@@ -1,0 +1,25 @@
+version = 1
+SPDX-PackageName = "Idejo"
+SPDX-PackageSupplier = "Mariano Pictet"
+SPDX-PackageDownloadLocation = "https://idejo.org"
+
+# Files that cannot carry an SPDX comment header (LI-01).
+[[annotations]]
+path = [
+  "*.md",
+  "*.pdf",
+  "NOTICE",
+  ".tool-versions",
+  ".gitattributes",
+  ".gitignore",
+  "mix.lock",
+  "REUSE.toml",
+  "**/*.json",
+  "**/*.pot",
+  "**/*.po",
+  "priv/static/**",
+  "assets/vendor/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Mariano Pictet and contributors"
+SPDX-License-Identifier = "AGPL-3.0-only"
