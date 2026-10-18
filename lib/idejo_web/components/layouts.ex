@@ -40,28 +40,10 @@ defmodule IdejoWeb.Layouts do
     ~H"""
     <header class="navbar px-4 sm:px-6 lg:px-8">
       <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
-        </a>
+        <a href={~p"/"} class="text-lg font-semibold">{server_name()}</a>
       </div>
       <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
-          </li>
-          <li>
-            <.theme_toggle />
-          </li>
-          <li>
-            <a href="https://phoenix.hexdocs.pm/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
-          </li>
-        </ul>
+        <.theme_toggle />
       </div>
     </header>
 
@@ -72,6 +54,31 @@ defmodule IdejoWeb.Layouts do
     </main>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
+  The name shown in the header and page titles: the server name set by an administrator
+  (AD-02), or "Idejo" when none is set. When branding exists (AD-11), the Idejo logo will be
+  the fallback in the same way.
+  """
+  @spec server_name() :: String.t()
+  def server_name, do: Idejo.Settings.get(:server_name)
+
+  @doc """
+  The page title: "Page · Server name", or the server name alone.
+  """
+  attr :page_title, :string, default: nil
+
+  def page_title(assigns) do
+    assigns = assign(assigns, :server_name, server_name())
+
+    ~H"""
+    <.live_title
+      default={@server_name}
+      suffix={@page_title && " · " <> @server_name}
+      phx-no-format
+    >{@page_title}</.live_title>
     """
   end
 

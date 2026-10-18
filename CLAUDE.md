@@ -130,6 +130,9 @@ roles or the permission grid. Every later change must keep it true:
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
   `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
+- **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
+  falling back to "Idejo". Pages set `page_title`; the title reads "Page · Server name". No
+  framework branding in the interface.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
