@@ -107,7 +107,10 @@ by `:view` in the query, never after loading.
   disconnects the session's LiveViews via `live_socket_id`.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
-- **Admin changes** to settings, roles or permissions write an `audit_log` row (SP-06).
+- **Admin changes** to settings, roles, role assignments, categories or permissions write an
+  `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
+  in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and
+  never a secret. The table is append-only (database trigger).
 - Contexts expose plain functions returning `{:ok, _} | {:error, _}`; LiveViews stay thin.
 - No new dependency without a licence check: MIT, BSD, Apache-2.0 or similar only (LI-06).
 
