@@ -6,12 +6,11 @@ defmodule Idejo.Access do
   Roles (RP-01) and, from RP-04, the permission check `can?/3`.
 
   The built-in roles owner, administrator, moderator, member and guest always exist; the
-  database refuses to delete or rename them. Visitors without an account and users who have
-  not verified their email address act as guest. Verifying an address grants member, and a
-  verified user who holds no role at all acts as member.
+  database refuses to delete or rename them.
 
-  Rights from several roles combine with "allow wins" (decided 2026-10-19; replaces "deny
-  wins" in RP-06): if any of a user's roles allows a right, the user has it.
+  Guest and member are implicit and never stored in `user_roles`: visitors without an
+  account and users who have not verified their email address act as guest; every verified
+  user holds member, whatever other roles they hold. So nobody is ever without a role.
   """
 
   import Ecto.Query, warn: false
@@ -44,45 +43,33 @@ defmodule Idejo.Access do
   Returns the roles a visitor or user acts with, highest rank first.
 
   `nil` (a visitor) and a user with an unverified email address get only guest. A verified
-  user gets the roles they hold, or member if they hold none, so the list is never empty.
+  user gets member plus every role they hold.
   """
-  @spec roles_of(User.t() | nil) :: [Role.t()]
+  @spec roles_of(User.t() | nil) :: [Role.t(), ...]
   def roles_of(nil), do: [built_in_role!(:guest)]
   def roles_of(%User{confirmed_at: nil}), do: [built_in_role!(:guest)]
 
   def roles_of(%User{id: user_id}) do
-    roles =
-      Repo.all(
-        from r in Role,
-          join: ur in UserRole,
-          on: ur.role_id == r.id,
-          where: ur.user_id == ^user_id,
-          order_by: [asc: r.position, asc: r.name]
-      )
-
-    # No user is ever without a role: a verified user holding none acts as member.
-    case roles do
-      [] -> [built_in_role!(:member)]
-      roles -> roles
-    end
+    Repo.all(
+      from r in Role,
+        left_join: ur in UserRole,
+        on: ur.role_id == r.id and ur.user_id == ^user_id,
+        where: not is_nil(ur.user_id) or (r.built_in and r.name == "member"),
+        order_by: [asc: r.position, asc: r.name]
+    )
   end
 
   @doc """
   Gives a role to a user. Giving a role the user already holds is a no-op.
 
-  Guest cannot be given: it is never held, only acted as.
+  Guest and member cannot be given: they follow from whether the email is verified.
   """
-  @spec grant_role(User.t(), Role.t()) :: :ok | {:error, :guest_is_implicit}
-  def grant_role(%User{}, %Role{built_in: true, name: "guest"}), do: {:error, :guest_is_implicit}
+  @spec grant_role(User.t(), Role.t()) :: :ok | {:error, :implicit_role}
+  def grant_role(%User{}, %Role{built_in: true, name: name}) when name in ~w(guest member),
+    do: {:error, :implicit_role}
 
   def grant_role(%User{id: user_id}, %Role{id: role_id}) do
     Repo.insert_all(UserRole, [%{user_id: user_id, role_id: role_id}], on_conflict: :nothing)
     :ok
   end
-
-  @doc """
-  Called when a user verifies their email address (AC-01): grants member.
-  """
-  @spec grant_verified_roles(User.t()) :: :ok
-  def grant_verified_roles(%User{} = user), do: grant_role(user, built_in_role!(:member))
 end
