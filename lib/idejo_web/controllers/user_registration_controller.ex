@@ -10,7 +10,7 @@ defmodule IdejoWeb.UserRegistrationController do
 
   def new(conn, _params) do
     changeset = Accounts.change_user_registration(%User{})
-    render(conn, :new, changeset: changeset)
+    render(conn, :new, page_title: gettext("Create an account"), changeset: changeset)
   end
 
   def create(conn, %{"user" => user_params}) do
@@ -21,7 +21,7 @@ defmodule IdejoWeb.UserRegistrationController do
         |> UserAuth.log_in_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, :new, changeset: changeset)
+        render(conn, :new, page_title: gettext("Create an account"), changeset: changeset)
     end
   end
 

@@ -8,7 +8,10 @@ defmodule IdejoWeb.UserSessionController do
   alias IdejoWeb.UserAuth
 
   def new(conn, _params) do
-    render(conn, :new, form: Phoenix.Component.to_form(%{}, as: "user"))
+    render(conn, :new,
+      page_title: gettext("Sign in"),
+      form: Phoenix.Component.to_form(%{}, as: "user")
+    )
   end
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
@@ -22,7 +25,7 @@ defmodule IdejoWeb.UserSessionController do
       # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
       conn
       |> put_flash(:error, gettext("Invalid email or password"))
-      |> render(:new, form: form)
+      |> render(:new, page_title: gettext("Sign in"), form: form)
     end
   end
 

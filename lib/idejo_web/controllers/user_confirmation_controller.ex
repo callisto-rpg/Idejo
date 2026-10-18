@@ -11,7 +11,7 @@ defmodule IdejoWeb.UserConfirmationController do
   alias Idejo.Accounts
 
   def edit(conn, %{"token" => token}) do
-    render(conn, :edit, token: token)
+    render(conn, :edit, page_title: gettext("Verify your email address"), token: token)
   end
 
   def update(conn, %{"token" => token}) do

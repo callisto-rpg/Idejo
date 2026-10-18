@@ -31,8 +31,8 @@ msgstr ""
 msgid "Already have one?"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:143
-#: lib/idejo_web/components/layouts.ex:158
+#: lib/idejo_web/components/layouts.ex:150
+#: lib/idejo_web/components/layouts.ex:165
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -47,6 +47,8 @@ msgstr ""
 msgid "Create account"
 msgstr ""
 
+#: lib/idejo_web/controllers/user_registration_controller.ex:13
+#: lib/idejo_web/controllers/user_registration_controller.ex:24
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:9
 #, elixir-autogen, elixir-format
 msgid "Create an account"
@@ -74,7 +76,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:23
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
-#: lib/idejo_web/live/admin/user_live.ex:34
+#: lib/idejo_web/live/admin/user_live.ex:38
 #: lib/idejo_web/live/admin/users_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -85,7 +87,7 @@ msgstr ""
 msgid "Hi %{name},\n\nPlease verify your email address by visiting the link below:\n\n%{url}\n\nIf you didn't create an account, you can ignore this email.\n"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:24
+#: lib/idejo_web/controllers/user_session_controller.ex:27
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
@@ -133,6 +135,8 @@ msgstr ""
 
 #: lib/idejo_web/components/layouts/root.html.heex:32
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:13
+#: lib/idejo_web/controllers/user_session_controller.ex:12
+#: lib/idejo_web/controllers/user_session_controller.ex:28
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:9
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:47
 #, elixir-autogen, elixir-format
@@ -149,12 +153,12 @@ msgstr ""
 msgid "Sign up"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:31
+#: lib/idejo_web/controllers/user_session_controller.ex:34
 #, elixir-autogen, elixir-format
 msgid "Signed out."
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:150
+#: lib/idejo_web/components/layouts.ex:157
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
@@ -180,12 +184,13 @@ msgid "Verify my email address"
 msgstr ""
 
 #: lib/idejo/accounts/user_notifier.ex:32
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:14
 #: lib/idejo_web/controllers/user_confirmation_html/edit.html.heex:8
 #, elixir-autogen, elixir-format
 msgid "Verify your email address"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:135
+#: lib/idejo_web/components/layouts.ex:142
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr ""
@@ -200,7 +205,7 @@ msgstr ""
 msgid "We sent a new link to %{email}."
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:17
+#: lib/idejo_web/controllers/user_session_controller.ex:20
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
 msgstr ""
@@ -241,7 +246,7 @@ msgstr ""
 msgid "the mailbox"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:95
+#: lib/idejo_web/components/layouts.ex:102
 #: lib/idejo_web/components/layouts/root.html.heex:24
 #, elixir-autogen, elixir-format
 msgid "Admin"
@@ -252,12 +257,12 @@ msgstr ""
 msgid "Administrator"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:50
+#: lib/idejo_web/live/admin/user_live.ex:54
 #, elixir-autogen, elixir-format
 msgid "Back to users"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:35
+#: lib/idejo_web/live/admin/user_live.ex:39
 #, elixir-autogen, elixir-format
 msgid "Email verified"
 msgstr ""
@@ -267,7 +272,7 @@ msgstr ""
 msgid "Guest"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:44
+#: lib/idejo_web/live/admin/user_live.ex:48
 #: lib/idejo_web/live/admin/users_live.ex:60
 #, elixir-autogen, elixir-format
 msgid "Joined"
@@ -293,7 +298,7 @@ msgstr ""
 msgid "No users on this page."
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:38
+#: lib/idejo_web/live/admin/user_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "Not yet"
 msgstr ""
@@ -319,7 +324,7 @@ msgstr ""
 msgid "Previous page"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:40
+#: lib/idejo_web/live/admin/user_live.ex:44
 #: lib/idejo_web/live/admin/users_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Roles"
@@ -340,7 +345,7 @@ msgstr ""
 msgid "Server name"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:101
+#: lib/idejo_web/components/layouts.ex:108
 #: lib/idejo_web/live/admin/settings_live.ex:16
 #: lib/idejo_web/live/admin/settings_live.ex:43
 #, elixir-autogen, elixir-format
@@ -352,17 +357,17 @@ msgstr ""
 msgid "Settings saved."
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:43
+#: lib/idejo_web/live/admin/user_live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:47
+#: lib/idejo_web/live/admin/user_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:108
+#: lib/idejo_web/components/layouts.ex:115
 #: lib/idejo_web/live/admin/users_live.ex:16
 #: lib/idejo_web/live/admin/users_live.ex:42
 #, elixir-autogen, elixir-format
