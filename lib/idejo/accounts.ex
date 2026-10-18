@@ -7,7 +7,6 @@ defmodule Idejo.Accounts do
   """
 
   import Ecto.Query, warn: false
-  alias Idejo.Access
   alias Idejo.Federation
   alias Idejo.Repo
 
@@ -125,8 +124,7 @@ defmodule Idejo.Accounts do
   @doc """
   Verifies the user's email address with the token from the email.
 
-  The token is single-use: all verification tokens of the user are deleted. Verifying
-  grants the member role (RP-01).
+  The token is single-use: all verification tokens of the user are deleted.
   """
   @spec confirm_user(String.t()) :: {:ok, User.t()} | {:error, :invalid_token}
   def confirm_user(token) when is_binary(token) do
@@ -139,8 +137,7 @@ defmodule Idejo.Accounts do
   end
 
   defp confirm_and_delete_tokens(user) do
-    with {:ok, user} <- Repo.update(User.confirm_changeset(user)),
-         :ok <- Access.grant_verified_roles(user) do
+    with {:ok, user} <- Repo.update(User.confirm_changeset(user)) do
       Repo.delete_all(from(UserToken, where: [user_id: ^user.id, context: "confirm"]))
       {:ok, user}
     end

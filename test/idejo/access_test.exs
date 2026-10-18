@@ -78,35 +78,40 @@ defmodule Idejo.AccessTest do
     end
 
     @tag req: "RP-01"
-    test "RP-01 verifying the email address grants member" do
+    test "RP-01 every verified user holds member" do
       user = user_fixture()
       assert names(Access.roles_of(user)) == ["member"]
     end
 
     @tag req: "RP-01"
-    test "RP-01 a verified user who holds no role acts as member" do
+    test "RP-01 a verified user keeps member alongside other roles, highest rank first" do
       user = user_fixture()
-      Repo.delete_all(Idejo.Access.UserRole)
+      :ok = Access.grant_role(user, Access.built_in_role!(:moderator))
+      :ok = Access.grant_role(user, Repo.insert!(%Role{name: "team", position: 10}))
+
+      assert names(Access.roles_of(user)) == ["moderator", "member", "team"]
+    end
+
+    @tag req: "RP-01"
+    test "RP-01 roles held by other users are not mixed in" do
+      user = user_fixture()
+      other = user_fixture()
+      :ok = Access.grant_role(other, Access.built_in_role!(:administrator))
 
       assert names(Access.roles_of(user)) == ["member"]
+    end
+
+    @tag req: "RP-01"
+    test "RP-01 guest and member are implicit, never stored" do
+      user_fixture()
+      assert Repo.aggregate(Idejo.Access.UserRole, :count) == 0
     end
 
     @tag req: "RP-01"
     test "RP-01 nobody is ever without a role" do
-      verified = user_fixture()
-      Repo.delete_all(Idejo.Access.UserRole)
-
-      for subject <- [nil, unconfirmed_user_fixture(), verified, user_fixture()] do
+      for subject <- [nil, unconfirmed_user_fixture(), user_fixture()] do
         assert [_ | _] = Access.roles_of(subject)
       end
-    end
-
-    @tag req: "RP-01"
-    test "RP-01 roles are listed highest rank first" do
-      user = user_fixture()
-      :ok = Access.grant_role(user, Access.built_in_role!(:moderator))
-
-      assert names(Access.roles_of(user)) == ["moderator", "member"]
     end
   end
 
@@ -114,20 +119,22 @@ defmodule Idejo.AccessTest do
     @tag req: "RP-01"
     test "RP-01 granting a role twice keeps one" do
       user = user_fixture()
-      member = Access.built_in_role!(:member)
+      moderator = Access.built_in_role!(:moderator)
 
-      assert :ok = Access.grant_role(user, member)
-      assert names(Access.roles_of(user)) == ["member"]
+      assert :ok = Access.grant_role(user, moderator)
+      assert :ok = Access.grant_role(user, moderator)
+      assert names(Access.roles_of(user)) == ["moderator", "member"]
     end
 
     @tag req: "RP-01"
-    test "RP-01 guest is never held, only acted as" do
+    test "RP-01 guest and member cannot be granted" do
       user = user_fixture()
 
-      assert {:error, :guest_is_implicit} =
-               Access.grant_role(user, Access.built_in_role!(:guest))
+      for name <- [:guest, :member] do
+        assert {:error, :implicit_role} = Access.grant_role(user, Access.built_in_role!(name))
+      end
 
-      assert names(Access.roles_of(user)) == ["member"]
+      assert Repo.aggregate(Idejo.Access.UserRole, :count) == 0
     end
   end
 end
