@@ -131,6 +131,10 @@ roles or the permission grid. Every later change must keep it true:
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
   `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
+- **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
+  attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
+  "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
+  `IDEJO_SOURCE_URL`). New pages must use `Layouts.app` so the footer is never missing.
 - **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
   falling back to "Idejo". Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface.

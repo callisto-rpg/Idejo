@@ -4,8 +4,11 @@
 defmodule IdejoWeb.PageControllerTest do
   use IdejoWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
+  test "GET / shows the server name", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    response = html_response(conn, 200)
+    assert response =~ "<h1"
+    assert response =~ "Idejo"
+    refute response =~ "Phoenix"
   end
 end
