@@ -28,7 +28,8 @@ defmodule Idejo.AccountsFixtures do
     {:ok, user} =
       attrs
       |> valid_user_attributes()
-      |> Accounts.register_user()
+      # Fixtures are existing accounts: no invite needed, whatever the registration mode.
+      |> Accounts.register_user(skip_invite: true)
 
     user
   end
@@ -50,6 +51,17 @@ defmodule Idejo.AccountsFixtures do
     user = user_fixture(attrs)
     :ok = Idejo.Access.grant_role(user, Idejo.Access.built_in_role!(role))
     user
+  end
+
+  @doc "Switches registration to invite-only (AC-02)."
+  def invite_only!(admin \\ user_with_role_fixture(:administrator)) do
+    {:ok, _} = Idejo.Settings.update_settings(admin, %{"registration_mode" => "invite_only"})
+    admin
+  end
+
+  def invite_fixture(admin \\ user_with_role_fixture(:administrator)) do
+    {:ok, invite} = Accounts.create_invite(admin)
+    invite
   end
 
   def user_scope_fixture(user \\ user_fixture()), do: Scope.for_user(user)

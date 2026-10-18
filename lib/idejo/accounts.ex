@@ -10,7 +10,9 @@ defmodule Idejo.Accounts do
   alias Idejo.Federation
   alias Idejo.Repo
 
-  alias Idejo.Accounts.{User, UserNotifier, UserToken}
+  alias Idejo.Accounts.{Invite, User, UserNotifier, UserToken}
+  alias Idejo.Audit
+  alias Idejo.Settings
 
   ## Database getters
 
@@ -68,10 +70,15 @@ defmodule Idejo.Accounts do
   transaction. The email address is not verified yet; see
   `deliver_user_confirmation_instructions/2`.
 
+  While registration is invite-only (AC-02), `attrs` must carry a valid `invite_code`; the
+  invite is used up in the same transaction.
+
   ## Options
 
-    * `:confirmed` - creates the account with its email already verified. Only the
-      first-run wizard uses it, for the owner (AD-01), since email may not work yet.
+    * `:confirmed` - creates the account with its email already verified.
+    * `:skip_invite` - signs up without an invite even when registration is invite-only.
+
+  Only the first-run wizard uses these options, for the owner (AD-01).
   """
   @spec register_user(map(), keyword()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def register_user(attrs, opts \\ []) do
@@ -84,7 +91,10 @@ defmodule Idejo.Accounts do
       |> then(&if(opts[:confirmed], do: User.confirm_changeset(&1), else: &1))
 
     Repo.transact(fn ->
+      {invite, changeset} = check_invite(changeset, opts)
+
       with {:ok, user} <- Repo.insert(changeset),
+           :ok <- use_invite(invite, user),
            {:ok, _activity} <-
              Repo.insert(
                Federation.activity_changeset(%{
@@ -97,6 +107,85 @@ defmodule Idejo.Accounts do
         {:ok, user}
       end
     end)
+  end
+
+  # Locks the invite so two sign-ups cannot use it at once. An invalid invite is added to the
+  # changeset's errors, so the form shows it together with any other error.
+  defp check_invite(changeset, opts) do
+    if opts[:skip_invite] || Settings.get(:registration_mode) != "invite_only" do
+      {nil, changeset}
+    else
+      code = Ecto.Changeset.get_field(changeset, :invite_code)
+
+      case code && Repo.one(usable_invite_query(code)) do
+        %Invite{} = invite ->
+          {invite, changeset}
+
+        nil ->
+          {nil,
+           Ecto.Changeset.add_error(changeset, :invite_code, "is not valid, used or expired")}
+      end
+    end
+  end
+
+  defp usable_invite_query(code) do
+    from i in Invite,
+      where: i.code == ^code and is_nil(i.used_by) and i.expires_at > ^DateTime.utc_now(),
+      lock: "FOR UPDATE"
+  end
+
+  defp use_invite(nil, _user), do: :ok
+
+  defp use_invite(%Invite{} = invite, %User{id: user_id}) do
+    invite
+    |> Ecto.Changeset.change(used_by: user_id, used_at: DateTime.utc_now(:second))
+    |> Repo.update()
+    |> case do
+      {:ok, _invite} -> :ok
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  ## Invites (AC-02)
+
+  @doc """
+  Creates a single-use invite valid for 7 days, as `admin`, with an `invite.create` audit
+  entry. The invite link is built by the web layer from `invite.code`.
+  """
+  @spec create_invite(User.t()) :: {:ok, Invite.t()}
+  def create_invite(%User{} = admin) do
+    now = DateTime.utc_now(:second)
+
+    invite = %Invite{
+      code: Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false),
+      created_by: admin.id,
+      expires_at: DateTime.add(now, Invite.validity_in_days(), :day)
+    }
+
+    Repo.transact(fn ->
+      with {:ok, invite} <- Repo.insert(invite),
+           # The audit log keeps only the start of the code: the code itself lets one in.
+           {:ok, _} <-
+             Audit.record(admin, "invite.create", nil, %{
+               "code_start" => String.slice(invite.code, 0, 4),
+               "expires_at" => DateTime.to_iso8601(invite.expires_at)
+             }) do
+        {:ok, invite}
+      end
+    end)
+  end
+
+  @doc """
+  Lists invites, newest first, with who created and who used them.
+  """
+  @spec list_invites(keyword()) :: [Invite.t()]
+  def list_invites(opts \\ []) do
+    Repo.all(
+      from i in Invite,
+        order_by: [desc: i.created_at, desc: i.code],
+        limit: ^Keyword.get(opts, :limit, 100),
+        preload: [:creator, :user]
+    )
   end
 
   @doc """

@@ -13,8 +13,8 @@ defmodule Idejo.Settings do
   put in a form, and appear in the audit log only as `"[changed]"`. Leaving a secret blank in
   a form keeps the saved value.
 
-  Keys in v0.1 so far: the server name (AD-02) and outgoing email (AD-08). Later requirements
-  add theirs (registration mode in AC-02, the growing-message window in AD-04).
+  Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
+  email (AD-08). The growing-message window comes with AD-04.
   """
 
   import Ecto.Changeset
@@ -26,9 +26,17 @@ defmodule Idejo.Settings do
   alias Idejo.Settings.{Secret, Setting}
 
   @smtp_security ~w(starttls tls none)
+  @registration_modes ~w(open invite_only)
 
   @definitions %{
     server_name: %{type: :string, default: "Idejo", required: true, max: 80},
+    # Who may sign up (AC-02): anyone, or only people with an invite.
+    registration_mode: %{
+      type: :string,
+      default: "open",
+      required: true,
+      in: @registration_modes
+    },
     # Sender address of the emails the server sends; defaults to noreply@<host>.
     mail_from: %{type: :string, default: :noreply, required: true, max: 160, format: :email},
     # Outgoing email is off until a host is set.
@@ -41,12 +49,19 @@ defmodule Idejo.Settings do
 
   @type key ::
           :server_name
+          | :registration_mode
           | :mail_from
           | :smtp_host
           | :smtp_port
           | :smtp_security
           | :smtp_username
           | :smtp_password
+
+  @doc """
+  The allowed values of `:registration_mode`: open, or invite-only (AC-02).
+  """
+  @spec registration_modes() :: [String.t()]
+  def registration_modes, do: @registration_modes
 
   @doc """
   The allowed values of `:smtp_security`: STARTTLS, implicit TLS, or no encryption.

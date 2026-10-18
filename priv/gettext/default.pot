@@ -31,8 +31,8 @@ msgstr ""
 msgid "Already have one?"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:179
-#: lib/idejo_web/components/layouts.ex:194
+#: lib/idejo_web/components/layouts.ex:186
+#: lib/idejo_web/components/layouts.ex:201
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -42,13 +42,12 @@ msgstr ""
 msgid "Composer prototype"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:53
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:66
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_registration_controller.ex:13
-#: lib/idejo_web/controllers/user_registration_controller.ex:24
+#: lib/idejo_web/controllers/user_registration_controller.ex:46
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:9
 #, elixir-autogen, elixir-format
 msgid "Create an account"
@@ -59,7 +58,7 @@ msgstr ""
 msgid "Create one"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:52
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:65
 #, elixir-autogen, elixir-format
 msgid "Creating account…"
 msgstr ""
@@ -70,14 +69,14 @@ msgid "Development mail adapter: sent emails are in"
 msgstr ""
 
 #: lib/idejo_web/controllers/setup_html/new.html.heex:66
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:40
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:53
 #, elixir-autogen, elixir-format
 msgid "Display name"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:137
 #: lib/idejo_web/controllers/setup_html/new.html.heex:50
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:23
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:36
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
 #: lib/idejo_web/live/admin/email_live.ex:20
 #: lib/idejo_web/live/admin/email_live.ex:98
@@ -126,7 +125,7 @@ msgid "Password"
 msgstr ""
 
 #: lib/idejo_web/controllers/setup_html/new.html.heex:73
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:47
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:60
 #, elixir-autogen, elixir-format
 msgid "Password (at least 12 characters)"
 msgstr ""
@@ -166,7 +165,7 @@ msgstr ""
 msgid "Signed out."
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:186
+#: lib/idejo_web/components/layouts.ex:193
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
@@ -182,7 +181,7 @@ msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
 msgstr ""
 
 #: lib/idejo_web/controllers/setup_html/new.html.heex:58
-#: lib/idejo_web/controllers/user_registration_html/new.html.heex:32
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:45
 #, elixir-autogen, elixir-format
 msgid "Username (for @mentions)"
 msgstr ""
@@ -199,7 +198,7 @@ msgstr ""
 msgid "Verify your email address"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:171
+#: lib/idejo_web/components/layouts.ex:178
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr ""
@@ -219,12 +218,12 @@ msgstr ""
 msgid "Welcome back!"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_registration_controller.ex:36
+#: lib/idejo_web/controllers/user_registration_controller.ex:38
 #, elixir-autogen, elixir-format
 msgid "Welcome! We could not send the verification email. Please try again in a moment."
 msgstr ""
 
-#: lib/idejo_web/controllers/user_registration_controller.ex:31
+#: lib/idejo_web/controllers/user_registration_controller.ex:33
 #, elixir-autogen, elixir-format
 msgid "Welcome! We sent a link to %{email}; open it to verify your email address."
 msgstr ""
@@ -340,13 +339,13 @@ msgid "Roles"
 msgstr ""
 
 #: lib/idejo_web/live/admin/email_live.ex:143
-#: lib/idejo_web/live/admin/settings_live.ex:48
+#: lib/idejo_web/live/admin/settings_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
 #: lib/idejo_web/live/admin/email_live.ex:142
-#: lib/idejo_web/live/admin/settings_live.ex:47
+#: lib/idejo_web/live/admin/settings_live.ex:56
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
@@ -369,6 +368,7 @@ msgstr ""
 msgid "Settings saved."
 msgstr ""
 
+#: lib/idejo_web/live/admin/invites_live.ex:92
 #: lib/idejo_web/live/admin/user_live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Status"
@@ -573,4 +573,86 @@ msgstr ""
 #: lib/idejo_web/controllers/setup_html/new.html.heex:21
 #, elixir-autogen, elixir-format
 msgid "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “Idejo is not set up yet” (see “Set up your server” in the deployment guide)."
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:52
+#, elixir-autogen, elixir-format
+msgid "Anyone"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:63
+#, elixir-autogen, elixir-format
+msgid "Anyone can sign up right now, so invites are not needed. Switch to invite-only in Settings."
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "Create an invite link"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:98
+#, elixir-autogen, elixir-format
+msgid "Created by"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Each link lets one person sign up, for %{days} days."
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:45
+#, elixir-autogen, elixir-format
+msgid "Expired"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:93
+#, elixir-autogen, elixir-format
+msgid "Expires"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:28
+#, elixir-autogen, elixir-format
+msgid "Invite code"
+msgstr ""
+
+#: lib/idejo_web/components/layouts.ex:151
+#: lib/idejo_web/live/admin/invites_live.ex:19
+#: lib/idejo_web/live/admin/invites_live.ex:54
+#, elixir-autogen, elixir-format
+msgid "Invites"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:20
+#, elixir-autogen, elixir-format
+msgid "Joining is by invitation. Use the link or code you were given."
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "Link"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "New invite link — copy it and send it to one person:"
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:53
+#, elixir-autogen, elixir-format
+msgid "Only people with an invite"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:43
+#, elixir-autogen, elixir-format
+msgid "Unused"
+msgstr ""
+
+#: lib/idejo_web/live/admin/invites_live.ex:44
+#, elixir-autogen, elixir-format
+msgid "Used by %{name}"
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:50
+#, elixir-autogen, elixir-format
+msgid "Who can sign up"
 msgstr ""
