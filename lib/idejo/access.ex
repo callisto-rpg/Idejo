@@ -7,7 +7,11 @@ defmodule Idejo.Access do
 
   The built-in roles owner, administrator, moderator, member and guest always exist; the
   database refuses to delete or rename them. Visitors without an account and users who have
-  not verified their email address act as guest. Verifying an address grants member.
+  not verified their email address act as guest. Verifying an address grants member, and a
+  verified user who holds no role at all acts as member.
+
+  Rights from several roles combine with "allow wins" (decided 2026-10-19; replaces "deny
+  wins" in RP-06): if any of a user's roles allows a right, the user has it.
   """
 
   import Ecto.Query, warn: false
@@ -39,20 +43,28 @@ defmodule Idejo.Access do
   @doc """
   Returns the roles a visitor or user acts with, highest rank first.
 
-  `nil` (a visitor) and a user with an unverified email address get only guest.
+  `nil` (a visitor) and a user with an unverified email address get only guest. A verified
+  user gets the roles they hold, or member if they hold none, so the list is never empty.
   """
   @spec roles_of(User.t() | nil) :: [Role.t()]
   def roles_of(nil), do: [built_in_role!(:guest)]
   def roles_of(%User{confirmed_at: nil}), do: [built_in_role!(:guest)]
 
   def roles_of(%User{id: user_id}) do
-    Repo.all(
-      from r in Role,
-        join: ur in UserRole,
-        on: ur.role_id == r.id,
-        where: ur.user_id == ^user_id,
-        order_by: [asc: r.position, asc: r.name]
-    )
+    roles =
+      Repo.all(
+        from r in Role,
+          join: ur in UserRole,
+          on: ur.role_id == r.id,
+          where: ur.user_id == ^user_id,
+          order_by: [asc: r.position, asc: r.name]
+      )
+
+    # No user is ever without a role: a verified user holding none acts as member.
+    case roles do
+      [] -> [built_in_role!(:member)]
+      roles -> roles
+    end
   end
 
   @doc """

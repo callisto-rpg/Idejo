@@ -84,6 +84,24 @@ defmodule Idejo.AccessTest do
     end
 
     @tag req: "RP-01"
+    test "RP-01 a verified user who holds no role acts as member" do
+      user = user_fixture()
+      Repo.delete_all(Idejo.Access.UserRole)
+
+      assert names(Access.roles_of(user)) == ["member"]
+    end
+
+    @tag req: "RP-01"
+    test "RP-01 nobody is ever without a role" do
+      verified = user_fixture()
+      Repo.delete_all(Idejo.Access.UserRole)
+
+      for subject <- [nil, unconfirmed_user_fixture(), verified, user_fixture()] do
+        assert [_ | _] = Access.roles_of(subject)
+      end
+    end
+
+    @tag req: "RP-01"
     test "RP-01 roles are listed highest rank first" do
       user = user_fixture()
       :ok = Access.grant_role(user, Access.built_in_role!(:moderator))
