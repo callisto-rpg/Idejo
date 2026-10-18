@@ -76,6 +76,18 @@ defmodule IdejoWeb.Router do
     post "/confirm", UserConfirmationController, :create
   end
 
+  ## Admin panel (AD-02), signed-in LiveViews for owners and administrators only.
+
+  scope "/admin", IdejoWeb.Admin do
+    pipe_through [:browser, :require_authenticated_user, :require_administrator]
+
+    live_session :admin, on_mount: [{IdejoWeb.UserAuth, :require_administrator}] do
+      live "/", SettingsLive
+      live "/users", UsersLive
+      live "/users/:id", UserLive
+    end
+  end
+
   scope "/users", IdejoWeb do
     pipe_through [:browser]
 

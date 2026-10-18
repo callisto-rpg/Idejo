@@ -214,6 +214,65 @@ defmodule IdejoWeb.UserAuth do
     end
   end
 
+  @doc """
+  Plug for the admin panel (AD-02): only owners and administrators get through. Run it
+  after `require_authenticated_user/2`.
+  """
+  def require_administrator(conn, _opts) do
+    if conn.assigns.current_scope.administrator? do
+      conn
+    else
+      conn
+      |> put_flash(:error, gettext("Only administrators can open the admin panel."))
+      |> redirect(to: ~p"/")
+      |> halt()
+    end
+  end
+
+  @doc """
+  LiveView hooks, used with `live_session`.
+
+    * `:mount_current_scope` - assigns `current_scope` from the session, or `nil`.
+    * `:require_administrator` - as `require_administrator/2`, checked again on every
+      LiveView mount, including when the socket connects.
+  """
+  def on_mount(:mount_current_scope, _params, session, socket) do
+    {:cont, mount_current_scope(socket, session)}
+  end
+
+  def on_mount(:require_administrator, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    case socket.assigns.current_scope do
+      %Scope{administrator?: true} ->
+        {:cont, socket}
+
+      scope ->
+        message =
+          if scope,
+            do: gettext("Only administrators can open the admin panel."),
+            else: gettext("You must sign in to access this page.")
+
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, message)
+          |> Phoenix.LiveView.redirect(to: if(scope, do: ~p"/", else: ~p"/users/sign-in"))
+
+        {:halt, socket}
+    end
+  end
+
+  defp mount_current_scope(socket, session) do
+    Phoenix.Component.assign_new(socket, :current_scope, fn ->
+      with token when is_binary(token) <- session["user_token"],
+           {user, _inserted_at} <- Accounts.get_user_by_session_token(token) do
+        Scope.for_user(user)
+      else
+        _ -> nil
+      end
+    end)
+  end
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
     put_session(conn, :user_return_to, current_path(conn))
   end

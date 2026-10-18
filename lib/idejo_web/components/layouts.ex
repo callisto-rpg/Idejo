@@ -76,6 +76,44 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
+  Renders the admin panel (AD-02): the app layout with the admin sections.
+
+  ## Examples
+
+      <Layouts.admin flash={@flash} current_scope={@current_scope} section={:settings}>
+        <h1>Settings</h1>
+      </Layouts.admin>
+  """
+  attr :flash, :map, required: true
+  attr :current_scope, :map, required: true
+  attr :section, :atom, required: true, values: [:settings, :users]
+  slot :inner_block, required: true
+
+  def admin(assigns) do
+    ~H"""
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
+      <nav aria-label={gettext("Admin")} class="tabs tabs-border mb-6">
+        <.link
+          navigate={~p"/admin"}
+          class={["tab", @section == :settings && "tab-active"]}
+          aria-current={@section == :settings && "page"}
+        >
+          {gettext("Settings")}
+        </.link>
+        <.link
+          navigate={~p"/admin/users"}
+          class={["tab", @section == :users && "tab-active"]}
+          aria-current={@section == :users && "page"}
+        >
+          {gettext("Users")}
+        </.link>
+      </nav>
+      {render_slot(@inner_block)}
+    </Layouts.app>
+    """
+  end
+
+  @doc """
   Shows the flash group with standard titles and content.
 
   ## Examples

@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule IdejoWeb.Admin.SettingsLive do
+  @moduledoc """
+  Admin panel: server-wide settings (AD-02).
+  """
+  use IdejoWeb, :live_view
+
+  alias Idejo.Settings
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok,
+     socket
+     |> assign(:page_title, gettext("Settings"))
+     |> assign(:form, to_form(Settings.change_settings(), as: :settings))}
+  end
+
+  @impl true
+  def handle_event("validate", %{"settings" => params}, socket) do
+    changeset = params |> Settings.change_settings() |> Map.put(:action, :validate)
+    {:noreply, assign(socket, :form, to_form(changeset, as: :settings))}
+  end
+
+  def handle_event("save", %{"settings" => params}, socket) do
+    case Settings.update_settings(socket.assigns.current_scope.user, params) do
+      {:ok, _settings} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Settings saved."))
+         |> assign(:form, to_form(Settings.change_settings(), as: :settings))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset, as: :settings))}
+    end
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.admin flash={@flash} current_scope={@current_scope} section={:settings}>
+      <.header>{gettext("Settings")}</.header>
+
+      <.form for={@form} id="settings-form" phx-change="validate" phx-submit="save">
+        <.input field={@form[:server_name]} type="text" label={gettext("Server name")} required />
+        <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
+          {gettext("Save")}
+        </.button>
+      </.form>
+    </Layouts.admin>
+    """
+  end
+end

@@ -113,6 +113,11 @@ filter by `:view` in the query, never after loading.
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
   disconnects the session's LiveViews via `live_socket_id`.
+- **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
+  `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
+  `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
+  `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
+  in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an

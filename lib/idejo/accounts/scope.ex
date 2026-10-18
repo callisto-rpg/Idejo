@@ -19,17 +19,20 @@ defmodule Idejo.Accounts.Scope do
   growing application requirements.
   """
 
+  alias Idejo.Access
   alias Idejo.Accounts.User
 
-  defstruct user: nil
+  @type t :: %__MODULE__{user: User.t(), administrator?: boolean()}
+
+  defstruct user: nil, administrator?: false
 
   @doc """
-  Creates a scope for the given user.
+  Creates a scope for the given user, noting whether they may use the admin panel.
 
   Returns nil if no user is given.
   """
   def for_user(%User{} = user) do
-    %__MODULE__{user: user}
+    %__MODULE__{user: user, administrator?: Access.administrator?(user)}
   end
 
   def for_user(nil), do: nil
