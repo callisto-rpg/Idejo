@@ -1,8 +1,0 @@
-{
-  "name": "Idejo Community Platform",
-  "description": "Self-hosted community server organised like a forum where every topic is a live chat with growing messages.",
-  "permissions": [],
-  "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

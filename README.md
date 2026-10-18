@@ -1,32 +1,18 @@
-# Idejo Community Platform
+# Idejo
 
-A self-hosted community server organised like a forum (categories &rarr; topics &rarr; messages), where every topic is a live conversation powered by **Growing Messages**.
+To start your Phoenix server:
 
-Quick lines sent with `Enter` merge into one **growing message** that stays open for a fixed window (default 45s), so conversations read like an organized forum while feeling as immediate as chat.
+* Run `mix setup` to install and setup dependencies
+* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
-## Getting Started
+Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-To run the development server in AI Studio:
+Ready to run in production? Please [check our deployment guides](https://phoenix.hexdocs.pm/deployment.html).
 
-```bash
-npm install
-npm run dev
-```
+## Learn more
 
-The app will be available on port 3000 (`http://0.0.0.0:3000`).
-
-## Core Invariants & Features
-
-- **Growing Messages (GM-01 to GM-14)**:
-  - Press `Enter` to send a line and start the 45-second window.
-  - Subsequent lines sent with `Enter` within that window merge into the same message as commits.
-  - The window is fixed: appends never extend or reset the 45-second countdown timer.
-  - Press `Ctrl + Enter` (or `Cmd + Enter`) to finish and close the message early.
-  - Press `Shift + Enter` for a multi-line break within your draft.
-  - Open messages display a live pencil icon ✏️ and real-time countdown timer.
-  - Moderators can force-close an open message at any time.
-- **Topics & Categories**:
-  - Pinned and locked topics, category permission matrix, inline replies, and thread forking (`TP-09`).
-- **Search & Moderation**:
-  - Full-text search across topics and messages with category filtering (`SE-01`).
-  - Audit log and action tracking for moderators (`MO-03`).
+* Official website: https://www.phoenixframework.org/
+* Guides: https://phoenix.hexdocs.pm/overview.html
+* Docs: https://phoenix.hexdocs.pm
+* Forum: https://elixirforum.com/c/phoenix-forum
+* Source: https://github.com/phoenixframework/phoenix

@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Automatic HTTPS (SP-01). Caddy obtains and renews certificates for IDEJO_DOMAIN.
+# WebSockets (LiveView, live delivery) are proxied without extra configuration.
+# Content security policy and other app headers are set by the app (SP-05).
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$IDEJO_DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		protocols tls1.2 tls1.3
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	reverse_proxy app:4000
+}

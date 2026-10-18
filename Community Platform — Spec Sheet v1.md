@@ -18,9 +18,9 @@ The twelve open questions from the feature list are settled as follows; each dec
 
 | Question | Decision |
 | --- | --- |
-| Growing-message countdown | Appends do not restart the countdown. No size limit on a growing message. Default window 45 s, adjustable server-wide and per category. |
-| Editing an open message | Allowed. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
-| Line break key | Shift+Enter inserts a line break; Enter sends or appends; Ctrl+Enter closes. |
+| Growing-message countdown | The countdown only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it. No size limit on a growing message. Default window 45 s, adjustable server-wide and per category. |
+| Editing an open message | Allowed, in the same composer: sent text stays in it, shown in higher contrast than unsent text. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
+| Line break key | Shift+Enter inserts a line break; Enter sends what changed and keeps typing on the same line; Ctrl+Enter sends and continues on a new line, or starts a new message once the window has ended. |
 | When a topic stops being live | Optional auto-archive after 65 days of inactivity by default; period editable in server-wide settings. |
 | First message of a topic | Same editor as any message. Only differences: it has a title, it takes tags, and it is not live while being typed. |
 | Replies inside a topic | Inline replies only. Anyone permitted can select any message, including someone else’s, and create a new topic from it. |
@@ -66,35 +66,39 @@ Four levels, each with a stable URL: server → category (nestable) → topic �
 | Category | Administrators (or delegated roles) | Name, description, order, parent category, visibility, permissions per role, growing-message window, auto-archive setting | `/c/{slug}` |
 | Topic | Members with “start topics” right | Title, tags, state (open, locked, archived, solved), pinned flag, category | `/c/{slug}/t/{id}-{slug}` |
 | Message | Members with “post” right | Author, body (Markdown), state (open or closed), commits, reply-to reference, reactions, attachments | `/c/{slug}/t/{id}-{slug}#m{id}` |
-| Commit | System, at each Enter | Text fragment, timestamp, edited flag — the unit a growing message is built from | (internal) |
+| Commit | System, at each Enter or Ctrl+Enter | Change to the message text (added, edited or deleted), timestamp, edited flag — the unit a growing message is built from | (internal) |
 
 ## 5. Growing messages
 
-A message stays open for a fixed window (45 s by default) after its first line is sent; every line sent in that window joins the same message. The window is not extended by appends, and a message has no size limit.
+The composer *is* the author’s open message. Pressing Enter sends what has changed, but the text stays in the composer and the author keeps typing in the same message, on the same line. Sent text is shown in higher contrast than unsent text, so it is always clear which part is still private.
+
+The composer sits in the topic at the place of the author’s open message. Replies from other members appear below it, so the composer moves up as the conversation continues; with no open message, it sits at the end of the topic.
+
+A fixed window (45 s by default) starts at the first commit. It does not end the message: it only sets how soon the author may start a new one. After the window the author is still typing in the same message until they choose to start a new one. The window is not extended by appends, and a message has no size limit.
 
 &#91;embedded content: message states · compose, open, closed\]
 
 | Key | Action |
 | --- | --- |
-| Enter | Sends: starts a new message, or appends to the author’s open message |
-| Shift+Enter | Line break inside the composer, nothing sent |
-| Ctrl+Enter (Cmd+Enter on macOS) | Sends any text in the composer and closes the open message |
-| Touch screens | Send button = Enter; a close button beside it = Ctrl+Enter |
+| Enter | Sends what changed: starts a new message, or commits to the author’s open message. Typing continues in the same message, on the same line |
+| Shift+Enter | Line break inside the unsent text, nothing sent |
+| Ctrl+Enter (Cmd+Enter on macOS) | Sends what changed and continues on a new line. Within the window the new line stays in the same message; after the window it starts a new message |
+| Touch screens | Send button = Enter; a “new line” button beside it = Ctrl+Enter |
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | GM-01 | Enter with no open message posts a new message, open and visible to readers at once | Must |
-| GM-02 | Enter while the author has an open message in the topic appends the text as a new commit; readers see it appear in place | Must |
-| GM-03 | The window starts at the first commit; appends never restart or extend it | Must |
-| GM-04 | When the window ends the message closes; the next Enter starts a new message | Must |
-| GM-05 | Ctrl+Enter appends any composer text as the last commit and closes the message immediately | Must |
+| GM-02 | Enter while the author has an open message in the topic sends the unsent changes as a new commit; readers see them appear in place. The text stays in the composer and typing continues on the same line, with no line break added | Must |
+| GM-03 | The window starts at the first commit; appends never restart or extend it. The window only limits when a new message can be started; it never closes the message or moves the author out of it | Must |
+| GM-04 | When the window ends the message stays open and the author keeps typing in it; Enter still commits to it. Only Ctrl+Enter (GM-05) starts a new message | Must |
+| GM-05 | Ctrl+Enter sends the unsent changes as a commit and continues on a new line. Within the window that line belongs to the same message; after the window the message closes and the new line starts a new message | Must |
 | GM-06 | No size limit on a message; bodies longer than one screen render collapsed with a “show all” control | Must |
-| GM-07 | An open message shows a discreet pencil icon to all readers; the author also sees the time left | Must |
-| GM-08 | Messages are ordered by their first commit; replies by others appear below an open message, which keeps its place and keeps growing | Must |
+| GM-07 | An open message shows a discreet pencil icon to all readers; the author also sees the time left until a new message can be started | Must |
+| GM-08 | Messages are ordered by their first commit; replies by others appear below an open message, which keeps its place and keeps growing. The author’s composer is that open message, in place: new replies appear below it and push it up | Must |
 | GM-09 | An author has at most one open message per topic | Must |
-| GM-10 | The author can edit any commit, while open or after closing. Adding text at the end is not an edit | Must |
+| GM-10 | The author can edit any commit, while open or after closing. While open, sent text is edited directly in the composer: sent text shows in higher contrast than unsent text; text typed inside or changed within sent text shows as unsent until the next Enter; deleting sent text is sent with the next commit. Adding text at the end is not an edit | Must |
 | GM-11 | Changing text of an earlier commit marks the message as edited and shows a discreet “view earlier version” tag; it opens every previous version with its time | Must |
-| GM-12 | An open message closes early when its topic is locked or archived, or when the author’s session disconnects | Must |
+| GM-12 | An open message also closes when its topic is locked or archived, or when the author’s session disconnects | Must |
 | GM-13 | Notifications, unread counts, search, feeds and webhooks treat a growing message as one item (see sections 10, 11, 15) | Must |
 | GM-14 | The first message of a topic is never live: it is composed privately and posted closed (see TP-02) | Must |
 | GM-15 | Window length set server-wide (default 45 s) with a per-category override; consolidation can be switched off per category | Must |
