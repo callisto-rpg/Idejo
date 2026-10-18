@@ -56,8 +56,8 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | TP-15 | Move a topic to another category |
 | RP-01, RP-02 | As v1: built-in roles; custom roles with name, colour and order |
 | RP-03 | Create, rename, reorder and delete categories (one level) |
-| RP-04, RP-05 | Per category, allow or deny per role for four rights: view, start topics, post, moderate |
-| RP-06 | Several roles per user; deny wins; highest role sets colour |
+| RP-04, RP-05 | Per category, allow, deny or unset per role for four rights: view, start topics, post, moderate. Unset follows the role’s server-wide setting; deny overrides it |
+| RP-06 | Several roles per user; allow wins: a right is granted when any of the user’s roles allows it; highest role sets colour |
 | AC-01, AC-02 | Email sign-up with verification; open or invite-only; password reset by email |
 | AC-04 | Display name and avatar |
 | AC-05, AC-07 | As v1: guest reading; users delete their own account |
@@ -133,7 +133,7 @@ PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` p
 | roles | id, name, colour, position, built\_in |  |
 | user\_roles | user\_id, role\_id |  |
 | categories | id, uri, slug, name, description, position, visibility | One level only; `parent_id` column added but unused |
-| category\_permissions | category\_id, role\_id, right, effect | right: view, start, post, moderate; effect: allow, deny |
+| category\_permissions | category\_id, role\_id, right, effect | right: view, start, post, moderate; effect: allow, deny (no row = unset). A row with no `category_id` is the role’s server-wide setting |
 | topics | id, uri, category\_id, author\_id, title, slug, state, pinned, forked\_from\_message\_id, message\_count, last\_activity\_at |  |
 | messages | id, uri, topic\_id, author\_id, reply\_to\_id, state, opened\_at, closes\_at, closed\_at, body\_md, body\_html, edited, search\_vector | Ordered by `opened_at` (GM-08) |
 | commits | id, message\_id, position, text, created\_at | The change sent at that Enter (added, edited or deleted text). Written before it is acknowledged (NF-02) |
