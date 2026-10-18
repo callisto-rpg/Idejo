@@ -22,12 +22,69 @@ defmodule Idejo.Access do
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
+  # Built-in roles that always have every right and never depend on email verification.
+  @all_rights ~w(owner administrator)
+
   @doc """
   Lists all roles, highest rank first.
   """
   @spec list_roles() :: [Role.t()]
   def list_roles do
     Repo.all(from r in Role, order_by: [asc: r.position, asc: r.name])
+  end
+
+  @doc """
+  Returns true when the user holds owner or administrator.
+
+  Owners and administrators always have every right and can always use the admin panel
+  (AD-02), whatever their other roles, the permission grid or the state of their email
+  verification, so they can never lock themselves out. `can?/3` must check this first.
+  """
+  @spec administrator?(User.t() | nil) :: boolean()
+  def administrator?(nil), do: false
+
+  def administrator?(%User{id: user_id}) do
+    Repo.exists?(
+      from r in Role,
+        join: ur in UserRole,
+        on: ur.role_id == r.id,
+        where: ur.user_id == ^user_id and r.built_in and r.name in @all_rights
+    )
+  end
+
+  @doc """
+  Returns the roles of several users at once, as a map from user id to the same list
+  `roles_of/1` gives. Used by lists such as the admin users page.
+  """
+  @spec roles_of_users([User.t()]) :: %{Ecto.UUID.t() => [Role.t(), ...]}
+  def roles_of_users(users) do
+    ids = Enum.map(users, & &1.id)
+
+    held =
+      Repo.all(
+        from r in Role,
+          join: ur in UserRole,
+          on: ur.role_id == r.id,
+          where: ur.user_id in ^ids,
+          select: {ur.user_id, r}
+      )
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    guest = built_in_role!(:guest)
+    member = built_in_role!(:member)
+
+    Map.new(users, fn user ->
+      held = Map.get(held, user.id, [])
+
+      # Unverified users act as guest, but keep owner and administrator (never locked out).
+      roles =
+        case user do
+          %User{confirmed_at: nil} -> [guest | Enum.filter(held, &(&1.name in @all_rights))]
+          _ -> [member | held]
+        end
+
+      {user.id, roles |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&{&1.position, &1.name})}
+    end)
   end
 
   @doc """

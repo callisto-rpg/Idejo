@@ -29,6 +29,37 @@ defmodule Idejo.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Gets a single user, or `nil`.
+  """
+  def get_user(id), do: Repo.get(User, id)
+
+  @doc """
+  Lists users for the admin panel (AD-02), newest first, one page at a time.
+
+  Returns `{users, more?}`, where `more?` tells whether a next page exists.
+
+  ## Options
+
+    * `:page` - the page number, from 1. Defaults to 1.
+    * `:per_page` - users per page. Defaults to 50.
+  """
+  @spec list_users(keyword()) :: {[User.t()], boolean()}
+  def list_users(opts \\ []) do
+    per_page = Keyword.get(opts, :per_page, 50)
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    users =
+      Repo.all(
+        from u in User,
+          order_by: [desc: u.created_at, desc: u.id],
+          offset: ^((page - 1) * per_page),
+          limit: ^(per_page + 1)
+      )
+
+    {Enum.take(users, per_page), length(users) > per_page}
+  end
+
   ## Sign-up
 
   @doc """

@@ -21,6 +21,7 @@
       class="w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end"
     >
       <%= if @current_scope do %>
+        <.link :if={@current_scope.administrator?} href={~p"/admin"}>{gettext("Admin")}</.link>
         <span>{@current_scope.user.display_name}</span>
         <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
         <.form for={%{}} action={~p"/users/sign-out"} method="delete">

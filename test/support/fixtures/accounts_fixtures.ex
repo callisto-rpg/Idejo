@@ -45,6 +45,13 @@ defmodule Idejo.AccountsFixtures do
     user
   end
 
+  @doc "A verified user holding the given built-in role, e.g. `:administrator`."
+  def user_with_role_fixture(role, attrs \\ %{}) do
+    user = user_fixture(attrs)
+    :ok = Idejo.Access.grant_role(user, Idejo.Access.built_in_role!(role))
+    user
+  end
+
   def user_scope_fixture(user \\ user_fixture()), do: Scope.for_user(user)
 
   def extract_user_token(fun) do

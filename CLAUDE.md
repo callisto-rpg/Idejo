@@ -82,6 +82,18 @@ if any of the user's roles allows a right, the user has it, even when a higher-r
 denies it (steward decision 2026-10-19; replaces "deny wins" in RP-06). Search and lists
 filter by `:view` in the query, never after loading.
 
+**Owners and administrators always have every right and can never lock themselves out**
+(steward rule, 2026-10-19). `Idejo.Access.administrator?/1` (holds owner or administrator) is
+checked first by `can?/3` and the admin panel, and does not depend on email verification, other
+roles or the permission grid. Every later change must keep it true:
+
+- the permission grid has no deny for owner or administrator (RP-04/RP-05);
+- role assignment cannot remove the last owner, and an administrator cannot remove their own
+  administrator role (RP-06);
+- the last owner cannot delete their account (AC-07) and owners and administrators cannot be
+  banned (MO-02);
+- the command line can always reset the owner's password (AD-09).
+
 ## Conventions
 
 - **SPDX header** on every source file (LI-01):
@@ -113,6 +125,11 @@ filter by `:view` in the query, never after loading.
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
   disconnects the session's LiveViews via `live_socket_id`.
+- **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
+  `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
+  `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
+  `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
+  in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
