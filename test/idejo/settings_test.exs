@@ -16,7 +16,7 @@ defmodule Idejo.SettingsTest do
   @tag req: "AD-02"
   test "AD-02 a setting that was never saved has its default" do
     assert Settings.get(:server_name) == "Idejo"
-    assert Settings.all() == %{server_name: "Idejo"}
+    assert %{server_name: "Idejo"} = Settings.all()
   end
 
   @tag req: "AD-02"

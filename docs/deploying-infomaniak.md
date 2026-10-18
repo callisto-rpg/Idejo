@@ -423,8 +423,8 @@ Never run `idejo down -v`: the `-v` deletes your database and certificates.
 ## Good to know
 
 - **Email:** Infomaniak blocks outgoing port 25 on every VPS (and it cannot be opened on
-  VPS Lite). When Idejo starts sending email (invites, password reset — milestone M1), it
-  will use an SMTP service on port 587 or 465, which is not blocked. Nothing to do for now.
+  VPS Lite). Set up email in **Admin → Email** with an SMTP service on port 587 (STARTTLS)
+  or 465 (TLS), which are not blocked — see "Outgoing email" in `docs/deploying.md`.
 - **Infomaniak support** helps with the Manager, the firewall and DNS, but a VPS is
   "unmanaged": they do not support the software you install on it.
 

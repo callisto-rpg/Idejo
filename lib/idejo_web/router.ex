@@ -83,6 +83,7 @@ defmodule IdejoWeb.Router do
 
     live_session :admin, on_mount: [{IdejoWeb.UserAuth, :require_administrator}] do
       live "/", SettingsLive
+      live "/email", EmailLive
       live "/users", UsersLive
       live "/users/:id", UserLive
     end

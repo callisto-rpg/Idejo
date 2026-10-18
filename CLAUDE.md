@@ -135,6 +135,11 @@ roles or the permission grid. Every later change must keep it true:
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
   `IDEJO_SOURCE_URL`). New pages must use `Layouts.app` so the footer is never missing.
+- **Email** (AD-08): send with `Idejo.Mailer.deliver_email/1`, never `deliver/1`, so production
+  uses the SMTP settings from **Admin → Email** (read at each send). Secret settings are
+  declared with `secret: true` in `Idejo.Settings`: stored encrypted (`Settings.Secret`), never
+  put in a form, audited as "[changed]". Tests can use `Idejo.SMTPCapture` for a real SMTP
+  server.
 - **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
   falling back to "Idejo". Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface.
