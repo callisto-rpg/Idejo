@@ -154,12 +154,56 @@ defmodule IdejoWeb.SP02SessionsTest do
     test "SP-02 signing out disconnects the session's live sockets", %{conn: conn, user: user} do
       conn = sign_in(conn, user)
       token = get_session(conn, :user_token)
-      assert get_session(conn, :live_socket_id) == UserAuth.live_socket_id(token)
+      socket_id = Accounts.session_socket_id(token)
+      assert get_session(conn, :live_socket_id) == UserAuth.live_socket_id(socket_id)
 
-      IdejoWeb.Endpoint.subscribe(UserAuth.live_socket_id(token))
+      IdejoWeb.Endpoint.subscribe(UserAuth.live_socket_id(socket_id))
       conn |> recycle() |> delete(~p"/users/sign-out")
 
       assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    @tag req: "SP-02"
+    test "SP-02 a reissued token keeps the session's socket id, so sign-out still reaches older LiveViews",
+         %{conn: conn, user: user} do
+      conn = sign_in(conn, user, %{"remember_me" => "true"})
+      old_token = get_session(conn, :user_token)
+      live_socket_id = get_session(conn, :live_socket_id)
+
+      # Make the token old enough to be reissued on the next request.
+      offset_user_token(old_token, -8, :day)
+      conn = conn |> recycle() |> get(~p"/")
+      new_token = get_session(conn, :user_token)
+
+      assert new_token != old_token
+      assert get_session(conn, :live_socket_id) == live_socket_id
+      assert Accounts.session_socket_id(new_token) == Accounts.session_socket_id(old_token)
+
+      IdejoWeb.Endpoint.subscribe(live_socket_id)
+      conn |> recycle() |> delete(~p"/users/sign-out")
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+
+    @tag req: "SP-02"
+    test "SP-02 a session restored from the remember-me cookie keeps its socket id", %{
+      conn: conn,
+      user: user
+    } do
+      conn = sign_in(conn, user, %{"remember_me" => "true"})
+      live_socket_id = get_session(conn, :live_socket_id)
+      cookie = conn.resp_cookies[@remember_me_cookie].value
+
+      # A new browser session (cookie only, empty session).
+      conn = build_conn() |> put_req_cookie(@remember_me_cookie, cookie) |> get(~p"/")
+      assert conn.assigns.current_scope.user.id == user.id
+      assert get_session(conn, :live_socket_id) == live_socket_id
+    end
+
+    @tag req: "SP-02"
+    test "SP-02 each sign-in gets its own socket id", %{conn: conn, user: user} do
+      a = conn |> sign_in(user) |> get_session(:live_socket_id)
+      b = build_conn() |> sign_in(user) |> get_session(:live_socket_id)
+      assert a != b
     end
   end
 end

@@ -73,6 +73,12 @@ defmodule IdejoWeb.Router do
     post "/sign-up", UserRegistrationController, :create
     get "/sign-in", UserSessionController, :new
     post "/sign-in", UserSessionController, :create
+
+    # Password reset by email (AC-02).
+    get "/reset-password", UserResetPasswordController, :new
+    post "/reset-password", UserResetPasswordController, :create
+    get "/reset-password/:token", UserResetPasswordController, :edit
+    put "/reset-password/:token", UserResetPasswordController, :update
   end
 
   scope "/users", IdejoWeb do

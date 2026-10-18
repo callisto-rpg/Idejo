@@ -4,9 +4,6 @@
 defmodule IdejoWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :idejo
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
   # The session is stored in a cookie that is encrypted, not only signed, and is never
   # readable by scripts or sent over plain http (SP-02).
   @session_options [

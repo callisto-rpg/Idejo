@@ -49,6 +49,30 @@ defmodule Idejo.Accounts.UserNotifier do
   end
 
   @doc """
+  Delivers the link to set a new password (AC-02).
+  """
+  def deliver_reset_password_instructions(user, url) do
+    deliver(
+      user.email,
+      gettext("Reset your password"),
+      gettext(
+        """
+        Hi %{name},
+
+        Someone asked to reset the password of your account. To choose a new password,
+        visit the link below within one day:
+
+        %{url}
+
+        If it wasn't you, you can ignore this email: your password stays the same.
+        """,
+        name: user.display_name,
+        url: url
+      )
+    )
+  end
+
+  @doc """
   Sends a test email to the given address, to check the SMTP settings (AD-08).
   """
   def deliver_test_email(recipient) do

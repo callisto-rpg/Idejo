@@ -3,7 +3,7 @@
 
 defmodule Idejo.Accounts.UserToken do
   @moduledoc """
-  Session tokens and emailed tokens (email verification).
+  Session tokens and emailed tokens (email verification, password reset).
   """
   use Ecto.Schema
   import Ecto.Query
@@ -13,6 +13,8 @@ defmodule Idejo.Accounts.UserToken do
   @rand_size 32
 
   @confirm_validity_in_days 7
+  # Short, since whoever holds the link can set a new password.
+  @reset_password_validity_in_days 1
   @session_validity_in_days 14
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -21,6 +23,8 @@ defmodule Idejo.Accounts.UserToken do
     field :token, :binary
     field :context, :string
     field :sent_to, :string
+    # Session tokens only: the browser session's live socket id (see IdejoWeb.UserAuth).
+    field :socket_id, :string
     belongs_to :user, Idejo.Accounts.User
 
     timestamps(type: :utc_datetime, updated_at: false)
@@ -34,9 +38,10 @@ defmodule Idejo.Accounts.UserToken do
   Session tokens are stored in the database, not only in the signed cookie, so that
   individual sessions can be expired.
   """
-  def build_session_token(user) do
+  def build_session_token(user, socket_id) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, %UserToken{token: token, context: "session", user_id: user.id}}
+
+    {token, %UserToken{token: token, context: "session", user_id: user.id, socket_id: socket_id}}
   end
 
   @doc """
@@ -78,21 +83,21 @@ defmodule Idejo.Accounts.UserToken do
   end
 
   @doc """
-  Checks if the email verification token is valid and returns its lookup query.
+  Checks if an emailed token is valid and returns its lookup query.
 
-  If found, the query returns a tuple of the form `{user, token}`. The token must match
-  its hashed counterpart, be younger than @confirm_validity_in_days and have been sent
-  to the user's current email.
+  If found, the query returns a tuple of the form `{user, token}`. The token must match its
+  hashed counterpart, be younger than its context allows and have been sent to the user's
+  current email. Contexts: `"confirm"` (7 days) and `"reset_password"` (1 day).
   """
-  def verify_confirm_token_query(token) do
+  def verify_email_token_query(token, context) when context in ["confirm", "reset_password"] do
     case Base.url_decode64(token, padding: false) do
       {:ok, decoded_token} ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in by_token_and_context_query(hashed_token, "confirm"),
+          from token in by_token_and_context_query(hashed_token, context),
             join: user in assoc(token, :user),
-            where: token.inserted_at > ago(^@confirm_validity_in_days, "day"),
+            where: token.inserted_at > ago(^validity_in_days(context), "day"),
             where: token.sent_to == user.email,
             select: {user, token}
 
@@ -102,6 +107,9 @@ defmodule Idejo.Accounts.UserToken do
         :error
     end
   end
+
+  defp validity_in_days("confirm"), do: @confirm_validity_in_days
+  defp validity_in_days("reset_password"), do: @reset_password_validity_in_days
 
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]
