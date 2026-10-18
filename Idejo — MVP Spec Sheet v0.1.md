@@ -41,7 +41,7 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 
 | ID | v0.1 form |
 | --- | --- |
-| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 45 s window not reset by appends that only limits when a new message can start, Ctrl+Enter new line or new message, Shift+Enter line break, no size limit, pencil icon and countdown, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
+| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 45 s window not reset by appends that only limits when a new message can start, Ctrl+Enter new line or new message, Shift+Enter line break, `. ` added after unpunctuated text, no size limit, no visible open-state chrome, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
 | GM-15 | Window length set server-wide only (default 45 s) |
 | GM-16 | As v1: moderators can close an open message |
 | TP-01, TP-02 | As v1: title, first message (tags come later) |
@@ -100,10 +100,10 @@ Three flows cover everything the pilot must do; each becomes an end-to-end test.
 
 **Live conversation**
 
-1. A member opens the topic and presses Enter after a first line: the message appears for everyone with a pencil icon; the author sees 45 s counting down. The sent text stays in the composer, in higher contrast.
-2. They keep typing and pressing Enter; each part joins the same message on the same line. Ctrl+Enter continues on a new line of the same message. Another member replies meanwhile; the reply appears below the author’s composer, which moves up and keeps growing.
+1. A member opens the topic and presses Enter after a first line: the message appears for everyone. The sent text stays in the composer, in higher contrast, with `. ` added; the 45 s window starts, unseen.
+2. They keep typing as in any chat and pressing Enter; each part joins the same message on the same line. Ctrl+Enter continues on a new line of the same message. Another member replies meanwhile; the reply appears below the author’s composer, which moves up and keeps growing.
 3. The author fixes a typo in an earlier line, right in the composer; the changed text shows as unsent until Enter, then a discreet “view earlier version” tag appears.
-4. The countdown ends: the author is still typing in the same message and Enter still adds to it. Only now does Ctrl+Enter close it (the pencil disappears) and start a new message on a new line.
+4. The window ends: the author is still typing in the same message and Enter still adds to it. Only now does Ctrl+Enter close it and start a new message on a new line.
 5. A side question comes up: someone selects that message and chooses “New topic from this”; the new topic links back to it.
 
 ## 5. Screens
@@ -114,7 +114,7 @@ Ten screens make up v0.1; public ones are server-rendered and work without JavaS
 | --- | --- | --- |
 | Home | Server name, category list with description, topic count and last activity | Yes |
 | Category | Topic list (pinned first), “New topic” button | Yes |
-| Topic | Title, messages with replies, pencil icons, “view earlier version” tags; composer in place of the author’s open message, with countdown and “new line” button | Yes (read only) |
+| Topic | Title, messages with replies (avatar, display name and role above each), “view earlier version” tags; composer in place of the author’s open message: a plain text box whose placeholder lists the keys | Yes (read only) |
 | New topic | Title, first-message editor with preview | No |
 | Search | Query box, category filter, results with excerpts | Yes |
 | Notifications | Mentions and replies, unread first | No |
@@ -159,7 +159,7 @@ Six milestones, in order; each ends with its exit check passing in CI before the
    - Exit: the “admin sets up the server” flow passes as an automated test.
 3. **M2 — Topics:** new topic, topic list, closed messages, inline replies, permalinks, public no-JS pages, sitemap.
    - Exit: the “member starts a topic” flow passes; a public topic renders without JavaScript.
-4. **M3 — Growing messages:** live delivery and catch-up, open/append in the same composer, window timers, keys, composer in place, pencil icon and countdown, edits with earlier versions, early close, screen-reader announcements.
+4. **M3 — Growing messages:** live delivery and catch-up, open/append in the same composer, window timers, keys, composer in place with no chrome, `. ` after unpunctuated text, edits with earlier versions, early close, screen-reader announcements.
    - Exit: all GM tests pass; the “live conversation” flow passes; a server restart mid-message loses nothing.
 5. **M4 — Around the conversation:** @mentions, in-app notifications, unread tracking, follow, fork to new topic, image uploads, search.
    - Exit: search finds a message by a word added in its last commit; a growing message produces one notification.
@@ -179,4 +179,4 @@ v0.1 is ready for the pilot when every box below is ticked.
 - [ ] Accessibility check of the topic page with keyboard and a screen reader.
 - [ ] Public topic readable with JavaScript off; sitemap reachable.
 - [ ] AGPL source link, NOTICE attribution and CLA check in place.
-- [ ] Admin guide and a one-page member guide (keys and the pencil icon) written.
+- [ ] Admin guide and a one-page member guide (keys and the composer) written.
