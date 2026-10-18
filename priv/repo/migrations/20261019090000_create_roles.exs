@@ -65,13 +65,6 @@ defmodule Idejo.Repo.Migrations.CreateRoles do
     FOR EACH ROW WHEN (OLD.built_in)
     EXECUTE FUNCTION protect_built_in_roles()
     """
-
-    # Accounts verified before this migration become members, as verification now grants.
-    execute """
-    INSERT INTO user_roles (user_id, role_id)
-    SELECT users.id, roles.id FROM users, roles
-    WHERE users.confirmed_at IS NOT NULL AND roles.name = 'member'
-    """
   end
 
   def down do

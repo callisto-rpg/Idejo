@@ -3,8 +3,8 @@
 
 defmodule Idejo.Access.UserRole do
   @moduledoc """
-  A role held by a user. Guest is never stored: it is the role of visitors and of users
-  who have not verified their email address.
+  A role held by a user. Guest and member are never stored: guest is the role of visitors
+  and unverified users, member that of every verified user (see `Idejo.Access.roles_of/1`).
   """
   use Ecto.Schema
 
