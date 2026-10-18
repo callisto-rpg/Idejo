@@ -29,11 +29,16 @@ defmodule IdejoWeb.AdminLiveTest do
     end
 
     @tag req: "AD-02"
-    test "AD-02 an administrator who has not verified their email is refused", %{conn: conn} do
-      user = unconfirmed_user_fixture()
-      :ok = Access.grant_role(user, Access.built_in_role!(:administrator))
+    test "AD-02 owners and administrators get in even before verifying their email", %{
+      conn: conn
+    } do
+      for role <- [:owner, :administrator] do
+        user = unconfirmed_user_fixture()
+        :ok = Access.grant_role(user, Access.built_in_role!(role))
 
-      assert redirected_to(conn |> log_in_user(user) |> get(~p"/admin")) == ~p"/"
+        conn = conn |> log_in_user(user) |> get(~p"/admin")
+        assert html_response(conn, 200) =~ "Server name"
+      end
     end
 
     @tag req: "AD-02"
@@ -120,6 +125,18 @@ defmodule IdejoWeb.AdminLiveTest do
       assert lv |> element("#user-#{unverified.id}") |> render() =~ "Guest"
       assert lv |> element("#user-#{moderator.id}") |> render() =~ "Moderator, Member"
       assert lv |> element("tbody") |> render() =~ "Administrator, Member"
+    end
+
+    @tag req: "AD-02"
+    test "AD-02 an unverified administrator is listed with the administrator role", %{
+      conn: conn
+    } do
+      user = unconfirmed_user_fixture()
+      :ok = Access.grant_role(user, Access.built_in_role!(:administrator))
+      :ok = Access.grant_role(user, Access.built_in_role!(:moderator))
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/users")
+      assert lv |> element("#user-#{user.id}") |> render() =~ "Administrator, Guest"
     end
 
     @tag req: "AD-02"

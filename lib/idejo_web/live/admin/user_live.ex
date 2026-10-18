@@ -15,7 +15,11 @@ defmodule IdejoWeb.Admin.UserLive do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %{} = user <- Accounts.get_user(id) do
       {:ok,
-       assign(socket, page_title: user.display_name, user: user, roles: Access.roles_of(user))}
+       assign(socket,
+         page_title: user.display_name,
+         user: user,
+         roles: Access.roles_of_users([user])[user.id]
+       )}
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Accounts.User
     end

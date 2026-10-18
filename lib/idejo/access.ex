@@ -22,6 +22,9 @@ defmodule Idejo.Access do
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
+  # Built-in roles that always have every right and never depend on email verification.
+  @all_rights ~w(owner administrator)
+
   @doc """
   Lists all roles, highest rank first.
   """
@@ -31,14 +34,22 @@ defmodule Idejo.Access do
   end
 
   @doc """
-  Returns true when the user may use the admin panel (AD-02): they hold owner or
-  administrator and have verified their email address.
+  Returns true when the user holds owner or administrator.
+
+  Owners and administrators always have every right and can always use the admin panel
+  (AD-02), whatever their other roles, the permission grid or the state of their email
+  verification, so they can never lock themselves out. `can?/3` must check this first.
   """
   @spec administrator?(User.t() | nil) :: boolean()
   def administrator?(nil), do: false
 
-  def administrator?(%User{} = user) do
-    Enum.any?(roles_of(user), &(&1.built_in and &1.name in ~w(owner administrator)))
+  def administrator?(%User{id: user_id}) do
+    Repo.exists?(
+      from r in Role,
+        join: ur in UserRole,
+        on: ur.role_id == r.id,
+        where: ur.user_id == ^user_id and r.built_in and r.name in @all_rights
+    )
   end
 
   @doc """
@@ -47,7 +58,7 @@ defmodule Idejo.Access do
   """
   @spec roles_of_users([User.t()]) :: %{Ecto.UUID.t() => [Role.t(), ...]}
   def roles_of_users(users) do
-    ids = for %User{confirmed_at: %DateTime{}, id: id} <- users, do: id
+    ids = Enum.map(users, & &1.id)
 
     held =
       Repo.all(
@@ -62,13 +73,17 @@ defmodule Idejo.Access do
     guest = built_in_role!(:guest)
     member = built_in_role!(:member)
 
-    Map.new(users, fn
-      %User{confirmed_at: nil, id: id} ->
-        {id, [guest]}
+    Map.new(users, fn user ->
+      held = Map.get(held, user.id, [])
 
-      %User{id: id} ->
-        roles = [member | Map.get(held, id, [])] |> Enum.uniq_by(& &1.id)
-        {id, Enum.sort_by(roles, &{&1.position, &1.name})}
+      # Unverified users act as guest, but keep owner and administrator (never locked out).
+      roles =
+        case user do
+          %User{confirmed_at: nil} -> [guest | Enum.filter(held, &(&1.name in @all_rights))]
+          _ -> [member | held]
+        end
+
+      {user.id, roles |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&{&1.position, &1.name})}
     end)
   end
 
