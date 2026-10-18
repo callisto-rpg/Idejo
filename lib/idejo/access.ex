@@ -99,22 +99,14 @@ defmodule Idejo.Access do
   @doc """
   Returns the roles a visitor or user acts with, highest rank first.
 
-  `nil` (a visitor) and a user with an unverified email address get only guest. A verified
-  user gets member plus every role they hold.
+  `nil` (a visitor) gets only guest. A user with an unverified email address acts as guest,
+  but keeps owner or administrator if they hold it, so owners and administrators are never
+  shown or treated as less than they are. A verified user gets member plus every role they
+  hold.
   """
   @spec roles_of(User.t() | nil) :: [Role.t(), ...]
   def roles_of(nil), do: [built_in_role!(:guest)]
-  def roles_of(%User{confirmed_at: nil}), do: [built_in_role!(:guest)]
-
-  def roles_of(%User{id: user_id}) do
-    Repo.all(
-      from r in Role,
-        left_join: ur in UserRole,
-        on: ur.role_id == r.id and ur.user_id == ^user_id,
-        where: not is_nil(ur.user_id) or (r.built_in and r.name == "member"),
-        order_by: [asc: r.position, asc: r.name]
-    )
-  end
+  def roles_of(%User{id: id} = user), do: Map.fetch!(roles_of_users([user]), id)
 
   @doc """
   Gives a role to a user. Giving a role the user already holds is a no-op.

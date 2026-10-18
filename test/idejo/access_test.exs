@@ -78,6 +78,34 @@ defmodule Idejo.AccessTest do
     end
 
     @tag req: "RP-01"
+    test "RP-01 an unverified owner or administrator keeps that role, next to guest" do
+      for role <- [:owner, :administrator] do
+        user = unconfirmed_user_fixture()
+        :ok = Access.grant_role(user, Access.built_in_role!(role))
+        :ok = Access.grant_role(user, Access.built_in_role!(:moderator))
+
+        # Other held roles wait for verification; owner and administrator never do.
+        assert names(Access.roles_of(user)) == [Atom.to_string(role), "guest"]
+      end
+    end
+
+    @tag req: "RP-01"
+    test "RP-01 roles_of/1 and roles_of_users/1 always agree" do
+      users = [
+        unconfirmed_user_fixture(),
+        user_fixture(),
+        user_with_role_fixture(:moderator),
+        unconfirmed_user_fixture() |> tap(&Access.grant_role(&1, Access.built_in_role!(:owner)))
+      ]
+
+      by_user = Access.roles_of_users(users)
+
+      for user <- users do
+        assert names(Access.roles_of(user)) == names(by_user[user.id])
+      end
+    end
+
+    @tag req: "RP-01"
     test "RP-01 every verified user holds member" do
       user = user_fixture()
       assert names(Access.roles_of(user)) == ["member"]

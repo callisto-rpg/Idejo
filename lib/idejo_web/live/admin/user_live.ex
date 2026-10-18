@@ -18,7 +18,7 @@ defmodule IdejoWeb.Admin.UserLive do
        assign(socket,
          page_title: user.display_name,
          user: user,
-         roles: Access.roles_of_users([user])[user.id]
+         roles: Access.roles_of(user)
        )}
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Accounts.User
