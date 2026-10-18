@@ -44,6 +44,9 @@ defmodule IdejoWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
+      # Composer prototype, ahead of M3 (in-memory, see Idejo.Messages.DemoTopic).
+      live "/topic", IdejoWeb.DemoTopicLive
+
       live_dashboard "/dashboard",
         metrics: IdejoWeb.Telemetry,
         csp_nonce_assign_key: %{script: :script_csp_nonce, style: :style_csp_nonce}

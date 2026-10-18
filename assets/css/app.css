@@ -108,3 +108,55 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* Composer (GM-02, GM-10): a transparent textarea over a backdrop that draws
+   sent text in higher contrast than unsent text. Both share the same box. */
+.composer {
+  position: relative;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-field);
+  background: var(--color-base-100);
+}
+.composer:focus-within {
+  border-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+.composer-backdrop,
+.composer-input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  line-height: 1.5;
+  letter-spacing: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  border: 0;
+}
+.composer-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.composer-input {
+  position: relative;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-base-content);
+  outline: none;
+}
+.composer-input::placeholder {
+  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+.composer-input::selection {
+  background: color-mix(in oklab, var(--color-primary) 30%, transparent);
+}
+.composer-sent {
+  color: var(--color-base-content);
+}
+.composer-unsent {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}

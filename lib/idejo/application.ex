@@ -15,6 +15,7 @@ defmodule Idejo.Application do
       Idejo.Repo,
       {DNSCluster, query: Application.get_env(:idejo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Idejo.PubSub},
+      Idejo.Messages.DemoTopic,
       # Start a worker by calling: Idejo.Worker.start_link(arg)
       # {Idejo.Worker, arg},
       # Start to serve requests, typically the last entry
