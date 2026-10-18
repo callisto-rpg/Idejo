@@ -96,7 +96,13 @@ by `:view` in the query, never after loading.
 - **All UI strings via Gettext** (`gettext/1`), never hard-coded (AX-05 readiness).
 - **Content stored twice**: Markdown source and sanitised HTML (FD-03).
 - **Every user, category, topic and message gets a stable `uri`** at creation (FD-01), and
-  significant events write an `activities` row (FD-02).
+  significant events write an `activities` row (FD-02). Use `Idejo.Federation`: primary keys
+  are UUIDv7 from `generate_id/0`, the URI comes from `uri/2` (`<base_uri>/u/<id>`, `/c/`,
+  `/t/`, `/m/`), and `activity_changeset/1` is inserted in the same transaction as the change.
+- **Email verification gates taking part** (AC-01): unverified users can sign in, but only
+  `Idejo.Accounts.confirmed?/1` users get posting rights (enforced through roles from RP-01).
+- Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
+  web module a context may reference.
 - **Admin changes** to settings, roles or permissions write an `audit_log` row (SP-06).
 - Contexts expose plain functions returning `{:ok, _} | {:error, _}`; LiveViews stay thin.
 - No new dependency without a licence check: MIT, BSD, Apache-2.0 or similar only (LI-06).

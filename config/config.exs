@@ -10,9 +10,29 @@
 # General application configuration
 import Config
 
+config :idejo, :scopes,
+  user: [
+    default: true,
+    module: Idejo.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :binary_id,
+    schema_table: :users,
+    test_data_fixture: Idejo.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :idejo,
   ecto_repos: [Idejo.Repo],
   generators: [timestamp_type: :utc_datetime]
+
+# Base of every stable URI (FD-01). Set from PHX_HOST in production; never change it
+# once a server has content, since URIs are stored at creation.
+config :idejo, :base_uri, "http://localhost:4000"
+
+# Sender of account emails until SMTP settings move to the admin panel (AD-08).
+config :idejo, :mail_from, {"Idejo", "noreply@localhost"}
 
 # Configure the endpoint
 config :idejo, IdejoWeb.Endpoint,

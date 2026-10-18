@@ -1,0 +1,238 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/idejo_web/live/demo_topic_live.ex:91
+#, elixir-autogen, elixir-format
+msgid "(still being written)"
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:20
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr ""
+
+#: lib/idejo_web/components/core_components.ex:379
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:11
+#, elixir-autogen, elixir-format
+msgid "Already have one?"
+msgstr ""
+
+#: lib/idejo_web/components/layouts.ex:105
+#: lib/idejo_web/components/layouts.ex:120
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr ""
+
+#: lib/idejo_web/live/demo_topic_live.ex:48
+#, elixir-autogen, elixir-format
+msgid "Composer prototype"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:53
+#, elixir-autogen, elixir-format
+msgid "Create account"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Create an account"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:13
+#, elixir-autogen, elixir-format
+msgid "Create one"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:52
+#, elixir-autogen, elixir-format
+msgid "Creating account…"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:22
+#, elixir-autogen, elixir-format
+msgid "Development mail adapter: sent emails are in"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:40
+#, elixir-autogen, elixir-format
+msgid "Display name"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:23
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:31
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:33
+#, elixir-autogen, elixir-format
+msgid "Hi %{name},\n\nPlease verify your email address by visiting the link below:\n\n%{url}\n\nIf you didn't create an account, you can ignore this email.\n"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_controller.ex:24
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "Keep me signed in"
+msgstr ""
+
+#: lib/idejo_web/live/demo_topic_live.ex:24
+#, elixir-autogen, elixir-format
+msgid "Member"
+msgstr ""
+
+#: lib/idejo_web/live/demo_topic_live.ex:60
+#, elixir-autogen, elixir-format
+msgid "Message"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:11
+#, elixir-autogen, elixir-format
+msgid "No account yet?"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:40
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:47
+#, elixir-autogen, elixir-format
+msgid "Password (at least 12 characters)"
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:40
+#, elixir-autogen, elixir-format
+msgid "Please verify your email address to take part. Check your inbox for the link."
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:43
+#, elixir-autogen, elixir-format
+msgid "Send the link again"
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:31
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:13
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:9
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:47
+#, elixir-autogen, elixir-format
+msgid "Sign in"
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:27
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr ""
+
+#: lib/idejo_web/components/layouts/root.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "Sign up"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Signed out."
+msgstr ""
+
+#: lib/idejo_web/components/layouts.ex:112
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:26
+#, elixir-autogen, elixir-format
+msgid "This verification link is invalid or has expired."
+msgstr ""
+
+#: lib/idejo_web/live/demo_topic_live.ex:62
+#, elixir-autogen, elixir-format
+msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_html/new.html.heex:32
+#, elixir-autogen, elixir-format
+msgid "Username (for @mentions)"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_html/edit.html.heex:13
+#, elixir-autogen, elixir-format
+msgid "Verify my email address"
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:32
+#: lib/idejo_web/controllers/user_confirmation_html/edit.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Verify your email address"
+msgstr ""
+
+#: lib/idejo_web/components/layouts.ex:97
+#, elixir-autogen, elixir-format
+msgid "We can't find the internet"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "We could not send the email. Please try again later."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:37
+#, elixir-autogen, elixir-format
+msgid "We sent a new link to %{email}."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_controller.ex:17
+#, elixir-autogen, elixir-format
+msgid "Welcome back!"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_controller.ex:36
+#, elixir-autogen, elixir-format
+msgid "Welcome! We could not send the verification email. Please try again in a moment."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_registration_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Welcome! We sent a link to %{email}; open it to verify your email address."
+msgstr ""
+
+#: lib/idejo_web/user_auth.ex:199
+#, elixir-autogen, elixir-format
+msgid "You must sign in to access this page."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:38
+#, elixir-autogen, elixir-format
+msgid "Your email address is already verified."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_confirmation_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "Your email address is verified."
+msgstr ""
+
+#: lib/idejo_web/components/core_components.ex:85
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:23
+#, elixir-autogen, elixir-format
+msgid "the mailbox"
+msgstr ""

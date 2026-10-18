@@ -1,0 +1,57 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm">
+    <div class="text-center">
+      <.header>
+        {gettext("Create an account")}
+        <:subtitle>
+          {gettext("Already have one?")}
+          <.link href={~p"/users/sign-in"} class="font-semibold text-brand hover:underline">
+            {gettext("Sign in")}
+          </.link>
+        </:subtitle>
+      </.header>
+    </div>
+
+    <.form :let={f} for={@changeset} action={~p"/users/sign-up"}>
+      <.input
+        field={f[:email]}
+        type="email"
+        label={gettext("Email")}
+        autocomplete="email"
+        spellcheck="false"
+        required
+        autofocus
+      />
+      <.input
+        field={f[:username]}
+        type="text"
+        label={gettext("Username (for @mentions)")}
+        autocomplete="username"
+        spellcheck="false"
+        required
+      />
+      <.input
+        field={f[:display_name]}
+        type="text"
+        label={gettext("Display name")}
+        autocomplete="name"
+        required
+      />
+      <.input
+        field={f[:password]}
+        type="password"
+        label={gettext("Password (at least 12 characters)")}
+        autocomplete="new-password"
+        required
+      />
+
+      <.button phx-disable-with={gettext("Creating account…")} class="btn btn-primary w-full">
+        {gettext("Create account")}
+      </.button>
+    </.form>
+  </div>
+</Layouts.app>

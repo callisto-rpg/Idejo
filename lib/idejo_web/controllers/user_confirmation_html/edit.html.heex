@@ -1,0 +1,17 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm">
+    <div class="text-center">
+      <.header>{gettext("Verify your email address")}</.header>
+    </div>
+
+    <.form for={%{}} id="confirmation_form" action={~p"/users/confirm/#{@token}"}>
+      <.button class="btn btn-primary w-full">
+        {gettext("Verify my email address")}
+      </.button>
+    </.form>
+  </div>
+</Layouts.app>

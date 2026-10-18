@@ -3,6 +3,9 @@
 
 import Config
 
+# Only in tests, lower the Argon2id cost so the suite stays fast
+config :argon2_elixir, t_cost: 1, m_cost: 8
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used
