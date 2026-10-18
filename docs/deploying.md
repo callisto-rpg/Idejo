@@ -20,6 +20,9 @@ in three Docker containers defined in `deploy/docker-compose.yml`:
 
 The server only needs **Docker** and **git**.
 
+Using **Infomaniak**? Follow the beginner's walkthrough in
+[deploying-infomaniak.md](deploying-infomaniak.md) instead.
+
 ## What you need before you start
 
 - **A server (VPS)** running **Ubuntu 24.04 LTS**, with at least **2 vCPU and 2 GB RAM**
