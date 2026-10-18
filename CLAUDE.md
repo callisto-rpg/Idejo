@@ -118,7 +118,8 @@ reuse lint                         # SPDX headers (pip install reuse)
 mix precommit                      # everything above that CI runs (alias in mix.exs)
 ```
 
-Production bundle: `deploy/` (see `deploy/docker-compose.yml`).
+Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:
+`docs/deploying.md`.
 
 ## Milestones (MVP §7)
 

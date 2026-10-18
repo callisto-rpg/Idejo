@@ -6,9 +6,10 @@ SPDX-PackageDownloadLocation = "https://idejo.org"
 # Files that cannot carry an SPDX comment header (LI-01).
 [[annotations]]
 path = [
-  "*.md",
-  "*.pdf",
+  "**/*.md",
+  "**/*.pdf",
   "NOTICE",
+  ".sobelow-conf",
   ".tool-versions",
   ".gitattributes",
   ".gitignore",

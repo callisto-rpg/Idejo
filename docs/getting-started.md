@@ -94,7 +94,9 @@ cp deploy/.env.example deploy/.env  # fill in domain, secrets
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 ```
 
-On a server whose DNS points at `IDEJO_DOMAIN`, the app is served over HTTPS.
+On a server whose DNS points at `IDEJO_DOMAIN`, the app is served over HTTPS. For the full
+server setup (firewall, Docker, configuration, updates, backups), see
+[deploying.md](deploying.md).
 
 ## 7. Before the first pull request
 
