@@ -23,6 +23,8 @@ defmodule Idejo.Accounts.User do
     field :status, :string, default: "active"
     field :origin, :string, default: "local"
     field :confirmed_at, :utc_datetime
+    # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
+    field :invite_code, :string, virtual: true
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -36,7 +38,7 @@ defmodule Idejo.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :username, :display_name, :password])
+    |> cast(attrs, [:email, :username, :display_name, :password, :invite_code])
     |> validate_required([:id, :uri])
     |> validate_email()
     |> validate_username()

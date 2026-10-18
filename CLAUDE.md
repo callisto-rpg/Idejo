@@ -122,6 +122,10 @@ roles or the permission grid. Every later change must keep it true:
   `/t/`, `/m/`), and `activity_changeset/1` is inserted in the same transaction as the change.
 - **Email verification gates taking part** (AC-01): unverified users can sign in, but only
   `Idejo.Accounts.confirmed?/1` users get posting rights (enforced through roles from RP-01).
+- **Registration** (AC-02): `Accounts.register_user/2` enforces the `registration_mode` setting
+  (open or invite-only) itself, so no sign-up path can skip it. Invites are single-use, valid
+  7 days, made by administrators in **Admin → Invites**; the link is
+  `/users/sign-up?invite=CODE`. Test fixtures create users with `skip_invite: true`.
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and

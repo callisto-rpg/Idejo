@@ -16,7 +16,20 @@
       </.header>
     </div>
 
+    <p :if={@invite_only?} class="alert alert-info my-4">
+      {gettext("Joining is by invitation. Use the link or code you were given.")}
+    </p>
+
     <.form :let={f} for={@changeset} action={~p"/users/sign-up"}>
+      <.input
+        :if={@invite_only?}
+        field={f[:invite_code]}
+        type="text"
+        label={gettext("Invite code")}
+        autocomplete="off"
+        spellcheck="false"
+        required
+      />
       <.input
         field={f[:email]}
         type="email"

@@ -115,7 +115,7 @@ defmodule IdejoWeb.Layouts do
   """
   attr :flash, :map, required: true
   attr :current_scope, :map, required: true
-  attr :section, :atom, required: true, values: [:settings, :email, :users]
+  attr :section, :atom, required: true, values: [:settings, :email, :users, :invites]
   slot :inner_block, required: true
 
   def admin(assigns) do
@@ -142,6 +142,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :users && "page"}
         >
           {gettext("Users")}
+        </.link>
+        <.link
+          navigate={~p"/admin/invites"}
+          class={["tab", @section == :invites && "tab-active"]}
+          aria-current={@section == :invites && "page"}
+        >
+          {gettext("Invites")}
         </.link>
       </nav>
       {render_slot(@inner_block)}

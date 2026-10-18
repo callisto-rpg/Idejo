@@ -44,6 +44,15 @@ defmodule IdejoWeb.Admin.SettingsLive do
 
       <.form for={@form} id="settings-form" phx-change="validate" phx-submit="save">
         <.input field={@form[:server_name]} type="text" label={gettext("Server name")} required />
+        <.input
+          field={@form[:registration_mode]}
+          type="select"
+          label={gettext("Who can sign up")}
+          options={[
+            {gettext("Anyone"), "open"},
+            {gettext("Only people with an invite"), "invite_only"}
+          ]}
+        />
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>
