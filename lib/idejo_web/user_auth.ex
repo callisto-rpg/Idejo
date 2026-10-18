@@ -93,7 +93,12 @@ defmodule IdejoWeb.UserAuth do
       conn = fetch_cookies(conn, encrypted: [@remember_me_cookie])
 
       if token = conn.cookies[@remember_me_cookie] do
-        {token, conn |> put_token_in_session(token) |> put_session(:user_remember_me, true)}
+        socket_id = Accounts.session_socket_id(token) || Accounts.new_session_socket_id()
+
+        {token,
+         conn
+         |> put_token_in_session(token, socket_id)
+         |> put_session(:user_remember_me, true)}
       else
         nil
       end
@@ -118,13 +123,17 @@ defmodule IdejoWeb.UserAuth do
   # When the session is created, rather than extended, the renew_session
   # function will clear the session to avoid fixation attacks. See the
   # renew_session function to customize this behaviour.
+  #
+  # Extending keeps the session's socket id, so signing out still disconnects the LiveViews
+  # opened before the token was reissued.
   defp create_or_extend_session(conn, user, params) do
-    token = Accounts.generate_user_session_token(user)
     remember_me = get_session(conn, :user_remember_me)
+    conn = renew_session(conn, user)
+    socket_id = session_socket_id(conn) || Accounts.new_session_socket_id()
+    token = Accounts.generate_user_session_token(user, socket_id)
 
     conn
-    |> renew_session(user)
-    |> put_token_in_session(token)
+    |> put_token_in_session(token, socket_id)
     |> maybe_write_remember_me_cookie(token, params, remember_me)
   end
 
@@ -173,16 +182,32 @@ defmodule IdejoWeb.UserAuth do
   end
 
   # The live socket id lets sign-out disconnect every LiveView of this session (SP-02).
-  defp put_token_in_session(conn, token) do
+  defp put_token_in_session(conn, token, socket_id) do
     conn
     |> put_session(:user_token, token)
-    |> put_session(:live_socket_id, live_socket_id(token))
+    |> put_session(:live_socket_id, live_socket_id(socket_id))
+  end
+
+  defp session_socket_id(conn) do
+    case get_session(conn, :live_socket_id) do
+      "users_sessions:" <> socket_id -> socket_id
+      _ -> nil
+    end
   end
 
   @doc """
-  Returns the PubSub topic of the LiveView sockets opened with the given session token.
+  Returns the PubSub topic of the LiveView sockets of a browser session.
   """
-  def live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
+  def live_socket_id(socket_id), do: "users_sessions:" <> socket_id
+
+  @doc """
+  Disconnects the LiveViews of the given browser sessions, e.g. after a password reset ended
+  them. Their next mount finds no valid session.
+  """
+  @spec disconnect_sessions([String.t()]) :: :ok
+  def disconnect_sessions(socket_ids) do
+    Enum.each(socket_ids, &IdejoWeb.Endpoint.broadcast(live_socket_id(&1), "disconnect", %{}))
+  end
 
   @doc """
   Plug for routes that require the user to not be authenticated.

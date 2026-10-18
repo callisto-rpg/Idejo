@@ -226,7 +226,7 @@ defmodule Idejo.Accounts do
   """
   @spec confirm_user(String.t()) :: {:ok, User.t()} | {:error, :invalid_token}
   def confirm_user(token) when is_binary(token) do
-    with {:ok, query} <- UserToken.verify_confirm_token_query(token),
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
          {user, _token} <- Repo.one(query) do
       Repo.transact(fn -> confirm_and_delete_tokens(user) end)
     else
@@ -241,15 +241,102 @@ defmodule Idejo.Accounts do
     end
   end
 
+  ## Password reset (AC-02)
+
+  @doc """
+  Emails a password reset link, valid for one day, to the user.
+
+  `reset_url_fun` receives the encoded token and returns the link.
+  """
+  def deliver_user_reset_password_instructions(%User{} = user, reset_url_fun)
+      when is_function(reset_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    Repo.insert!(user_token)
+    UserNotifier.deliver_reset_password_instructions(user, reset_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Gets the user with an email address, or `nil`.
+  """
+  def get_user_by_email(email) when is_binary(email), do: Repo.get_by(User, email: email)
+
+  @doc """
+  Gets the user a valid password reset token was sent to, or `nil`.
+  """
+  @spec get_user_by_reset_password_token(String.t()) :: User.t() | nil
+  def get_user_by_reset_password_token(token) when is_binary(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "reset_password"),
+         {user, _token} <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Returns a changeset for the new-password form.
+  """
+  def change_user_password(%User{} = user, attrs \\ %{}) do
+    User.password_changeset(user, attrs, hash_password: false)
+  end
+
+  @doc """
+  Sets a new password and ends every session of the user (SP-02): all their tokens, sessions
+  and emailed links alike, are deleted in the same transaction.
+
+  Returns the socket ids of the ended sessions, so the web layer can disconnect their
+  LiveViews.
+  """
+  @spec reset_user_password(User.t(), map()) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, Ecto.Changeset.t()}
+  def reset_user_password(%User{} = user, attrs) do
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.update(User.password_changeset(user, attrs)) do
+        tokens = from(t in UserToken, where: t.user_id == ^user.id)
+
+        socket_ids =
+          Repo.all(
+            from t in tokens,
+              where: t.context == "session" and not is_nil(t.socket_id),
+              distinct: true,
+              select: t.socket_id
+          )
+
+        Repo.delete_all(tokens)
+        {:ok, {user, socket_ids}}
+      end
+    end)
+  end
+
   ## Session
 
   @doc """
-  Generates a session token.
+  Makes a new id for a browser session. LiveViews opened in the session join a topic built
+  from it, so they can be disconnected together.
   """
-  def generate_user_session_token(user) do
-    {token, user_token} = UserToken.build_session_token(user)
+  @spec new_session_socket_id() :: String.t()
+  def new_session_socket_id, do: Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
+
+  @doc """
+  Generates a session token for the browser session `socket_id`. A reissued token keeps the
+  socket id of the session it replaces.
+  """
+  def generate_user_session_token(user, socket_id \\ new_session_socket_id()) do
+    {token, user_token} = UserToken.build_session_token(user, socket_id)
     Repo.insert!(user_token)
     token
+  end
+
+  @doc """
+  Returns the browser session's socket id stored with a session token, or `nil`.
+  """
+  @spec session_socket_id(binary()) :: String.t() | nil
+  def session_socket_id(token) do
+    Repo.one(
+      from t in UserToken,
+        where: t.token == ^token and t.context == "session",
+        select: t.socket_id
+    )
   end
 
   @doc """

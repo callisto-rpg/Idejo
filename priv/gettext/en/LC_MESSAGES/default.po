@@ -77,6 +77,7 @@ msgstr ""
 #: lib/idejo_web/components/layouts.ex:137
 #: lib/idejo_web/controllers/setup_html/new.html.heex:50
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:36
+#: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:18
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
 #: lib/idejo_web/live/admin/email_live.ex:20
 #: lib/idejo_web/live/admin/email_live.ex:98
@@ -145,7 +146,7 @@ msgstr ""
 #: lib/idejo_web/controllers/user_session_controller.ex:12
 #: lib/idejo_web/controllers/user_session_controller.ex:28
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:9
-#: lib/idejo_web/controllers/user_session_html/new.html.heex:47
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:52
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
@@ -228,8 +229,8 @@ msgstr ""
 msgid "Welcome! We sent a link to %{email}; open it to verify your email address."
 msgstr ""
 
-#: lib/idejo_web/user_auth.ex:210
-#: lib/idejo_web/user_auth.ex:254
+#: lib/idejo_web/user_auth.ex:235
+#: lib/idejo_web/user_auth.ex:279
 #, elixir-autogen, elixir-format
 msgid "You must sign in to access this page."
 msgstr ""
@@ -311,8 +312,8 @@ msgstr ""
 msgid "Not yet"
 msgstr ""
 
-#: lib/idejo_web/user_auth.ex:226
-#: lib/idejo_web/user_auth.ex:253
+#: lib/idejo_web/user_auth.ex:251
+#: lib/idejo_web/user_auth.ex:278
 #, elixir-autogen, elixir-format
 msgid "Only administrators can open the admin panel."
 msgstr ""
@@ -472,7 +473,7 @@ msgstr ""
 msgid "Test"
 msgstr ""
 
-#: lib/idejo/accounts/user_notifier.ex:57
+#: lib/idejo/accounts/user_notifier.ex:81
 #, elixir-autogen, elixir-format
 msgid "Test email from %{name}"
 msgstr ""
@@ -492,7 +493,7 @@ msgstr ""
 msgid "The test email could not be sent: %{reason}"
 msgstr ""
 
-#: lib/idejo/accounts/user_notifier.ex:58
+#: lib/idejo/accounts/user_notifier.ex:82
 #, elixir-autogen, elixir-format
 msgid "This is a test email sent from the admin panel. Email from your server works.\n"
 msgstr ""
@@ -655,4 +656,77 @@ msgstr ""
 #: lib/idejo_web/live/admin/settings_live.ex:50
 #, elixir-autogen, elixir-format
 msgid "Who can sign up"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:28
+#, elixir-autogen, elixir-format
+msgid "Back to sign in"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:38
+#, elixir-autogen, elixir-format
+msgid "Change password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_controller.ex:61
+#: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Choose a new password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:33
+#, elixir-autogen, elixir-format
+msgid "Confirm the new password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_html/new.html.heex:48
+#, elixir-autogen, elixir-format
+msgid "Forgot your password?"
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:58
+#, elixir-autogen, elixir-format
+msgid "Hi %{name},\n\nSomeone asked to reset the password of your account. To choose a new password,\nvisit the link below within one day:\n\n%{url}\n\nIf it wasn't you, you can ignore this email: your password stays the same.\n"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_controller.ex:34
+#, elixir-autogen, elixir-format
+msgid "If that email has an account, a link to reset its password is on its way. It works for one day."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:24
+#, elixir-autogen, elixir-format
+msgid "New password (at least 12 characters)"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_controller.ex:51
+#, elixir-autogen, elixir-format
+msgid "Password changed. Sign in with your new password."
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:57
+#: lib/idejo_web/controllers/user_reset_password_controller.ex:18
+#: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Reset your password"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:24
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Send the link"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_controller.ex:72
+#, elixir-autogen, elixir-format
+msgid "This reset link is invalid or has expired."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "We will email you a link to choose a new password."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:10
+#, elixir-autogen, elixir-format
+msgid "You will be signed out everywhere, then sign in again."
 msgstr ""

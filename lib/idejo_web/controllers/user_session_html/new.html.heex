@@ -43,6 +43,11 @@
         required
       />
       <.input field={f[:remember_me]} type="checkbox" label={gettext("Keep me signed in")} />
+      <p class="text-sm mb-2">
+        <.link href={~p"/users/reset-password"} class="link">
+          {gettext("Forgot your password?")}
+        </.link>
+      </p>
       <.button class="btn btn-primary w-full">
         {gettext("Sign in")}
       </.button>

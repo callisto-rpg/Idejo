@@ -1,0 +1,41 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm">
+    <div class="text-center">
+      <.header>
+        {gettext("Choose a new password")}
+        <:subtitle>{gettext("You will be signed out everywhere, then sign in again.")}</:subtitle>
+      </.header>
+    </div>
+
+    <.form
+      :let={f}
+      for={@form}
+      id="new_password_form"
+      action={~p"/users/reset-password/#{@token}"}
+      method="put"
+    >
+      <.input
+        field={f[:password]}
+        type="password"
+        label={gettext("New password (at least 12 characters)")}
+        autocomplete="new-password"
+        value=""
+        required
+        autofocus
+      />
+      <.input
+        field={f[:password_confirmation]}
+        type="password"
+        label={gettext("Confirm the new password")}
+        autocomplete="new-password"
+        value=""
+        required
+      />
+      <.button class="btn btn-primary w-full">{gettext("Change password")}</.button>
+    </.form>
+  </div>
+</Layouts.app>

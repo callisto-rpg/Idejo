@@ -129,7 +129,10 @@ roles or the permission grid. Every later change must keep it true:
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
-  disconnects the session's LiveViews via `live_socket_id`.
+  disconnects the session's LiveViews via `live_socket_id`. Each sign-in gets a socket id,
+  stored on its session tokens and kept when a token is reissued. A password reset (AC-02)
+  deletes every token of the account and disconnects all its sessions
+  (`UserAuth.disconnect_sessions/1`).
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
