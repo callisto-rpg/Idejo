@@ -146,8 +146,8 @@ Administrators manage custom roles (as in Discord) and categories (as in phpBB) 
 | RP-02 | Role editor: create, rename, colour, icon, rank order and delete an unlimited number of custom roles | Must |
 | RP-03 | Category manager: create, nest, reorder by drag and drop, describe and delete categories; deleting asks whether to move or archive their topics | Must |
 | RP-04 | Permission matrix per category: view, read history, start topics, post, attach, react, mention roles, mention everyone, fork topics, pin, moderate | Must |
-| RP-05 | Sub-categories inherit their parent’s permissions; overrides set allow, deny or inherit per role or per user | Must |
-| RP-06 | Users hold several roles; their rights combine, an explicit deny on a category wins, the highest-ranked role sets the name colour | Must |
+| RP-05 | Sub-categories inherit their parent’s permissions; overrides set allow, deny or inherit per role or per user. Inherit falls back to the parent category, then to the role’s server-wide setting; deny overrides what the role would otherwise inherit | Must |
+| RP-06 | Users hold several roles; their rights combine and allow wins: a right is granted when any of the user’s roles allows it, even if a higher-ranked role denies it. A deny only overrides what that role would otherwise inherit. The highest-ranked role sets the name colour | Must |
 | RP-07 | Moderator rights can be scoped to one category and its sub-categories | Must |
 | RP-08 | “View as”: an admin sees the server exactly as a chosen role or user sees it | Should |
 | RP-09 | “Manage roles” and “Manage categories” can be delegated; a delegate cannot grant rights or ranks above their own | Should |

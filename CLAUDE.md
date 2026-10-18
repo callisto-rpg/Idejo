@@ -77,10 +77,11 @@ and users with an unverified email act as guest; every verified user holds membe
 their other roles (`Idejo.Access.roles_of/1`). Nobody is ever without a role.
 
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
-`:view`, `:start`, `:post`, `:moderate`. Rights from several roles combine with **allow wins**:
-if any of the user's roles allows a right, the user has it, even when a higher-ranked role
-denies it (steward decision 2026-10-19; replaces "deny wins" in RP-06). Search and lists
-filter by `:view` in the query, never after loading.
+`:view`, `:start`, `:post`, `:moderate`. Each role's right on a category is allow, deny or
+unset; unset follows the role's server-wide setting (a `category_permissions` row with no
+`category_id`), and deny overrides it (RP-04/RP-05). Across roles, **allow wins**: a right is
+granted when any of the user's roles allows it, even if a higher-ranked role denies it (RP-06).
+Search and lists filter by `:view` in the query, never after loading.
 
 **Owners and administrators always have every right and can never lock themselves out**
 (steward rule, 2026-10-19). `Idejo.Access.administrator?/1` (holds owner or administrator) is
