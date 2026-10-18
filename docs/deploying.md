@@ -181,7 +181,7 @@ chmod 600 deploy/.env
 nano deploy/.env
 ```
 
-Fill in every value:
+Fill in every value (leave `IDEJO_SOURCE_URL` empty unless you changed the code):
 
 | Variable | Value |
 | --- | --- |
@@ -189,6 +189,7 @@ Fill in every value:
 | `ACME_EMAIL` | `admin@example.org` |
 | `SECRET_KEY_BASE` | output of `openssl rand -base64 48` (64 characters) |
 | `POSTGRES_PASSWORD` | output of `openssl rand -hex 32` — hex only, because the password goes into a URL where `/` or `+` would break it |
+| `IDEJO_SOURCE_URL` | empty for an unmodified Idejo: the "Source code" link in the footer then points at the exact upstream commit you built. If you run modified code, the AGPL requires that link to reach your source: publish it and put its address here |
 
 `deploy/.env` holds your secrets. It is git-ignored and kept out of the Docker image; never
 commit or share it. Keep a copy in your password manager: without `POSTGRES_PASSWORD` you

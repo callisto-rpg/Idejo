@@ -53,7 +53,29 @@ defmodule IdejoWeb.Layouts do
       </div>
     </main>
 
+    <.site_footer />
+
     <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
+  The footer on every page: the attribution notice (LI-02) and the "Source code" link
+  (LI-03).
+
+  The notice is kept word for word as NOTICE gives it, and is not translated: section 7(b)
+  of the licence requires it to be preserved.
+  """
+  def site_footer(assigns) do
+    ~H"""
+    <footer class="px-4 py-6 sm:px-6 lg:px-8 text-sm opacity-80">
+      <p class="mx-auto max-w-2xl flex flex-wrap gap-x-4 gap-y-1">
+        <a href="https://idejo.org" class="link" id="attribution">
+          Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
+        </a>
+        <a href={Idejo.Source.url()} class="link" id="source-code">{gettext("Source code")}</a>
+      </p>
+    </footer>
     """
   end
 

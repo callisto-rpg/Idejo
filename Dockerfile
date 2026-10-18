@@ -60,6 +60,9 @@ RUN mix assets.setup
 COPY priv priv
 
 COPY lib lib
+# Only .git/HEAD and .git/refs pass .dockerignore: enough for Idejo.Source to record the
+# commit this release is built from (LI-03).
+COPY .git .git
 
 # Compile the release
 RUN mix compile

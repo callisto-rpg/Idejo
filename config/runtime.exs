@@ -42,6 +42,11 @@ if config_env() == :dev do
     ]
 end
 
+# LI-03: where a modified server publishes its own source code.
+if source_url = System.get_env("IDEJO_SOURCE_URL") do
+  config :idejo, :source_url, source_url
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

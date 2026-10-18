@@ -22,6 +22,7 @@ services:
     environment:
       PHX_SERVER: "true"
       PHX_HOST: ${IDEJO_DOMAIN}
+      IDEJO_SOURCE_URL: ${IDEJO_SOURCE_URL:-}
       PORT: "4000"
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       DATABASE_URL: ecto://idejo:${POSTGRES_PASSWORD}@db/idejo

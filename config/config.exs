@@ -39,6 +39,10 @@ config :argon2_elixir, argon2_type: 2, t_cost: 3, m_cost: 16, parallelism: 4
 # since it serves plain http.
 config :idejo, :secure_cookies, true
 
+# LI-03: the upstream repository; the footer links to it at the commit the release was built
+# from. A server running modified code sets IDEJO_SOURCE_URL instead (see config/runtime.exs).
+config :idejo, :upstream_source_url, "https://github.com/callisto-rpg/Idejo"
+
 # Sender of account emails until SMTP settings move to the admin panel (AD-08).
 config :idejo, :mail_from, {"Idejo", "noreply@localhost"}
 
