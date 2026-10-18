@@ -18,10 +18,13 @@ defmodule IdejoWeb.UserAuth do
   # the session validity setting in UserToken.
   @max_cookie_age_in_days 14
   @remember_me_cookie "_idejo_web_user_remember_me"
+  # Encrypted, HTTP-only and Secure like the session cookie (SP-02).
   @remember_me_options [
-    sign: true,
+    encrypt: true,
     max_age: @max_cookie_age_in_days * 24 * 60 * 60,
-    same_site: "Lax"
+    same_site: "Lax",
+    http_only: true,
+    secure: Application.compile_env!(:idejo, :secure_cookies)
   ]
 
   # How old the session token should be before a new one is issued. When a request is made
@@ -87,7 +90,7 @@ defmodule IdejoWeb.UserAuth do
     if token = get_session(conn, :user_token) do
       {token, conn}
     else
-      conn = fetch_cookies(conn, signed: [@remember_me_cookie])
+      conn = fetch_cookies(conn, encrypted: [@remember_me_cookie])
 
       if token = conn.cookies[@remember_me_cookie] do
         {token, conn |> put_token_in_session(token) |> put_session(:user_remember_me, true)}
@@ -169,9 +172,17 @@ defmodule IdejoWeb.UserAuth do
     |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
   end
 
+  # The live socket id lets sign-out disconnect every LiveView of this session (SP-02).
   defp put_token_in_session(conn, token) do
-    put_session(conn, :user_token, token)
+    conn
+    |> put_session(:user_token, token)
+    |> put_session(:live_socket_id, live_socket_id(token))
   end
+
+  @doc """
+  Returns the PubSub topic of the LiveView sockets opened with the given session token.
+  """
+  def live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   @doc """
   Plug for routes that require the user to not be authenticated.

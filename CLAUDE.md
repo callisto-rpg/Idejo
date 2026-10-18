@@ -101,6 +101,10 @@ by `:view` in the query, never after loading.
   `/t/`, `/m/`), and `activity_changeset/1` is inserted in the same transaction as the change.
 - **Email verification gates taking part** (AC-01): unverified users can sign in, but only
   `Idejo.Accounts.confirmed?/1` users get posting rights (enforced through roles from RP-01).
+- **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
+  and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
+  off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
+  disconnects the session's LiveViews via `live_socket_id`.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Admin changes** to settings, roles or permissions write an `audit_log` row (SP-06).
