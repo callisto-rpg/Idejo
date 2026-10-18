@@ -20,6 +20,9 @@ defmodule IdejoWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  alias Idejo.{Accounts, AccountsFixtures}
+  alias Idejo.Accounts.Scope
+
   using do
     quote do
       # The default endpoint for testing
@@ -37,5 +40,33 @@ defmodule IdejoWeb.ConnCase do
   setup tags do
     Idejo.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  @doc """
+  Setup helper that registers and signs in a verified user.
+
+      setup :register_and_log_in_user
+
+  It stores an updated connection and a registered user in the
+  test context.
+  """
+  def register_and_log_in_user(%{conn: conn}) do
+    user = AccountsFixtures.user_fixture()
+    scope = Scope.for_user(user)
+
+    %{conn: log_in_user(conn, user), user: user, scope: scope}
+  end
+
+  @doc """
+  Signs the given `user` into the `conn`.
+
+  It returns an updated `conn`.
+  """
+  def log_in_user(conn, user) do
+    token = Accounts.generate_user_session_token(user)
+
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Plug.Conn.put_session(:user_token, token)
   end
 end

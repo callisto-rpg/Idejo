@@ -76,6 +76,9 @@ if config_env() == :prod do
 
   config :idejo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  config :idejo, :base_uri, "https://#{host}"
+  config :idejo, :mail_from, {"Idejo", "noreply@#{host}"}
+
   config :idejo, IdejoWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

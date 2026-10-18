@@ -4,6 +4,8 @@
 defmodule IdejoWeb.Router do
   use IdejoWeb, :router
 
+  import IdejoWeb.UserAuth
+
   # The policy is set by IdejoWeb.Plugs.ContentSecurityPolicy below, with
   # per-request nonces, so Sobelow cannot see it (SP-05).
   # sobelow_skip ["Config.CSP"]
@@ -14,6 +16,7 @@ defmodule IdejoWeb.Router do
     plug :put_root_layout, html: {IdejoWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_scope_for_user
     plug IdejoWeb.Plugs.ContentSecurityPolicy
   end
 
@@ -54,5 +57,30 @@ defmodule IdejoWeb.Router do
       forward "/mailbox", Plug.Swoosh.MailboxPreview,
         csp_nonce_assign_key: %{script: :script_csp_nonce, style: :style_csp_nonce}
     end
+  end
+
+  ## Accounts (AC-01). Public forms are plain controllers so they work without JavaScript.
+
+  scope "/users", IdejoWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/sign-up", UserRegistrationController, :new
+    post "/sign-up", UserRegistrationController, :create
+    get "/sign-in", UserSessionController, :new
+    post "/sign-in", UserSessionController, :create
+  end
+
+  scope "/users", IdejoWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    post "/confirm", UserConfirmationController, :create
+  end
+
+  scope "/users", IdejoWeb do
+    pipe_through [:browser]
+
+    delete "/sign-out", UserSessionController, :delete
+    get "/confirm/:token", UserConfirmationController, :edit
+    post "/confirm/:token", UserConfirmationController, :update
   end
 end

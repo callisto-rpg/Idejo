@@ -1,0 +1,51 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <div class="mx-auto max-w-sm space-y-4">
+    <div class="text-center">
+      <.header>
+        {gettext("Sign in")}
+        <:subtitle>
+          {gettext("No account yet?")}
+          <.link href={~p"/users/sign-up"} class="font-semibold text-brand hover:underline">
+            {gettext("Create one")}
+          </.link>
+        </:subtitle>
+      </.header>
+    </div>
+
+    <div :if={local_mail_adapter?()} class="alert alert-info">
+      <.icon name="hero-information-circle" class="size-6 shrink-0" />
+      <p>
+        {gettext("Development mail adapter: sent emails are in")}
+        <.link href="/dev/mailbox" class="underline">{gettext("the mailbox")}</.link>.
+      </p>
+    </div>
+
+    <.form :let={f} for={@form} as={:user} id="sign_in_form" action={~p"/users/sign-in"}>
+      <.input
+        field={f[:email]}
+        type="email"
+        label={gettext("Email")}
+        autocomplete="username"
+        spellcheck="false"
+        required
+        autofocus
+      />
+      <.input
+        field={f[:password]}
+        type="password"
+        label={gettext("Password")}
+        autocomplete="current-password"
+        spellcheck="false"
+        required
+      />
+      <.input field={f[:remember_me]} type="checkbox" label={gettext("Keep me signed in")} />
+      <.button class="btn btn-primary w-full">
+        {gettext("Sign in")}
+      </.button>
+    </.form>
+  </div>
+</Layouts.app>
