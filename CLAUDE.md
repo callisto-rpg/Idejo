@@ -84,6 +84,10 @@ by `:view` in the query, never after loading.
   test "GM-03 appends never extend the window" do
   ```
 - **No third-party scripts, fonts or analytics** (SP-04). Assets are served from the app.
+- **No inline `<script>`, `<style>` or `style=""`** — the content security policy refuses them
+  (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
+  `assets/css/`; a dependency that needs inline code gets the per-request nonce from
+  `conn.assigns.script_csp_nonce` / `style_csp_nonce`.
 - **Public pages must work without JavaScript** (AX-04, CL-02). Use controllers, not LiveView.
 - **All UI strings via Gettext** (`gettext/1`), never hard-coded (AX-05 readiness).
 - **Content stored twice**: Markdown source and sanitised HTML (FD-03).

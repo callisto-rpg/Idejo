@@ -4,8 +4,8 @@
 defmodule IdejoWeb.Router do
   use IdejoWeb, :router
 
-  # Known gap until SP-05: no content security policy yet. The SP-05 pull
-  # request adds IdejoWeb.Plugs.ContentSecurityPolicy and replaces this note.
+  # The policy is set by IdejoWeb.Plugs.ContentSecurityPolicy below, with
+  # per-request nonces, so Sobelow cannot see it (SP-05).
   # sobelow_skip ["Config.CSP"]
   pipeline :browser do
     plug :accepts, ["html"]
@@ -14,6 +14,7 @@ defmodule IdejoWeb.Router do
     plug :put_root_layout, html: {IdejoWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug IdejoWeb.Plugs.ContentSecurityPolicy
   end
 
   pipeline :api do
@@ -43,8 +44,12 @@ defmodule IdejoWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: IdejoWeb.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      live_dashboard "/dashboard",
+        metrics: IdejoWeb.Telemetry,
+        csp_nonce_assign_key: %{script: :script_csp_nonce, style: :style_csp_nonce}
+
+      forward "/mailbox", Plug.Swoosh.MailboxPreview,
+        csp_nonce_assign_key: %{script: :script_csp_nonce, style: :style_csp_nonce}
     end
   end
 end
