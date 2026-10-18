@@ -67,15 +67,24 @@ defmodule Idejo.Accounts do
   The account is created with a stable URI (FD-01) and a `create` activity (FD-02) in one
   transaction. The email address is not verified yet; see
   `deliver_user_confirmation_instructions/2`.
+
+  ## Options
+
+    * `:confirmed` - creates the account with its email already verified. Only the
+      first-run wizard uses it, for the owner (AD-01), since email may not work yet.
   """
-  @spec register_user(map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
-  def register_user(attrs) do
+  @spec register_user(map(), keyword()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def register_user(attrs, opts \\ []) do
     id = Federation.generate_id()
     uri = Federation.uri(:user, id)
 
+    changeset =
+      %User{id: id, uri: uri}
+      |> User.registration_changeset(attrs)
+      |> then(&if(opts[:confirmed], do: User.confirm_changeset(&1), else: &1))
+
     Repo.transact(fn ->
-      with {:ok, user} <-
-             Repo.insert(User.registration_changeset(%User{id: id, uri: uri}, attrs)),
+      with {:ok, user} <- Repo.insert(changeset),
            {:ok, _activity} <-
              Repo.insert(
                Federation.activity_changeset(%{

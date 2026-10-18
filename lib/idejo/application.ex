@@ -16,8 +16,8 @@ defmodule Idejo.Application do
       {DNSCluster, query: Application.get_env(:idejo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Idejo.PubSub},
       Idejo.Messages.DemoTopic,
-      # Start a worker by calling: Idejo.Worker.start_link(arg)
-      # {Idejo.Worker, arg},
+      # Writes the setup link to the log while the server has no owner (AD-01).
+      if(Application.get_env(:idejo, :announce_setup, true), do: Idejo.Setup.Announcer),
       # Start to serve requests, typically the last entry
       IdejoWeb.Endpoint
     ]
@@ -25,7 +25,7 @@ defmodule Idejo.Application do
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Idejo.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(Enum.reject(children, &is_nil/1), opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

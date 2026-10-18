@@ -224,11 +224,36 @@ From your own computer:
 curl -I https://forum.example.org
 ```
 
-You should see `HTTP/2 200` with the headers `strict-transport-security` (from Caddy) and
-`x-content-type-options` (from the app). Open the address in a browser: the padlock should
-show a valid Let's Encrypt certificate, and `http://` should redirect to `https://`.
+You should see `HTTP/2 302` with `location: /setup` (the server is not set up yet) and the
+headers `strict-transport-security` (from Caddy) and `x-content-type-options` (from the app).
+Open the address in a browser: the padlock should show a valid Let's Encrypt certificate,
+and `http://` should redirect to `https://`.
 
-If both are true and CI is green, the M0 exit check passes.
+## 10. Set up your server
+
+Until it has an owner, every page of the server opens the setup wizard. So that nobody else
+can claim your server first, the wizard asks for a setup code that only appears in the app
+log:
+
+```sh
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env logs app | grep -A2 "not set up yet"
+```
+
+Open the link it shows (`https://forum.example.org/setup?code=…`), or paste the code into the
+wizard. The code changes each time the app restarts; if the link stops working, read the log
+again.
+
+The wizard asks for:
+
+1. **The server name**, shown in the header and in emails.
+2. **Your owner account**: email, username, display name and password. The owner has every
+   right and can never be locked out; this account is ready to use straight away, without a
+   verification email.
+3. **Email**: see [Outgoing email](#outgoing-email). You can leave the SMTP host empty and set
+   it up later in **Admin → Email**.
+
+When you submit, you are signed in and taken to **Admin → Email**: press **Send test email**
+to check that email works. The wizard is then gone for good.
 
 ## Day-to-day operations
 
@@ -298,7 +323,3 @@ fill in:
 Save, then press **Send test email**: it goes to your own address. If it fails, the page
 shows the reason. While no SMTP host is set, the server sends no email at all.
 
-## Not configured yet
-
-- **First-run wizard** (AD-01) also arrives in M1. For M0, the generated start page is what
-  you should see.

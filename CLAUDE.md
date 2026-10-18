@@ -50,7 +50,7 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 | SE | `lib/idejo/search/` | Postgres full-text, permission-aware |
 | NO | `lib/idejo/notifications/` | In-app only in v0.1 |
 | FD | `lib/idejo/federation/` | URIs, activities outbox |
-| AD | `lib/idejo/settings/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, backup, CLI recovery |
+| AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard, backup, CLI recovery |
 | SP | `lib/idejo/audit/`, `lib/idejo_web/plugs/` | Audit log, CSP, rate limits |
 | AX, CL, SE-04 | `lib/idejo_web/` | Accessibility, public rendering |
 
@@ -135,6 +135,11 @@ roles or the permission grid. Every later change must keep it true:
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
   `IDEJO_SOURCE_URL`). New pages must use `Layouts.app` so the footer is never missing.
+- **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
+  to `/setup`. The wizard needs the setup code written to the app log at boot
+  (`Idejo.Setup.token/0`, in memory, new at each restart) and creates the owner, verified, in
+  one locked transaction. Tests run with the redirect off (`setup_redirect: false`); a test
+  that needs it turns it on and is not async.
 - **Email** (AD-08): send with `Idejo.Mailer.deliver_email/1`, never `deliver/1`, so production
   uses the SMTP settings from **Admin → Email** (read at each send). Secret settings are
   declared with `secret: true` in `Idejo.Settings`: stored encrypted (`Settings.Secret`), never

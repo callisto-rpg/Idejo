@@ -69,12 +69,14 @@ msgstr ""
 msgid "Development mail adapter: sent emails are in"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:66
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:40
 #, elixir-autogen, elixir-format
 msgid "Display name"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:137
+#: lib/idejo_web/controllers/setup_html/new.html.heex:50
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:23
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
 #: lib/idejo_web/live/admin/email_live.ex:20
@@ -116,12 +118,14 @@ msgstr ""
 msgid "No account yet?"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:127
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:40
 #: lib/idejo_web/live/admin/email_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:73
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:47
 #, elixir-autogen, elixir-format
 msgid "Password (at least 12 characters)"
@@ -177,6 +181,7 @@ msgstr ""
 msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:58
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:32
 #, elixir-autogen, elixir-format
 msgid "Username (for @mentions)"
@@ -346,6 +351,7 @@ msgstr ""
 msgid "Saving…"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:39
 #: lib/idejo_web/live/admin/settings_live.ex:46
 #, elixir-autogen, elixir-format
 msgid "Server name"
@@ -395,11 +401,13 @@ msgstr ""
 msgid "Email settings saved."
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:110
 #: lib/idejo_web/live/admin/email_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "Encryption"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:114
 #: lib/idejo_web/live/admin/email_live.ex:121
 #, elixir-autogen, elixir-format
 msgid "None — only for a relay on the same machine or network"
@@ -410,6 +418,7 @@ msgstr ""
 msgid "Password (saved; leave empty to keep it)"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:103
 #: lib/idejo_web/live/admin/email_live.ex:113
 #, elixir-autogen, elixir-format
 msgid "Port"
@@ -420,6 +429,7 @@ msgstr ""
 msgid "SMTP host (leave empty to turn email off)"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:112
 #: lib/idejo_web/live/admin/email_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "STARTTLS (usually port 587)"
@@ -430,6 +440,7 @@ msgstr ""
 msgid "Send test email"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:90
 #: lib/idejo_web/live/admin/email_live.ex:105
 #, elixir-autogen, elixir-format
 msgid "Sender address"
@@ -450,6 +461,7 @@ msgstr ""
 msgid "Set an SMTP host and save before sending a test email."
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:113
 #: lib/idejo_web/live/admin/email_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "TLS from the start (usually port 465)"
@@ -485,7 +497,80 @@ msgstr ""
 msgid "This is a test email sent from the admin panel. Email from your server works.\n"
 msgstr ""
 
+#: lib/idejo_web/controllers/setup_html/new.html.heex:120
 #: lib/idejo_web/live/admin/email_live.ex:127
 #, elixir-autogen, elixir-format
 msgid "Username"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:38
+#, elixir-autogen, elixir-format
+msgid "1. Your server"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:43
+#, elixir-autogen, elixir-format
+msgid "2. Your owner account"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:81
+#, elixir-autogen, elixir-format, fuzzy
+msgid "3. Email"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:83
+#, elixir-autogen, elixir-format
+msgid "Members get a verification email when they sign up. You can leave the SMTP host empty and set it up later in Admin → Email."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:96
+#, elixir-autogen, elixir-format
+msgid "SMTP host"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:133
+#, elixir-autogen, elixir-format
+msgid "Set up the server"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_controller.ex:50
+#: lib/idejo_web/controllers/setup_html/new.html.heex:7
+#, elixir-autogen, elixir-format
+msgid "Set up your server"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:19
+#: lib/idejo_web/controllers/setup_html/new.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "Setup code"
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "The owner has every right and can never be locked out."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_controller.ex:41
+#, elixir-autogen, elixir-format
+msgid "The server is already set up."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_controller.ex:37
+#, elixir-autogen, elixir-format
+msgid "The setup code is wrong. Copy it again from the app log."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:9
+#, elixir-autogen, elixir-format
+msgid "Three things and you are done: a name, your owner account and how the server sends email."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_controller.ex:30
+#, elixir-autogen, elixir-format
+msgid "Welcome! The server is set up. Send a test email to check email works."
+msgstr ""
+
+#: lib/idejo_web/controllers/setup_html/new.html.heex:21
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “Idejo is not set up yet” (see “Set up your server” in the deployment guide)."
 msgstr ""
