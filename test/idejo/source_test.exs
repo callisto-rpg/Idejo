@@ -60,11 +60,9 @@ defmodule Idejo.SourceTest do
     test "LI-03 links the upstream repository at the commit the release was built from" do
       upstream = Application.fetch_env!(:idejo, :upstream_source_url)
 
-      assert Source.url() ==
-               if(Source.revision(),
-                 do: upstream <> "/tree/" <> Source.revision(),
-                 else: upstream
-               )
+      # revision/0 is fixed at compile time, so no branching on it here: the type checker
+      # flags a condition that can only go one way, which fails CI's --warnings-as-errors.
+      assert Source.url() == Source.upstream_url(Source.revision())
 
       assert Source.upstream_url(@sha) == upstream <> "/tree/" <> @sha
       assert Source.upstream_url(nil) == upstream

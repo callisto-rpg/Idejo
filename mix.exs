@@ -115,7 +115,7 @@ defmodule Idejo.MixProject do
         "sobelow --config --exit",
         "deps.audit",
         "cmd mix hex.audit",
-        "test"
+        "test --warnings-as-errors"
       ]
     ]
   end
