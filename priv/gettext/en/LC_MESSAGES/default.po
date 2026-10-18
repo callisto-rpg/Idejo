@@ -31,8 +31,8 @@ msgstr ""
 msgid "Already have one?"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:172
-#: lib/idejo_web/components/layouts.ex:187
+#: lib/idejo_web/components/layouts.ex:179
+#: lib/idejo_web/components/layouts.ex:194
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -74,15 +74,18 @@ msgstr ""
 msgid "Display name"
 msgstr ""
 
+#: lib/idejo_web/components/layouts.ex:137
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:23
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
+#: lib/idejo_web/live/admin/email_live.ex:20
+#: lib/idejo_web/live/admin/email_live.ex:98
 #: lib/idejo_web/live/admin/user_live.ex:38
 #: lib/idejo_web/live/admin/users_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
 
-#: lib/idejo/accounts/user_notifier.ex:33
+#: lib/idejo/accounts/user_notifier.ex:35
 #, elixir-autogen, elixir-format
 msgid "Hi %{name},\n\nPlease verify your email address by visiting the link below:\n\n%{url}\n\nIf you didn't create an account, you can ignore this email.\n"
 msgstr ""
@@ -114,6 +117,7 @@ msgid "No account yet?"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:40
+#: lib/idejo_web/live/admin/email_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -158,7 +162,7 @@ msgstr ""
 msgid "Signed out."
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:179
+#: lib/idejo_web/components/layouts.ex:186
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
@@ -183,14 +187,14 @@ msgstr ""
 msgid "Verify my email address"
 msgstr ""
 
-#: lib/idejo/accounts/user_notifier.ex:32
+#: lib/idejo/accounts/user_notifier.ex:34
 #: lib/idejo_web/controllers/user_confirmation_controller.ex:14
 #: lib/idejo_web/controllers/user_confirmation_html/edit.html.heex:8
 #, elixir-autogen, elixir-format
 msgid "Verify your email address"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:164
+#: lib/idejo_web/components/layouts.ex:171
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr ""
@@ -330,11 +334,13 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
+#: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/settings_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
+#: lib/idejo_web/live/admin/email_live.ex:142
 #: lib/idejo_web/live/admin/settings_live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Saving…"
@@ -367,7 +373,7 @@ msgstr ""
 msgid "URI"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:137
+#: lib/idejo_web/components/layouts.ex:144
 #: lib/idejo_web/live/admin/users_live.ex:16
 #: lib/idejo_web/live/admin/users_live.ex:42
 #, elixir-autogen, elixir-format
@@ -382,4 +388,104 @@ msgstr ""
 #: lib/idejo_web/components/layouts.ex:76
 #, elixir-autogen, elixir-format
 msgid "Source code"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:44
+#, elixir-autogen, elixir-format
+msgid "Email settings saved."
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:117
+#, elixir-autogen, elixir-format
+msgid "Encryption"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:121
+#, elixir-autogen, elixir-format
+msgid "None — only for a relay on the same machine or network"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:136
+#, elixir-autogen, elixir-format
+msgid "Password (saved; leave empty to keep it)"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:113
+#, elixir-autogen, elixir-format
+msgid "Port"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:109
+#, elixir-autogen, elixir-format
+msgid "SMTP host (leave empty to turn email off)"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:119
+#, elixir-autogen, elixir-format
+msgid "STARTTLS (usually port 587)"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:161
+#, elixir-autogen, elixir-format
+msgid "Send test email"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:105
+#, elixir-autogen, elixir-format
+msgid "Sender address"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:161
+#, elixir-autogen, elixir-format
+msgid "Sending…"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:150
+#, elixir-autogen, elixir-format
+msgid "Sends a test email to %{email} with the saved settings."
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:85
+#, elixir-autogen, elixir-format
+msgid "Set an SMTP host and save before sending a test email."
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:120
+#, elixir-autogen, elixir-format
+msgid "TLS from the start (usually port 465)"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:148
+#, elixir-autogen, elixir-format
+msgid "Test"
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:57
+#, elixir-autogen, elixir-format
+msgid "Test email from %{name}"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:66
+#, elixir-autogen, elixir-format
+msgid "Test email sent to %{email}."
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:100
+#, elixir-autogen, elixir-format
+msgid "The server sends sign-up verification and other emails through this SMTP server."
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:88
+#, elixir-autogen, elixir-format
+msgid "The test email could not be sent: %{reason}"
+msgstr ""
+
+#: lib/idejo/accounts/user_notifier.ex:58
+#, elixir-autogen, elixir-format
+msgid "This is a test email sent from the admin panel. Email from your server works.\n"
+msgstr ""
+
+#: lib/idejo_web/live/admin/email_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Username"
 msgstr ""

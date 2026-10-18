@@ -281,9 +281,24 @@ request new ones and can hit Let's Encrypt rate limits.
 | Browser shows "too many redirects" | Another proxy (e.g. Cloudflare in "Flexible" mode) sits in front. Set it to "Full (strict)", or turn the proxy off. |
 | Page loads but the live features do not connect | `IDEJO_DOMAIN` differs from the address in the browser (e.g. `www.` prefix). Use exactly one name. |
 
+## Outgoing email
+
+Idejo sends sign-up verification emails (and later invites and password resets) through an
+SMTP server you choose: your mail provider or a transactional email service. Nothing goes
+in `deploy/.env` for this. Once signed in as an administrator, open **Admin → Email** and
+fill in:
+
+- **Sender address**, e.g. `forum@example.org`. Use an address your SMTP service is allowed
+  to send from, or messages will be rejected or land in spam.
+- **SMTP host, port and encryption** from your provider: usually port 587 with STARTTLS, or
+  465 with TLS from the start. Certificates are always checked.
+- **Username and password**, if your provider requires a login. The password is stored
+  encrypted with `SECRET_KEY_BASE`; if you ever change that key, enter the password again.
+
+Save, then press **Send test email**: it goes to your own address. If it fails, the page
+shows the reason. While no SMTP host is set, the server sends no email at all.
+
 ## Not configured yet
 
-- **Outgoing email** (invites, password reset) arrives with accounts in M1; the server needs
-  no mail setup until then.
 - **First-run wizard** (AD-01) also arrives in M1. For M0, the generated start page is what
   you should see.

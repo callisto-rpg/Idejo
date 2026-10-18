@@ -70,6 +70,8 @@ defmodule Idejo.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      # SMTP delivery for Swoosh (AD-08). BSD-2-Clause; its dependency ranch is ISC (LI-06).
+      {:gen_smtp, "~> 1.3"},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},

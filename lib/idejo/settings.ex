@@ -5,11 +5,16 @@ defmodule Idejo.Settings do
   @moduledoc """
   Server-wide settings (AD-02), changed by administrators from the admin panel.
 
-  Each key is declared in `@definitions` with its default; a key without a stored row uses
-  the default. Every change writes an audit entry (SP-06) in the same transaction.
+  Each key is declared in `@definitions` with its type, default and checks; a key without a
+  stored row uses the default. Every change writes an audit entry (SP-06) in the same
+  transaction.
 
-  Keys in v0.1 so far: `server_name`. Later requirements add theirs (registration mode in
-  AC-02, SMTP in AD-08, the growing-message window in AD-04).
+  Secret keys (the SMTP password) are stored encrypted (`Idejo.Settings.Secret`), are never
+  put in a form, and appear in the audit log only as `"[changed]"`. Leaving a secret blank in
+  a form keeps the saved value.
+
+  Keys in v0.1 so far: the server name (AD-02) and outgoing email (AD-08). Later requirements
+  add theirs (registration mode in AC-02, the growing-message window in AD-04).
   """
 
   import Ecto.Changeset
@@ -18,49 +23,76 @@ defmodule Idejo.Settings do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Repo
-  alias Idejo.Settings.Setting
+  alias Idejo.Settings.{Secret, Setting}
+
+  @smtp_security ~w(starttls tls none)
 
   @definitions %{
-    server_name: %{default: "Idejo", max_length: 80}
+    server_name: %{type: :string, default: "Idejo", required: true, max: 80},
+    # Sender address of the emails the server sends; defaults to noreply@<host>.
+    mail_from: %{type: :string, default: :noreply, required: true, max: 160, format: :email},
+    # Outgoing email is off until a host is set.
+    smtp_host: %{type: :string, default: "", max: 255, format: :hostname},
+    smtp_port: %{type: :integer, default: 587, range: 1..65_535},
+    smtp_security: %{type: :string, default: "starttls", required: true, in: @smtp_security},
+    smtp_username: %{type: :string, default: "", max: 255},
+    smtp_password: %{type: :string, default: "", max: 255, secret: true}
   }
 
-  @type key :: :server_name
+  @type key ::
+          :server_name
+          | :mail_from
+          | :smtp_host
+          | :smtp_port
+          | :smtp_security
+          | :smtp_username
+          | :smtp_password
 
   @doc """
-  Returns the value of a setting, or its default when it was never set.
+  The allowed values of `:smtp_security`: STARTTLS, implicit TLS, or no encryption.
   """
-  @spec get(key()) :: String.t()
+  @spec smtp_security_values() :: [String.t()]
+  def smtp_security_values, do: @smtp_security
+
+  @doc """
+  Returns the value of a setting, or its default when it was never set. Secrets come back
+  decrypted, or `""` when none is saved or it can no longer be read (e.g. after
+  `SECRET_KEY_BASE` changed).
+  """
+  @spec get(key()) :: String.t() | integer()
   def get(key) when is_map_key(@definitions, key) do
-    case Repo.get(Setting, Atom.to_string(key)) do
-      %Setting{value: value} -> value
-      nil -> @definitions[key].default
-    end
+    stored = Repo.get(Setting, Atom.to_string(key))
+    decode(key, stored && stored.value)
   end
 
   @doc """
-  Returns every setting with its current value.
+  Returns every setting with its current value. Secrets are decrypted.
   """
-  @spec all() :: %{key() => String.t()}
+  @spec all() :: %{key() => String.t() | integer()}
   def all do
     stored = Map.new(Repo.all(Setting), &{&1.key, &1.value})
-
-    Map.new(@definitions, fn {key, %{default: default}} ->
-      {key, Map.get(stored, Atom.to_string(key), default)}
-    end)
+    Map.new(@definitions, fn {key, _} -> {key, decode(key, stored[Atom.to_string(key)])} end)
   end
 
   @doc """
-  Returns a changeset for the settings form, over the current values.
+  Returns true when a secret setting holds a value, so a form can say it is saved.
+  """
+  @spec secret_set?(key()) :: boolean()
+  def secret_set?(key) when is_map_key(@definitions, key), do: get(key) != ""
+
+  @doc """
+  Returns a changeset for a settings form, over the current values. Secrets are blank.
   """
   @spec change_settings(map()) :: Ecto.Changeset.t()
   def change_settings(attrs \\ %{}) do
-    types = Map.new(@definitions, fn {key, _} -> {key, :string} end)
+    types = Map.new(@definitions, fn {key, %{type: type}} -> {key, type} end)
+    data = Map.new(all(), fn {key, value} -> {key, if(secret?(key), do: "", else: value)} end)
 
-    {all(), types}
-    |> cast(attrs, Map.keys(types))
-    |> update_change(:server_name, &(&1 && String.trim(&1)))
-    |> validate_required([:server_name])
-    |> validate_length(:server_name, max: @definitions.server_name.max_length)
+    changeset =
+      {data, types}
+      |> cast(drop_blank_secrets(attrs), Map.keys(types), empty_values: [])
+
+    Enum.reduce(@definitions, changeset, &validate/2)
   end
 
   @doc """
@@ -69,7 +101,7 @@ defmodule Idejo.Settings do
   changed.
   """
   @spec update_settings(User.t(), map()) ::
-          {:ok, %{key() => String.t()}} | {:error, Ecto.Changeset.t()}
+          {:ok, %{key() => String.t() | integer()}} | {:error, Ecto.Changeset.t()}
   def update_settings(%User{} = admin, attrs) do
     changeset = change_settings(attrs)
 
@@ -89,7 +121,12 @@ defmodule Idejo.Settings do
 
     rows =
       Enum.map(changed, fn key ->
-        %{key: Atom.to_string(key), value: new[key], inserted_at: now, updated_at: now}
+        %{
+          key: Atom.to_string(key),
+          value: encode(key, new[key]),
+          inserted_at: now,
+          updated_at: now
+        }
       end)
 
     Repo.insert_all(Setting, rows,
@@ -101,10 +138,105 @@ defmodule Idejo.Settings do
            Audit.record(
              admin,
              "settings.update",
-             Audit.snapshot(old, changed),
-             Audit.snapshot(new, changed)
+             snapshot(old, changed, "[hidden]"),
+             snapshot(new, changed, "[changed]")
            ) do
       {:ok, new}
+    end
+  end
+
+  # Audit entries never hold a secret.
+  defp snapshot(values, keys, secret_placeholder) do
+    values
+    |> Map.new(fn {key, value} ->
+      {key, if(secret?(key), do: secret_placeholder, else: value)}
+    end)
+    |> Audit.snapshot(keys)
+  end
+
+  defp secret?(key), do: Map.get(@definitions[key], :secret, false)
+
+  defp drop_blank_secrets(attrs) do
+    Map.reject(attrs, fn {key, value} ->
+      key = if is_binary(key), do: String.to_existing_atom(key), else: key
+      is_map_key(@definitions, key) and secret?(key) and String.trim(to_string(value)) == ""
+    end)
+  rescue
+    # A key that is not even an atom yet cannot be a setting; cast ignores it.
+    ArgumentError -> attrs
+  end
+
+  defp validate({key, definition}, changeset) do
+    changeset
+    |> trim(key, definition)
+    |> validate_present(key, definition)
+    |> validate_rule(key, :max, definition[:max])
+    |> validate_rule(key, :in, definition[:in])
+    |> validate_rule(key, :range, definition[:range])
+    |> validate_format_of(key, definition[:format])
+  end
+
+  defp trim(changeset, key, %{type: :string}),
+    do: update_change(changeset, key, &(&1 && String.trim(&1)))
+
+  defp trim(changeset, _key, _definition), do: changeset
+
+  # Blank strings are kept by cast (optional settings may be ""), so required ones are
+  # checked here.
+  defp validate_present(changeset, key, %{required: true}) do
+    if get_field(changeset, key) in [nil, ""],
+      do: add_error(changeset, key, "can't be blank", validation: :required),
+      else: changeset
+  end
+
+  defp validate_present(changeset, _key, _definition), do: changeset
+
+  defp validate_rule(changeset, _key, _rule, nil), do: changeset
+  defp validate_rule(changeset, key, :max, max), do: validate_length(changeset, key, max: max)
+  defp validate_rule(changeset, key, :in, values), do: validate_inclusion(changeset, key, values)
+
+  defp validate_rule(changeset, key, :range, first..last//_) do
+    validate_number(changeset, key, greater_than_or_equal_to: first, less_than_or_equal_to: last)
+  end
+
+  defp validate_format_of(changeset, key, :email) do
+    validate_format(changeset, key, ~r/^[^@,;\s]+@[^@,;\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+  end
+
+  defp validate_format_of(changeset, key, :hostname) do
+    validate_format(changeset, key, ~r/^([A-Za-z0-9-]+\.)*[A-Za-z0-9-]+$|^$/,
+      message: "must be a host name such as smtp.example.org"
+    )
+  end
+
+  defp validate_format_of(changeset, _key, nil), do: changeset
+
+  defp decode(key, nil), do: default(key)
+
+  defp decode(key, value) do
+    case @definitions[key] do
+      %{secret: true} -> Secret.decrypt(value) || ""
+      %{type: :integer} -> String.to_integer(value)
+      %{type: :string} -> value
+    end
+  end
+
+  defp encode(key, value) do
+    case @definitions[key] do
+      %{secret: true} -> Secret.encrypt(value)
+      _ -> to_string(value)
+    end
+  end
+
+  defp default(key) do
+    case @definitions[key].default do
+      :noreply ->
+        "noreply@" <> (URI.parse(Application.fetch_env!(:idejo, :base_uri)).host || "localhost")
+
+      default ->
+        default
     end
   end
 end

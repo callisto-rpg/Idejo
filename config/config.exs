@@ -43,9 +43,6 @@ config :idejo, :secure_cookies, true
 # from. A server running modified code sets IDEJO_SOURCE_URL instead (see config/runtime.exs).
 config :idejo, :upstream_source_url, "https://github.com/callisto-rpg/Idejo"
 
-# Sender of account emails until SMTP settings move to the admin panel (AD-08).
-config :idejo, :mail_from, {"Idejo", "noreply@localhost"}
-
 # Configure the endpoint
 config :idejo, IdejoWeb.Endpoint,
   url: [host: "localhost"],

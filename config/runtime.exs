@@ -82,7 +82,8 @@ if config_env() == :prod do
   config :idejo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :idejo, :base_uri, "https://#{host}"
-  config :idejo, :mail_from, {"Idejo", "noreply@#{host}"}
+  # AD-08: email goes through the SMTP server set in the admin panel (Idejo.Mailer).
+  config :idejo, Idejo.Mailer, adapter: Swoosh.Adapters.SMTP
 
   config :idejo, IdejoWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],

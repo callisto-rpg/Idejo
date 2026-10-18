@@ -9,16 +9,18 @@ defmodule Idejo.Accounts.UserNotifier do
   use Gettext, backend: IdejoWeb.Gettext
 
   alias Idejo.Mailer
+  alias Idejo.Settings
 
+  # Sent from the server name and sender address set in the admin panel (AD-02, AD-08).
   defp deliver(recipient, subject, body) do
     email =
       new()
       |> to(recipient)
-      |> from(Application.fetch_env!(:idejo, :mail_from))
+      |> from({Settings.get(:server_name), Settings.get(:mail_from)})
       |> subject(subject)
       |> text_body(body)
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
+    with {:ok, _metadata} <- Mailer.deliver_email(email) do
       {:ok, email}
     end
   end
@@ -43,6 +45,19 @@ defmodule Idejo.Accounts.UserNotifier do
         name: user.display_name,
         url: url
       )
+    )
+  end
+
+  @doc """
+  Sends a test email to the given address, to check the SMTP settings (AD-08).
+  """
+  def deliver_test_email(recipient) do
+    deliver(
+      recipient,
+      gettext("Test email from %{name}", name: Settings.get(:server_name)),
+      gettext("""
+      This is a test email sent from the admin panel. Email from your server works.
+      """)
     )
   end
 end
