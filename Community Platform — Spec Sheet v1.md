@@ -18,8 +18,8 @@ The twelve open questions from the feature list are settled as follows; each dec
 
 | Question | Decision |
 | --- | --- |
-| Growing-message countdown | The countdown only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it. No size limit on a growing message. Default window 45 s, adjustable server-wide and per category. |
-| Editing an open message | Allowed, in the same composer: sent text stays in it, shown in higher contrast than unsent text. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
+| Growing-message window | The window only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it, and it is not shown. No size limit on a growing message. Default window 45 s, adjustable server-wide and per category. |
+| Editing an open message | Allowed, in the same composer: sent text stays in it, shown in higher contrast than unsent text, and the author can go back into it at any time. After Enter, typing simply carries on, like editing a message inline in Discord. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
 | Line break key | Shift+Enter inserts a line break; Enter sends what changed and keeps typing on the same line; Ctrl+Enter sends and continues on a new line, or starts a new message once the window has ended. |
 | When a topic stops being live | Optional auto-archive after 65 days of inactivity by default; period editable in server-wide settings. |
 | First message of a topic | Same editor as any message. Only differences: it has a title, it takes tags, and it is not live while being typed. |
@@ -70,7 +70,11 @@ Four levels, each with a stable URL: server → category (nestable) → topic �
 
 ## 5. Growing messages
 
-The composer *is* the author’s open message. Pressing Enter sends what has changed, but the text stays in the composer and the author keeps typing in the same message, on the same line. Sent text is shown in higher contrast than unsent text, so it is always clear which part is still private.
+The composer *is* the author’s open message. Before the first Enter it looks and feels like any chat input. Pressing Enter sends what has changed, but the text stays in the composer, the caret stays where it was, and the author keeps typing in the same message, on the same line — it should feel like carrying on a chat, not like editing, much as editing a message inline in Discord. The only visible change is contrast: sent text is shown in higher contrast than unsent text, so it is always clear which part is still private. The author can move back into sent text and change it at any time; the part being changed shows as unsent until the next Enter.
+
+When the sent text does not end with punctuation, Enter adds `. ` after it, so the next words start a new sentence on the same line. When it already ends with punctuation, Enter adds a single space.
+
+The composer has no chrome: only the text box, with placeholder text that names the keys (“Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line”). No countdown, button or status is shown around it. Every message, open or closed, shows only the author’s avatar, display name and role above its text.
 
 The composer sits in the topic at the place of the author’s open message. Replies from other members appear below it, so the composer moves up as the conversation continues; with no open message, it sits at the end of the topic.
 
@@ -80,23 +84,23 @@ A fixed window (45 s by default) starts at the first commit. It does not end the
 
 | Key | Action |
 | --- | --- |
-| Enter | Sends what changed: starts a new message, or commits to the author’s open message. Typing continues in the same message, on the same line |
+| Enter | Sends what changed: starts a new message, or commits to the author’s open message. Adds `. ` (or a space after punctuation); typing continues in the same message, on the same line |
 | Shift+Enter | Line break inside the unsent text, nothing sent |
 | Ctrl+Enter (Cmd+Enter on macOS) | Sends what changed and continues on a new line. Within the window the new line stays in the same message; after the window it starts a new message |
-| Touch screens | Send button = Enter; a “new line” button beside it = Ctrl+Enter |
+| Touch screens | The keyboard’s return key = Enter; how to give Ctrl+Enter without a button is still open |
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | GM-01 | Enter with no open message posts a new message, open and visible to readers at once | Must |
-| GM-02 | Enter while the author has an open message in the topic sends the unsent changes as a new commit; readers see them appear in place. The text stays in the composer and typing continues on the same line, with no line break added | Must |
+| GM-02 | Enter while the author has an open message in the topic sends the unsent changes as a new commit; readers see them appear in place. The text stays in the composer, the caret does not move, and typing continues on the same line, with no line break added. If the sent text does not end with punctuation, `. ` is appended to it; otherwise a single space | Must |
 | GM-03 | The window starts at the first commit; appends never restart or extend it. The window only limits when a new message can be started; it never closes the message or moves the author out of it | Must |
 | GM-04 | When the window ends the message stays open and the author keeps typing in it; Enter still commits to it. Only Ctrl+Enter (GM-05) starts a new message | Must |
 | GM-05 | Ctrl+Enter sends the unsent changes as a commit and continues on a new line. Within the window that line belongs to the same message; after the window the message closes and the new line starts a new message | Must |
 | GM-06 | No size limit on a message; bodies longer than one screen render collapsed with a “show all” control | Must |
-| GM-07 | An open message shows a discreet pencil icon to all readers; the author also sees the time left until a new message can be started | Must |
+| GM-07 | No visible open-state chrome: open and closed messages look the same to readers (avatar, display name and role above the text), and the composer shows no countdown. The open state and time left exist only as text for assistive technology (AX-02, AX-03) | Must |
 | GM-08 | Messages are ordered by their first commit; replies by others appear below an open message, which keeps its place and keeps growing. The author’s composer is that open message, in place: new replies appear below it and push it up | Must |
 | GM-09 | An author has at most one open message per topic | Must |
-| GM-10 | The author can edit any commit, while open or after closing. While open, sent text is edited directly in the composer: sent text shows in higher contrast than unsent text; text typed inside or changed within sent text shows as unsent until the next Enter; deleting sent text is sent with the next commit. Adding text at the end is not an edit | Must |
+| GM-10 | The author can edit any commit, while open or after closing. While open, sent text is edited directly in the composer, with no edit mode to enter or leave: sent text shows in higher contrast than unsent text; text typed inside or changed within sent text shows as unsent until the next Enter; deleting sent text is sent with the next commit. Adding text at the end is not an edit | Must |
 | GM-11 | Changing text of an earlier commit marks the message as edited and shows a discreet “view earlier version” tag; it opens every previous version with its time | Must |
 | GM-12 | An open message also closes when its topic is locked or archived, or when the author’s session disconnects | Must |
 | GM-13 | Notifications, unread counts, search, feeds and webhooks treat a growing message as one item (see sections 10, 11, 15) | Must |
@@ -223,7 +227,7 @@ The whole interface meets WCAG 2.2 level AA, including the live conversation vie
 | --- | --- | --- |
 | AX-01 | Full keyboard operation, visible focus, landmarks and headings on every page | Must |
 | AX-02 | Screen readers announce a growing message when it opens and when it closes, not at every append | Must |
-| AX-03 | The pencil icon, the countdown and the “view earlier version” tag have text equivalents | Must |
+| AX-03 | The open state, the time left in the window and the “view earlier version” tag have text equivalents | Must |
 | AX-04 | Public pages readable without JavaScript | Must |
 | AX-05 | Every interface string translatable; right-to-left languages supported | Must |
 | AX-06 | Light, dark and high-contrast themes; text scaling; reduced motion | Should |
