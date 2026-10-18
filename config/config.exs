@@ -31,6 +31,14 @@ config :idejo,
 # once a server has content, since URIs are stored at creation.
 config :idejo, :base_uri, "http://localhost:4000"
 
+# SP-02: passwords are hashed with Argon2id at a pinned cost (3 passes, 2^16 KiB = 64 MiB,
+# 4 lanes), so a dependency update cannot silently weaken it. Tests lower the cost.
+config :argon2_elixir, argon2_type: 2, t_cost: 3, m_cost: 16, parallelism: 4
+
+# SP-02: session and remember-me cookies carry the Secure flag. Only dev turns it off,
+# since it serves plain http.
+config :idejo, :secure_cookies, true
+
 # Sender of account emails until SMTP settings move to the admin panel (AD-08).
 config :idejo, :mail_from, {"Idejo", "noreply@localhost"}
 

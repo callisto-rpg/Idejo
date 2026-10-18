@@ -3,6 +3,9 @@
 
 import Config
 
+# Plain http on localhost: no Secure flag on cookies (SP-02 keeps it everywhere else).
+config :idejo, :secure_cookies, false
+
 # Configure your database
 config :idejo, Idejo.Repo,
   username: "postgres",
