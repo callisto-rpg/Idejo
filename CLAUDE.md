@@ -70,6 +70,11 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 
 ### Permissions
 
+Roles (RP-01): the built-in roles owner, administrator, moderator, member and guest are created
+by migration; a database trigger refuses to delete, rename or un-built-in them. Lower
+`position` ranks higher. Guest is never stored in `user_roles`: visitors and users with an
+unverified email act as guest (`Idejo.Access.roles_of/1`); verifying grants member.
+
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
 `:view`, `:start`, `:post`, `:moderate`. An explicit deny wins (RP-06). Search and lists filter
 by `:view` in the query, never after loading.
