@@ -18,6 +18,7 @@ defmodule IdejoWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_current_scope_for_user
     plug IdejoWeb.Plugs.ContentSecurityPolicy
+    plug IdejoWeb.Plugs.RequireSetup
   end
 
   pipeline :api do
@@ -28,6 +29,10 @@ defmodule IdejoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    # First-run wizard (AD-01), only while the server has no owner.
+    get "/setup", SetupController, :new
+    post "/setup", SetupController, :create
   end
 
   # Other scopes may use custom stacks.

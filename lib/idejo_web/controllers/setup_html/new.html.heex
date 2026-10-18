@@ -1,0 +1,135 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {gettext("Set up your server")}
+    <:subtitle>
+      {gettext(
+        "Three things and you are done: a name, your owner account and how the server sends email."
+      )}
+    </:subtitle>
+  </.header>
+
+  <form action={~p"/setup"} method="post" id="setup-form" class="space-y-10">
+    <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+
+    <section aria-labelledby="setup-code-heading" class="space-y-2">
+      <h2 id="setup-code-heading" class="font-semibold">{gettext("Setup code")}</h2>
+      <p class="text-sm">
+        {gettext(
+          "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “Idejo is not set up yet” (see “Set up your server” in the deployment guide)."
+        )}
+      </p>
+      <.input
+        name="setup[code]"
+        id="setup_code"
+        type="text"
+        value={@code}
+        label={gettext("Setup code")}
+        autocomplete="off"
+        spellcheck="false"
+        required
+      />
+    </section>
+
+    <section aria-labelledby="setup-server-heading" class="space-y-2">
+      <h2 id="setup-server-heading" class="font-semibold">{gettext("1. Your server")}</h2>
+      <.input field={@settings[:server_name]} type="text" label={gettext("Server name")} required />
+    </section>
+
+    <section aria-labelledby="setup-owner-heading" class="space-y-2">
+      <h2 id="setup-owner-heading" class="font-semibold">{gettext("2. Your owner account")}</h2>
+      <p class="text-sm">
+        {gettext("The owner has every right and can never be locked out.")}
+      </p>
+      <.input
+        field={@owner[:email]}
+        type="email"
+        label={gettext("Email")}
+        autocomplete="email"
+        spellcheck="false"
+        required
+      />
+      <.input
+        field={@owner[:username]}
+        type="text"
+        label={gettext("Username (for @mentions)")}
+        autocomplete="username"
+        spellcheck="false"
+        required
+      />
+      <.input
+        field={@owner[:display_name]}
+        type="text"
+        label={gettext("Display name")}
+        autocomplete="name"
+        required
+      />
+      <.input
+        field={@owner[:password]}
+        type="password"
+        label={gettext("Password (at least 12 characters)")}
+        autocomplete="new-password"
+        value=""
+        required
+      />
+    </section>
+
+    <section aria-labelledby="setup-email-heading" class="space-y-2">
+      <h2 id="setup-email-heading" class="font-semibold">{gettext("3. Email")}</h2>
+      <p class="text-sm">
+        {gettext(
+          "Members get a verification email when they sign up. You can leave the SMTP host empty and set it up later in Admin → Email."
+        )}
+      </p>
+      <.input
+        field={@settings[:mail_from]}
+        type="email"
+        label={gettext("Sender address")}
+        required
+      />
+      <.input
+        field={@settings[:smtp_host]}
+        type="text"
+        label={gettext("SMTP host")}
+        placeholder="smtp.example.org"
+        spellcheck="false"
+      />
+      <.input
+        field={@settings[:smtp_port]}
+        type="number"
+        label={gettext("Port")}
+        min="1"
+        max="65535"
+      />
+      <.input
+        field={@settings[:smtp_security]}
+        type="select"
+        label={gettext("Encryption")}
+        options={[
+          {gettext("STARTTLS (usually port 587)"), "starttls"},
+          {gettext("TLS from the start (usually port 465)"), "tls"},
+          {gettext("None — only for a relay on the same machine or network"), "none"}
+        ]}
+      />
+      <.input
+        field={@settings[:smtp_username]}
+        type="text"
+        label={gettext("Username")}
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <.input
+        field={@settings[:smtp_password]}
+        type="password"
+        label={gettext("Password")}
+        autocomplete="new-password"
+        value=""
+      />
+    </section>
+
+    <.button class="btn btn-primary w-full">{gettext("Set up the server")}</.button>
+  </form>
+</Layouts.app>
