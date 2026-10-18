@@ -12,9 +12,8 @@ affects architecture, conventions, commands or milestone status (DV-01).
 
 A self-hosted community server: one install hosts one community, organised like a forum
 (categories → topics → messages), where every topic is a live chat. Quick lines sent with
-Enter merge into one **growing message**. The composer is the open message: sent text stays in
-it, and a fixed window (45 s default) only sets how soon the author may start a new message
-with Ctrl+Enter, so conversations read like a forum while feeling like a chat.
+Enter merge into one **growing message** that stays open for a fixed window (45 s default),
+so conversations read like a forum while feeling like a chat.
 
 ## Specifications — the source of truth
 
@@ -58,15 +57,12 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 
 1. A commit is written to the database **before** the append is acknowledged.
 2. `closes_at = opened_at + window` is fixed at the first commit. Appends never change it.
-   It marks when the author may start a new message; it never closes the message (GM-03/04).
-3. One `Idejo.Messages.OpenMessage` process per open message holds the window timer, under
+3. One `Idejo.Messages.OpenMessage` process per open message holds the close timer, under
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
-4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
-5. A message closes only on Ctrl+Enter after the window (GM-05), lock or archive, session
-   disconnect (GM-12) or a moderator (GM-16).
-6. At most one open message per author per topic (GM-09). The first message of a topic is
+4. On boot, `Idejo.Messages.Recovery` reloads open messages; any past `closes_at` closes now.
+5. At most one open message per author per topic (GM-09). The first message of a topic is
    never open (GM-14).
-7. Notifications, unread counts and search treat a growing message as one item (GM-13).
+6. Notifications, unread counts and search treat a growing message as one item (GM-13).
 
 ### Permissions
 
