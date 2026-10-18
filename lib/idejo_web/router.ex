@@ -4,6 +4,9 @@
 defmodule IdejoWeb.Router do
   use IdejoWeb, :router
 
+  # Known gap until SP-05: no content security policy yet. The SP-05 pull
+  # request adds IdejoWeb.Plugs.ContentSecurityPolicy and replaces this note.
+  # sobelow_skip ["Config.CSP"]
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session

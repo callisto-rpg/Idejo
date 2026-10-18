@@ -110,8 +110,9 @@ defmodule Idejo.MixProject do
         "deps.unlock --unused",
         "format",
         "credo --strict",
-        "sobelow --config",
+        "sobelow --config --exit",
         "deps.audit",
+        "cmd mix hex.audit",
         "test"
       ]
     ]
