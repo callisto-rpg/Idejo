@@ -15,6 +15,12 @@ defmodule Idejo.Application do
       Idejo.Repo,
       {DNSCluster, query: Application.get_env(:idejo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Idejo.PubSub},
+      # Growing messages: one timer process per open message (GM-03), rebuilt at boot.
+      {Registry, keys: :unique, name: Idejo.Messages.Registry},
+      {DynamicSupervisor, name: Idejo.Messages.OpenMessageSupervisor, strategy: :one_for_one},
+      if(Application.get_env(:idejo, :recover_open_messages, true),
+        do: Idejo.Messages.Recovery
+      ),
       Idejo.Messages.DemoTopic,
       # Writes the setup link to the log while the server has no owner (AD-01).
       if(Application.get_env(:idejo, :announce_setup, true), do: Idejo.Setup.Announcer),
