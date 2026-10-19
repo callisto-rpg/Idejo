@@ -351,7 +351,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:57
-#: lib/idejo_web/live/user_settings_live.ex:99
+#: lib/idejo_web/live/user_settings_live.ex:129
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
@@ -675,8 +675,8 @@ msgid "Back to sign in"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:38
-#: lib/idejo_web/live/user_settings_live.ex:103
-#: lib/idejo_web/live/user_settings_live.ex:131
+#: lib/idejo_web/live/user_settings_live.ex:133
+#: lib/idejo_web/live/user_settings_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "Change password"
 msgstr ""
@@ -708,7 +708,7 @@ msgid "If that email has an account, a link to reset its password is on its way.
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:24
-#: lib/idejo_web/live/user_settings_live.ex:120
+#: lib/idejo_web/live/user_settings_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "New password (at least 12 characters)"
 msgstr ""
@@ -1077,33 +1077,73 @@ msgstr ""
 msgid "You cannot remove your own administrator role."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:95
+#: lib/idejo_web/live/user_settings_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Display name (shown above your messages)"
 msgstr ""
 
 #: lib/idejo_web/live/user_settings_live.ex:20
-#: lib/idejo_web/live/user_settings_live.ex:87
+#: lib/idejo_web/live/user_settings_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "Profile and account"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:45
+#: lib/idejo_web/live/user_settings_live.ex:46
 #, elixir-autogen, elixir-format
 msgid "Profile saved."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:113
+#: lib/idejo_web/live/user_settings_live.ex:143
 #, elixir-autogen, elixir-format
 msgid "Current password"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:73
+#: lib/idejo_web/live/user_settings_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "Password changed. You were signed out everywhere else."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:127
+#: lib/idejo_web/live/user_settings_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "Repeat the new password"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:166
+#, elixir-autogen, elixir-format
+msgid "Delete account"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:184
+#, elixir-autogen, elixir-format
+msgid "Delete my account"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:182
+#, elixir-autogen, elixir-format
+msgid "Delete your account for good?"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "That is not your current password."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:108
+#, elixir-autogen, elixir-format
+msgid "You are the only owner of this server. Make someone else owner before deleting your account."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:93
+#, elixir-autogen, elixir-format
+msgid "Your account has been deleted."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:168
+#, elixir-autogen, elixir-format
+msgid "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "Your password, to confirm"
 msgstr ""

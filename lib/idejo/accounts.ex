@@ -7,6 +7,8 @@ defmodule Idejo.Accounts do
   """
 
   import Ecto.Query, warn: false
+  alias Idejo.Access
+  alias Idejo.Access.UserRole
   alias Idejo.Federation
   alias Idejo.Repo
 
@@ -380,6 +382,61 @@ defmodule Idejo.Accounts do
              })
            ) do
       {:ok, user}
+    end
+  end
+
+  ## Account deletion (AC-07)
+
+  @doc """
+  Deletes the user's own account, given their password.
+
+  The row stays so the stable `uri` (FD-01) and the records that name the user keep
+  working, but everything personal goes: email, username, display name and password are
+  replaced, roles, sessions and emailed links are deleted, and `status` becomes
+  `"deleted"`. A `delete` activity (FD-02) is recorded in the same transaction.
+
+  The server's last owner cannot delete their account (`{:error, :last_owner}`). Returns the
+  socket ids of the ended sessions, so the web layer can disconnect their LiveViews.
+  """
+  @spec delete_user(User.t(), String.t() | nil) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, :invalid_password | :last_owner}
+  def delete_user(%User{} = user, password) do
+    if User.valid_password?(user, password || "") do
+      Repo.transact(fn -> anonymise(user) end)
+    else
+      {:error, :invalid_password}
+    end
+  end
+
+  defp anonymise(user) do
+    with :ok <- Access.ensure_not_last_owner(user) do
+      socket_ids = session_socket_ids(user)
+      Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
+      Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id)
+
+      # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.
+      deleted =
+        user
+        |> Ecto.Changeset.change(
+          email: "deleted:" <> user.id,
+          username: "deleted-" <> user.id,
+          display_name: "Deleted user",
+          password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
+          confirmed_at: nil,
+          status: "deleted"
+        )
+        |> Repo.update!()
+
+      Repo.insert!(
+        Federation.activity_changeset(%{
+          actor_uri: user.uri,
+          verb: "delete",
+          object_uri: user.uri,
+          payload: %{"type" => "Person"}
+        })
+      )
+
+      {:ok, {deleted, socket_ids}}
     end
   end
 

@@ -155,6 +155,11 @@ roles or the permission grid. Every later change must keep it true:
   through `Accounts.update_user_profile/2`, which records an `update` activity. The username
   never changes (@mentions); the avatar comes with uploads in M4. The same page changes the
   password (AC-01, below).
+- **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
+  password. The row stays (its `uri` and the records naming it keep working) but is
+  anonymised: placeholder email and username that sign-up can never produce, "Deleted user",
+  random password, roles, tokens and links deleted, `status: "deleted"`, and a `delete`
+  activity. `Access.ensure_not_last_owner/1` refuses the last owner.
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
