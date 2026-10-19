@@ -182,6 +182,10 @@ roles or the permission grid. Every later change must keep it true:
   one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
   there with 301.
+- **Permalinks** (TP-06): a topic's URI `/t/{id}` 301s to `/t/{id}/{slug}`; a message's URI
+  `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
+  renames and moves. Each message's time links to its permalink. When topic pages are paged,
+  `/m/{id}` must lead to the right page.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

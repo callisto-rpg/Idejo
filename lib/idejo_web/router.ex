@@ -34,6 +34,7 @@ defmodule IdejoWeb.Router do
     get "/c/:slug", CategoryController, :show
     get "/t/:id", TopicController, :show
     get "/t/:id/:slug", TopicController, :show
+    get "/m/:id", MessageController, :show
 
     # First-run wizard (AD-01), only while the server has no owner.
     get "/setup", SetupController, :new

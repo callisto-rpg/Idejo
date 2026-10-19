@@ -400,6 +400,21 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Gets a message by id, with its topic, if the visitor (`nil`) or user may view the topic's
+  category; otherwise `nil`. For message permalinks (TP-06).
+  """
+  @spec get_viewable_message(User.t() | nil, String.t()) :: Message.t() | nil
+  def get_viewable_message(user, id) when is_binary(id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %Message{} = message <- Repo.get(Message, id) |> Repo.preload(topic: :category),
+         true <- Access.can?(user, :view, message.topic.category) do
+      message
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
   Lists a category's topics for its page (TP-03), one page at a time: pinned topics first,
   then the most recently active, with their starters. The caller checks the category can be
   viewed.
