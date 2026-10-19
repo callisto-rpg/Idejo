@@ -4,7 +4,8 @@
 defmodule IdejoWeb.Admin.CategoriesLive do
   @moduledoc """
   Admin panel: categories (RP-03). Create, rename, describe, reorder and delete the
-  categories of the server; one level only.
+  categories of the server; one level only. Deleting a category that has topics asks whether
+  to move them to another category or archive them; the Archive itself is never deleted.
   """
   use IdejoWeb, :live_view
 
@@ -16,11 +17,15 @@ defmodule IdejoWeb.Admin.CategoriesLive do
      socket
      |> assign(:page_title, gettext("Categories"))
      |> assign(:editing, nil)
+     |> assign(:deleting, nil)
      |> assign(:new_form, to_form(Forum.change_new_category(), as: :category))
      |> load()}
   end
 
-  defp load(socket), do: assign(socket, :categories, Forum.list_categories())
+  defp load(socket),
+    do: assign(socket, categories: Forum.list_categories(), topics: Forum.topic_counts())
+
+  defp topic_count(topics, category), do: Map.get(topics, category.id, 0)
   defp admin(socket), do: socket.assigns.current_scope.user
   defp find(socket, id), do: Enum.find(socket.assigns.categories, &(&1.id == id))
 
@@ -55,6 +60,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
          socket
          |> put_flash(:info, gettext("Category “%{name}” saved.", name: category.name))
          |> assign(:editing, nil)
+         |> assign(:deleting, nil)
          |> load()}
 
       {:error, changeset} ->
@@ -72,27 +78,48 @@ defmodule IdejoWeb.Admin.CategoriesLive do
     end
   end
 
-  def handle_event("delete", %{"id" => id}, socket) do
+  # A category with topics asks where they go before it is deleted.
+  def handle_event("ask_delete", %{"id" => id}, socket),
+    do: {:noreply, assign(socket, :deleting, id)}
+
+  def handle_event("cancel_delete", _params, socket),
+    do: {:noreply, assign(socket, :deleting, nil)}
+
+  def handle_event("delete", %{"id" => id} = params, socket) do
     category = find(socket, id)
 
-    case Forum.delete_category(admin(socket), category) do
+    case Forum.delete_category(admin(socket), category, topics: topics_option(socket, params)) do
       {:ok, _} ->
         {:noreply,
          socket
          |> put_flash(:info, gettext("Category “%{name}” deleted.", name: category.name))
+         |> assign(:deleting, nil)
          |> load()}
 
-      {:error, :has_topics} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("“%{name}” still has topics, so it cannot be deleted yet.",
-             name: category.name
-           )
-         )}
+      {:error, reason} ->
+        {:noreply, socket |> put_flash(:error, delete_error(reason, category)) |> load()}
     end
   end
+
+  defp topics_option(_socket, %{"topics" => "archive"}), do: :archive
+
+  defp topics_option(socket, %{"topics" => "move:" <> target_id}) do
+    case find(socket, target_id) do
+      nil -> nil
+      target -> {:move, target}
+    end
+  end
+
+  defp topics_option(_socket, _params), do: nil
+
+  defp delete_error(:has_topics, category),
+    do: gettext("Choose where the topics of “%{name}” go.", name: category.name)
+
+  defp delete_error(:invalid_target, _category),
+    do: gettext("Choose another category to move the topics to.")
+
+  defp delete_error(:archive, _category), do: gettext("The Archive cannot be deleted.")
+  defp delete_error(_reason, _category), do: gettext("The category could not be deleted.")
 
   @impl true
   def render(assigns) do
@@ -137,7 +164,11 @@ defmodule IdejoWeb.Admin.CategoriesLive do
             <% _ -> %>
               <div class="flex flex-wrap items-center gap-3">
                 <span class="font-semibold">{category.name}</span>
+                <span :if={category.archive} class="badge badge-sm">{gettext("Archive")}</span>
                 <code class="text-sm opacity-70">/c/{category.slug}</code>
+                <span class="text-sm opacity-70">
+                  {ngettext("1 topic", "%{count} topics", topic_count(@topics, category))}
+                </span>
                 <span class="flex-1"></span>
                 <button
                   :if={index > 0}
@@ -178,6 +209,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                   {gettext("Edit")}
                 </button>
                 <button
+                  :if={!category.archive and topic_count(@topics, category) == 0}
                   type="button"
                   class="btn btn-xs btn-error"
                   phx-click="delete"
@@ -186,8 +218,57 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                 >
                   {gettext("Delete")}
                 </button>
+                <button
+                  :if={!category.archive and topic_count(@topics, category) > 0}
+                  type="button"
+                  class="btn btn-xs btn-error"
+                  phx-click="ask_delete"
+                  phx-value-id={category.id}
+                >
+                  {gettext("Delete")}
+                </button>
               </div>
               <p :if={category.description != ""} class="text-sm mt-1">{category.description}</p>
+              <.form
+                :if={@deleting == category.id}
+                for={%{}}
+                as={:delete}
+                id={"delete-category-#{category.id}"}
+                phx-submit="delete"
+                phx-value-id={category.id}
+                class="mt-3 space-y-2"
+              >
+                <fieldset>
+                  <legend class="text-sm font-semibold">
+                    {ngettext(
+                      "“%{name}” has 1 topic. Where should it go?",
+                      "“%{name}” has %{count} topics. Where should they go?",
+                      topic_count(@topics, category),
+                      name: category.name
+                    )}
+                  </legend>
+                  <label
+                    :for={target <- @categories}
+                    :if={target.id != category.id and !target.archive}
+                    class="flex items-center gap-2"
+                  >
+                    <input type="radio" name="topics" value={"move:#{target.id}"} required />
+                    {gettext("Move to %{name}", name: target.name)}
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input type="radio" name="topics" value="archive" required />
+                    {gettext("Archive (read only, hidden unless shown in Permissions)")}
+                  </label>
+                </fieldset>
+                <div class="flex gap-2">
+                  <.button class="btn btn-error btn-sm">
+                    {gettext("Delete “%{name}”", name: category.name)}
+                  </.button>
+                  <button type="button" class="btn btn-sm" phx-click="cancel_delete">
+                    {gettext("Cancel")}
+                  </button>
+                </div>
+              </.form>
           <% end %>
         </li>
       </ol>

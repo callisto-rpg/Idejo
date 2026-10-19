@@ -181,9 +181,16 @@ roles or the permission grid. Every later change must keep it true:
   writes the topic and its first message, closed (GM-14), with URIs and `create` activities in
   one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
-  there with 301. A category with topics is not deleted (`{:error, :has_topics}`).
+  there with 301.
+- **Deleting a category with topics** (RP-03, TP-14): `Forum.delete_category/3` needs
+  `topics: {:move, target}` or `topics: :archive` (else `{:error, :has_topics}`). Archived
+  topics go, read-only (`state: "arc hived"`), to the one Archive category (`archive: true`),
+  made on first use by `Forum.archive_category/1` with a `:view` deny for every role; admins
+  show it to roles in the grid. The Archive is never deleted and takes no new topics
+  (`Forum.can_start_topic?/2`).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
-  sanitises the result; `body_html` is stored and shown as is (`TopicHTML.body/1`). No syntax
+  sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
+  one raw output). No syntax
   highlighting: MDEx colours code with inline styles, which the CSP refuses.
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
