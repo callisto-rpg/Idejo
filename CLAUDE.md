@@ -182,16 +182,19 @@ roles or the permission grid. Every later change must keep it true:
   one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
   there with 301.
+- **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
+  Preview, used for every message (the first message now, replies and the composer later).
+  Nothing typed is stored or sent before posting; the preview is rendered for the author only.
 - **Deleting a category with topics** (RP-03, TP-14): `Forum.delete_category/3` needs
   `topics: {:move, target}` or `topics: :archive` (else `{:error, :has_topics}`). Archived
-  topics go, read-only (`state: "arc hived"`), to the one Archive category (`archive: true`),
+  topics go, read-only (`state: "archived"`), to the one Archive category (`archive: true`),
   made on first use by `Forum.archive_category/1` with a `:view` deny for every role; admins
   show it to roles in the grid. The Archive is never deleted and takes no new topics
   (`Forum.can_start_topic?/2`).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
-  one raw output). No syntax
-  highlighting: MDEx colours code with inline styles, which the CSP refuses.
+  one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP
+  refuses.
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor

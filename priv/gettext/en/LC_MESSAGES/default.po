@@ -1160,41 +1160,34 @@ msgstr ""
 msgid "Your password, to confirm"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:77
-#: lib/idejo_web/live/new_topic_live.ex:91
+#: lib/idejo_web/live/new_topic_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "First message (Markdown)"
 msgstr ""
 
 #: lib/idejo_web/controllers/category_html/show.html.heex:11
-#: lib/idejo_web/live/new_topic_live.ex:66
-#: lib/idejo_web/live/new_topic_live.ex:81
+#: lib/idejo_web/live/new_topic_live.ex:80
 #, elixir-autogen, elixir-format
 msgid "New topic"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:25
-#: lib/idejo_web/live/new_topic_live.ex:30
+#: lib/idejo_web/live/new_topic_live.ex:29
 #, elixir-autogen, elixir-format
 msgid "New topic in %{category}"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:81
-#: lib/idejo_web/live/new_topic_live.ex:95
+#: lib/idejo_web/live/new_topic_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "Post topic"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:73
-#: lib/idejo_web/live/new_topic_live.ex:88
+#: lib/idejo_web/live/new_topic_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:31
-#: lib/idejo_web/live/new_topic_live.ex:53
-#: lib/idejo_web/live/new_topic_live.ex:37
-#: lib/idejo_web/live/new_topic_live.ex:68
+#: lib/idejo_web/live/new_topic_live.ex:36
+#: lib/idejo_web/live/new_topic_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "You cannot start topics in this category."
 msgstr ""
@@ -1257,6 +1250,7 @@ msgid "“%{name}” has 1 topic. Where should it go?"
 msgid_plural "“%{name}” has %{count} topics. Where should they go?"
 msgstr[0] ""
 msgstr[1] ""
+
 #: lib/idejo_web/components/message_components.ex:73
 #, elixir-autogen, elixir-format
 msgid "Nothing to preview yet."
