@@ -4,14 +4,14 @@
 defmodule IdejoWeb.CategoryController do
   @moduledoc """
   The public category page at `/c/{slug}` (AC-05), server-rendered so it works without
-  JavaScript (AX-04, CL-02), with a “New topic” button for those who may start one (TP-01).
-  Topics are listed here from TP-03.
+  JavaScript (AX-04, CL-02): its topics, pinned first, then the most recently active (TP-03),
+  and a “New topic” button for those who may start one (TP-01).
   """
   use IdejoWeb, :controller
 
   alias Idejo.Forum
 
-  def show(conn, %{"slug" => slug}) do
+  def show(conn, %{"slug" => slug} = params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
 
     # A category the visitor may not view is not found, so its name is not given away.
@@ -20,11 +20,26 @@ defmodule IdejoWeb.CategoryController do
         raise Ecto.NoResultsError, queryable: Idejo.Forum.Category
 
       category ->
+        page = page(params)
+        {topics, more?} = Forum.list_topics(category, page: page)
+
         render(conn, :show,
           category: category,
           page_title: category.name,
-          can_start?: Forum.can_start_topic?(user, category)
+          can_start?: Forum.can_start_topic?(user, category),
+          topics: topics,
+          page: page,
+          more?: more?
         )
     end
   end
+
+  defp page(%{"page" => page}) do
+    case Integer.parse(page) do
+      {page, ""} when page > 0 -> page
+      _ -> 1
+    end
+  end
+
+  defp page(_params), do: 1
 end

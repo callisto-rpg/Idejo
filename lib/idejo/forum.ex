@@ -400,6 +400,36 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Lists a category's topics for its page (TP-03), one page at a time: pinned topics first,
+  then the most recently active, with their starters. The caller checks the category can be
+  viewed.
+
+  Returns `{topics, more?}`, where `more?` tells whether a next page exists.
+
+  ## Options
+
+    * `:page` - the page number, from 1. Defaults to 1.
+    * `:per_page` - topics per page. Defaults to 30.
+  """
+  @spec list_topics(Category.t(), keyword()) :: {[Topic.t()], boolean()}
+  def list_topics(%Category{id: category_id}, opts \\ []) do
+    per_page = Keyword.get(opts, :per_page, 30)
+    page = max(Keyword.get(opts, :page, 1), 1)
+
+    topics =
+      Repo.all(
+        from t in Topic,
+          where: t.category_id == ^category_id,
+          order_by: [desc: t.pinned, desc: t.last_activity_at, desc: t.id],
+          offset: ^((page - 1) * per_page),
+          limit: ^(per_page + 1),
+          preload: [:author]
+      )
+
+    {Enum.take(topics, per_page), length(topics) > per_page}
+  end
+
+  @doc """
   Lists a topic's messages in the order they were opened (GM-08), with their authors.
   """
   @spec list_messages(Topic.t()) :: [Message.t()]

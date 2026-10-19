@@ -302,6 +302,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
+#: lib/idejo_web/controllers/category_html/show.html.heex:46
 #: lib/idejo_web/live/admin/users_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Next page"
@@ -328,11 +329,13 @@ msgstr ""
 msgid "Owner"
 msgstr ""
 
+#: lib/idejo_web/controllers/category_html/show.html.heex:41
 #: lib/idejo_web/live/admin/users_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "Pages"
 msgstr ""
 
+#: lib/idejo_web/controllers/category_html/show.html.heex:43
 #: lib/idejo_web/live/admin/users_live.ex:70
 #, elixir-autogen, elixir-format
 msgid "Previous page"
@@ -1079,7 +1082,7 @@ msgstr ""
 msgid "You cannot remove your own administrator role."
 msgstr ""
 
-#: lib/idejo_web/controllers/category_html/show.html.heex:16
+#: lib/idejo_web/controllers/category_html/show.html.heex:50
 #, elixir-autogen, elixir-format
 msgid "All categories"
 msgstr ""
@@ -1264,4 +1267,31 @@ msgstr ""
 #: lib/idejo_web/components/message_components.ex:53
 #, elixir-autogen, elixir-format
 msgid "Write"
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:28
+#, elixir-autogen, elixir-format
+msgid "1 message"
+msgid_plural "%{count} messages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:24
+#, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:16
+#, elixir-autogen, elixir-format
+msgid "No topics yet."
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:23
+#, elixir-autogen, elixir-format
+msgid "Pinned"
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:33
+#, elixir-autogen, elixir-format
+msgid "last activity"
 msgstr ""
