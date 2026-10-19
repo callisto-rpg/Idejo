@@ -3,22 +3,29 @@
 
 defmodule IdejoWeb.UserSettingsLive do
   @moduledoc """
-  Profile and account (AC-04): the signed-in user changes their display name. The avatar
-  comes with uploads (M4); deleting the account with AC-07.
+  Profile and account: the signed-in user changes their display name (AC-04) and password
+  (AC-01), and can delete their account (AC-07). The avatar comes with uploads (M4).
   """
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts
+  alias IdejoWeb.UserAuth
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     user = socket.assigns.current_scope.user
 
     {:ok,
      socket
      |> assign(:page_title, gettext("Profile and account"))
-     |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))}
+     |> assign(:session_token, session["user_token"])
+     |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
+     |> assign(:password_form, password_form(user))
+     |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))}
   end
+
+  defp password_form(user, changeset \\ nil),
+    do: to_form(changeset || Accounts.change_user_password(user), as: :password)
 
   @impl true
   def handle_event("validate", %{"profile" => params}, socket) do
@@ -44,6 +51,64 @@ defmodule IdejoWeb.UserSettingsLive do
     end
   end
 
+  def handle_event("validate_password", %{"password" => params}, socket) do
+    changeset =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_password(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :password_form, password_form(nil, changeset))}
+  end
+
+  def handle_event("save_password", %{"password" => params}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Accounts.update_user_password(user, params, socket.assigns.session_token) do
+      {:ok, {user, socket_ids}} ->
+        UserAuth.disconnect_sessions(socket_ids)
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext("Password changed. You were signed out everywhere else.")
+         )
+         |> assign(:password_form, password_form(user))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :password_form, password_form(nil, changeset))}
+    end
+  end
+
+  def handle_event("delete_account", %{"delete" => %{"password" => password}}, socket) do
+    own_socket_id = Accounts.session_socket_id(socket.assigns.session_token)
+
+    case Accounts.delete_user(socket.assigns.current_scope.user, password) do
+      {:ok, {_user, socket_ids}} ->
+        # This page goes to the home page by itself; the other sessions are disconnected.
+        UserAuth.disconnect_sessions(Enum.reject(socket_ids, &(&1 == own_socket_id)))
+
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Your account has been deleted."))
+         |> redirect(to: ~p"/")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, delete_error(reason))
+         |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))}
+    end
+  end
+
+  defp delete_error(:invalid_password), do: gettext("That is not your current password.")
+
+  defp delete_error(:last_owner),
+    do:
+      gettext(
+        "You are the only owner of this server. Make someone else owner before deleting your account."
+      )
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -63,6 +128,63 @@ defmodule IdejoWeb.UserSettingsLive do
         />
         <.button class="btn btn-primary">{gettext("Save")}</.button>
       </.form>
+
+      <section class="mt-10" aria-labelledby="password-heading">
+        <h2 id="password-heading" class="font-semibold mb-2">{gettext("Change password")}</h2>
+        <.form
+          for={@password_form}
+          id="password-form"
+          phx-change="validate_password"
+          phx-submit="save_password"
+        >
+          <.input
+            field={@password_form[:current_password]}
+            type="password"
+            label={gettext("Current password")}
+            autocomplete="current-password"
+            required
+          />
+          <.input
+            field={@password_form[:password]}
+            type="password"
+            label={gettext("New password (at least 12 characters)")}
+            autocomplete="new-password"
+            required
+          />
+          <.input
+            field={@password_form[:password_confirmation]}
+            type="password"
+            label={gettext("Repeat the new password")}
+            autocomplete="new-password"
+            required
+          />
+          <.button class="btn btn-primary">{gettext("Change password")}</.button>
+        </.form>
+      </section>
+
+      <section class="mt-10" aria-labelledby="delete-heading">
+        <h2 id="delete-heading" class="font-semibold mb-2">{gettext("Delete account")}</h2>
+        <p class="text-sm mb-2">
+          {gettext(
+            "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
+          )}
+        </p>
+        <.form for={@delete_form} id="delete-account-form" phx-submit="delete_account">
+          <.input
+            field={@delete_form[:password]}
+            type="password"
+            label={gettext("Your password, to confirm")}
+            autocomplete="current-password"
+            required
+          />
+          <.button
+            class="btn btn-error"
+            data-confirm={gettext("Delete your account for good?")}
+          >
+            {gettext("Delete my account")}
+          </.button>
+        </.form>
+      </section>
     </Layouts.app>
     """
   end

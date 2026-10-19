@@ -228,6 +228,16 @@ defmodule Idejo.Access do
 
   defp check_not_last_owner(%Role{}), do: :ok
 
+  @doc """
+  Returns `:ok`, or `{:error, :last_owner}` when the user is the server's only owner, who
+  must never go away (AC-07). Locks the owner role like removing it does, so call it inside
+  the transaction that removes the user.
+  """
+  @spec ensure_not_last_owner(User.t()) :: :ok | {:error, :last_owner}
+  def ensure_not_last_owner(%User{} = user) do
+    if owner?(user), do: check_not_last_owner(built_in_role!(:owner)), else: :ok
+  end
+
   # Nothing changes, and nothing is audited, when the user already holds the role (or not).
   defp insert_assignment(admin, user, role) do
     case Repo.insert_all(UserRole, [%{user_id: user.id, role_id: role.id}], on_conflict: :nothing) do

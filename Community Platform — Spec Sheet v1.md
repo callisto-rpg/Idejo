@@ -161,7 +161,7 @@ One account per person on the server; anonymous visitors can read public categor
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| AC-01 | Sign-up with email and password, email verification | Must |
+| AC-01 | Sign-up with email and password, email verification; password change from the profile | Must |
 | AC-02 | Registration modes: open, admin approval, invite-only, closed | Must |
 | AC-03 | Two-factor sign-in with authenticator codes and passkeys; recovery codes | Must |
 | AC-04 | Profile: display name, avatar, bio, pronouns, links, plus fields defined by admins | Must |

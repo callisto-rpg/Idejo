@@ -7,6 +7,8 @@ defmodule Idejo.Accounts do
   """
 
   import Ecto.Query, warn: false
+  alias Idejo.Access
+  alias Idejo.Access.UserRole
   alias Idejo.Federation
   alias Idejo.Repo
 
@@ -281,6 +283,36 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
+  Changes the password from the profile (AC-01), given the current one in
+  `attrs["current_password"]`. Every other session of the user ends (SP-02): their tokens,
+  and any emailed links, are deleted in the same transaction; the session holding
+  `kept_token` stays signed in.
+
+  Returns the socket ids of the ended sessions, so the web layer can disconnect their
+  LiveViews.
+  """
+  @spec update_user_password(User.t(), map(), binary()) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, Ecto.Changeset.t()}
+  def update_user_password(%User{} = user, attrs, kept_token) when is_binary(kept_token) do
+    changeset =
+      user
+      |> Ecto.Changeset.change()
+      # First, so a wrong current password costs no hashing of the new one.
+      |> User.validate_current_password(attrs["current_password"])
+      |> User.password_changeset(attrs)
+
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.update(changeset) do
+        kept_socket_id = session_socket_id(kept_token)
+        others = from(t in UserToken, where: t.user_id == ^user.id and t.token != ^kept_token)
+        socket_ids = Enum.reject(session_socket_ids(user), &(&1 == kept_socket_id))
+        Repo.delete_all(others)
+        {:ok, {user, socket_ids}}
+      end
+    end)
+  end
+
+  @doc """
   Sets a new password and ends every session of the user (SP-02): all their tokens, sessions
   and emailed links alike, are deleted in the same transaction.
 
@@ -350,6 +382,61 @@ defmodule Idejo.Accounts do
              })
            ) do
       {:ok, user}
+    end
+  end
+
+  ## Account deletion (AC-07)
+
+  @doc """
+  Deletes the user's own account, given their password.
+
+  The row stays so the stable `uri` (FD-01) and the records that name the user keep
+  working, but everything personal goes: email, username, display name and password are
+  replaced, roles, sessions and emailed links are deleted, and `status` becomes
+  `"deleted"`. A `delete` activity (FD-02) is recorded in the same transaction.
+
+  The server's last owner cannot delete their account (`{:error, :last_owner}`). Returns the
+  socket ids of the ended sessions, so the web layer can disconnect their LiveViews.
+  """
+  @spec delete_user(User.t(), String.t() | nil) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, :invalid_password | :last_owner}
+  def delete_user(%User{} = user, password) do
+    if User.valid_password?(user, password || "") do
+      Repo.transact(fn -> anonymise(user) end)
+    else
+      {:error, :invalid_password}
+    end
+  end
+
+  defp anonymise(user) do
+    with :ok <- Access.ensure_not_last_owner(user) do
+      socket_ids = session_socket_ids(user)
+      Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
+      Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id)
+
+      # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.
+      deleted =
+        user
+        |> Ecto.Changeset.change(
+          email: "deleted:" <> user.id,
+          username: "deleted-" <> user.id,
+          display_name: "Deleted user",
+          password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
+          confirmed_at: nil,
+          status: "deleted"
+        )
+        |> Repo.update!()
+
+      Repo.insert!(
+        Federation.activity_changeset(%{
+          actor_uri: user.uri,
+          verb: "delete",
+          object_uri: user.uri,
+          payload: %{"type" => "Person"}
+        })
+      )
+
+      {:ok, {deleted, socket_ids}}
     end
   end
 
