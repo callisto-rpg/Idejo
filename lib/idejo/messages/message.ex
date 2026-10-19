@@ -28,6 +28,8 @@ defmodule Idejo.Messages.Message do
     belongs_to :topic, Idejo.Forum.Topic
     belongs_to :author, Idejo.Accounts.User
     belongs_to :reply_to, __MODULE__
+    # Earlier versions, kept only when sent text was changed (GM-11, TP-05).
+    has_many :versions, Idejo.Messages.Version, preload_order: [asc: :created_at]
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end

@@ -218,6 +218,13 @@ roles or the permission grid. Every later change must keep it true:
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect. No Ctrl+Enter on touch screens for now (steward decision).
+- **Edits and earlier versions** (GM-10, GM-11): open messages are edited in the composer;
+  closed ones with `Messages.edit/3` (the author only, in an open topic; the text kept as
+  written, no `.` added), from an "Edit" button that opens the message editor in place.
+  Changing text already there keeps a version and sets `edited`; adding at the end does not.
+  Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
+  needed) listing each version newest first with the span it was current. `list_messages/1`
+  preloads `:versions`.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

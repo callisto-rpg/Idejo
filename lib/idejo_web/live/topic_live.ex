@@ -47,7 +47,8 @@ defmodule IdejoWeb.TopicLive do
            can_post?: false,
            lost_access?: false,
            messages: [],
-           roles: %{}
+           roles: %{},
+           editing: nil
          )}
 
       topic ->
@@ -62,6 +63,7 @@ defmodule IdejoWeb.TopicLive do
         {:ok,
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
+         |> assign(editing: nil, editor_mode: :write, preview_html: "")
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> sync_composer()}
@@ -110,7 +112,7 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def handle_info({:message, message}, socket) do
-    message = Repo.preload(message, [:author, reply_to: :author])
+    message = Repo.preload(message, [:author, :versions, reply_to: :author], force: true)
     {:noreply, put_messages(socket, upsert(socket.assigns.messages, message))}
   end
 
@@ -171,6 +173,63 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
 
+  # Editing one's own closed message (GM-10); open ones are edited in the composer.
+  def handle_event("edit", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.messages, &(&1.id == id)) do
+      %{state: "closed"} = message ->
+        form = to_form(%{"body" => message.body_md}, as: :edit)
+        {:noreply, assign(socket, editing: {id, form}, editor_mode: :write, preview_html: "")}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("cancel_edit", _params, socket), do: {:noreply, assign(socket, :editing, nil)}
+
+  def handle_event(
+        "validate_edit",
+        %{"edit" => params},
+        %{assigns: %{editing: {id, _}}} = socket
+      ),
+      do: {:noreply, assign(socket, :editing, {id, to_form(params, as: :edit)})}
+
+  def handle_event(
+        "editor_mode",
+        %{"mode" => "preview"},
+        %{assigns: %{editing: {_, form}}} = socket
+      ) do
+    html = Idejo.Markdown.to_html(form.params["body"] || "")
+    {:noreply, assign(socket, editor_mode: :preview, preview_html: html)}
+  end
+
+  def handle_event("editor_mode", %{"mode" => "write"}, socket),
+    do: {:noreply, assign(socket, :editor_mode, :write)}
+
+  def handle_event("save_edit", %{"edit" => %{"body" => body}}, socket) do
+    {id, _form} = socket.assigns.editing
+    message = Enum.find(socket.assigns.messages, &(&1.id == id))
+
+    case Messages.edit(user(socket), message, body) do
+      # The edited message arrives like everyone else's view of it, as an event.
+      {:ok, _message} ->
+        {:noreply, assign(socket, :editing, nil)}
+
+      {:error, :blank} ->
+        form =
+          %{"body" => body}
+          |> to_form(as: :edit, errors: [body: {"can't be blank", []}], action: :validate)
+
+        {:noreply, assign(socket, :editing, {id, form})}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> assign(:editing, nil)
+         |> put_flash(:error, gettext("This message cannot be edited."))}
+    end
+  end
+
   @impl true
   def render(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
@@ -185,7 +244,16 @@ defmodule IdejoWeb.TopicLive do
 
       <ol id="messages" class="space-y-6">
         <li :for={message <- @before} :key={message.id} id={"message-#{message.id}"}>
-          <.message message={message} topic={@topic} can_post?={@can_post?} roles={@roles} />
+          <.message
+            message={message}
+            topic={@topic}
+            can_post?={@can_post?}
+            roles={@roles}
+            viewer={@current_scope && @current_scope.user}
+            editing={@editing}
+            editor_mode={@editor_mode}
+            preview_html={@preview_html}
+          />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
           <.composer
@@ -196,7 +264,16 @@ defmodule IdejoWeb.TopicLive do
           />
         </li>
         <li :for={message <- @later} :key={message.id} id={"message-#{message.id}"}>
-          <.message message={message} topic={@topic} can_post?={@can_post?} roles={@roles} />
+          <.message
+            message={message}
+            topic={@topic}
+            can_post?={@can_post?}
+            roles={@roles}
+            viewer={@current_scope && @current_scope.user}
+            editing={@editing}
+            editor_mode={@editor_mode}
+            preview_html={@preview_html}
+          />
         </li>
       </ol>
 
@@ -251,9 +328,27 @@ defmodule IdejoWeb.TopicLive do
   attr :topic, :map, required: true
   attr :can_post?, :boolean, required: true
   attr :roles, :map, required: true
+  attr :viewer, :any, required: true
+  attr :editing, :any, required: true
+  attr :editor_mode, :atom, required: true
+  attr :preview_html, :string, required: true
 
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
+    editing =
+      case assigns.editing do
+        {id, form} when id == assigns.message.id -> form
+        _ -> nil
+      end
+
+    assigns =
+      assign(assigns,
+        edit_form: editing,
+        own_closed?:
+          assigns.can_post? and assigns.viewer != nil and
+            assigns.viewer.id == assigns.message.author_id and assigns.message.state == "closed"
+      )
+
     ~H"""
     <article aria-labelledby={"message-#{@message.id}-author"}>
       <p id={"message-#{@message.id}-author"} class="flex items-center gap-2">
@@ -278,7 +373,37 @@ defmodule IdejoWeb.TopicLive do
         </.link>
         <span class="opacity-70">{Forum.excerpt(@message.reply_to)}</span>
       </blockquote>
-      <MessageComponents.body html={@message.body_html} />
+      <.form
+        :if={@edit_form}
+        for={@edit_form}
+        id={"edit-message-#{@message.id}"}
+        phx-change="validate_edit"
+        phx-submit="save_edit"
+      >
+        <MessageComponents.editor
+          field={@edit_form[:body]}
+          label={gettext("Edit your message (Markdown)")}
+          mode={@editor_mode}
+          preview_html={@preview_html}
+        />
+        <div class="flex gap-2">
+          <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
+          <button type="button" class="btn btn-sm" phx-click="cancel_edit">
+            {gettext("Cancel")}
+          </button>
+        </div>
+      </.form>
+      <MessageComponents.body :if={!@edit_form} html={@message.body_html} />
+      <.versions :if={@message.edited} message={@message} />
+      <button
+        :if={@own_closed? and !@edit_form}
+        type="button"
+        class="link text-sm mr-3"
+        phx-click="edit"
+        phx-value-id={@message.id}
+      >
+        {gettext("Edit")}
+      </button>
       <.link
         :if={@can_post?}
         href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
@@ -288,6 +413,38 @@ defmodule IdejoWeb.TopicLive do
         {gettext("Reply")}
       </.link>
     </article>
+    """
+  end
+
+  attr :message, :map, required: true
+
+  # GM-11: a discreet tag that opens every earlier version with its time. A <details> element,
+  # so it opens without JavaScript too; its words are the text equivalent (AX-03).
+  defp versions(assigns) do
+    # Each version was the message's text from the previous change (or the opening) until
+    # the edit that replaced it; newest first.
+    froms = [assigns.message.opened_at | Enum.map(assigns.message.versions, & &1.created_at)]
+    spans = assigns.message.versions |> Enum.zip(froms) |> Enum.reverse()
+    assigns = assign(assigns, :spans, spans)
+
+    ~H"""
+    <details id={"message-#{@message.id}-versions"} class="text-xs opacity-70 mt-1">
+      <summary class="cursor-pointer">{gettext("view earlier version")}</summary>
+      <ol class="mt-2 space-y-3">
+        <li :for={{version, from} <- @spans} class="border-l-2 border-base-300 pl-3">
+          <p>
+            <time datetime={DateTime.to_iso8601(from)}>
+              {Calendar.strftime(from, "%Y-%m-%d %H:%M:%S")}
+            </time>
+            –
+            <time datetime={DateTime.to_iso8601(version.created_at)}>
+              {Calendar.strftime(version.created_at, "%Y-%m-%d %H:%M:%S UTC")}
+            </time>
+          </p>
+          <MessageComponents.body html={Idejo.Markdown.to_html(version.body_md)} />
+        </li>
+      </ol>
+    </details>
     """
   end
 
