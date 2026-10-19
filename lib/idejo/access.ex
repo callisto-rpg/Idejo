@@ -18,6 +18,7 @@ defmodule Idejo.Access do
 
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
+  alias Idejo.Audit
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
@@ -121,4 +122,147 @@ defmodule Idejo.Access do
     Repo.insert_all(UserRole, [%{user_id: user_id, role_id: role_id}], on_conflict: :nothing)
     :ok
   end
+
+  ## Role editor (RP-02)
+
+  # Ranks that never change, so the order cannot put anyone above the owner or below guest.
+  @fixed_top ~w(owner administrator)
+  @fixed_bottom ~w(guest)
+
+  @doc """
+  Returns true when a role can move in the order: every role but owner and administrator
+  (always on top) and guest (always last).
+  """
+  @spec movable?(Role.t()) :: boolean()
+  def movable?(%Role{built_in: true, name: name})
+      when name in @fixed_top or name in @fixed_bottom,
+      do: false
+
+  def movable?(%Role{}), do: true
+
+  @doc """
+  Returns a changeset for the role form.
+  """
+  def change_role(%Role{} = role, attrs \\ %{}), do: Role.changeset(role, attrs)
+
+  @doc """
+  Creates a custom role, as `admin`, ranked just above guest. Audited as `role.create`.
+  """
+  @spec create_role(User.t(), map()) :: {:ok, Role.t()} | {:error, Ecto.Changeset.t()}
+  def create_role(%User{} = admin, attrs) do
+    Repo.transact(fn ->
+      lock_roles()
+      guest = built_in_role!(:guest)
+
+      with {:ok, role} <- Repo.insert(Role.changeset(%Role{position: guest.position}, attrs)),
+           {:ok, _} <- Repo.update(Ecto.Changeset.change(guest, position: guest.position + 1)),
+           {:ok, _} <- Audit.record(admin, "role.create", nil, role_snapshot(role)) do
+        {:ok, role}
+      end
+    end)
+  end
+
+  @doc """
+  Renames a custom role or changes the colour of any role, as `admin`. Audited as
+  `role.update` with the old and new values.
+  """
+  @spec update_role(User.t(), Role.t(), map()) :: {:ok, Role.t()} | {:error, Ecto.Changeset.t()}
+  def update_role(%User{} = admin, %Role{} = role, attrs) do
+    case Role.changeset(role, attrs) do
+      %Ecto.Changeset{changes: changes} when changes == %{} -> {:ok, role}
+      changeset -> Repo.transact(fn -> save_role(admin, role, changeset) end)
+    end
+  end
+
+  defp save_role(admin, role, changeset) do
+    with {:ok, updated} <- Repo.update(changeset),
+         {:ok, _} <-
+           Audit.record(admin, "role.update", role_snapshot(role), role_snapshot(updated)) do
+      {:ok, updated}
+    end
+  end
+
+  @doc """
+  Moves a role one place up (higher rank) or down, as `admin`, swapping it with its neighbour.
+  Audited as `role.reorder`. Owner, administrator and guest do not move, and nothing moves
+  past them.
+  """
+  @spec move_role(User.t(), Role.t(), :up | :down) ::
+          {:ok, [Role.t()]} | {:error, :fixed_rank}
+  def move_role(%User{} = admin, %Role{} = role, direction) when direction in [:up, :down] do
+    Repo.transact(fn ->
+      lock_roles()
+      roles = list_roles()
+
+      case neighbours(roles, role, direction) do
+        {role, neighbour} -> swap_positions(admin, roles, role, neighbour)
+        nil -> {:error, :fixed_rank}
+      end
+    end)
+  end
+
+  # The role and the one it would swap with, or nil when either cannot move.
+  defp neighbours(roles, role, direction) do
+    with index when is_integer(index) <- Enum.find_index(roles, &(&1.id == role.id)),
+         target = if(direction == :up, do: index - 1, else: index + 1),
+         # Enum.at/2 counts negative indexes from the end, so stop at the top first.
+         true <- target >= 0,
+         %Role{} = neighbour <- Enum.at(roles, target),
+         role = Enum.at(roles, index),
+         true <- movable?(role) and movable?(neighbour) do
+      {role, neighbour}
+    else
+      _ -> nil
+    end
+  end
+
+  defp swap_positions(admin, roles_before, role, neighbour) do
+    with {:ok, _} <- Repo.update(Ecto.Changeset.change(role, position: neighbour.position)),
+         {:ok, _} <- Repo.update(Ecto.Changeset.change(neighbour, position: role.position)),
+         roles_after = list_roles(),
+         {:ok, _} <-
+           Audit.record(admin, "role.reorder", %{"order" => order_names(roles_before)}, %{
+             "order" => order_names(roles_after)
+           }) do
+      {:ok, roles_after}
+    end
+  end
+
+  defp order_names(roles), do: Enum.map(roles, & &1.name)
+
+  @doc """
+  Deletes a custom role, as `admin`. The users who held it simply lose it; the roles below
+  move up one place. Audited as `role.delete`. Built-in roles cannot be deleted.
+  """
+  @spec delete_role(User.t(), Role.t()) :: {:ok, Role.t()} | {:error, :built_in}
+  def delete_role(%User{}, %Role{built_in: true}), do: {:error, :built_in}
+
+  def delete_role(%User{} = admin, %Role{} = role) do
+    Repo.transact(fn ->
+      lock_roles()
+
+      with {:ok, deleted} <- Repo.delete(role),
+           {_, _} <-
+             Repo.update_all(from(r in Role, where: r.position > ^role.position),
+               inc: [position: -1]
+             ),
+           {:ok, _} <- Audit.record(admin, "role.delete", role_snapshot(role), nil) do
+        {:ok, deleted}
+      end
+    end)
+  end
+
+  @doc """
+  Counts how many users hold each role, as a map from role id. For the role editor.
+  """
+  @spec holder_counts() :: %{Ecto.UUID.t() => non_neg_integer()}
+  def holder_counts do
+    Repo.all(from ur in UserRole, group_by: ur.role_id, select: {ur.role_id, count()})
+    |> Map.new()
+  end
+
+  defp role_snapshot(role), do: Audit.snapshot(role, [:name, :colour, :position])
+
+  # Positions are rewritten as a whole; one change at a time.
+  defp lock_roles, do: Repo.query!("LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE")
 end

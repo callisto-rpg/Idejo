@@ -97,6 +97,7 @@ defmodule IdejoWeb.Router do
       live "/email", EmailLive
       live "/users", UsersLive
       live "/invites", InvitesLive
+      live "/roles", RolesLive
       live "/users/:id", UserLive
       live "/categories", CategoriesLive
     end
