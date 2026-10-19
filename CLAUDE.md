@@ -77,6 +77,13 @@ and users with an unverified email act as guest (an unverified owner or administ
 that role too); every verified user holds member on top of their other roles
 (`Idejo.Access.roles_of/1`). Nobody is ever without a role.
 
+Role editor (RP-02, **Admin → Roles**): custom roles have a name (unique ignoring case, also
+against built-in names) and an optional `#rrggbb` colour, and can be renamed, moved one place
+up or down, and deleted. Built-in roles only change colour. Owner and administrator stay on
+top and guest stays last (`Access.movable?/1`). Every change is audited (`role.create`,
+`role.update`, `role.reorder`, `role.delete`). Colours are drawn as SVG `fill`, never as
+`style` (SP-05).
+
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
 `:view`, `:start`, `:post`, `:moderate`. Each role's right on a category is allow, deny or
 unset; unset follows the role's server-wide setting (a `category_permissions` row with no
