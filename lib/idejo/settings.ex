@@ -59,6 +59,7 @@ defmodule Idejo.Settings do
           | :smtp_security
           | :smtp_username
           | :smtp_password
+          | :gm_window_seconds
 
   @doc """
   The allowed values of `:registration_mode`: open, or invite-only (AC-02).
