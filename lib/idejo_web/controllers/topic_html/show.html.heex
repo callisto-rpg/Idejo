@@ -7,6 +7,9 @@
     {@topic.title}
     <:subtitle>
       <.link href={~p"/c/#{@topic.category.slug}"} class="link">{@topic.category.name}</.link>
+      <span :if={@topic.state == "archived"} id="topic-archived" class="badge badge-sm ml-2">
+        {gettext("Archived: read only")}
+      </span>
     </:subtitle>
   </.header>
 
@@ -21,7 +24,7 @@
             {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
           </time>
         </p>
-        <.body message={message} />
+        <MessageComponents.body html={message.body_html} />
       </article>
     </li>
   </ol>

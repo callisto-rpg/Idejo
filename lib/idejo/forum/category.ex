@@ -22,6 +22,8 @@ defmodule Idejo.Forum.Category do
     field :description, :string, default: ""
     field :position, :integer
     field :visibility, :string, default: "public"
+    # The one built-in Archive category (RP-03, TP-14), made by `Idejo.Forum` on first use.
+    field :archive, :boolean, default: false
     # Sub-categories wait for v1 (RP-05); the column exists but is never set in v0.1.
     belongs_to :parent, __MODULE__
 
