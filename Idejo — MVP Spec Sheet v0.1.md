@@ -125,7 +125,7 @@ Ten screens make up v0.1; public ones are server-rendered and work without JavaS
 
 ## 6. Data model
 
-PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` plus one row per Enter in `commits`; the end of the window is fixed at the first commit (`closes_at = opened_at + window`) and marks when the author may start a new message, not when the message closes, so a restart simply reloads open messages.
+PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` whose full text each Enter overwrites, plus one row in `message_versions` each time an Enter changes text already sent; the end of the window is fixed at the first commit (`closes_at = opened_at + window`) and marks when the author may start a new message, not when the message closes, so a restart simply reloads open messages.
 
 | Table | Key fields | Notes |
 | --- | --- | --- |
@@ -136,7 +136,7 @@ PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` p
 | category\_permissions | category\_id, role\_id, right, effect | right: view, start, post, moderate; effect: allow, deny (no row = unset). A row with no `category_id` is the role’s server-wide setting |
 | topics | id, uri, category\_id, author\_id, title, slug, state, pinned, forked\_from\_message\_id, message\_count, last\_activity\_at |  |
 | messages | id, uri, topic\_id, author\_id, reply\_to\_id, state, opened\_at, closes\_at, closed\_at, body\_md, body\_html, edited, search\_vector | Ordered by `opened_at` (GM-08) |
-| commits | id, message\_id, position, text, created\_at | The change sent at that Enter (added, edited or deleted text). Written before it is acknowledged (NF-02) |
+| message\_versions | id, message\_id, body\_md, created\_at | The message's full text before an Enter that changed text already sent, with the time of that Enter (GM-11). Appends keep no version. Each Enter's new text is written to `messages` before it is acknowledged (NF-02) |
 | message\_versions | id, message\_id, body\_md, created\_at | Snapshot saved when an earlier commit is edited (GM-11) |
 | read\_positions | user\_id, topic\_id, last\_read\_message\_id |  |
 | follows | user\_id, topic\_id |  |

@@ -14,7 +14,7 @@ defmodule Idejo.Settings do
   a form keeps the saved value.
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
-  email (AD-08). The growing-message window comes with AD-04.
+  email (AD-08), and the growing-message window (GM-15), set in the admin panel with AD-04.
   """
 
   import Ecto.Changeset
@@ -44,7 +44,10 @@ defmodule Idejo.Settings do
     smtp_port: %{type: :integer, default: 587, range: 1..65_535},
     smtp_security: %{type: :string, default: "starttls", required: true, in: @smtp_security},
     smtp_username: %{type: :string, default: "", max: 255},
-    smtp_password: %{type: :string, default: "", max: 255, secret: true}
+    smtp_password: %{type: :string, default: "", max: 255, secret: true},
+    # Growing messages (GM-03, GM-15): seconds from a message's first commit until its author
+    # may start a new one. Set in the admin panel with AD-04.
+    gm_window_seconds: %{type: :integer, default: 45, range: 10..600}
   }
 
   @type key ::

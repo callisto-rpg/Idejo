@@ -68,6 +68,14 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
    never open (GM-14).
 7. Notifications, unread counts and search treat a growing message as one item (GM-13).
 
+The engine is `Idejo.Messages`: the composer sends the author's whole message after each Enter
+and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunctuated text
+(not after code). Each commit overwrites `body_md`/`body_html`; one that changes text already
+sent first keeps the old text in `message_versions` (GM-11). Events go to `"topic:{id}"` on
+`Idejo.PubSub`: `{:message, message}` and `{:window_ended, id}`. The window length is the
+`gm_window_seconds` setting (default 45). Tests set `recover_open_messages: false` and call
+`Idejo.Messages.Recovery.run/0` themselves.
+
 ### Permissions
 
 Roles (RP-01): the built-in roles owner, administrator, moderator, member and guest are created

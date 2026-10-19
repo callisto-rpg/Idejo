@@ -49,3 +49,6 @@ config :phoenix,
 # AD-01: no setup link in the test log, and pages are not sent to the wizard unless a test
 # asks for it.
 config :idejo, announce_setup: false, setup_redirect: false
+
+# Tests run Idejo.Messages.Recovery themselves, inside the SQL sandbox.
+config :idejo, recover_open_messages: false
