@@ -100,6 +100,8 @@ defmodule IdejoWeb.Router do
       live "/roles", RolesLive
       live "/users/:id", UserLive
       live "/categories", CategoriesLive
+      live "/permissions", PermissionsLive
+      live "/permissions/:slug", PermissionsLive
     end
   end
 

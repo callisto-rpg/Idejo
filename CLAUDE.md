@@ -94,6 +94,10 @@ Search and lists filter by `:view` in the query, never after loading: use
 category. Settings change only through `Access.set_permission/5` (audited as
 `permission.update`). Server-wide defaults seeded at install: guest views; member views,
 starts topics and posts; moderator also moderates.
+The grid is **Admin → Permissions** (RP-05, `IdejoWeb.Admin.PermissionsLive`):
+`/admin/permissions` for the server-wide settings (allow or not allowed, no deny) and
+`/admin/permissions/{slug}` per category (server-wide, allow or deny); owner and administrator
+rows show “Always” and take no setting.
 
 **Owners and administrators always have every right and can never lock themselves out**
 (steward rule, 2026-10-19). `Idejo.Access.administrator?/1` (holds owner or administrator) is
