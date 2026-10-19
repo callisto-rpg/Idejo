@@ -182,6 +182,9 @@ roles or the permission grid. Every later change must keep it true:
   one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
   there with 301.
+- **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
+  pinned first, then by `last_activity_at`, with starter, message count and last activity.
+  The unread marker waits for read positions (TP-07, M4).
 - **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
   Preview, used for every message (the first message now, replies and the composer later).
   Nothing typed is stored or sent before posting; the preview is rendered for the author only.
