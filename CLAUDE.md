@@ -283,12 +283,19 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 
 - [x] M0 — Foundations — repo, headers, NOTICE, CLA check, CI, Compose with HTTPS
 - [x] M1 — Accounts and structure — roles, categories, permission grid, invites, profile, admin pages, audit log; exit test "admin sets up the server"
-- [ ] **M2 — Topics**
-- [ ] M3 — Growing messages
+- [x] M2 — Topics
+- [ ] **M3 — Growing messages**
 - [ ] M4 — Around the conversation
 - [ ] M5 — Moderation and operations
 
-Current milestone: **M2**. Do not start work belonging to a later milestone.
+Current milestone: **M3**. Do not start work belonging to a later milestone.
+
+M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
+end-to-end test; a server restart mid-message loses nothing.
 
 M2 exit check (MVP §7): the "member starts a topic" flow passes as an end-to-end test; a public
 topic renders without JavaScript.
+Not implemented in M2, left for later milestones:
+- live delivery (TP-04), in M3;
+- unread tracking (TP-07), along with TP-03's unread marker, in M4.
+
