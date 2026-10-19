@@ -161,30 +161,134 @@ defmodule Idejo.Forum do
   Deletes a category, as `admin`; the ones below move up. Audited as `category.delete`, with
   a `delete` activity.
 
-  A category that still has topics is not deleted (`{:error, :has_topics}`): they must be
-  moved or archived first (v1 RP-03).
+  A category that still has topics needs `topics:` to say where they go (RP-03):
+
+    * `{:move, target}` - to another category, as they are;
+    * `:archive` - to the Archive category, archived and read-only (TP-14). The Archive is
+      made the first time something is archived (`archive_category/1`).
+
+  Each topic gets an `update` activity with its new category, and the audit entry records
+  where the topics went. Without `topics:` the category is kept (`{:error, :has_topics}`).
+  The Archive itself is never deleted (`{:error, :archive}`).
   """
-  @spec delete_category(User.t(), Category.t()) :: {:ok, Category.t()} | {:error, term()}
-  def delete_category(%User{} = admin, %Category{} = category) do
+  @spec delete_category(User.t(), Category.t(), keyword()) ::
+          {:ok, Category.t()} | {:error, :archive | :has_topics | :invalid_target | term()}
+  def delete_category(%User{} = admin, %Category{} = category, opts \\ []) do
     Repo.transact(fn ->
       lock_categories()
+      topic_ids = Repo.all(from t in Topic, where: t.category_id == ^category.id, select: t.id)
 
-      with :ok <- check_no_topics(category),
+      with :ok <- check_deletable(category),
+           {:ok, moved} <- move_topics_away(admin, category, topic_ids, opts[:topics]),
            {:ok, deleted} <- Repo.delete(category),
            {_, _} <-
              Repo.update_all(from(c in Category, where: c.position > ^category.position),
                inc: [position: -1]
              ),
-           :ok <- record(admin, "delete", category, nil) do
+           :ok <- record(admin, "delete", category, nil, moved) do
         {:ok, deleted}
       end
     end)
   end
 
-  defp check_no_topics(%Category{id: id}) do
-    if Repo.exists?(from t in Topic, where: t.category_id == ^id),
-      do: {:error, :has_topics},
-      else: :ok
+  @doc """
+  Counts the topics of each category, as a map from category id. For the admin page.
+  """
+  @spec topic_counts() :: %{Ecto.UUID.t() => non_neg_integer()}
+  def topic_counts do
+    Repo.all(from t in Topic, group_by: t.category_id, select: {t.category_id, count()})
+    |> Map.new()
+  end
+
+  defp check_deletable(%Category{archive: true}), do: {:error, :archive}
+  defp check_deletable(%Category{}), do: :ok
+
+  # Returns what the audit entry says about the topics, or nothing when there were none.
+  defp move_topics_away(_admin, _category, [], _where), do: {:ok, %{}}
+  defp move_topics_away(_admin, _category, _ids, nil), do: {:error, :has_topics}
+
+  defp move_topics_away(admin, category, ids, {:move, %Category{} = target}) do
+    target = Repo.get(Category, target.id)
+
+    if target && target.id != category.id && !target.archive do
+      move_topics(admin, ids, target, %{})
+      {:ok, %{"topics" => %{"count" => length(ids), "moved_to" => target.slug}}}
+    else
+      {:error, :invalid_target}
+    end
+  end
+
+  defp move_topics_away(admin, _category, ids, :archive) do
+    with {:ok, archive} <- archive_category(admin) do
+      move_topics(admin, ids, archive, %{state: "archived"})
+      {:ok, %{"topics" => %{"count" => length(ids), "archived_in" => archive.slug}}}
+    end
+  end
+
+  defp move_topics(admin, ids, target, changes) do
+    changes = Keyword.new(Map.put(changes, :category_id, target.id))
+    {_, topics} = Repo.update_all(from(t in Topic, where: t.id in ^ids, select: t), set: changes)
+
+    for topic <- topics do
+      Repo.insert!(
+        Federation.activity_changeset(%{
+          actor_uri: admin.uri,
+          verb: "update",
+          object_uri: topic.uri,
+          target_uri: target.uri,
+          payload: %{"type" => "Page", "name" => topic.title, "state" => topic.state}
+        })
+      )
+    end
+  end
+
+  @doc """
+  Returns the Archive category (RP-03, TP-14), making it on first use, as `admin`: last in
+  the order, named "Archive", and hidden from every role (a `:view` deny each, audited as
+  `permission.update`) until an administrator shows it to some in the permission grid.
+  Owners and administrators always see it.
+  """
+  @spec archive_category(User.t()) :: {:ok, Category.t()} | {:error, term()}
+  def archive_category(%User{} = admin) do
+    case Repo.get_by(Category, archive: true) do
+      %Category{} = archive -> {:ok, archive}
+      nil -> Repo.transact(fn -> create_archive(admin) end)
+    end
+  end
+
+  defp create_archive(admin) do
+    lock_categories()
+    id = Federation.generate_id()
+
+    archive = %Category{
+      id: id,
+      uri: Federation.uri(:category, id),
+      position: Repo.aggregate(Category, :count),
+      archive: true
+    }
+
+    attrs = %{
+      "name" => "Archive",
+      "description" => "Topics kept from deleted categories.",
+      "slug" => free_slug("archive")
+    }
+
+    with {:ok, archive} <- Repo.insert(Category.create_changeset(archive, attrs)),
+         :ok <- record(admin, "create", nil, archive),
+         :ok <- hide_from_every_role(admin, archive) do
+      {:ok, archive}
+    end
+  end
+
+  defp hide_from_every_role(admin, archive) do
+    Access.list_roles()
+    |> Enum.reject(&(&1.built_in and &1.name in ~w(owner administrator)))
+    |> Enum.reduce_while(:ok, fn role, :ok ->
+      case Access.set_permission(admin, role, archive, :view, :deny) do
+        {:ok, _} -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
   end
 
   ## Topics (TP-01)
@@ -215,11 +319,20 @@ defmodule Idejo.Forum do
     form = change_new_topic(attrs)
 
     cond do
-      not Access.can?(user, :start, category) -> {:error, :forbidden}
+      not can_start_topic?(user, category) -> {:error, :forbidden}
       not form.valid? -> {:error, Map.put(form, :action, :insert)}
       true -> Repo.transact(fn -> insert_topic(user, category, form.changes) end)
     end
   end
+
+  @doc """
+  Returns true when the user may start a topic in the category: the `:start` right there,
+  and never in the Archive, whose topics only come from deleted categories.
+  """
+  @spec can_start_topic?(User.t() | nil, Category.t()) :: boolean()
+  def can_start_topic?(nil, _category), do: false
+  def can_start_topic?(_user, %Category{archive: true}), do: false
+  def can_start_topic?(%User{} = user, category), do: Access.can?(user, :start, category)
 
   defp insert_topic(user, category, %{title: title, body: body}) do
     now = DateTime.utc_now()
@@ -300,11 +413,12 @@ defmodule Idejo.Forum do
   end
 
   # One audit entry (SP-06) and one activity (FD-02) per change.
-  defp record(admin, verb, before, after_) do
+  defp record(admin, verb, before, after_, extra \\ %{}) do
     object = after_ || before
+    before_snapshot = if before, do: Map.merge(snapshot(before), extra), else: nil
 
     with {:ok, _} <-
-           Audit.record(admin, "category." <> verb, snapshot(before), snapshot(after_)),
+           Audit.record(admin, "category." <> verb, before_snapshot, snapshot(after_)),
          {:ok, _} <-
            Repo.insert(
              Federation.activity_changeset(%{
