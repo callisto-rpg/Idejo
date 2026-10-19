@@ -266,6 +266,7 @@ mix phx.server                     # http://localhost:4000
 mix test                           # all tests
 mix test --only req:GM-03          # tests for one requirement
 mix test --only flow:admin-sets-up-the-server   # one end-to-end flow (MVP §4)
+mix test --only flow:member-starts-a-topic       # the M2 exit check
 mix format --check-formatted
 mix credo --strict
 mix dialyzer
