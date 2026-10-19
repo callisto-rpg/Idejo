@@ -30,8 +30,45 @@
             </time>
           </.link>
         </p>
+        <blockquote
+          :if={message.reply_to}
+          id={"message-#{message.id}-reply-to"}
+          class="border-l-2 border-base-300 pl-3 my-1 text-sm"
+        >
+          <.link href={~p"/m/#{message.reply_to.id}"} class="link">
+            {gettext("In reply to %{name}", name: message.reply_to.author.display_name)}
+          </.link>
+          <span class="opacity-70">{Forum.excerpt(message.reply_to)}</span>
+        </blockquote>
         <MessageComponents.body html={message.body_html} />
+        <.link
+          :if={@can_post?}
+          href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{message.id}" <> "#message-form-section"}
+          class="link text-sm"
+          aria-label={gettext("Reply to %{name}", name: message.author.display_name)}
+        >
+          {gettext("Reply")}
+        </.link>
       </article>
     </li>
   </ol>
+
+  <div class="mt-8">
+    <%= cond do %>
+      <% @can_post? -> %>
+        {live_render(@conn, IdejoWeb.MessageFormLive,
+          id: "message-form-live",
+          session: %{"topic_id" => @topic.id, "reply_to_id" => @reply_to_id}
+        )}
+      <% @topic.state != "open" -> %>
+        <p id="topic-closed" class="opacity-70">
+          {gettext("This topic takes no new messages.")}
+        </p>
+      <% is_nil(@current_scope) -> %>
+        <p id="sign-in-to-post">
+          <.link href={~p"/users/sign-in"} class="link">{gettext("Sign in to take part.")}</.link>
+        </p>
+      <% true -> %>
+    <% end %>
+  </div>
 </Layouts.app>

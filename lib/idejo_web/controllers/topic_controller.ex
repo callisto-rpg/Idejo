@@ -6,6 +6,10 @@ defmodule IdejoWeb.TopicController do
   The public topic page at `/t/{id}/{slug}` (TP-01), server-rendered so it reads without
   JavaScript (AX-04, CL-02). `/t/{id}`, the topic's URI (FD-01), and any other slug redirect
   to it, so the URI and old links keep working after a rename.
+
+  Signed-in users who may post get the message form (`IdejoWeb.MessageFormLive`) below the
+  messages, and a "Reply" link on each; `?reply_to={message id}` opens the form as a reply to
+  it (TP-08), without JavaScript needed to choose it.
   """
   use IdejoWeb, :controller
 
@@ -24,7 +28,9 @@ defmodule IdejoWeb.TopicController do
           render(conn, :show,
             topic: topic,
             messages: Forum.list_messages(topic),
-            page_title: topic.title
+            page_title: topic.title,
+            can_post?: Forum.can_post?(user, topic),
+            reply_to_id: params["reply_to"]
           )
         else
           conn

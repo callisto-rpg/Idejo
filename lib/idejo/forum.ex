@@ -453,8 +453,157 @@ defmodule Idejo.Forum do
       from m in Message,
         where: m.topic_id == ^id,
         order_by: [asc: m.opened_at, asc: m.id],
-        preload: [:author]
+        preload: [:author, reply_to: :author]
     )
+  end
+
+  ## Messages in a topic (TP-08)
+
+  @doc """
+  Returns a changeset for the message form: the Markdown body.
+  """
+  def change_new_message(attrs \\ %{}) do
+    {%{}, %{body: :string}}
+    |> Ecto.Changeset.cast(attrs, [:body])
+    |> Ecto.Changeset.validate_required([:body])
+  end
+
+  @doc """
+  Returns true when the user may post in the topic: the `:post` right in its category, and
+  the topic open (locked and archived topics take no new messages).
+  """
+  @spec can_post?(User.t() | nil, Topic.t()) :: boolean()
+  def can_post?(nil, _topic), do: false
+  def can_post?(_user, %Topic{state: state}) when state != "open", do: false
+
+  def can_post?(%User{} = user, %Topic{} = topic) do
+    topic = Repo.preload(topic, :category)
+    Access.can?(user, :post, topic.category)
+  end
+
+  @doc """
+  Posts a message in a topic, as `user`, closed (until growing messages arrive in M3).
+
+  With `"reply_to_id"` it is an inline reply (TP-08): it references one earlier message of
+  the same topic and is shown with a short excerpt of it, in the topic's single flow (no side
+  threads). The topic's message count and last activity move on, and the message gets a URI
+  (FD-01) and a `create` activity (FD-02), in one transaction.
+
+  Refused with `{:error, :forbidden}` without the right or in a locked or archived topic.
+  """
+  @spec post_message(User.t(), Topic.t(), map()) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def post_message(%User{} = user, %Topic{} = topic, attrs) do
+    form = change_new_message(attrs)
+
+    Repo.transact(fn ->
+      # Locked, so a lock or a move cannot slip in between the check and the insert.
+      topic = Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+
+      cond do
+        not can_post?(user, topic) -> {:error, :forbidden}
+        not form.valid? -> {:error, Map.put(form, :action, :insert)}
+        true -> insert_message(user, topic, form, attrs["reply_to_id"])
+      end
+    end)
+  end
+
+  defp insert_message(user, topic, form, reply_to_id) do
+    now = DateTime.utc_now()
+    id = Federation.generate_id()
+
+    with {:ok, reply_to} <- reply_target(topic, reply_to_id, form),
+         {:ok, message} <-
+           %Message{
+             id: id,
+             uri: Federation.uri(:message, id),
+             topic_id: topic.id,
+             author_id: user.id,
+             reply_to_id: reply_to && reply_to.id,
+             opened_at: now,
+             closes_at: now,
+             closed_at: now
+           }
+           |> Message.closed_changeset(%{body_md: form.changes.body})
+           |> Repo.insert(),
+         {:ok, _} <-
+           topic
+           |> Ecto.Changeset.change(message_count: topic.message_count + 1, last_activity_at: now)
+           |> Repo.update(),
+         {:ok, _} <-
+           insert_activity(user, message.uri, topic.uri, reply_payload(reply_to)) do
+      {:ok, message}
+    end
+  end
+
+  # A reply references a message of the same topic; anything else is refused.
+  defp reply_target(_topic, blank, _form) when blank in [nil, ""], do: {:ok, nil}
+
+  defp reply_target(topic, id, form) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %Message{} = message <- Repo.get_by(Message, id: id, topic_id: topic.id) do
+      {:ok, message}
+    else
+      _ ->
+        {:error,
+         form
+         |> Ecto.Changeset.add_error(:body, "replies to a message that is not in this topic")
+         |> Map.put(:action, :insert)}
+    end
+  end
+
+  defp reply_payload(nil), do: %{"type" => "Note"}
+  defp reply_payload(reply_to), do: %{"type" => "Note", "inReplyTo" => reply_to.uri}
+
+  @doc """
+  Gets one message of a topic, with its author, or `nil`: the message a reply is written to.
+  """
+  @spec get_topic_message(Topic.t(), String.t() | nil) :: Message.t() | nil
+  def get_topic_message(%Topic{id: topic_id}, id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.get_by(Message, id: id, topic_id: topic_id) |> Repo.preload(:author)
+      :error -> nil
+    end
+  end
+
+  def get_topic_message(_topic, _id), do: nil
+
+  @doc """
+  A short plain-text excerpt of a message, for inline replies (TP-08): its text without
+  formatting, cut at about `length` characters on a word.
+  """
+  @spec excerpt(Message.t(), pos_integer()) :: String.t()
+  def excerpt(%Message{body_html: html}, length \\ 140) do
+    text =
+      html
+      # Blocks and line breaks part words; inline tags such as <strong> do not.
+      |> String.replace(
+        ~r{</?(p|li|ul|ol|h[1-6]|blockquote|pre|br|hr|tr|td|th|table)\b[^>]*>},
+        " "
+      )
+      |> String.replace(~r/<[^>]*>/, "")
+      |> unescape_html()
+      |> String.split()
+      |> Enum.join(" ")
+
+    if String.length(text) <= length do
+      text
+    else
+      cut = String.slice(text, 0, length)
+      cut = String.replace(cut, ~r/\s+\S*$/u, "")
+      cut <> "…"
+    end
+  end
+
+  # The sanitiser escapes text with these entities only.
+  defp unescape_html(text) do
+    text
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
+    |> String.replace("&#39;", "'")
+    |> String.replace("&#x27;", "'")
+    |> String.replace("&amp;", "&")
   end
 
   # One audit entry (SP-06) and one activity (FD-02) per change.

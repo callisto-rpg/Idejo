@@ -952,6 +952,7 @@ msgid "Permissions of %{name}"
 msgstr ""
 
 #: lib/idejo_web/live/admin/permissions_live.ex:80
+#: lib/idejo_web/live/message_form_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Post"
 msgstr ""
@@ -1299,4 +1300,55 @@ msgstr ""
 #: lib/idejo_web/controllers/topic_html/show.html.heex:26
 #, elixir-autogen, elixir-format
 msgid "Permalink to this message"
+msgstr ""
+
+#: lib/idejo_web/live/message_form_live.ex:82
+#, elixir-autogen, elixir-format
+msgid "Cancel reply"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:39
+#, elixir-autogen, elixir-format
+msgid "In reply to %{name}"
+msgstr ""
+
+#: lib/idejo_web/live/message_form_live.ex:91
+#, elixir-autogen, elixir-format
+msgid "Message (Markdown)"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:50
+#: lib/idejo_web/live/message_form_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "Reply"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:48
+#, elixir-autogen, elixir-format
+msgid "Reply to %{name}"
+msgstr ""
+
+#: lib/idejo_web/live/message_form_live.ex:80
+#, elixir-autogen, elixir-format
+msgid "Replying to %{name}:"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:69
+#, elixir-autogen, elixir-format
+msgid "Sign in to take part."
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:65
+#, elixir-autogen, elixir-format
+msgid "This topic takes no new messages."
+msgstr ""
+
+#: lib/idejo_web/live/message_form_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "Write a message"
+msgstr ""
+
+#: lib/idejo_web/live/message_form_live.ex:62
+#, elixir-autogen, elixir-format
+msgid "You cannot post in this topic."
 msgstr ""

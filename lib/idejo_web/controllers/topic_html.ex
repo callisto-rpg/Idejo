@@ -7,5 +7,7 @@ defmodule IdejoWeb.TopicHTML do
   """
   use IdejoWeb, :html
 
+  alias Idejo.Forum
+
   embed_templates "topic_html/*"
 end
