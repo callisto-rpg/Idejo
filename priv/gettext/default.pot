@@ -31,8 +31,8 @@ msgstr ""
 msgid "Already have one?"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:193
-#: lib/idejo_web/components/layouts.ex:208
+#: lib/idejo_web/components/layouts.ex:204
+#: lib/idejo_web/components/layouts.ex:219
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
@@ -74,7 +74,7 @@ msgstr ""
 msgid "Display name"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:137
+#: lib/idejo_web/components/layouts.ex:141
 #: lib/idejo_web/controllers/setup_html/new.html.heex:50
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:36
 #: lib/idejo_web/controllers/user_reset_password_html/new.html.heex:18
@@ -166,7 +166,7 @@ msgstr ""
 msgid "Signed out."
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:200
+#: lib/idejo_web/components/layouts.ex:211
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
@@ -199,7 +199,7 @@ msgstr ""
 msgid "Verify your email address"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:185
+#: lib/idejo_web/components/layouts.ex:196
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr ""
@@ -255,7 +255,7 @@ msgstr ""
 msgid "the mailbox"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:124
+#: lib/idejo_web/components/layouts.ex:128
 #: lib/idejo_web/components/layouts/root.html.heex:24
 #, elixir-autogen, elixir-format
 msgid "Admin"
@@ -292,6 +292,8 @@ msgstr ""
 msgid "Moderator"
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:114
+#: lib/idejo_web/live/admin/categories_live.ex:177
 #: lib/idejo_web/live/admin/roles_live.ex:155
 #: lib/idejo_web/live/admin/roles_live.ex:234
 #: lib/idejo_web/live/admin/users_live.ex:47
@@ -335,7 +337,7 @@ msgstr ""
 msgid "Previous page"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:158
+#: lib/idejo_web/components/layouts.ex:169
 #: lib/idejo_web/live/admin/roles_live.ex:20
 #: lib/idejo_web/live/admin/roles_live.ex:128
 #: lib/idejo_web/live/admin/user_live.ex:44
@@ -344,6 +346,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:117
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:165
 #: lib/idejo_web/live/admin/settings_live.ex:57
@@ -363,7 +366,7 @@ msgstr ""
 msgid "Server name"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:130
+#: lib/idejo_web/components/layouts.ex:134
 #: lib/idejo_web/live/admin/settings_live.ex:16
 #: lib/idejo_web/live/admin/settings_live.ex:43
 #, elixir-autogen, elixir-format
@@ -386,7 +389,7 @@ msgstr ""
 msgid "URI"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:144
+#: lib/idejo_web/components/layouts.ex:148
 #: lib/idejo_web/live/admin/users_live.ex:16
 #: lib/idejo_web/live/admin/users_live.ex:42
 #, elixir-autogen, elixir-format
@@ -622,7 +625,7 @@ msgstr ""
 msgid "Invite code"
 msgstr ""
 
-#: lib/idejo_web/components/layouts.ex:151
+#: lib/idejo_web/components/layouts.ex:162
 #: lib/idejo_web/live/admin/invites_live.ex:19
 #: lib/idejo_web/live/admin/invites_live.ex:54
 #, elixir-autogen, elixir-format
@@ -749,6 +752,7 @@ msgstr[1] ""
 msgid "Built-in roles cannot be deleted."
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:119
 #: lib/idejo_web/live/admin/roles_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -765,6 +769,7 @@ msgstr ""
 msgid "Create role"
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:166
 #: lib/idejo_web/live/admin/roles_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -775,11 +780,13 @@ msgstr ""
 msgid "Delete the role “%{name}”? Its members lose it."
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:157
 #: lib/idejo_web/live/admin/roles_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:155
 #: lib/idejo_web/live/admin/roles_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
@@ -790,11 +797,13 @@ msgstr ""
 msgid "Higher roles come first; a member's name takes the colour of their highest role. Owner and administrator always have every right."
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:146
 #: lib/idejo_web/live/admin/roles_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Move %{name} down"
 msgstr ""
 
+#: lib/idejo_web/live/admin/categories_live.ex:135
 #: lib/idejo_web/live/admin/roles_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Move %{name} up"
@@ -828,4 +837,62 @@ msgstr ""
 #: lib/idejo_web/live/admin/roles_live.ex:173
 #, elixir-autogen, elixir-format
 msgid "built-in"
+msgstr ""
+
+#: lib/idejo_web/components/layouts.ex:155
+#: lib/idejo_web/live/admin/categories_live.ex:17
+#: lib/idejo_web/live/admin/categories_live.ex:90
+#, elixir-autogen, elixir-format
+msgid "Categories"
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:33
+#, elixir-autogen, elixir-format
+msgid "Category “%{name}” created."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:81
+#, elixir-autogen, elixir-format
+msgid "Category “%{name}” deleted."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:56
+#, elixir-autogen, elixir-format
+msgid "Category “%{name}” saved."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Create category"
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:164
+#, elixir-autogen, elixir-format
+msgid "Delete the category “%{name}”?"
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:115
+#: lib/idejo_web/live/admin/categories_live.ex:178
+#, elixir-autogen, elixir-format
+msgid "Description"
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:175
+#, elixir-autogen, elixir-format
+msgid "New category"
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:97
+#, elixir-autogen, elixir-format
+msgid "No categories yet. Create the first one below, e.g. Announcements, General, Help."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:92
+#, elixir-autogen, elixir-format
+msgid "Shown on the home page in this order. Who can see and post in each comes next."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:183
+#, elixir-autogen, elixir-format
+msgid "Web address /c/… (leave empty to make it from the name; it never changes)"
 msgstr ""

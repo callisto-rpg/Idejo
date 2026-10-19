@@ -141,6 +141,11 @@ roles or the permission grid. Every later change must keep it true:
   stored on its session tokens and kept when a token is reissued. A password reset (AC-02)
   deletes every token of the account and disconnects all its sessions
   (`UserAuth.disconnect_sessions/1`).
+- **Categories** (RP-03, `Idejo.Forum`, **Admin → Categories**): one level (`parent_id` stays
+  unused), ordered by `position`, at `/c/{slug}`. The slug is made from the name at creation
+  (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
+  (`category.create|update|reorder|delete`) and an activity in the same transaction.
+  `visibility` is stored for RP-04, which turns it into view rights.
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
