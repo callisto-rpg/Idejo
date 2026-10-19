@@ -3,7 +3,7 @@
 
 defmodule Idejo.Forum do
   @moduledoc """
-  The forum structure: categories (RP-03), and topics from M2.
+  The forum structure: categories (RP-03) and topics (TP-01).
 
   Administrators create, rename, reorder and delete categories in **Admin → Categories**. Each
   change is audited (SP-06) and recorded as an activity (FD-02) in the same transaction.
@@ -15,7 +15,8 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.Category
+  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Messages.Message
   alias Idejo.Repo
 
   @doc """
@@ -160,15 +161,16 @@ defmodule Idejo.Forum do
   Deletes a category, as `admin`; the ones below move up. Audited as `category.delete`, with
   a `delete` activity.
 
-  Categories hold no topics yet; when topics arrive (M2), deleting a category must first
-  move or archive them (v1 RP-03).
+  A category that still has topics is not deleted (`{:error, :has_topics}`): they must be
+  moved or archived first (v1 RP-03).
   """
   @spec delete_category(User.t(), Category.t()) :: {:ok, Category.t()} | {:error, term()}
   def delete_category(%User{} = admin, %Category{} = category) do
     Repo.transact(fn ->
       lock_categories()
 
-      with {:ok, deleted} <- Repo.delete(category),
+      with :ok <- check_no_topics(category),
+           {:ok, deleted} <- Repo.delete(category),
            {_, _} <-
              Repo.update_all(from(c in Category, where: c.position > ^category.position),
                inc: [position: -1]
@@ -177,6 +179,124 @@ defmodule Idejo.Forum do
         {:ok, deleted}
       end
     end)
+  end
+
+  defp check_no_topics(%Category{id: id}) do
+    if Repo.exists?(from t in Topic, where: t.category_id == ^id),
+      do: {:error, :has_topics},
+      else: :ok
+  end
+
+  ## Topics (TP-01)
+
+  @doc """
+  Returns a changeset for the new-topic form: the title and the first message's Markdown.
+  """
+  def change_new_topic(attrs \\ %{}) do
+    types = %{title: :string, body: :string}
+
+    {%{}, types}
+    |> Ecto.Changeset.cast(attrs, Map.keys(types))
+    |> Ecto.Changeset.update_change(:title, &(&1 && String.trim(&1)))
+    |> Ecto.Changeset.validate_required([:title, :body])
+    |> Ecto.Changeset.validate_length(:title, max: 150)
+  end
+
+  @doc """
+  Starts a topic in `category`, as `user`, with a title and a first message (TP-01).
+
+  The user needs the `:start` right there (`{:error, :forbidden}` otherwise). The first
+  message is posted closed together with the title (GM-14): it never was open. The topic and
+  the message each get a URI (FD-01) and a `create` activity (FD-02), all in one transaction.
+  """
+  @spec create_topic(User.t(), Category.t(), map()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def create_topic(%User{} = user, %Category{} = category, attrs) do
+    form = change_new_topic(attrs)
+
+    cond do
+      not Access.can?(user, :start, category) -> {:error, :forbidden}
+      not form.valid? -> {:error, Map.put(form, :action, :insert)}
+      true -> Repo.transact(fn -> insert_topic(user, category, form.changes) end)
+    end
+  end
+
+  defp insert_topic(user, category, %{title: title, body: body}) do
+    now = DateTime.utc_now()
+    topic_id = Federation.generate_id()
+    message_id = Federation.generate_id()
+
+    topic =
+      %Topic{
+        id: topic_id,
+        uri: Federation.uri(:topic, topic_id),
+        category_id: category.id,
+        author_id: user.id,
+        slug: slugify(title, "topic"),
+        message_count: 1,
+        last_activity_at: now
+      }
+      |> Topic.create_changeset(%{title: title})
+
+    message =
+      %Message{
+        id: message_id,
+        uri: Federation.uri(:message, message_id),
+        topic_id: topic_id,
+        author_id: user.id,
+        opened_at: now,
+        closes_at: now,
+        closed_at: now
+      }
+      |> Message.closed_changeset(%{body_md: body})
+
+    with {:ok, topic} <- Repo.insert(topic),
+         {:ok, message} <- Repo.insert(message),
+         {:ok, _} <-
+           insert_activity(user, topic.uri, category.uri, %{"type" => "Page", "name" => title}),
+         {:ok, _} <- insert_activity(user, message.uri, topic.uri, %{"type" => "Note"}) do
+      {:ok, topic}
+    end
+  end
+
+  defp insert_activity(user, object_uri, target_uri, payload) do
+    Repo.insert(
+      Federation.activity_changeset(%{
+        actor_uri: user.uri,
+        verb: "create",
+        object_uri: object_uri,
+        target_uri: target_uri,
+        payload: payload
+      })
+    )
+  end
+
+  @doc """
+  Gets a topic by id, with its category, if the visitor (`nil`) or user may view that
+  category; otherwise `nil`.
+  """
+  @spec get_viewable_topic(User.t() | nil, String.t()) :: Topic.t() | nil
+  def get_viewable_topic(user, id) when is_binary(id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %Topic{} = topic <- Repo.get(Topic, id) |> Repo.preload(:category),
+         true <- Access.can?(user, :view, topic.category) do
+      topic
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Lists a topic's messages in the order they were opened (GM-08), with their authors.
+  """
+  @spec list_messages(Topic.t()) :: [Message.t()]
+  def list_messages(%Topic{id: id}) do
+    Repo.all(
+      from m in Message,
+        where: m.topic_id == ^id,
+        order_by: [asc: m.opened_at, asc: m.id],
+        preload: [:author]
+    )
   end
 
   # One audit entry (SP-06) and one activity (FD-02) per change.
@@ -217,10 +337,10 @@ defmodule Idejo.Forum do
 
   @doc """
   Turns a name into a slug: lowercase ASCII letters and digits separated by single dashes.
-  Accents are dropped ("Café" → `cafe`); a name with no letters or digits gives `category`.
+  Accents are dropped ("Café" → `cafe`); a name with no letters or digits gives `fallback`.
   """
-  @spec slugify(String.t()) :: String.t()
-  def slugify(name) do
+  @spec slugify(String.t(), String.t()) :: String.t()
+  def slugify(name, fallback \\ "category") do
     slug =
       name
       |> String.normalize(:nfd)
@@ -231,7 +351,7 @@ defmodule Idejo.Forum do
       |> String.slice(0, 50)
       |> String.trim("-")
 
-    if slug == "", do: "category", else: slug
+    if slug == "", do: fallback, else: slug
   end
 
   defp free_slug(base) do

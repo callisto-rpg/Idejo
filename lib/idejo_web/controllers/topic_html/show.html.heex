@@ -1,0 +1,28 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {@topic.title}
+    <:subtitle>
+      <.link href={~p"/c/#{@topic.category.slug}"} class="link">{@topic.category.name}</.link>
+    </:subtitle>
+  </.header>
+
+  <ol id="messages" class="space-y-6">
+    <li :for={message <- @messages} id={"message-#{message.id}"}>
+      <article aria-labelledby={"message-#{message.id}-author"}>
+        <p class="text-sm">
+          <span id={"message-#{message.id}-author"} class="font-semibold">
+            {message.author.display_name}
+          </span>
+          <time datetime={DateTime.to_iso8601(message.opened_at)} class="opacity-70">
+            {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
+          </time>
+        </p>
+        <.body message={message} />
+      </article>
+    </li>
+  </ol>
+</Layouts.app>

@@ -177,6 +177,14 @@ roles or the permission grid. Every later change must keep it true:
   (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
   (`category.create|update|reorder|delete`) and an activity in the same transaction.
   `visibility` is stored for RP-04, which turns it into view rights.
+- **Topics** (TP-01, `Idejo.Forum`): `Forum.create_topic/3` needs the `:start` right and
+  writes the topic and its first message, closed (GM-14), with URIs and `create` activities in
+  one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
+  topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
+  there with 301. A category with topics is not deleted (`{:error, :has_topics}`).
+- **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
+  sanitises the result; `body_html` is stored and shown as is (`TopicHTML.body/1`). No syntax
+  highlighting: MDEx colours code with inline styles, which the CSP refuses.
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor

@@ -32,6 +32,8 @@ defmodule IdejoWeb.Router do
 
     # Public pages (AC-05): server-rendered, no JavaScript needed.
     get "/c/:slug", CategoryController, :show
+    get "/t/:id", TopicController, :show
+    get "/t/:id/:slug", TopicController, :show
 
     # First-run wizard (AD-01), only while the server has no owner.
     get "/setup", SetupController, :new
@@ -92,6 +94,16 @@ defmodule IdejoWeb.Router do
     # Profile and account (AC-04), for the signed-in user.
     live_session :signed_in, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/settings", UserSettingsLive
+    end
+  end
+
+  ## Topics (TP-01): starting one needs a signed-in user with the start right.
+
+  scope "/", IdejoWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
+      live "/c/:slug/new", NewTopicLive
     end
   end
 

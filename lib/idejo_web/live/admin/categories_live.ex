@@ -74,12 +74,24 @@ defmodule IdejoWeb.Admin.CategoriesLive do
 
   def handle_event("delete", %{"id" => id}, socket) do
     category = find(socket, id)
-    {:ok, _} = Forum.delete_category(admin(socket), category)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Category “%{name}” deleted.", name: category.name))
-     |> load()}
+    case Forum.delete_category(admin(socket), category) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Category “%{name}” deleted.", name: category.name))
+         |> load()}
+
+      {:error, :has_topics} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("“%{name}” still has topics, so it cannot be deleted yet.",
+             name: category.name
+           )
+         )}
+    end
   end
 
   @impl true

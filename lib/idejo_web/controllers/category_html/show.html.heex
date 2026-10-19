@@ -6,9 +6,12 @@
   <.header>
     {@category.name}
     <:subtitle :if={@category.description != ""}>{@category.description}</:subtitle>
+    <:actions :if={@can_start?}>
+      <.link href={~p"/c/#{@category.slug}/new"} id="new-topic" class="btn btn-primary">
+        {gettext("New topic")}
+      </.link>
+    </:actions>
   </.header>
-
-  <p id="no-topics">{gettext("No topics yet.")}</p>
 
   <.link href={~p"/"} class="link">{gettext("All categories")}</.link>
 </Layouts.app>
