@@ -32,9 +32,10 @@ defmodule IdejoWeb.InlineRepliesTest do
 
   defp page(topic), do: ~p"/t/#{topic.id}/plans"
 
-  # The form is a LiveView embedded in the server-rendered page, with this session.
+  # The list and the form are a LiveView embedded in the server-rendered page, with this
+  # session.
   defp form_live(conn, topic, reply_to \\ nil) do
-    live_isolated(conn, IdejoWeb.MessageFormLive,
+    live_isolated(conn, IdejoWeb.TopicLive,
       session: %{"topic_id" => topic.id, "reply_to_id" => reply_to && reply_to.id}
     )
   end
@@ -68,12 +69,14 @@ defmodule IdejoWeb.InlineRepliesTest do
     {:ok, lv, _html} = form_live(conn, topic, first)
     assert lv |> element("#replying-to") |> render() =~ "What next?"
 
-    {:error, {:redirect, %{to: to}}} =
-      lv |> form("#message-form", message: %{body: "Lunch **first**"}) |> render_submit()
+    lv |> form("#message-form", message: %{body: "Lunch **first**"}) |> render_submit()
 
     [_, reply] = Forum.list_messages(topic)
     assert reply.reply_to_id == first.id
-    assert to == page(topic) <> "#message-#{reply.id}"
+
+    # It appears at once, without a reload, and the form is ready for the next one.
+    assert has_element?(lv, "#message-#{reply.id}-reply-to", "In reply to Sam Starter")
+    refute has_element?(lv, "#replying-to")
 
     html = conn |> get(page(topic)) |> html_response(200)
 
