@@ -16,9 +16,10 @@ defmodule Idejo.Access do
   import Ecto.Query, warn: false
   alias Idejo.Repo
 
-  alias Idejo.Access.{Role, UserRole}
+  alias Idejo.Access.{CategoryPermission, Role, UserRole}
   alias Idejo.Accounts.User
   alias Idejo.Audit
+  alias Idejo.Forum.Category
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
@@ -265,4 +266,160 @@ defmodule Idejo.Access do
 
   # Positions are rewritten as a whole; one change at a time.
   defp lock_roles, do: Repo.query!("LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE")
+
+  ## Category rights (RP-04)
+
+  @doc """
+  The rights of v0.1: `:view`, `:start` (topics), `:post` and `:moderate`.
+  """
+  @spec rights() :: [atom()]
+  def rights, do: CategoryPermission.rights()
+
+  @doc """
+  Returns true when the visitor or user has `right` in `category`.
+
+  Owners and administrators always have every right. Otherwise each of the user's roles
+  (`roles_of/1`) gets the category's own setting for that role, or, when unset there, the
+  role's server-wide setting; a deny on the category overrides the server-wide allow for that
+  role. Across roles, **allow wins**: one role allowing is enough (RP-06).
+  """
+  @spec can?(User.t() | nil, atom(), Category.t()) :: boolean()
+  def can?(user, right, %Category{id: category_id})
+      when right in [:view, :start, :post, :moderate] do
+    from(c in Category, where: c.id == ^category_id)
+    |> where_allowed(user, right)
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Narrows a query on categories to those where the visitor or user has `right`, in the
+  database: lists and search filter this way, never after loading. Same rule as `can?/3`.
+  """
+  @spec where_allowed(Ecto.Queryable.t(), User.t() | nil, atom()) :: Ecto.Query.t()
+  def where_allowed(query, user, right) when right in [:view, :start, :post, :moderate] do
+    query = from(c in query, as: :category)
+
+    if administrator?(user) do
+      query
+    else
+      role_ids = Enum.map(roles_of(user), & &1.id)
+      right = Atom.to_string(right)
+
+      from c in query,
+        where:
+          exists(
+            from r in Role,
+              left_join: own in CategoryPermission,
+              on:
+                own.category_id == parent_as(:category).id and own.role_id == r.id and
+                  own.right == ^right,
+              left_join: server in CategoryPermission,
+              on:
+                is_nil(server.category_id) and server.role_id == r.id and server.right == ^right,
+              where: r.id in ^role_ids and coalesce(own.effect, server.effect) == "allow"
+          )
+    end
+  end
+
+  @doc """
+  Returns the permission settings of a category, or the server-wide ones (`:server`), as a
+  map from `{role_id, right}` to `:allow` or `:deny`. Unset rights are missing.
+  """
+  @spec permissions(Category.t() | :server) :: %{{Ecto.UUID.t(), atom()} => :allow | :deny}
+  def permissions(scope) do
+    scope
+    |> permissions_query()
+    |> Repo.all()
+    |> Map.new(fn p ->
+      {{p.role_id, String.to_existing_atom(p.right)}, String.to_existing_atom(p.effect)}
+    end)
+  end
+
+  defp permissions_query(:server), do: from(p in CategoryPermission, where: is_nil(p.category_id))
+
+  defp permissions_query(%Category{id: id}),
+    do: from(p in CategoryPermission, where: p.category_id == ^id)
+
+  @doc """
+  Sets one role's right on a category or server-wide, as `admin`: `:allow`, `:deny` or
+  `:unset` (removes the setting). Audited as `permission.update` (SP-06).
+
+  Owner and administrator always have every right, so they take no settings
+  (`{:error, :always_all_rights}`); server-wide, a right is only allowed or unset
+  (`{:error, :no_server_deny}`): deny exists to override the server-wide allow on one category.
+  """
+  @spec set_permission(
+          User.t(),
+          Role.t(),
+          Category.t() | :server,
+          atom(),
+          :allow | :deny | :unset
+        ) ::
+          {:ok, :allow | :deny | :unset} | {:error, :always_all_rights | :no_server_deny}
+  def set_permission(%User{}, %Role{built_in: true, name: name}, _scope, _right, _effect)
+      when name in @all_rights,
+      do: {:error, :always_all_rights}
+
+  def set_permission(%User{}, %Role{}, :server, _right, :deny), do: {:error, :no_server_deny}
+
+  def set_permission(%User{} = admin, %Role{} = role, scope, right, effect)
+      when right in [:view, :start, :post, :moderate] and effect in [:allow, :deny, :unset] do
+    Repo.transact(fn ->
+      existing =
+        Repo.one(
+          from p in permissions_query(scope),
+            where: p.role_id == ^role.id and p.right == ^Atom.to_string(right),
+            lock: "FOR UPDATE"
+        )
+
+      before = if existing, do: String.to_existing_atom(existing.effect), else: :unset
+
+      with :ok <- write_permission(existing, role, scope, right, effect),
+           {:ok, _} <- audit_permission(admin, role, scope, right, before, effect) do
+        {:ok, effect}
+      end
+    end)
+  end
+
+  defp write_permission(nil, _role, _scope, _right, :unset), do: :ok
+
+  defp write_permission(%CategoryPermission{} = existing, _role, _scope, _right, :unset) do
+    with {:ok, _} <- Repo.delete(existing), do: :ok
+  end
+
+  defp write_permission(nil, role, scope, right, effect) do
+    category_id = if scope == :server, do: nil, else: scope.id
+
+    with {:ok, _} <-
+           Repo.insert(%CategoryPermission{
+             category_id: category_id,
+             role_id: role.id,
+             right: Atom.to_string(right),
+             effect: Atom.to_string(effect)
+           }),
+         do: :ok
+  end
+
+  defp write_permission(%CategoryPermission{} = existing, _role, _scope, _right, effect) do
+    with {:ok, _} <- Repo.update(Ecto.Changeset.change(existing, effect: Atom.to_string(effect))),
+         do: :ok
+  end
+
+  # An unchanged setting writes no entry.
+  defp audit_permission(_admin, _role, _scope, _right, same, same), do: {:ok, :unchanged}
+
+  defp audit_permission(admin, role, scope, right, before, effect) do
+    where = %{
+      "role" => role.name,
+      "category" => if(scope == :server, do: "(server)", else: scope.slug),
+      "right" => Atom.to_string(right)
+    }
+
+    Audit.record(
+      admin,
+      "permission.update",
+      Map.put(where, "effect", Atom.to_string(before)),
+      Map.put(where, "effect", Atom.to_string(effect))
+    )
+  end
 end
