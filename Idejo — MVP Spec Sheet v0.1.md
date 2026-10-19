@@ -46,7 +46,7 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | GM-16 | As v1: moderators can close an open message |
 | TP-01, TP-02 | As v1: title, first message (tags come later) |
 | TP-03 | Topic list with title, starter, message count, last activity, unread marker; pinned first |
-| TP-04 to TP-07 | As v1: live delivery with catch-up, full history, permalinks, unread tracking |
+| TP-04 to TP-07 | As v1: live delivery with catch-up, history kept only when a message is edited (appends keep only the final message), permalinks, unread tracking |
 | TP-08, TP-09 | As v1: inline replies; fork any message into a new topic |
 | TP-10 | @user mentions only |
 | TP-11 | Markdown with code blocks and preview |
