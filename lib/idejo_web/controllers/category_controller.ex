@@ -9,7 +9,6 @@ defmodule IdejoWeb.CategoryController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Access
   alias Idejo.Forum
 
   def show(conn, %{"slug" => slug}) do
@@ -24,7 +23,7 @@ defmodule IdejoWeb.CategoryController do
         render(conn, :show,
           category: category,
           page_title: category.name,
-          can_start?: user != nil and Access.can?(user, :start, category)
+          can_start?: Forum.can_start_topic?(user, category)
         )
     end
   end

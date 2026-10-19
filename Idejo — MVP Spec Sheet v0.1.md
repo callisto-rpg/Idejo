@@ -52,10 +52,10 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | TP-11 | Markdown with code blocks and preview |
 | TP-12 | Images only, one server-wide size limit, stored on local disk |
 | TP-13 | Follow a topic |
-| TP-14 | Open and locked states; pin within a category |
+| TP-14 | Open, locked and archived states; pin within a category |
 | TP-15 | Move a topic to another category |
 | RP-01, RP-02 | As v1: built-in roles; custom roles with name, colour and order |
-| RP-03 | Create, rename, reorder and delete categories (one level) |
+| RP-03 | Create, rename, reorder and delete categories (one level); deleting a category with topics moves them to another category or archives them |
 | RP-04, RP-05 | Per category, allow, deny or unset per role for four rights: view, start topics, post, moderate. Unset follows the role’s server-wide setting; deny overrides it |
 | RP-06 | Several roles per user; allow wins: a right is granted when any of the user’s roles allows it; highest role sets colour |
 | AC-01, AC-02 | Email sign-up with verification; password change from the profile; open or invite-only; password reset by email |

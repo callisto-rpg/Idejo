@@ -8,7 +8,6 @@ defmodule IdejoWeb.NewTopicLive do
   """
   use IdejoWeb, :live_view
 
-  alias Idejo.Access
   alias Idejo.Forum
 
   @impl true
@@ -20,7 +19,7 @@ defmodule IdejoWeb.NewTopicLive do
         raise Ecto.NoResultsError, queryable: Idejo.Forum.Category
 
       category ->
-        if Access.can?(user, :start, category) do
+        if Forum.can_start_topic?(user, category) do
           {:ok,
            socket
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
