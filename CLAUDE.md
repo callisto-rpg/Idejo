@@ -225,6 +225,14 @@ roles or the permission grid. Every later change must keep it true:
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
   needed) listing each version newest first with the span it was current. `list_messages/1`
   preloads `:versions`.
+- **Closing** (GM-12, GM-16): archiving topics closes their open messages
+  (`Messages.close_open_in_topics/1` inside the transaction, `announce_closed/1` after it);
+  locking (MO-02) must do the same. `Idejo.Messages.Authors` tracks live topic views
+  (`present/2`, called by `TopicLive`); when a user's last view of a topic is gone for the
+  grace (30 s, `:gm_disconnect_grace_ms`; steward decision) their open message there closes.
+  `Recovery` starts that grace for every open message at boot. Moderators close others' open
+  messages (`Messages.close_as_moderator/2`, a "Close message" button). Tests run with a
+  one-hour grace and pass `grace_ms:` when they need one.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

@@ -18,6 +18,8 @@ defmodule Idejo.Application do
       # Growing messages: one timer process per open message (GM-03), rebuilt at boot.
       {Registry, keys: :unique, name: Idejo.Messages.Registry},
       {DynamicSupervisor, name: Idejo.Messages.OpenMessageSupervisor, strategy: :one_for_one},
+      # Closes an open message once its author has been gone for the grace (GM-12).
+      Idejo.Messages.Authors,
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),

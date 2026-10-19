@@ -205,8 +205,9 @@ defmodule Idejo.Messages do
     do: DateTime.compare(now, closes_at) != :lt
 
   @doc """
-  Closes an open message (GM-05; lock, archive, disconnect and moderators come with GM-12 and
-  GM-16). Closing a closed message changes nothing.
+  Closes an open message: Ctrl+Enter after the window (GM-05), a session gone for good (GM-12)
+  or a moderator (GM-16); lock and archive use `close_open_in_topics/1`. Closing a closed
+  message changes nothing.
   """
   @spec close(Message.t()) :: {:ok, Message.t()} | {:error, Ecto.Changeset.t()}
   def close(%Message{} = message) do
@@ -304,6 +305,57 @@ defmodule Idejo.Messages do
          {:ok, _} <- activity(author, message, "update", topic.uri) do
       {:ok, message}
     end
+  end
+
+  @doc """
+  Closes every open message in the given topics, inside the caller's transaction: for a topic
+  that is locked or archived (GM-12). Returns the closed messages; once the transaction has
+  committed, pass them to `announce_closed/1`.
+  """
+  @spec close_open_in_topics([Ecto.UUID.t()]) :: [Message.t()]
+  def close_open_in_topics(topic_ids) do
+    now = DateTime.utc_now()
+
+    from(m in Message, where: m.topic_id in ^topic_ids and m.state == "open", lock: "FOR UPDATE")
+    |> Repo.all()
+    |> Enum.map(fn message ->
+      {:ok, closed} = close_locked(message, now)
+      closed
+    end)
+  end
+
+  @doc "Stops the timers of closed messages and tells their topics' viewers (after commit)."
+  @spec announce_closed([Message.t()]) :: :ok
+  def announce_closed(messages), do: Enum.each(messages, &after_commit/1)
+
+  @doc """
+  Closes the author's open message in a topic, if any: when their session has been gone for
+  longer than the grace (GM-12, `Idejo.Messages.Authors`).
+  """
+  @spec close_for_author(Ecto.UUID.t(), Ecto.UUID.t()) :: {:ok, Message.t() | nil}
+  def close_for_author(topic_id, author_id) do
+    case Repo.one(
+           from m in Message,
+             where: m.topic_id == ^topic_id and m.author_id == ^author_id and m.state == "open"
+         ) do
+      nil -> {:ok, nil}
+      message -> close(message)
+    end
+  end
+
+  @doc """
+  Closes another user's open message, as a moderator: someone with the `:moderate` right in
+  the topic's category (GM-16). `{:error, :forbidden}` otherwise. The moderation log (MO-03)
+  comes with M5.
+  """
+  @spec close_as_moderator(User.t(), Message.t()) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def close_as_moderator(%User{} = moderator, %Message{} = message) do
+    topic = Topic |> Repo.get!(message.topic_id) |> Repo.preload(:category)
+
+    if Idejo.Access.can?(moderator, :moderate, topic.category),
+      do: close(message),
+      else: {:error, :forbidden}
   end
 
   @doc "Lists a message's earlier versions, oldest first (GM-11)."

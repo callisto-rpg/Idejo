@@ -84,11 +84,16 @@ export const Composer = {
     this.paint()
   },
 
-  // Takes `body` as the sent text, keeping anything typed after it.
+  // Takes `body` as the sent text, keeping anything typed after it. An empty `body` means
+  // nothing is open: the message closed while the author was away (GM-12), so what was sent
+  // is in it already and leaves the box; only text typed since stays, unsent.
   restore(body) {
-    if (body === "") { this.sent = ""; this.paint(); return }
-    const sent = body + " "
-    const typed = this.input.value.startsWith(sent) ? this.input.value.slice(sent.length) : ""
+    // The usual reconnect: the server holds what the box already has; edits stay as they are.
+    if (body !== "" && this.sent === body + " ") return
+    const old = this.sent
+    const value = this.input.value
+    const typed = old !== "" && value.startsWith(old) ? value.slice(old.length) : (old === "" ? value : "")
+    const sent = body === "" ? "" : body + " "
     this.input.value = sent + typed
     this.sent = sent
     this.paint()
