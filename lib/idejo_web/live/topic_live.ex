@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.TopicLive do
   @moduledoc """
-  A topic's messages, live (TP-04), with the message form for those who may post (TP-08).
+  A topic's messages, live (TP-04), with the composer for those who may post (M3).
 
   The topic page stays a controller (steward decision for M3): it embeds this LiveView with
   `live_render/3` and a session of `"topic_id"` and, after "Reply", `"reply_to_id"`. Its first
@@ -17,6 +17,13 @@ defmodule IdejoWeb.TopicLive do
   Rights are checked at mount and again whenever the permission grid changes
   (`Idejo.Access.subscribe_permissions/0`): a viewer who lost the view right then sees the
   list emptied and gets no more events.
+
+  **The composer** (GM-02, GM-07, GM-08) is a plain text box with no chrome; its placeholder
+  names the keys. It is the author's open message, in place: the messages before it, then
+  the composer (under the author's name), then the replies that came after, which push it
+  up. With no open message it sits at the end. The `Composer` hook (`assets/js/composer.js`)
+  sends the whole text on Enter, or with `"break"` on Ctrl+Enter, to `Idejo.Messages.commit/4`
+  and keeps it in the box; the reply tells it whether the message closed (GM-05).
   """
   use IdejoWeb, :live_view
 
@@ -24,21 +31,24 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Repo
+  alias IdejoWeb.Admin
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
 
   @impl true
   def mount(_params, %{"topic_id" => topic_id} = session, socket) do
-    user = socket.assigns.current_scope && socket.assigns.current_scope.user
-    # Keeps the anchors permalinks lead to (TP-06): /m/{id} goes to #message-{id}.
-    socket = stream_configure(socket, :messages, dom_id: &"message-#{&1.id}")
+    user = user(socket)
 
     case Forum.get_viewable_topic(user, topic_id) do
       nil ->
         {:ok,
-         socket
-         |> assign(topic: nil, can_post?: false, lost_access?: false)
-         |> stream(:messages, [])}
+         assign(socket,
+           topic: nil,
+           can_post?: false,
+           lost_access?: false,
+           messages: [],
+           roles: %{}
+         )}
 
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
@@ -51,23 +61,57 @@ defmodule IdejoWeb.TopicLive do
 
         {:ok,
          socket
-         |> assign(topic: topic, can_post?: can_post?, lost_access?: false)
+         |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
-         |> assign_form()
-         |> stream(:messages, Forum.list_messages(topic))}
+         |> put_messages(Forum.list_messages(topic))
+         |> sync_composer()}
     end
   end
 
-  defp assign_form(socket) do
+  defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  defp put_messages(socket, messages) do
     socket
-    |> assign(:form, to_form(Forum.change_new_message(), as: :message))
-    |> assign(editor_mode: :write, preview_html: "")
+    |> assign(:messages, messages)
+    |> add_roles(messages)
   end
+
+  # The role above each author's name (GM-07): their highest-ranked one, with the name colour.
+  defp add_roles(socket, messages) do
+    missing =
+      messages
+      |> Enum.map(& &1.author)
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.reject(&Map.has_key?(socket.assigns.roles, &1.id))
+
+    roles =
+      missing
+      |> Access.roles_of_users()
+      |> Map.new(fn {id, [top | _] = roles} ->
+        {id, %{name: Admin.role_name(top), colour: Access.name_colour(roles)}}
+      end)
+
+    assign(socket, :roles, Map.merge(socket.assigns.roles, roles))
+  end
+
+  # A reconnect keeps the author's open message (within the grace, GM-12): the hook is told
+  # what the server holds of it.
+  defp sync_composer(socket) do
+    case connected?(socket) && open_message(socket.assigns.messages, user(socket)) do
+      %{body_md: body} -> push_event(socket, "composer_sent", %{body: body})
+      _ -> socket
+    end
+  end
+
+  defp open_message(_messages, nil), do: nil
+
+  defp open_message(messages, user),
+    do: Enum.find(messages, &(&1.state == "open" and &1.author_id == user.id))
 
   @impl true
   def handle_info({:message, message}, socket) do
     message = Repo.preload(message, [:author, reply_to: :author])
-    {:noreply, stream_insert(socket, :messages, message)}
+    {:noreply, put_messages(socket, upsert(socket.assigns.messages, message))}
   end
 
   # The grid changed: the viewer may have lost the view or post right since mount.
@@ -75,86 +119,91 @@ defmodule IdejoWeb.TopicLive do
     do: {:noreply, socket}
 
   def handle_info(:permissions_changed, socket) do
-    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+    user = user(socket)
 
     case Forum.get_viewable_topic(user, socket.assigns.topic.id) do
       nil ->
         Messages.unsubscribe(socket.assigns.topic.id)
 
-        {:noreply,
-         socket
-         |> assign(topic: nil, can_post?: false, lost_access?: true)
-         |> stream(:messages, [], reset: true)}
+        {:noreply, assign(socket, topic: nil, can_post?: false, lost_access?: true, messages: [])}
 
       topic ->
         {:noreply, assign(socket, :can_post?, Forum.can_post?(user, topic))}
     end
   end
 
-  # The composer (M3 step 3) uses it; the list has nothing to change.
+  # No countdown is shown (GM-07); the window's end only matters to Ctrl+Enter, which the
+  # server checks. Its text equivalent for assistive technology comes with AX-03.
   def handle_info({:window_ended, _message_id}, socket), do: {:noreply, socket}
 
+  # Messages keep their place; a new one goes at the end (GM-08: ordered by first commit).
+  defp upsert(messages, message) do
+    if Enum.any?(messages, &(&1.id == message.id)),
+      do: Enum.map(messages, &if(&1.id == message.id, do: message, else: &1)),
+      else: messages ++ [message]
+  end
+
   @impl true
-  def handle_event("validate", %{"message" => params}, socket) do
-    form = params |> Forum.change_new_message() |> Map.put(:action, :validate)
-    {:noreply, assign(socket, :form, to_form(form, as: :message))}
-  end
-
-  def handle_event("editor_mode", %{"mode" => "preview"}, socket) do
-    body = socket.assigns.form.params["body"] || ""
-
-    {:noreply, assign(socket, editor_mode: :preview, preview_html: Idejo.Markdown.to_html(body))}
-  end
-
-  def handle_event("editor_mode", %{"mode" => "write"}, socket),
-    do: {:noreply, assign(socket, :editor_mode, :write)}
-
-  def handle_event("cancel_reply", _params, socket),
-    do: {:noreply, assign(socket, :reply_to, nil)}
-
-  def handle_event("post", %{"message" => params}, socket) do
+  def handle_event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
-    params = Map.put(params, "reply_to_id", reply_to && reply_to.id)
+    opts = [break: params["break"] == true, reply_to_id: reply_to && reply_to.id]
 
-    case Forum.post_message(socket.assigns.current_scope.user, topic, params) do
+    case Messages.commit(user(socket), topic, body, opts) do
+      {:ok, nil} ->
+        {:reply, %{closed: false, body: ""}, socket}
+
       # The message itself arrives like everyone else's, as an event.
-      {:ok, _message} ->
-        {:noreply, socket |> assign(:reply_to, nil) |> assign_form()}
+      {:ok, message} ->
+        {:reply, %{closed: message.state == "closed", body: message.body_md},
+         assign(socket, :reply_to, nil)}
 
       {:error, :forbidden} ->
-        {:noreply,
+        {:reply, %{error: true},
          socket
          |> assign(:can_post?, false)
          |> put_flash(:error, gettext("You cannot post in this topic."))}
 
-      {:error, form} ->
-        {:noreply, assign(socket, :form, to_form(form, as: :message))}
+      {:error, _changeset} ->
+        {:reply, %{error: true}, socket}
     end
   end
 
+  def handle_event("cancel_reply", _params, socket),
+    do: {:noreply, assign(socket, :reply_to, nil)}
+
   @impl true
   def render(assigns) do
+    mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+    {before, after_} = split(assigns.messages, mine)
+    assigns = assign(assigns, before: before, mine: mine, later: after_)
+
     ~H"""
     <div id="topic-live">
       <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
         {gettext("You can no longer view this topic.")}
       </p>
-      <ol id="messages" class="space-y-6" phx-update="stream">
-        <li :for={{dom_id, message} <- @streams.messages} id={dom_id}>
-          <.message message={message} topic={@topic} can_post?={@can_post?} />
+
+      <ol id="messages" class="space-y-6">
+        <li :for={message <- @before} :key={message.id} id={"message-#{message.id}"}>
+          <.message message={message} topic={@topic} can_post?={@can_post?} roles={@roles} />
+        </li>
+        <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
+          <.composer
+            mine={@mine}
+            reply_to={@reply_to}
+            roles={@roles}
+            author={@current_scope.user}
+          />
+        </li>
+        <li :for={message <- @later} :key={message.id} id={"message-#{message.id}"}>
+          <.message message={message} topic={@topic} can_post?={@can_post?} roles={@roles} />
         </li>
       </ol>
 
-      <div :if={@topic} class="mt-8">
-        <p :if={@flash["error"]} role="alert" class="alert alert-error mb-2">{@flash["error"]}</p>
+      <p :if={@flash["error"]} role="alert" class="alert alert-error mt-4">{@flash["error"]}</p>
+
+      <div :if={@topic && !@can_post?} class="mt-8">
         <%= cond do %>
-          <% @can_post? -> %>
-            <.message_form
-              form={@form}
-              reply_to={@reply_to}
-              mode={@editor_mode}
-              preview_html={@preview_html}
-            />
           <% @topic.state != "open" -> %>
             <p id="topic-closed" class="opacity-70">
               {gettext("This topic takes no new messages.")}
@@ -172,20 +221,46 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # The messages before the author's open message and the ones after it; with none open,
+  # everything comes before and the composer goes to the end.
+  defp split(messages, nil), do: {messages, []}
+
+  defp split(messages, mine) do
+    {before, [_mine | after_]} = Enum.split_while(messages, &(&1.id != mine.id))
+    {before, after_}
+  end
+
+  attr :author, :map, required: true
+  attr :roles, :map, required: true
+
+  defp author_line(assigns) do
+    assigns = assign(assigns, :role, Map.get(assigns.roles, assigns.author.id))
+
+    ~H"""
+    <span class="text-sm inline-flex items-center gap-2">
+      <span class="font-semibold">{@author.display_name}</span>
+      <span :if={@role} class="opacity-70 inline-flex items-center gap-1">
+        <Admin.swatch colour={@role.colour} />
+        {@role.name}
+      </span>
+    </span>
+    """
+  end
+
   attr :message, :map, required: true
   attr :topic, :map, required: true
   attr :can_post?, :boolean, required: true
+  attr :roles, :map, required: true
 
+  # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
     ~H"""
     <article aria-labelledby={"message-#{@message.id}-author"}>
-      <p class="text-sm">
-        <span id={"message-#{@message.id}-author"} class="font-semibold">
-          {@message.author.display_name}
-        </span>
+      <p id={"message-#{@message.id}-author"} class="flex items-center gap-2">
+        <.author_line author={@message.author} roles={@roles} />
         <.link
           href={~p"/m/#{@message.id}"}
-          class="opacity-70 link link-hover"
+          class="text-sm opacity-70 link link-hover"
           title={gettext("Permalink to this message")}
         >
           <time datetime={DateTime.to_iso8601(@message.opened_at)}>
@@ -206,7 +281,7 @@ defmodule IdejoWeb.TopicLive do
       <MessageComponents.body html={@message.body_html} />
       <.link
         :if={@can_post?}
-        href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#message-form-section"}
+        href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
         class="link text-sm"
         aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
       >
@@ -216,19 +291,18 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
-  attr :form, :map, required: true
+  attr :mine, :any, required: true
   attr :reply_to, :any, required: true
-  attr :mode, :atom, required: true
-  attr :preview_html, :string, required: true
+  attr :roles, :map, required: true
+  attr :author, :map, required: true
 
-  defp message_form(assigns) do
+  # No countdown, button or status around it (GM-07): only the text box. The hook owns its
+  # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
+  defp composer(assigns) do
     ~H"""
-    <section id="message-form-section" aria-labelledby="message-form-heading">
-      <h2 id="message-form-heading" class="font-semibold mb-2">
-        {if @reply_to, do: gettext("Reply"), else: gettext("Write a message")}
-      </h2>
-
-      <div :if={@reply_to} id="replying-to" class="border-l-2 border-base-300 pl-3 mb-3 text-sm">
+    <section aria-label={gettext("Your message")}>
+      <p :if={@mine}><.author_line author={@author} roles={@roles} /></p>
+      <div :if={@reply_to} id="replying-to" class="border-l-2 border-base-300 pl-3 mb-2 text-sm">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
           <button type="button" class="link ml-2" phx-click="cancel_reply">
@@ -237,16 +311,23 @@ defmodule IdejoWeb.TopicLive do
         </p>
         <p class="opacity-70">{Forum.excerpt(@reply_to)}</p>
       </div>
-
-      <.form for={@form} id="message-form" phx-change="validate" phx-submit="post">
-        <MessageComponents.editor
-          field={@form[:body]}
-          label={gettext("Message (Markdown)")}
-          mode={@mode}
-          preview_html={@preview_html}
-        />
-        <.button class="btn btn-primary">{gettext("Post")}</.button>
-      </.form>
+      <div
+        id="composer"
+        class="composer"
+        phx-hook="Composer"
+        phx-update="ignore"
+        data-sent={@mine && @mine.body_md}
+      >
+        <div class="composer-backdrop" aria-hidden="true"></div>
+        <textarea
+          class="composer-input"
+          rows="1"
+          aria-label={gettext("Message")}
+          placeholder={
+            gettext("Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line")
+          }
+        ></textarea>
+      </div>
     </section>
     """
   end

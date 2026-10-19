@@ -133,10 +133,10 @@ defmodule IdejoWeb.LiveTopicTest do
     member: member
   } do
     {:ok, lv, _html} = watch(log_in_user(conn, member), topic)
-    assert has_element?(lv, "#message-form")
+    assert has_element?(lv, "#composer")
 
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:member), general, :post, :deny)
-    refute has_element?(lv, "#message-form")
+    refute has_element?(lv, "#composer")
     assert length(ids(lv)) == 1
   end
 

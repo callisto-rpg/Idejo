@@ -21,7 +21,6 @@ defmodule Idejo.Application do
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),
-      Idejo.Messages.DemoTopic,
       # Writes the setup link to the log while the server has no owner (AD-01).
       if(Application.get_env(:idejo, :announce_setup, true), do: Idejo.Setup.Announcer),
       # Start to serve requests, typically the last entry
