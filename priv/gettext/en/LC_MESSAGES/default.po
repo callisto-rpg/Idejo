@@ -11,11 +11,6 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/idejo_web/live/demo_topic_live.ex:91
-#, elixir-autogen, elixir-format
-msgid "(still being written)"
-msgstr ""
-
 #: lib/idejo_web/components/layouts/root.html.heex:22
 #, elixir-autogen, elixir-format
 msgid "Account"
@@ -35,11 +30,6 @@ msgstr ""
 #: lib/idejo_web/components/layouts.ex:226
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
-msgstr ""
-
-#: lib/idejo_web/live/demo_topic_live.ex:48
-#, elixir-autogen, elixir-format
-msgid "Composer prototype"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:66
@@ -103,12 +93,11 @@ msgid "Keep me signed in"
 msgstr ""
 
 #: lib/idejo_web/live/admin.ex:21
-#: lib/idejo_web/live/demo_topic_live.ex:24
 #, elixir-autogen, elixir-format
 msgid "Member"
 msgstr ""
 
-#: lib/idejo_web/live/demo_topic_live.ex:60
+#: lib/idejo_web/live/topic_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -176,7 +165,7 @@ msgstr ""
 msgid "This verification link is invalid or has expired."
 msgstr ""
 
-#: lib/idejo_web/live/demo_topic_live.ex:62
+#: lib/idejo_web/live/topic_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
 msgstr ""
@@ -952,7 +941,6 @@ msgid "Permissions of %{name}"
 msgstr ""
 
 #: lib/idejo_web/live/admin/permissions_live.ex:80
-#: lib/idejo_web/live/topic_live.ex:248
 #, elixir-autogen, elixir-format
 msgid "Post"
 msgstr ""
@@ -1297,63 +1285,57 @@ msgstr ""
 msgid "last activity"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:189
+#: lib/idejo_web/live/topic_live.ex:264
 #, elixir-autogen, elixir-format
 msgid "Permalink to this message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:235
+#: lib/idejo_web/live/topic_live.ex:309
 #, elixir-autogen, elixir-format
 msgid "Cancel reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:202
+#: lib/idejo_web/live/topic_live.ex:277
 #, elixir-autogen, elixir-format
 msgid "In reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:244
-#, elixir-autogen, elixir-format
-msgid "Message (Markdown)"
-msgstr ""
-
-#: lib/idejo_web/live/topic_live.ex:213
-#: lib/idejo_web/live/topic_live.ex:228
+#: lib/idejo_web/live/topic_live.ex:288
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:211
+#: lib/idejo_web/live/topic_live.ex:286
 #, elixir-autogen, elixir-format
 msgid "Reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:233
+#: lib/idejo_web/live/topic_live.ex:307
 #, elixir-autogen, elixir-format
 msgid "Replying to %{name}:"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:165
+#: lib/idejo_web/live/topic_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "Sign in to take part."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:160
+#: lib/idejo_web/live/topic_live.ex:209
 #, elixir-autogen, elixir-format
 msgid "This topic takes no new messages."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:228
-#, elixir-autogen, elixir-format
-msgid "Write a message"
-msgstr ""
-
-#: lib/idejo_web/live/topic_live.ex:128
+#: lib/idejo_web/live/topic_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "You cannot post in this topic."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:140
+#: lib/idejo_web/live/topic_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "You can no longer view this topic."
+msgstr ""
+
+#: lib/idejo_web/live/topic_live.ex:303
+#, elixir-autogen, elixir-format
+msgid "Your message"
 msgstr ""

@@ -40,18 +40,21 @@ defmodule IdejoWeb.InlineRepliesTest do
     )
   end
 
+  # What the Composer hook sends on Enter.
+  defp enter(lv, body), do: lv |> element("#composer") |> render_hook("commit", %{"body" => body})
+
   @tag req: "TP-08"
-  test "TP-08 members get a message form and a Reply link on each message", %{
+  test "TP-08 members get the composer and a Reply link on each message", %{
     conn: conn,
     topic: topic,
     first: first
   } do
     html = conn |> get(page(topic)) |> html_response(200)
-    assert html =~ ~s(id="message-form-section")
-    assert html =~ ~s(href="/t/#{topic.id}/plans?reply_to=#{first.id}#message-form-section")
+    assert html =~ ~s(id="composer")
+    assert html =~ ~s(href="/t/#{topic.id}/plans?reply_to=#{first.id}#composer")
 
     visitor = build_conn() |> get(page(topic)) |> html_response(200)
-    refute visitor =~ "message-form-section"
+    refute visitor =~ ~s(id="composer")
     refute visitor =~ "reply_to="
     assert visitor =~ "Sign in to take part."
   end
@@ -69,14 +72,15 @@ defmodule IdejoWeb.InlineRepliesTest do
     {:ok, lv, _html} = form_live(conn, topic, first)
     assert lv |> element("#replying-to") |> render() =~ "What next?"
 
-    lv |> form("#message-form", message: %{body: "Lunch **first**"}) |> render_submit()
+    enter(lv, "Lunch **first**")
 
     [_, reply] = Forum.list_messages(topic)
     assert reply.reply_to_id == first.id
-
-    # It appears at once, without a reload, and the form is ready for the next one.
-    assert has_element?(lv, "#message-#{reply.id}-reply-to", "In reply to Sam Starter")
     refute has_element?(lv, "#replying-to")
+    {:ok, _} = Idejo.Messages.close(reply)
+
+    # Others see it at once, quoting what it replies to.
+    assert has_element?(lv, "#message-#{reply.id}-reply-to", "In reply to Sam Starter")
 
     html = conn |> get(page(topic)) |> html_response(200)
 
@@ -99,19 +103,16 @@ defmodule IdejoWeb.InlineRepliesTest do
     lv |> element("#replying-to button", "Cancel reply") |> render_click()
     refute has_element?(lv, "#replying-to")
 
-    lv |> form("#message-form", message: %{body: "Just saying"}) |> render_submit()
+    enter(lv, "Just saying")
     [_, message] = Forum.list_messages(topic)
     assert message.reply_to_id == nil
-    assert message.body_md == "Just saying"
+    assert message.body_md == "Just saying."
   end
 
   @tag req: "TP-08"
   test "TP-08 an empty message is not posted", %{conn: conn, topic: topic} do
     {:ok, lv, _html} = form_live(conn, topic)
-
-    assert lv |> form("#message-form", message: %{body: ""}) |> render_submit() =~
-             "can&#39;t be blank"
-
+    enter(lv, "   ")
     assert length(Forum.list_messages(topic)) == 1
   end
 
@@ -120,7 +121,7 @@ defmodule IdejoWeb.InlineRepliesTest do
     topic |> Ecto.Changeset.change(state: "locked") |> Repo.update!()
     html = conn |> get(page(topic)) |> html_response(200)
 
-    refute html =~ "message-form-section"
+    refute html =~ ~s(id="composer")
     refute html =~ "reply_to="
     assert html =~ "This topic takes no new messages."
   end

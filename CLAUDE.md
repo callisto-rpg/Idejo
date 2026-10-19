@@ -196,21 +196,28 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
   renames and moves. Each message's time links to its permalink. When topic pages are paged,
   `/m/{id}` must lead to the right page.
-- **Posting and inline replies** (TP-08): `Forum.post_message/3` needs `Forum.can_post?/2`
-  (the `:post` right and an open topic; locked and archived take nothing). It posts closed
-  (until M3), moves `message_count` and `last_activity_at`, and records a `create` activity
-  (`inReplyTo` for replies). A reply's `reply_to_id` must be a message of the same topic;
+- **Posting and inline replies** (TP-08): members post with the composer (`Messages.commit/4`);
+  `Forum.post_message/3` still posts one closed message (tests use it). Both need
+  `Forum.can_post?/2` (the `:post` right and an open topic; locked and archived take nothing).
+  A reply's `reply_to_id` must be a message of the same topic, set when the reply opens;
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
-  links use `?reply_to={id}`, so choosing a message needs no JavaScript.
+  links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
 - **Live topics** (TP-04): the topic page stays a controller and embeds `IdejoWeb.TopicLive`
   (`live_render/3`, session `"topic_id"`, `"reply_to_id"`) for every viewer: the message list
-  as a stream (`#message-{id}`, kept for permalinks) and the form for posters. Its first render
-  is in the page's HTML (no JavaScript needed to read). Connected, it subscribes before
+  (a keyed comprehension, `#message-{id}`, kept for permalinks) and the composer for posters.
+  Its first render is in the page's HTML (no JavaScript needed to read). Connected, it subscribes before
   loading; `{:message, m}` events update in place or append; a reconnect mounts again, which
   is the catch-up. Anything that changes a message must broadcast it after its transaction.
   Rights are checked at mount and again on `:permissions_changed`, which
   `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
+- **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
+  (messages before it, the composer under the author's name, later replies below; at the end
+  when nothing is open). Only a text box whose placeholder names the keys: no countdown,
+  button or status. The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
+  (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
+  rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
+  or reconnect. No Ctrl+Enter on touch screens for now (steward decision).
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

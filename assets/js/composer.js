@@ -1,16 +1,22 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Composer hook: the text box is the author's open message (GM-02, GM-10).
+// Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10).
 // Enter sends the whole text and keeps it in the box; sent text is drawn in
 // higher contrast than unsent text by a backdrop behind a transparent textarea.
 
-// Text that already ends a sentence (closing quotes or brackets allowed).
-const ENDS_WITH_PUNCTUATION = /[.!?…:;,]["'”’)\]»]*$/
+// The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
+// with punctuation, but never after or inside code, where it would become part of the code.
+const ENDS_WITH_PUNCTUATION = /[.!?…:;,)\]}"'»”’]$/u
+const FENCE = /^\s*(```|~~~)/
 
 export function finishSentence(text) {
   const body = text.replace(/\s+$/, "")
   if (body === "" || ENDS_WITH_PUNCTUATION.test(body)) return body
+  const lines = body.split("\n")
+  const last = lines[lines.length - 1]
+  const fences = lines.filter(line => FENCE.test(line)).length
+  if (fences % 2 === 1 || FENCE.test(last) || /^(    |\t)/.test(last)) return body
   return body + "."
 }
 
@@ -63,20 +69,28 @@ export const Composer = {
     this.input = this.el.querySelector("textarea")
     this.backdrop = this.el.querySelector(".composer-backdrop")
     this.sent = ""
+    // After a reload the author's open message is still theirs to continue (GM-12 grace).
+    this.restore(this.el.dataset.sent || "")
 
     this.input.addEventListener("input", () => this.paint())
     this.input.addEventListener("keydown", e => {
       if (e.key !== "Enter" || e.isComposing || e.shiftKey) return
       e.preventDefault()
+      // No Ctrl+Enter on touch screens for now (steward decision): their return is Enter.
       this.send(e.ctrlKey || e.metaKey)
     })
+    // The server says what it holds of the open message, e.g. after a reconnect.
+    this.handleEvent("composer_sent", ({body}) => this.restore(body))
     this.paint()
   },
 
-  // After a reconnect the server has a new session and no open message for it,
-  // so everything in the box is unsent again (GM-12).
-  reconnected() {
-    this.sent = ""
+  // Takes `body` as the sent text, keeping anything typed after it.
+  restore(body) {
+    if (body === "") { this.sent = ""; this.paint(); return }
+    const sent = body + " "
+    const typed = this.input.value.startsWith(sent) ? this.input.value.slice(sent.length) : ""
+    this.input.value = sent + typed
+    this.sent = sent
     this.paint()
   },
 
@@ -86,8 +100,9 @@ export const Composer = {
     if (body === "") return
     if (!isBreak && body === this.sent.replace(/\s+$/, "")) return
 
+    const before = this.sent
     const separator = isBreak ? "\n" : " "
-    // Keep the caret where it was unless it was at the end of the text.
+    // Keep the caret where it was unless it was at the end of the text (GM-02).
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
     this.input.value = body + separator
     this.sent = this.input.value
@@ -96,13 +111,22 @@ export const Composer = {
     this.paint()
 
     this.pushEvent("commit", {body, break: isBreak}, reply => {
-      if (!reply.closed) return
-      // Ctrl+Enter after the window: the message closed, and anything typed
-      // since starts the next one.
       const typed = this.input.value.startsWith(this.sent) ? this.input.value.slice(this.sent.length) : ""
-      this.input.value = typed
-      this.sent = ""
-      this.input.setSelectionRange(typed.length, typed.length)
+
+      if (reply.error) {
+        // Not stored: what was sent counts as unsent again.
+        this.sent = before
+      } else if (reply.closed) {
+        // Ctrl+Enter after the window: the message closed, and anything typed since starts
+        // the next one (GM-05).
+        this.input.value = typed
+        this.sent = ""
+        this.input.setSelectionRange(typed.length, typed.length)
+      } else if (reply.body !== body) {
+        // The server's text is the truth.
+        this.input.value = reply.body + separator + typed
+        this.sent = reply.body + separator
+      }
       this.paint()
     })
   },
