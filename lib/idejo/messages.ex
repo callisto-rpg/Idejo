@@ -260,6 +260,52 @@ defmodule Idejo.Messages do
     broadcast(message.topic_id, {:message, message})
   end
 
+  @doc """
+  Edits a message, as its author (GM-10): the way to change a message once it has closed;
+  an open message is edited in place in the composer, through `commit/4`.
+
+  Changing text already there keeps the previous text as a version and marks the message
+  edited (GM-11); adding text at the end is not an edit and keeps no version (TP-05). The text
+  is kept as written: no `.` is added, as it is not an Enter. Then the message is broadcast.
+
+  Refused with `{:error, :forbidden}` for someone else's message, an open one, or in a locked or
+  archived topic; `{:error, :blank}` for empty text.
+  """
+  @spec edit(User.t(), Message.t(), String.t()) ::
+          {:ok, Message.t()} | {:error, :forbidden | :blank | Ecto.Changeset.t()}
+  def edit(%User{} = author, %Message{} = message, text) when is_binary(text) do
+    text = String.trim_trailing(text)
+
+    result =
+      Repo.transact(fn ->
+        message = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+        topic = Repo.get!(Topic, message.topic_id)
+
+        cond do
+          message.author_id != author.id -> {:error, :forbidden}
+          message.state != "closed" -> {:error, :forbidden}
+          not Forum.can_post?(author, topic) -> {:error, :forbidden}
+          String.trim(text) == "" -> {:error, :blank}
+          text == message.body_md -> {:ok, message}
+          true -> save_edit(author, message, text, topic)
+        end
+      end)
+
+    with {:ok, message} <- result, do: broadcast(message.topic_id, {:message, message})
+    result
+  end
+
+  defp save_edit(author, message, text, topic) do
+    now = DateTime.utc_now()
+    edit? = not String.starts_with?(text, message.body_md)
+
+    with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
+         {:ok, message} <- update_body(message, text, true, edit?),
+         {:ok, _} <- activity(author, message, "update", topic.uri) do
+      {:ok, message}
+    end
+  end
+
   @doc "Lists a message's earlier versions, oldest first (GM-11)."
   @spec list_versions(Message.t()) :: [Version.t()]
   def list_versions(%Message{id: id}) do
