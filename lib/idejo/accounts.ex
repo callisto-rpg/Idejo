@@ -294,18 +294,25 @@ defmodule Idejo.Accounts do
       with {:ok, user} <- Repo.update(User.password_changeset(user, attrs)) do
         tokens = from(t in UserToken, where: t.user_id == ^user.id)
 
-        socket_ids =
-          Repo.all(
-            from t in tokens,
-              where: t.context == "session" and not is_nil(t.socket_id),
-              distinct: true,
-              select: t.socket_id
-          )
-
+        socket_ids = session_socket_ids(user)
         Repo.delete_all(tokens)
         {:ok, {user, socket_ids}}
       end
     end)
+  end
+
+  @doc """
+  Returns the socket ids of the user's signed-in browser sessions, so the web layer can
+  disconnect their LiveViews, e.g. when their roles change (RP-06).
+  """
+  @spec session_socket_ids(User.t()) :: [String.t()]
+  def session_socket_ids(%User{id: user_id}) do
+    Repo.all(
+      from t in UserToken,
+        where: t.user_id == ^user_id and t.context == "session" and not is_nil(t.socket_id),
+        distinct: true,
+        select: t.socket_id
+    )
   end
 
   ## Session

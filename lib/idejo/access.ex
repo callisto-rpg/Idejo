@@ -124,6 +124,153 @@ defmodule Idejo.Access do
     :ok
   end
 
+  ## Role assignment (RP-06)
+
+  @doc """
+  Returns true when the user holds the owner role.
+  """
+  @spec owner?(User.t() | nil) :: boolean()
+  def owner?(nil), do: false
+
+  def owner?(%User{id: user_id}) do
+    Repo.exists?(
+      from ur in UserRole,
+        join: r in Role,
+        on: ur.role_id == r.id,
+        where: ur.user_id == ^user_id and r.built_in and r.name == "owner"
+    )
+  end
+
+  @doc """
+  Returns the roles given to a user, highest rank first: what `user_roles` stores, without
+  the implicit guest and member. An unverified user acts only with owner or administrator
+  of these until they verify (`roles_of/1`).
+  """
+  @spec assigned_roles(User.t()) :: [Role.t()]
+  def assigned_roles(%User{id: user_id}) do
+    Repo.all(
+      from r in Role,
+        join: ur in UserRole,
+        on: ur.role_id == r.id,
+        where: ur.user_id == ^user_id,
+        order_by: [asc: r.position, asc: r.name]
+    )
+  end
+
+  @doc """
+  Returns true when `admin` may give or remove `role`: guest and member are never given, and
+  only an owner gives or removes the owner role (steward rule, 2026-10-19).
+  """
+  @spec assignable?(User.t(), Role.t()) :: boolean()
+  def assignable?(%User{}, %Role{built_in: true, name: name}) when name in ~w(guest member),
+    do: false
+
+  def assignable?(%User{} = admin, %Role{built_in: true, name: "owner"}), do: owner?(admin)
+  def assignable?(%User{}, %Role{}), do: true
+
+  @doc """
+  Gives a role to a user, as `admin`. Audited as `role.grant`. Giving a role the user
+  already holds changes nothing.
+  """
+  @spec assign_role(User.t(), User.t(), Role.t()) ::
+          {:ok, Role.t()} | {:error, :implicit_role | :owner_only}
+  def assign_role(%User{} = admin, %User{} = user, %Role{} = role) do
+    Repo.transact(fn ->
+      with :ok <- check_assignable(admin, role), do: insert_assignment(admin, user, role)
+    end)
+  end
+
+  @doc """
+  Takes a role away from a user, as `admin`. Audited as `role.revoke`.
+
+  Refused so nobody is locked out: the last owner keeps the owner role (`:last_owner`) and an
+  administrator cannot remove their own administrator role (`:own_administrator`).
+  """
+  @spec unassign_role(User.t(), User.t(), Role.t()) ::
+          {:ok, Role.t()}
+          | {:error, :implicit_role | :owner_only | :last_owner | :own_administrator}
+  def unassign_role(%User{} = admin, %User{} = user, %Role{} = role) do
+    Repo.transact(fn ->
+      with :ok <- check_assignable(admin, role),
+           :ok <- check_not_own_administrator(admin, user, role),
+           :ok <- check_not_last_owner(role) do
+        delete_assignment(admin, user, role)
+      end
+    end)
+  end
+
+  defp check_assignable(admin, %Role{built_in: true, name: name} = role)
+       when name in ~w(guest member owner) do
+    cond do
+      assignable?(admin, role) -> :ok
+      name == "owner" -> {:error, :owner_only}
+      true -> {:error, :implicit_role}
+    end
+  end
+
+  defp check_assignable(_admin, %Role{}), do: :ok
+
+  defp check_not_own_administrator(%User{id: id}, %User{id: id}, %Role{
+         built_in: true,
+         name: "administrator"
+       }),
+       do: {:error, :own_administrator}
+
+  defp check_not_own_administrator(_admin, _user, _role), do: :ok
+
+  defp check_not_last_owner(%Role{built_in: true, name: "owner"} = owner) do
+    lock_owners()
+
+    if Repo.aggregate(from(ur in UserRole, where: ur.role_id == ^owner.id), :count) > 1,
+      do: :ok,
+      else: {:error, :last_owner}
+  end
+
+  defp check_not_last_owner(%Role{}), do: :ok
+
+  # Nothing changes, and nothing is audited, when the user already holds the role (or not).
+  defp insert_assignment(admin, user, role) do
+    case Repo.insert_all(UserRole, [%{user_id: user.id, role_id: role.id}], on_conflict: :nothing) do
+      {0, _} -> {:ok, role}
+      {1, _} -> audit_assignment(admin, "role.grant", nil, assignment(user, role), role)
+    end
+  end
+
+  defp delete_assignment(admin, user, role) do
+    case Repo.delete_all(
+           from ur in UserRole, where: ur.user_id == ^user.id and ur.role_id == ^role.id
+         ) do
+      {0, _} -> {:ok, role}
+      {1, _} -> audit_assignment(admin, "role.revoke", assignment(user, role), nil, role)
+    end
+  end
+
+  defp assignment(user, role), do: %{"user" => user.username, "role" => role.name}
+
+  defp audit_assignment(admin, change, before, after_, role) do
+    with {:ok, _} <- Audit.record(admin, change, before, after_), do: {:ok, role}
+  end
+
+  # Two owners removing each other at once must not both see the other one left. NO KEY
+  # UPDATE, so giving any role (a foreign key check on roles) is never blocked by it.
+  defp lock_owners do
+    Repo.one!(
+      from r in Role,
+        where: r.built_in and r.name == "owner",
+        lock: "FOR NO KEY UPDATE",
+        select: r.id
+    )
+  end
+
+  @doc """
+  Returns the colour a name is shown in (RP-06): the colour of the highest-ranked role that
+  has one, or `nil`. Takes the roles from `roles_of/1` or `roles_of_users/1`.
+  """
+  @spec name_colour([Role.t()]) :: String.t() | nil
+  def name_colour(roles) when is_list(roles) do
+    roles |> Enum.sort_by(&{&1.position, &1.name}) |> Enum.find_value(& &1.colour)
+  end
+
   ## Role editor (RP-02)
 
   # Ranks that never change, so the order cannot put anyone above the owner or below guest.

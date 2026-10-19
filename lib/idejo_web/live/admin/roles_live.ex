@@ -109,17 +109,6 @@ defmodule IdejoWeb.Admin.RolesLive do
     Access.movable?(role) and neighbour != nil and Access.movable?(neighbour)
   end
 
-  attr :colour, :string, default: nil
-
-  # An SVG fill, not a style attribute: the content security policy refuses inline styles.
-  defp swatch(assigns) do
-    ~H"""
-    <svg :if={@colour} width="16" height="16" aria-hidden="true" class="inline-block align-middle">
-      <rect width="16" height="16" rx="3" fill={@colour} />
-    </svg>
-    """
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -168,7 +157,7 @@ defmodule IdejoWeb.Admin.RolesLive do
                 </button>
               </.form>
             <% _ -> %>
-              <.swatch colour={role.colour} />
+              <Admin.swatch colour={role.colour} />
               <span class="font-semibold">{Admin.role_name(role)}</span>
               <span :if={role.built_in} class="badge badge-sm">{gettext("built-in")}</span>
               <span :if={!role.built_in} class="text-sm opacity-70">
