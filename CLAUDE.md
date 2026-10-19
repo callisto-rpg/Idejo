@@ -198,9 +198,17 @@ roles or the permission grid. Every later change must keep it true:
   (the `:post` right and an open topic; locked and archived take nothing). It posts closed
   (until M3), moves `message_count` and `last_activity_at`, and records a `create` activity
   (`inReplyTo` for replies). A reply's `reply_to_id` must be a message of the same topic;
-  replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. The topic
-  page stays a controller: signed-in posters get `MessageFormLive` through `live_render/3`,
-  and "Reply" links use `?reply_to={id}`, so choosing a message needs no JavaScript.
+  replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
+  links use `?reply_to={id}`, so choosing a message needs no JavaScript.
+- **Live topics** (TP-04): the topic page stays a controller and embeds `IdejoWeb.TopicLive`
+  (`live_render/3`, session `"topic_id"`, `"reply_to_id"`) for every viewer: the message list
+  as a stream (`#message-{id}`, kept for permalinks) and the form for posters. Its first render
+  is in the page's HTML (no JavaScript needed to read). Connected, it subscribes before
+  loading; `{:message, m}` events update in place or append; a reconnect mounts again, which
+  is the catch-up. Anything that changes a message must broadcast it after its transaction.
+  Rights are checked at mount and again on `:permissions_changed`, which
+  `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
+  steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

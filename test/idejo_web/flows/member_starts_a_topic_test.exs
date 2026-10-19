@@ -103,8 +103,8 @@ defmodule IdejoWeb.Flows.MemberStartsATopicTest do
     assert first.closed_at == first.opened_at
     assert first.author_id == member.id
 
-    # A public topic renders without JavaScript: everything is in the HTML a visitor gets,
-    # with no LiveView on the page, and it is found through the sitemap at its canonical URL.
+    # A public topic renders without JavaScript: the title and the message are in the HTML a
+    # visitor gets, before any script runs (the live list's first render is part of the page).
     visitor_html =
       build_conn() |> get(~p"/t/#{topic.id}/picnic-on-saturday") |> html_response(200)
 
@@ -113,7 +113,7 @@ defmodule IdejoWeb.Flows.MemberStartsATopicTest do
     assert doc |> LazyHTML.query("h1") |> LazyHTML.text() =~ "Picnic on Saturday"
     assert doc |> LazyHTML.query("#message-#{first.id}") |> LazyHTML.text() =~ "Who brings"
     assert visitor_html =~ "<strong>bread</strong>"
-    assert LazyHTML.query(doc, "[data-phx-session]") |> Enum.count() == 0
+    refute visitor_html =~ "data-phx-main"
 
     canonical = IdejoWeb.Endpoint.url() <> "/t/#{topic.id}/picnic-on-saturday"
 

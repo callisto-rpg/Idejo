@@ -504,7 +504,8 @@ defmodule Idejo.Forum do
   With `"reply_to_id"` it is an inline reply (TP-08): it references one earlier message of
   the same topic and is shown with a short excerpt of it, in the topic's single flow (no side
   threads). The topic's message count and last activity move on, and the message gets a URI
-  (FD-01) and a `create` activity (FD-02), in one transaction.
+  (FD-01) and a `create` activity (FD-02), in one transaction; then it is broadcast to the
+  topic's viewers (TP-04).
 
   Refused with `{:error, :forbidden}` without the right or in a locked or archived topic.
   """
@@ -513,16 +514,21 @@ defmodule Idejo.Forum do
   def post_message(%User{} = user, %Topic{} = topic, attrs) do
     form = change_new_message(attrs)
 
-    Repo.transact(fn ->
-      # Locked, so a lock or a move cannot slip in between the check and the insert.
-      topic = Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+    result =
+      Repo.transact(fn ->
+        # Locked, so a lock or a move cannot slip in between the check and the insert.
+        topic = Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
 
-      cond do
-        not can_post?(user, topic) -> {:error, :forbidden}
-        not form.valid? -> {:error, Map.put(form, :action, :insert)}
-        true -> insert_message(user, topic, form, attrs["reply_to_id"])
-      end
-    end)
+        cond do
+          not can_post?(user, topic) -> {:error, :forbidden}
+          not form.valid? -> {:error, Map.put(form, :action, :insert)}
+          true -> insert_message(user, topic, form, attrs["reply_to_id"])
+        end
+      end)
+
+    # Stored first, then announced to the topic's viewers (TP-04, NF-02).
+    with {:ok, message} <- result, do: Idejo.Messages.broadcast(topic.id, {:message, message})
+    result
   end
 
   defp insert_message(user, topic, form, reply_to_id) do
