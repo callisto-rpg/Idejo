@@ -351,7 +351,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:57
-#: lib/idejo_web/live/user_settings_live.ex:64
+#: lib/idejo_web/live/user_settings_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
@@ -675,6 +675,8 @@ msgid "Back to sign in"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:38
+#: lib/idejo_web/live/user_settings_live.ex:103
+#: lib/idejo_web/live/user_settings_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Change password"
 msgstr ""
@@ -706,6 +708,7 @@ msgid "If that email has an account, a link to reset its password is on its way.
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:24
+#: lib/idejo_web/live/user_settings_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "New password (at least 12 characters)"
 msgstr ""
@@ -1089,18 +1092,33 @@ msgstr ""
 msgid "Nothing to read here yet."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:60
+#: lib/idejo_web/live/user_settings_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Display name (shown above your messages)"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:19
-#: lib/idejo_web/live/user_settings_live.ex:52
+#: lib/idejo_web/live/user_settings_live.ex:20
+#: lib/idejo_web/live/user_settings_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "Profile and account"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:39
+#: lib/idejo_web/live/user_settings_live.ex:45
 #, elixir-autogen, elixir-format
 msgid "Profile saved."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:113
+#, elixir-autogen, elixir-format
+msgid "Current password"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:73
+#, elixir-autogen, elixir-format
+msgid "Password changed. You were signed out everywhere else."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Repeat the new password"
 msgstr ""
