@@ -281,7 +281,7 @@ mix dialyzer
 mix sobelow --config
 mix deps.audit && mix hex.audit
 reuse lint                         # SPDX headers (pip install reuse)
-mix precommit                      # everything above that CI runs (alias in mix.exs)
+mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
 ```
 
 Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:

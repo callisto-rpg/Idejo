@@ -117,7 +117,9 @@ defmodule Idejo.MixProject do
         "sobelow --config --exit",
         "deps.audit",
         "cmd mix hex.audit",
-        "test --warnings-as-errors"
+        "test --warnings-as-errors",
+        # As CI runs it (dev env, without test/support), so precommit catches what CI would.
+        "cmd env MIX_ENV=dev mix dialyzer"
       ]
     ]
   end
