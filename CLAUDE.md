@@ -186,6 +186,13 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
   renames and moves. Each message's time links to its permalink. When topic pages are paged,
   `/m/{id}` must lead to the right page.
+- **Posting and inline replies** (TP-08): `Forum.post_message/3` needs `Forum.can_post?/2`
+  (the `:post` right and an open topic; locked and archived take nothing). It posts closed
+  (until M3), moves `message_count` and `last_activity_at`, and records a `create` activity
+  (`inReplyTo` for replies). A reply's `reply_to_id` must be a message of the same topic;
+  replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. The topic
+  page stays a controller: signed-in posters get `MessageFormLive` through `live_render/3`,
+  and "Reply" links use `?reply_to={id}`, so choosing a message needs no JavaScript.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).
