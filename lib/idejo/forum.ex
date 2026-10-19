@@ -16,6 +16,7 @@ defmodule Idejo.Forum do
   alias Idejo.Audit
   alias Idejo.Federation
   alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Repo
 
@@ -174,22 +175,33 @@ defmodule Idejo.Forum do
   @spec delete_category(User.t(), Category.t(), keyword()) ::
           {:ok, Category.t()} | {:error, :archive | :has_topics | :invalid_target | term()}
   def delete_category(%User{} = admin, %Category{} = category, opts \\ []) do
-    Repo.transact(fn ->
-      lock_categories()
-      topic_ids = Repo.all(from t in Topic, where: t.category_id == ^category.id, select: t.id)
+    result =
+      Repo.transact(fn ->
+        lock_categories()
+        topic_ids = Repo.all(from t in Topic, where: t.category_id == ^category.id, select: t.id)
 
-      with :ok <- check_deletable(category),
-           {:ok, moved} <- move_topics_away(admin, category, topic_ids, opts[:topics]),
-           {:ok, deleted} <- Repo.delete(category),
-           {_, _} <-
-             Repo.update_all(from(c in Category, where: c.position > ^category.position),
-               inc: [position: -1]
-             ),
-           :ok <- record(admin, "delete", category, nil, moved) do
-        {:ok, deleted}
-      end
-    end)
+        with :ok <- check_deletable(category),
+             {:ok, moved} <- move_topics_away(admin, category, topic_ids, opts[:topics]),
+             closed = close_if_archived(topic_ids, opts[:topics]),
+             {:ok, deleted} <- Repo.delete(category),
+             {_, _} <-
+               Repo.update_all(from(c in Category, where: c.position > ^category.position),
+                 inc: [position: -1]
+               ),
+             :ok <- record(admin, "delete", category, nil, moved) do
+          {:ok, {deleted, closed}}
+        end
+      end)
+
+    with {:ok, {deleted, closed}} <- result do
+      Messages.announce_closed(closed)
+      {:ok, deleted}
+    end
   end
+
+  # Archived topics are read only: their open messages close (GM-12).
+  defp close_if_archived(topic_ids, :archive), do: Messages.close_open_in_topics(topic_ids)
+  defp close_if_archived(_topic_ids, _where), do: []
 
   @doc """
   Counts the topics of each category, as a map from category id. For the admin page.

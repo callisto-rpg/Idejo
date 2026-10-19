@@ -52,3 +52,7 @@ config :idejo, announce_setup: false, setup_redirect: false
 
 # Tests run Idejo.Messages.Recovery themselves, inside the SQL sandbox.
 config :idejo, recover_open_messages: false
+
+# Views end with each test; their disconnect grace (GM-12) must not fire during the run.
+# Tests that need one pass `grace_ms:` to Idejo.Messages.Authors.
+config :idejo, gm_disconnect_grace_ms: :timer.hours(1)

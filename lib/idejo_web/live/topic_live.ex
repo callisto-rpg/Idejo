@@ -48,21 +48,20 @@ defmodule IdejoWeb.TopicLive do
            lost_access?: false,
            messages: [],
            roles: %{},
-           editing: nil
+           editing: nil,
+           can_moderate?: false
          )}
 
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
-        if connected?(socket) do
-          Messages.subscribe(topic.id)
-          Access.subscribe_permissions()
-        end
+        if connected?(socket), do: subscribe(topic, user)
 
         can_post? = Forum.can_post?(user, topic)
 
         {:ok,
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
+         |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(editing: nil, editor_mode: :write, preview_html: "")
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
@@ -71,6 +70,13 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  defp subscribe(topic, user) do
+    Messages.subscribe(topic.id)
+    Access.subscribe_permissions()
+    # While this view lives, the user's open message here stays open (GM-12).
+    if user, do: Messages.Authors.present(topic.id, user.id)
+  end
 
   defp put_messages(socket, messages) do
     socket
@@ -97,13 +103,22 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # A reconnect keeps the author's open message (within the grace, GM-12): the hook is told
-  # what the server holds of it.
-  defp sync_composer(socket) do
-    case connected?(socket) && open_message(socket.assigns.messages, user(socket)) do
-      %{body_md: body} -> push_event(socket, "composer_sent", %{body: body})
-      _ -> socket
+  # what the server holds of it, or that nothing is open, when it closed while they were away.
+  defp sync_composer(%{assigns: %{can_post?: true}} = socket) do
+    if connected?(socket) do
+      body =
+        case open_message(socket.assigns.messages, user(socket)) do
+          %{body_md: body} -> body
+          nil -> ""
+        end
+
+      push_event(socket, "composer_sent", %{body: body})
+    else
+      socket
     end
   end
+
+  defp sync_composer(socket), do: socket
 
   defp open_message(_messages, nil), do: nil
 
@@ -130,7 +145,11 @@ defmodule IdejoWeb.TopicLive do
         {:noreply, assign(socket, topic: nil, can_post?: false, lost_access?: true, messages: [])}
 
       topic ->
-        {:noreply, assign(socket, :can_post?, Forum.can_post?(user, topic))}
+        {:noreply,
+         assign(socket,
+           can_post?: Forum.can_post?(user, topic),
+           can_moderate?: user != nil and Access.can?(user, :moderate, topic.category)
+         )}
     end
   end
 
@@ -172,6 +191,16 @@ defmodule IdejoWeb.TopicLive do
 
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
+
+  # A moderator closes someone's open message (GM-16).
+  def handle_event("close_message", %{"id" => id}, socket) do
+    with %{state: "open"} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
+         {:ok, _} <- Messages.close_as_moderator(user(socket), message) do
+      {:noreply, socket}
+    else
+      _ -> {:noreply, put_flash(socket, :error, gettext("This message cannot be closed."))}
+    end
+  end
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
@@ -250,6 +279,7 @@ defmodule IdejoWeb.TopicLive do
             can_post?={@can_post?}
             roles={@roles}
             viewer={@current_scope && @current_scope.user}
+            can_moderate?={@can_moderate?}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -270,6 +300,7 @@ defmodule IdejoWeb.TopicLive do
             can_post?={@can_post?}
             roles={@roles}
             viewer={@current_scope && @current_scope.user}
+            can_moderate?={@can_moderate?}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -329,6 +360,7 @@ defmodule IdejoWeb.TopicLive do
   attr :can_post?, :boolean, required: true
   attr :roles, :map, required: true
   attr :viewer, :any, required: true
+  attr :can_moderate?, :boolean, required: true
   attr :editing, :any, required: true
   attr :editor_mode, :atom, required: true
   attr :preview_html, :string, required: true
@@ -395,6 +427,16 @@ defmodule IdejoWeb.TopicLive do
       </.form>
       <MessageComponents.body :if={!@edit_form} html={@message.body_html} />
       <.versions :if={@message.edited} message={@message} />
+      <button
+        :if={@can_moderate? and @message.state == "open" and @viewer.id != @message.author_id}
+        type="button"
+        class="link text-sm mr-3"
+        phx-click="close_message"
+        phx-value-id={@message.id}
+        data-confirm={gettext("Close this message? Its author will start a new one.")}
+      >
+        {gettext("Close message")}
+      </button>
       <button
         :if={@own_closed? and !@edit_form}
         type="button"
