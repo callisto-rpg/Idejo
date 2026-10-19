@@ -293,8 +293,8 @@ msgstr ""
 msgid "Moderator"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:116
-#: lib/idejo_web/live/admin/categories_live.ex:186
+#: lib/idejo_web/live/admin/categories_live.ex:128
+#: lib/idejo_web/live/admin/categories_live.ex:198
 #: lib/idejo_web/live/admin/roles_live.ex:144
 #: lib/idejo_web/live/admin/roles_live.ex:223
 #: lib/idejo_web/live/admin/users_live.ex:47
@@ -347,7 +347,7 @@ msgstr ""
 msgid "Roles"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:119
+#: lib/idejo_web/live/admin/categories_live.ex:131
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:57
@@ -757,7 +757,7 @@ msgstr[1] ""
 msgid "Built-in roles cannot be deleted."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:121
+#: lib/idejo_web/live/admin/categories_live.ex:133
 #: lib/idejo_web/live/admin/roles_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Cancel"
@@ -774,7 +774,7 @@ msgstr ""
 msgid "Create role"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:175
+#: lib/idejo_web/live/admin/categories_live.ex:187
 #: lib/idejo_web/live/admin/roles_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -785,13 +785,13 @@ msgstr ""
 msgid "Delete the role “%{name}”? Its members lose it."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:166
+#: lib/idejo_web/live/admin/categories_live.ex:178
 #: lib/idejo_web/live/admin/roles_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:164
+#: lib/idejo_web/live/admin/categories_live.ex:176
 #: lib/idejo_web/live/admin/roles_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
@@ -802,13 +802,13 @@ msgstr ""
 msgid "Higher roles come first; a member's name takes the colour of their highest role. Owner and administrator always have every right."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:148
+#: lib/idejo_web/live/admin/categories_live.ex:160
 #: lib/idejo_web/live/admin/roles_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Move %{name} down"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:137
+#: lib/idejo_web/live/admin/categories_live.ex:149
 #: lib/idejo_web/live/admin/roles_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Move %{name} up"
@@ -846,7 +846,7 @@ msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:155
 #: lib/idejo_web/live/admin/categories_live.ex:17
-#: lib/idejo_web/live/admin/categories_live.ex:90
+#: lib/idejo_web/live/admin/categories_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Categories"
 msgstr ""
@@ -856,7 +856,7 @@ msgstr ""
 msgid "Category “%{name}” created."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:81
+#: lib/idejo_web/live/admin/categories_live.ex:82
 #, elixir-autogen, elixir-format
 msgid "Category “%{name}” deleted."
 msgstr ""
@@ -866,33 +866,33 @@ msgstr ""
 msgid "Category “%{name}” saved."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:196
+#: lib/idejo_web/live/admin/categories_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Create category"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:173
+#: lib/idejo_web/live/admin/categories_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Delete the category “%{name}”?"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:117
-#: lib/idejo_web/live/admin/categories_live.ex:187
+#: lib/idejo_web/live/admin/categories_live.ex:129
+#: lib/idejo_web/live/admin/categories_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:184
+#: lib/idejo_web/live/admin/categories_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "New category"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:99
+#: lib/idejo_web/live/admin/categories_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "No categories yet. Create the first one below, e.g. Announcements, General, Help."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:192
+#: lib/idejo_web/live/admin/categories_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "Web address /c/… (leave empty to make it from the name; it never changes)"
 msgstr ""
@@ -934,14 +934,14 @@ msgid "Not allowed"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:162
-#: lib/idejo_web/live/admin/categories_live.ex:157
+#: lib/idejo_web/live/admin/categories_live.ex:169
 #: lib/idejo_web/live/admin/permissions_live.ex:24
 #: lib/idejo_web/live/admin/permissions_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Permissions"
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:155
+#: lib/idejo_web/live/admin/categories_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Permissions of %{name}"
 msgstr ""
@@ -977,7 +977,7 @@ msgstr ""
 msgid "Server-wide settings apply to every category. A category can allow or deny a right for one role instead. When any role of a user allows a right, the user has it. Owner and administrator always have every right."
 msgstr ""
 
-#: lib/idejo_web/live/admin/categories_live.ex:92
+#: lib/idejo_web/live/admin/categories_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Shown on the home page in this order. Who can see and post in each is set under Permissions."
 msgstr ""
@@ -1077,14 +1077,9 @@ msgstr ""
 msgid "You cannot remove your own administrator role."
 msgstr ""
 
-#: lib/idejo_web/controllers/category_html/show.html.heex:13
+#: lib/idejo_web/controllers/category_html/show.html.heex:16
 #, elixir-autogen, elixir-format
 msgid "All categories"
-msgstr ""
-
-#: lib/idejo_web/controllers/category_html/show.html.heex:11
-#, elixir-autogen, elixir-format
-msgid "No topics yet."
 msgstr ""
 
 #: lib/idejo_web/controllers/page_html/home.html.heex:8
@@ -1161,4 +1156,41 @@ msgstr ""
 #: lib/idejo_web/live/user_settings_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "Your password, to confirm"
+msgstr ""
+
+#: lib/idejo_web/live/new_topic_live.ex:78
+#, elixir-autogen, elixir-format
+msgid "First message (Markdown)"
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:11
+#: lib/idejo_web/live/new_topic_live.ex:67
+#, elixir-autogen, elixir-format
+msgid "New topic"
+msgstr ""
+
+#: lib/idejo_web/live/new_topic_live.ex:26
+#, elixir-autogen, elixir-format
+msgid "New topic in %{category}"
+msgstr ""
+
+#: lib/idejo_web/live/new_topic_live.ex:82
+#, elixir-autogen, elixir-format
+msgid "Post topic"
+msgstr ""
+
+#: lib/idejo_web/live/new_topic_live.ex:74
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr ""
+
+#: lib/idejo_web/live/new_topic_live.ex:32
+#: lib/idejo_web/live/new_topic_live.ex:54
+#, elixir-autogen, elixir-format
+msgid "You cannot start topics in this category."
+msgstr ""
+
+#: lib/idejo_web/live/admin/categories_live.ex:90
+#, elixir-autogen, elixir-format
+msgid "“%{name}” still has topics, so it cannot be deleted yet."
 msgstr ""

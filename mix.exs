@@ -81,6 +81,8 @@ defmodule Idejo.MixProject do
       {:bandit, "~> 1.5"},
       {:oban, "~> 2.24"},
       {:argon2_elixir, "~> 4.1"},
+      # Markdown source to sanitised HTML (FD-03). MIT; rustler_precompiled Apache-2.0 (LI-06).
+      {:mdex, "~> 0.14.2"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.16.0", only: [:dev, :test], runtime: false},
