@@ -258,11 +258,30 @@ defmodule IdejoWeb.UserAuth do
   LiveView hooks, used with `live_session`.
 
     * `:mount_current_scope` - assigns `current_scope` from the session, or `nil`.
+    * `:require_authenticated` - as `require_authenticated_user/2`: a signed-in user, or
+      a redirect to the sign-in page.
     * `:require_administrator` - as `require_administrator/2`, checked again on every
       LiveView mount, including when the socket connects.
   """
   def on_mount(:mount_current_scope, _params, session, socket) do
     {:cont, mount_current_scope(socket, session)}
+  end
+
+  def on_mount(:require_authenticated, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    case socket.assigns.current_scope do
+      %Scope{user: %Accounts.User{}} ->
+        {:cont, socket}
+
+      _ ->
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, gettext("You must sign in to access this page."))
+          |> Phoenix.LiveView.redirect(to: ~p"/users/sign-in")
+
+        {:halt, socket}
+    end
   end
 
   def on_mount(:require_administrator, _params, session, socket) do

@@ -150,6 +150,10 @@ roles or the permission grid. Every later change must keep it true:
   (open or invite-only) itself, so no sign-up path can skip it. Invites are single-use, valid
   7 days, made by administrators in **Admin → Invites**; the link is
   `/users/sign-up?invite=CODE`. Test fixtures create users with `skip_invite: true`.
+- **Profile** (AC-04): `/users/settings` (`IdejoWeb.UserSettingsLive`, `live_session :signed_in`
+  with the `{IdejoWeb.UserAuth, :require_authenticated}` hook) changes the display name
+  through `Accounts.update_user_profile/2`, which records an `update` activity. The username
+  never changes (@mentions); the avatar comes with uploads in M4.
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and

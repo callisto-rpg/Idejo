@@ -230,7 +230,8 @@ msgid "Welcome! We sent a link to %{email}; open it to verify your email address
 msgstr ""
 
 #: lib/idejo_web/user_auth.ex:235
-#: lib/idejo_web/user_auth.ex:279
+#: lib/idejo_web/user_auth.ex:280
+#: lib/idejo_web/user_auth.ex:298
 #, elixir-autogen, elixir-format
 msgid "You must sign in to access this page."
 msgstr ""
@@ -317,7 +318,7 @@ msgid "Not yet"
 msgstr ""
 
 #: lib/idejo_web/user_auth.ex:251
-#: lib/idejo_web/user_auth.ex:278
+#: lib/idejo_web/user_auth.ex:297
 #, elixir-autogen, elixir-format
 msgid "Only administrators can open the admin panel."
 msgstr ""
@@ -350,6 +351,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:57
+#: lib/idejo_web/live/user_settings_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
@@ -1070,4 +1072,20 @@ msgstr ""
 #: lib/idejo_web/live/admin/user_live.ex:84
 #, elixir-autogen, elixir-format
 msgid "You cannot remove your own administrator role."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:60
+#, elixir-autogen, elixir-format
+msgid "Display name (shown above your messages)"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:19
+#: lib/idejo_web/live/user_settings_live.ex:52
+#, elixir-autogen, elixir-format
+msgid "Profile and account"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Profile saved."
 msgstr ""

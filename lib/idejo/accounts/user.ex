@@ -68,9 +68,20 @@ defmodule Idejo.Accounts.User do
     |> unique_constraint(:username)
   end
 
+  @doc """
+  A changeset for the user's own profile (AC-04): the display name. The username stays as
+  chosen at sign-up, since @mentions use it.
+  """
+  def profile_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:display_name])
+    |> validate_display_name()
+  end
+
   defp validate_display_name(changeset) do
     changeset
-    |> update_change(:display_name, &String.trim/1)
+    # Blanking an existing name changes it to nil (Ecto's empty values): trim only strings.
+    |> update_change(:display_name, &(&1 && String.trim(&1)))
     |> validate_required([:display_name])
     |> validate_length(:display_name, max: 60)
   end
