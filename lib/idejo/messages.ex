@@ -40,6 +40,10 @@ defmodule Idejo.Messages do
   @spec subscribe(Ecto.UUID.t()) :: :ok | {:error, term()}
   def subscribe(topic_id), do: Phoenix.PubSub.subscribe(@pubsub, "topic:" <> topic_id)
 
+  @doc "Unsubscribes the caller from a topic's message events."
+  @spec unsubscribe(Ecto.UUID.t()) :: :ok
+  def unsubscribe(topic_id), do: Phoenix.PubSub.unsubscribe(@pubsub, "topic:" <> topic_id)
+
   @doc "Broadcasts a message event on a topic."
   @spec broadcast(Ecto.UUID.t(), term()) :: :ok | {:error, term()}
   def broadcast(topic_id, event),

@@ -206,6 +206,9 @@ roles or the permission grid. Every later change must keep it true:
   is in the page's HTML (no JavaScript needed to read). Connected, it subscribes before
   loading; `{:message, m}` events update in place or append; a reconnect mounts again, which
   is the catch-up. Anything that changes a message must broadcast it after its transaction.
+  Rights are checked at mount and again on `:permissions_changed`, which
+  `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
+  steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count and last activity.
   The unread marker waits for read positions (TP-07, M4).

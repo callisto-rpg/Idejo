@@ -13,9 +13,14 @@ defmodule IdejoWeb.TopicLive do
   posted in between is missed. Each `{:message, message}` updates that message in place or
   adds it at the end. A dropped connection reconnects by itself and mounts again, which loads
   the messages afresh: that is the catch-up of anything missed while away.
+
+  Rights are checked at mount and again whenever the permission grid changes
+  (`Idejo.Access.subscribe_permissions/0`): a viewer who lost the view right then sees the
+  list emptied and gets no more events.
   """
   use IdejoWeb, :live_view
 
+  alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Repo
@@ -30,16 +35,23 @@ defmodule IdejoWeb.TopicLive do
 
     case Forum.get_viewable_topic(user, topic_id) do
       nil ->
-        {:ok, assign(socket, topic: nil, can_post?: false) |> stream(:messages, [])}
+        {:ok,
+         socket
+         |> assign(topic: nil, can_post?: false, lost_access?: false)
+         |> stream(:messages, [])}
 
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
-        if connected?(socket), do: Messages.subscribe(topic.id)
+        if connected?(socket) do
+          Messages.subscribe(topic.id)
+          Access.subscribe_permissions()
+        end
+
         can_post? = Forum.can_post?(user, topic)
 
         {:ok,
          socket
-         |> assign(topic: topic, can_post?: can_post?)
+         |> assign(topic: topic, can_post?: can_post?, lost_access?: false)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> assign_form()
          |> stream(:messages, Forum.list_messages(topic))}
@@ -56,6 +68,27 @@ defmodule IdejoWeb.TopicLive do
   def handle_info({:message, message}, socket) do
     message = Repo.preload(message, [:author, reply_to: :author])
     {:noreply, stream_insert(socket, :messages, message)}
+  end
+
+  # The grid changed: the viewer may have lost the view or post right since mount.
+  def handle_info(:permissions_changed, %{assigns: %{topic: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_info(:permissions_changed, socket) do
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    case Forum.get_viewable_topic(user, socket.assigns.topic.id) do
+      nil ->
+        Messages.unsubscribe(socket.assigns.topic.id)
+
+        {:noreply,
+         socket
+         |> assign(topic: nil, can_post?: false, lost_access?: true)
+         |> stream(:messages, [], reset: true)}
+
+      topic ->
+        {:noreply, assign(socket, :can_post?, Forum.can_post?(user, topic))}
+    end
   end
 
   # The composer (M3 step 3) uses it; the list has nothing to change.
@@ -103,6 +136,9 @@ defmodule IdejoWeb.TopicLive do
   def render(assigns) do
     ~H"""
     <div id="topic-live">
+      <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
+        {gettext("You can no longer view this topic.")}
+      </p>
       <ol id="messages" class="space-y-6" phx-update="stream">
         <li :for={{dom_id, message} <- @streams.messages} id={dom_id}>
           <.message message={message} topic={@topic} can_post?={@can_post?} />

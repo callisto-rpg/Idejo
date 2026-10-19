@@ -23,6 +23,8 @@ defmodule Idejo.Access do
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
+  @grid_topic "access:permissions"
+
   # Built-in roles that always have every right and never depend on email verification.
   @all_rights ~w(owner administrator)
 
@@ -521,22 +523,40 @@ defmodule Idejo.Access do
 
   def set_permission(%User{} = admin, %Role{} = role, scope, right, effect)
       when right in [:view, :start, :post, :moderate] and effect in [:allow, :deny, :unset] do
-    Repo.transact(fn ->
-      existing =
-        Repo.one(
-          from p in permissions_query(scope),
-            where: p.role_id == ^role.id and p.right == ^Atom.to_string(right),
-            lock: "FOR UPDATE"
-        )
+    result =
+      Repo.transact(fn ->
+        existing =
+          Repo.one(
+            from p in permissions_query(scope),
+              where: p.role_id == ^role.id and p.right == ^Atom.to_string(right),
+              lock: "FOR UPDATE"
+          )
 
-      before = if existing, do: String.to_existing_atom(existing.effect), else: :unset
+        before = if existing, do: String.to_existing_atom(existing.effect), else: :unset
 
-      with :ok <- write_permission(existing, role, scope, right, effect),
-           {:ok, _} <- audit_permission(admin, role, scope, right, before, effect) do
+        with :ok <- write_permission(existing, role, scope, right, effect),
+             {:ok, _} <- audit_permission(admin, role, scope, right, before, effect) do
+          {:ok, {effect, before != effect}}
+        end
+      end)
+
+    case result do
+      {:ok, {effect, changed?}} ->
+        if changed?, do: Phoenix.PubSub.broadcast(Idejo.PubSub, @grid_topic, :permissions_changed)
         {:ok, effect}
-      end
-    end)
+
+      error ->
+        error
+    end
   end
+
+  @doc """
+  Subscribes the caller to changes of the permission grid: `:permissions_changed` arrives
+  after any setting changes. Open pages that were allowed at mount, such as a live topic
+  (TP-04), check again then (steward decision, 2026-10-19).
+  """
+  @spec subscribe_permissions() :: :ok | {:error, term()}
+  def subscribe_permissions, do: Phoenix.PubSub.subscribe(Idejo.PubSub, @grid_topic)
 
   defp write_permission(nil, _role, _scope, _right, :unset), do: :ok
 

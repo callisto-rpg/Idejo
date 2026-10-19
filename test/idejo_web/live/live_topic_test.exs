@@ -108,6 +108,39 @@ defmodule IdejoWeb.LiveTopicTest do
   end
 
   @tag req: "TP-04"
+  test "TP-04 a viewer who loses the view right stops seeing the topic when the grid changes",
+       %{conn: conn, admin: admin, general: general, topic: topic, member: member} do
+    {:ok, lv, _html} = watch(conn, topic)
+    assert length(ids(lv)) == 1
+
+    guest = Access.built_in_role!(:guest)
+    {:ok, _} = Access.set_permission(admin, guest, general, :view, :deny)
+
+    assert has_element?(lv, "#topic-gone", "You can no longer view this topic.")
+    assert ids(lv) == []
+
+    # No more events reach it.
+    {:ok, _} = Forum.post_message(member, topic, %{"body" => "Secret now"})
+    refute render(lv) =~ "Secret now"
+  end
+
+  @tag req: "TP-04"
+  test "TP-04 a poster who loses the post right loses the form when the grid changes", %{
+    conn: conn,
+    admin: admin,
+    general: general,
+    topic: topic,
+    member: member
+  } do
+    {:ok, lv, _html} = watch(log_in_user(conn, member), topic)
+    assert has_element?(lv, "#message-form")
+
+    {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:member), general, :post, :deny)
+    refute has_element?(lv, "#message-form")
+    assert length(ids(lv)) == 1
+  end
+
+  @tag req: "TP-04"
   test "TP-04 a topic the viewer may not view shows nothing", %{
     conn: conn,
     admin: admin,
