@@ -25,6 +25,12 @@ defmodule IdejoWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # SE-04: for search engines; no session, nothing personal.
+  scope "/", IdejoWeb do
+    get "/sitemap.xml", SitemapController, :sitemap
+    get "/robots.txt", SitemapController, :robots
+  end
+
   scope "/", IdejoWeb do
     pipe_through :browser
 

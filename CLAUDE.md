@@ -209,6 +209,11 @@ roles or the permission grid. Every later change must keep it true:
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
   one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP
   refuses.
+- **Search engines** (SE-04): public pages set `canonical_url` (rendered as
+  `<link rel="canonical">` by the root layout): `/`, `/c/{slug}` (`?page=n` from page 2) and
+  `/t/{id}/{slug}` without `?reply_to=`. `/sitemap.xml` and `/robots.txt` come from
+  `SitemapController` (no session); the sitemap lists only what a visitor may view
+  (`Forum.list_public_topics/1`, at most 50,000 topics).
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor

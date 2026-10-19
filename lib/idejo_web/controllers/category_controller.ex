@@ -29,10 +29,15 @@ defmodule IdejoWeb.CategoryController do
           can_start?: Forum.can_start_topic?(user, category),
           topics: topics,
           page: page,
-          more?: more?
+          more?: more?,
+          canonical_url: canonical_url(category, page)
         )
     end
   end
+
+  # Each page of the list is its own address; the first has no ?page=.
+  defp canonical_url(category, 1), do: url(~p"/c/#{category.slug}")
+  defp canonical_url(category, page), do: url(~p"/c/#{category.slug}?page=#{page}")
 
   defp page(%{"page" => page}) do
     case Integer.parse(page) do
