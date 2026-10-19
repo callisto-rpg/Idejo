@@ -58,7 +58,7 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | RP-03 | Create, rename, reorder and delete categories (one level) |
 | RP-04, RP-05 | Per category, allow, deny or unset per role for four rights: view, start topics, post, moderate. Unset follows the role’s server-wide setting; deny overrides it |
 | RP-06 | Several roles per user; allow wins: a right is granted when any of the user’s roles allows it; highest role sets colour |
-| AC-01, AC-02 | Email sign-up with verification; open or invite-only; password reset by email |
+| AC-01, AC-02 | Email sign-up with verification; password change from the profile; open or invite-only; password reset by email |
 | AC-04 | Display name and avatar |
 | AC-05, AC-07 | As v1: guest reading; users delete their own account |
 | MO-01 | Report a message with a reason |

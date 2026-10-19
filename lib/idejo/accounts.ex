@@ -281,6 +281,36 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
+  Changes the password from the profile (AC-01), given the current one in
+  `attrs["current_password"]`. Every other session of the user ends (SP-02): their tokens,
+  and any emailed links, are deleted in the same transaction; the session holding
+  `kept_token` stays signed in.
+
+  Returns the socket ids of the ended sessions, so the web layer can disconnect their
+  LiveViews.
+  """
+  @spec update_user_password(User.t(), map(), binary()) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, Ecto.Changeset.t()}
+  def update_user_password(%User{} = user, attrs, kept_token) when is_binary(kept_token) do
+    changeset =
+      user
+      |> Ecto.Changeset.change()
+      # First, so a wrong current password costs no hashing of the new one.
+      |> User.validate_current_password(attrs["current_password"])
+      |> User.password_changeset(attrs)
+
+    Repo.transact(fn ->
+      with {:ok, user} <- Repo.update(changeset) do
+        kept_socket_id = session_socket_id(kept_token)
+        others = from(t in UserToken, where: t.user_id == ^user.id and t.token != ^kept_token)
+        socket_ids = Enum.reject(session_socket_ids(user), &(&1 == kept_socket_id))
+        Repo.delete_all(others)
+        {:ok, {user, socket_ids}}
+      end
+    end)
+  end
+
+  @doc """
   Sets a new password and ends every session of the user (SP-02): all their tokens, sessions
   and emailed links alike, are deleted in the same transaction.
 

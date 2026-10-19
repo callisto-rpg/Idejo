@@ -135,6 +135,16 @@ defmodule Idejo.Accounts.User do
   end
 
   @doc """
+  Adds an error on `:current_password` unless it is the user's password (AC-01), so a
+  password left signed in on someone else's screen cannot be changed.
+  """
+  def validate_current_password(changeset, password) do
+    if valid_password?(changeset.data, password || ""),
+      do: changeset,
+      else: add_error(changeset, :current_password, "is not your current password")
+  end
+
+  @doc """
   Verifies the password.
 
   If there is no user, `Argon2.no_user_verify/0` runs to avoid timing attacks.
