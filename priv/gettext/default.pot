@@ -1182,12 +1182,15 @@ msgid "Post topic"
 msgstr ""
 
 #: lib/idejo_web/live/new_topic_live.ex:73
+#: lib/idejo_web/live/new_topic_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
 #: lib/idejo_web/live/new_topic_live.ex:31
 #: lib/idejo_web/live/new_topic_live.ex:53
+#: lib/idejo_web/live/new_topic_live.ex:37
+#: lib/idejo_web/live/new_topic_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "You cannot start topics in this category."
 msgstr ""
@@ -1250,3 +1253,17 @@ msgid "“%{name}” has 1 topic. Where should it go?"
 msgid_plural "“%{name}” has %{count} topics. Where should they go?"
 msgstr[0] ""
 msgstr[1] ""
+#: lib/idejo_web/components/message_components.ex:73
+#, elixir-autogen, elixir-format
+msgid "Nothing to preview yet."
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:64
+#, elixir-autogen, elixir-format
+msgid "Preview"
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Write"
+msgstr ""
