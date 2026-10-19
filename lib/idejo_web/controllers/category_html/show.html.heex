@@ -1,0 +1,14 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {@category.name}
+    <:subtitle :if={@category.description != ""}>{@category.description}</:subtitle>
+  </.header>
+
+  <p id="no-topics">{gettext("No topics yet.")}</p>
+
+  <.link href={~p"/"} class="link">{gettext("All categories")}</.link>
+</Layouts.app>

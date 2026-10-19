@@ -169,6 +169,10 @@ roles or the permission grid. Every later change must keep it true:
   (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
   (`category.create|update|reorder|delete`) and an activity in the same transaction.
   `visibility` is stored for RP-04, which turns it into view rights.
+- **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
+  (`PageController`, `CategoryController`) listing only what the visitor may view
+  (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor
+  may not view answers 404, so its name is not given away.
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use

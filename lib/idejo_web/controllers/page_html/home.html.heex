@@ -2,7 +2,17 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<%!-- Placeholder until AC-05 lists the categories here. --%>
 <Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>{Layouts.server_name()}</.header>
+
+  <p :if={@categories == []} id="no-categories">{gettext("Nothing to read here yet.")}</p>
+
+  <ul :if={@categories != []} id="categories" class="space-y-3">
+    <li :for={category <- @categories} id={"category-#{category.id}"}>
+      <.link href={~p"/c/#{category.slug}"} class="link font-semibold text-lg">
+        {category.name}
+      </.link>
+      <p :if={category.description != ""} class="text-sm">{category.description}</p>
+    </li>
+  </ul>
 </Layouts.app>
