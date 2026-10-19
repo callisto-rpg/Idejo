@@ -244,10 +244,13 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 ## Milestones (MVP §7)
 
 - [x] M0 — Foundations — repo, headers, NOTICE, CLA check, CI, Compose with HTTPS
-- [ ] **M1 — Accounts and structure**
-- [ ] M2 — Topics
+- [x] M1 — Accounts and structure — roles, categories, permission grid, invites, profile, admin pages, audit log; exit test "admin sets up the server"
+- [ ] **M2 — Topics**
 - [ ] M3 — Growing messages
 - [ ] M4 — Around the conversation
 - [ ] M5 — Moderation and operations
 
-Current milestone: **M1**. Do not start work belonging to a later milestone.
+Current milestone: **M2**. Do not start work belonging to a later milestone.
+
+M2 exit check (MVP §7): the "member starts a topic" flow passes as an end-to-end test; a public
+topic renders without JavaScript.
