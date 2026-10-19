@@ -89,7 +89,9 @@ defmodule IdejoWeb.Admin.CategoriesLive do
       <.header>
         {gettext("Categories")}
         <:subtitle>
-          {gettext("Shown on the home page in this order. Who can see and post in each comes next.")}
+          {gettext(
+            "Shown on the home page in this order. Who can see and post in each is set under Permissions."
+          )}
         </:subtitle>
       </.header>
 
@@ -147,6 +149,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                 >
                   <.icon name="hero-arrow-down" />
                 </button>
+                <.link
+                  navigate={~p"/admin/permissions/#{category.slug}"}
+                  class="btn btn-xs"
+                  aria-label={gettext("Permissions of %{name}", name: category.name)}
+                >
+                  {gettext("Permissions")}
+                </.link>
                 <button
                   type="button"
                   class="btn btn-xs"

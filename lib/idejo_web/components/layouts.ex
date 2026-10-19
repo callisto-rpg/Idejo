@@ -118,7 +118,7 @@ defmodule IdejoWeb.Layouts do
 
   attr :section, :atom,
     required: true,
-    values: [:settings, :email, :users, :invites, :roles, :categories]
+    values: [:settings, :email, :users, :invites, :roles, :categories, :permissions]
 
   slot :inner_block, required: true
 
@@ -153,6 +153,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :categories && "page"}
         >
           {gettext("Categories")}
+        </.link>
+        <.link
+          navigate={~p"/admin/permissions"}
+          class={["tab", @section == :permissions && "tab-active"]}
+          aria-current={@section == :permissions && "page"}
+        >
+          {gettext("Permissions")}
         </.link>
         <.link
           navigate={~p"/admin/invites"}
