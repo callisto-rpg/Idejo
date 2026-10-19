@@ -182,8 +182,12 @@ roles or the permission grid. Every later change must keep it true:
   one transaction. New topic: `/c/{slug}/new` (`NewTopicLive`, `live_session :member`). The
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
   there with 301. A category with topics is not deleted (`{:error, :has_topics}`).
+- **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
+  Preview, used for every message (the first message now, replies and the composer later).
+  Nothing typed is stored or sent before posting; the preview is rendered for the author only.
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
-  sanitises the result; `body_html` is stored and shown as is (`TopicHTML.body/1`). No syntax
+  sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
+  one raw output). No syntax
   highlighting: MDEx colours code with inline styles, which the CSP refuses.
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view

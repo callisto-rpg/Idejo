@@ -1158,34 +1158,34 @@ msgstr ""
 msgid "Your password, to confirm"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:78
+#: lib/idejo_web/live/new_topic_live.ex:91
 #, elixir-autogen, elixir-format
 msgid "First message (Markdown)"
 msgstr ""
 
 #: lib/idejo_web/controllers/category_html/show.html.heex:11
-#: lib/idejo_web/live/new_topic_live.ex:67
+#: lib/idejo_web/live/new_topic_live.ex:81
 #, elixir-autogen, elixir-format
 msgid "New topic"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:26
+#: lib/idejo_web/live/new_topic_live.ex:30
 #, elixir-autogen, elixir-format
 msgid "New topic in %{category}"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:82
+#: lib/idejo_web/live/new_topic_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Post topic"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:74
+#: lib/idejo_web/live/new_topic_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:32
-#: lib/idejo_web/live/new_topic_live.ex:54
+#: lib/idejo_web/live/new_topic_live.ex:37
+#: lib/idejo_web/live/new_topic_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "You cannot start topics in this category."
 msgstr ""
@@ -1193,4 +1193,19 @@ msgstr ""
 #: lib/idejo_web/live/admin/categories_live.ex:90
 #, elixir-autogen, elixir-format
 msgid "“%{name}” still has topics, so it cannot be deleted yet."
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:73
+#, elixir-autogen, elixir-format
+msgid "Nothing to preview yet."
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:64
+#, elixir-autogen, elixir-format
+msgid "Preview"
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Write"
 msgstr ""
