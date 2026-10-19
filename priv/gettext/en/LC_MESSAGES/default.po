@@ -1295,3 +1295,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "last activity"
 msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:26
+#, elixir-autogen, elixir-format
+msgid "Permalink to this message"
+msgstr ""

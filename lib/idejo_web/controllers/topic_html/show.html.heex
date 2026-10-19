@@ -20,9 +20,15 @@
           <span id={"message-#{message.id}-author"} class="font-semibold">
             {message.author.display_name}
           </span>
-          <time datetime={DateTime.to_iso8601(message.opened_at)} class="opacity-70">
-            {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
-          </time>
+          <.link
+            href={~p"/m/#{message.id}"}
+            class="opacity-70 link link-hover"
+            title={gettext("Permalink to this message")}
+          >
+            <time datetime={DateTime.to_iso8601(message.opened_at)}>
+              {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
+            </time>
+          </.link>
         </p>
         <MessageComponents.body html={message.body_html} />
       </article>
