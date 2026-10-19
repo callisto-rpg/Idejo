@@ -20,7 +20,8 @@ defmodule IdejoWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  # robots.txt is served by IdejoWeb.SitemapController, with this server's sitemap address.
+  def static_paths, do: ~w(assets fonts images favicon.ico)
 
   def router do
     quote do

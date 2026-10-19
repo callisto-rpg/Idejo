@@ -11,6 +11,10 @@ defmodule IdejoWeb.PageController do
   """
   def home(conn, _params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
-    render(conn, :home, categories: Forum.list_viewable_categories(user))
+
+    render(conn, :home,
+      categories: Forum.list_viewable_categories(user),
+      canonical_url: url(~p"/")
+    )
   end
 end

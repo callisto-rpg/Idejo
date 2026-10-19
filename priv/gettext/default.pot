@@ -16,7 +16,7 @@ msgstr ""
 msgid "(still being written)"
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:20
+#: lib/idejo_web/components/layouts/root.html.heex:22
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr ""
@@ -131,17 +131,17 @@ msgstr ""
 msgid "Password (at least 12 characters)"
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:41
+#: lib/idejo_web/components/layouts/root.html.heex:43
 #, elixir-autogen, elixir-format
 msgid "Please verify your email address to take part. Check your inbox for the link."
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:44
+#: lib/idejo_web/components/layouts/root.html.heex:46
 #, elixir-autogen, elixir-format
 msgid "Send the link again"
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:32
+#: lib/idejo_web/components/layouts/root.html.heex:34
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:13
 #: lib/idejo_web/controllers/user_session_controller.ex:12
 #: lib/idejo_web/controllers/user_session_controller.ex:28
@@ -151,12 +151,12 @@ msgstr ""
 msgid "Sign in"
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:28
+#: lib/idejo_web/components/layouts/root.html.heex:30
 #, elixir-autogen, elixir-format
 msgid "Sign out"
 msgstr ""
 
-#: lib/idejo_web/components/layouts/root.html.heex:31
+#: lib/idejo_web/components/layouts/root.html.heex:33
 #, elixir-autogen, elixir-format
 msgid "Sign up"
 msgstr ""
@@ -257,7 +257,7 @@ msgid "the mailbox"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:128
-#: lib/idejo_web/components/layouts/root.html.heex:24
+#: lib/idejo_web/components/layouts/root.html.heex:26
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr ""

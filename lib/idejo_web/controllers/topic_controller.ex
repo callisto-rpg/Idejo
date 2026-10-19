@@ -30,7 +30,9 @@ defmodule IdejoWeb.TopicController do
             messages: Forum.list_messages(topic),
             page_title: topic.title,
             can_post?: Forum.can_post?(user, topic),
-            reply_to_id: params["reply_to"]
+            reply_to_id: params["reply_to"],
+            # Without ?reply_to=, which only opens the form.
+            canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
           )
         else
           conn

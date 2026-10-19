@@ -400,6 +400,23 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Lists the topics a visitor without an account may view, most recently active first, at
+  most `limit` (a sitemap holds 50,000 addresses). For the sitemap (SE-04); filtered in the
+  query by `Idejo.Access.where_allowed/3`.
+  """
+  @spec list_public_topics(pos_integer()) :: [Topic.t()]
+  def list_public_topics(limit \\ 50_000) do
+    public = Category |> Access.where_allowed(nil, :view) |> select([c], c.id)
+
+    Repo.all(
+      from t in Topic,
+        where: t.category_id in subquery(public),
+        order_by: [desc: t.last_activity_at, desc: t.id],
+        limit: ^limit
+    )
+  end
+
+  @doc """
   Gets a message by id, with its topic, if the visitor (`nil`) or user may view the topic's
   category; otherwise `nil`. For message permalinks (TP-06).
   """
