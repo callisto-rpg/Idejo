@@ -71,8 +71,10 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 The engine is `Idejo.Messages`: the composer sends the author's whole message after each Enter
 and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunctuated text
 (not after code). Each commit overwrites `body_md`/`body_html`; one that changes text already
-sent first keeps the old text in `message_versions` (GM-11). Events go to `"topic:{id}"` on
-`Idejo.PubSub`: `{:message, message}` and `{:window_ended, id}`. The window length is the
+sent first keeps the old text in `message_versions` (GM-11). History is kept only for edits
+(TP-05): a message that only received appends keeps just its final text, with no versions and
+no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
+`{:window_ended, id}`. The window length is the
 `gm_window_seconds` setting (default 45). Tests set `recover_open_messages: false` and call
 `Idejo.Messages.Recovery.run/0` themselves.
 

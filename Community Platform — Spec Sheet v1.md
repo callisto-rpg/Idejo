@@ -118,7 +118,7 @@ A topic is created like a forum thread and then runs as a live conversation of g
 | TP-02 | The first message uses the same editor as any message; nobody sees it while it is typed; it is posted closed together with the title and tags | Must |
 | TP-03 | Category view lists topics with title, starter, tags, message count, participants, last activity and unread marker; pinned topics on top | Must |
 | TP-04 | New messages and appends reach every viewer live, with automatic reconnect and catch-up of missed events | Must |
-| TP-05 | Full history kept; jump to the first message, the first unread or a date | Must |
+| TP-05 | History kept if there is an edit. If only appends happen, only keep final message. | Must |
 | TP-06 | Stable permalink to every topic and every message | Must |
 | TP-07 | Per-user read position per topic; “new since last visit” across categories; a growing message counts as one unread item | Must |
 | TP-08 | Inline replies: a reply references one message and shows a short excerpt linking to it. No side threads | Must |
