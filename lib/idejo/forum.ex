@@ -11,6 +11,7 @@ defmodule Idejo.Forum do
 
   import Ecto.Query, warn: false
 
+  alias Idejo.Access
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
@@ -30,6 +31,27 @@ defmodule Idejo.Forum do
   """
   @spec get_category_by_slug(String.t()) :: Category.t() | nil
   def get_category_by_slug(slug) when is_binary(slug), do: Repo.get_by(Category, slug: slug)
+
+  @doc """
+  Lists, in their order, the categories the visitor (`nil`) or user may view (AC-05).
+  Filtered in the query by `Idejo.Access.where_allowed/3`.
+  """
+  @spec list_viewable_categories(User.t() | nil) :: [Category.t()]
+  def list_viewable_categories(user) do
+    from(c in Category, order_by: [asc: c.position, asc: c.name])
+    |> Access.where_allowed(user, :view)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a category by slug if the visitor (`nil`) or user may view it, or `nil` (AC-05).
+  """
+  @spec get_viewable_category(User.t() | nil, String.t()) :: Category.t() | nil
+  def get_viewable_category(user, slug) when is_binary(slug) do
+    from(c in Category, where: c.slug == ^slug)
+    |> Access.where_allowed(user, :view)
+    |> Repo.one()
+  end
 
   @doc """
   Returns a changeset for the new-category form.

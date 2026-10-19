@@ -4,7 +4,13 @@
 defmodule IdejoWeb.PageController do
   use IdejoWeb, :controller
 
+  alias Idejo.Forum
+
+  @doc """
+  The home page: the categories the visitor or user may view (AC-05), in their order.
+  """
   def home(conn, _params) do
-    render(conn, :home)
+    user = conn.assigns.current_scope && conn.assigns.current_scope.user
+    render(conn, :home, categories: Forum.list_viewable_categories(user))
   end
 end

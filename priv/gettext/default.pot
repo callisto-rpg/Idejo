@@ -1077,6 +1077,21 @@ msgstr ""
 msgid "You cannot remove your own administrator role."
 msgstr ""
 
+#: lib/idejo_web/controllers/category_html/show.html.heex:13
+#, elixir-autogen, elixir-format
+msgid "All categories"
+msgstr ""
+
+#: lib/idejo_web/controllers/category_html/show.html.heex:11
+#, elixir-autogen, elixir-format
+msgid "No topics yet."
+msgstr ""
+
+#: lib/idejo_web/controllers/page_html/home.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Nothing to read here yet."
+msgstr ""
+
 #: lib/idejo_web/live/user_settings_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Display name (shown above your messages)"
