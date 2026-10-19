@@ -82,7 +82,11 @@ Every read and write goes through `Idejo.Access.can?(user, right, category)`. Ri
 unset; unset follows the role's server-wide setting (a `category_permissions` row with no
 `category_id`), and deny overrides it (RP-04/RP-05). Across roles, **allow wins**: a right is
 granted when any of the user's roles allows it, even if a higher-ranked role denies it (RP-06).
-Search and lists filter by `:view` in the query, never after loading.
+Search and lists filter by `:view` in the query, never after loading: use
+`Idejo.Access.where_allowed(query, user, right)` for lists and `Access.can?/3` for one
+category. Settings change only through `Access.set_permission/5` (audited as
+`permission.update`). Server-wide defaults seeded at install: guest views; member views,
+starts topics and posts; moderator also moderates.
 
 **Owners and administrators always have every right and can never lock themselves out**
 (steward rule, 2026-10-19). `Idejo.Access.administrator?/1` (holds owner or administrator) is
