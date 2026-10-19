@@ -315,6 +315,44 @@ defmodule Idejo.Accounts do
     )
   end
 
+  ## Profile (AC-04)
+
+  @doc """
+  Returns a changeset for the profile form.
+  """
+  def change_user_profile(%User{} = user, attrs \\ %{}), do: User.profile_changeset(user, attrs)
+
+  @doc """
+  Updates the user's own profile: the display name. Records an `update` activity (FD-02)
+  when it changes.
+  """
+  @spec update_user_profile(User.t(), map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_profile(%User{} = user, attrs) do
+    case User.profile_changeset(user, attrs) do
+      %Ecto.Changeset{valid?: true, changes: changes} when changes == %{} -> {:ok, user}
+      changeset -> Repo.transact(fn -> save_profile(changeset) end)
+    end
+  end
+
+  defp save_profile(changeset) do
+    with {:ok, user} <- Repo.update(changeset),
+         {:ok, _activity} <-
+           Repo.insert(
+             Federation.activity_changeset(%{
+               actor_uri: user.uri,
+               verb: "update",
+               object_uri: user.uri,
+               payload: %{
+                 "type" => "Person",
+                 "username" => user.username,
+                 "name" => user.display_name
+               }
+             })
+           ) do
+      {:ok, user}
+    end
+  end
+
   ## Session
 
   @doc """

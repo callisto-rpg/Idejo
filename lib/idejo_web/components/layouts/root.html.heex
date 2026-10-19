@@ -22,7 +22,7 @@
     >
       <%= if @current_scope do %>
         <.link :if={@current_scope.administrator?} href={~p"/admin"}>{gettext("Admin")}</.link>
-        <span>{@current_scope.user.display_name}</span>
+        <.link href={~p"/users/settings"}>{@current_scope.user.display_name}</.link>
         <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
         <.form for={%{}} action={~p"/users/sign-out"} method="delete">
           <button class="link">{gettext("Sign out")}</button>
