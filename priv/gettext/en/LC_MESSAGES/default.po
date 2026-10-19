@@ -81,8 +81,8 @@ msgstr ""
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:31
 #: lib/idejo_web/live/admin/email_live.ex:20
 #: lib/idejo_web/live/admin/email_live.ex:98
-#: lib/idejo_web/live/admin/user_live.ex:38
-#: lib/idejo_web/live/admin/users_live.ex:51
+#: lib/idejo_web/live/admin/user_live.ex:107
+#: lib/idejo_web/live/admin/users_live.ex:52
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
@@ -102,7 +102,7 @@ msgstr ""
 msgid "Keep me signed in"
 msgstr ""
 
-#: lib/idejo_web/live/admin.ex:20
+#: lib/idejo_web/live/admin.ex:21
 #: lib/idejo_web/live/demo_topic_live.ex:24
 #, elixir-autogen, elixir-format
 msgid "Member"
@@ -261,47 +261,47 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-#: lib/idejo_web/live/admin.ex:18
+#: lib/idejo_web/live/admin.ex:19
 #, elixir-autogen, elixir-format
 msgid "Administrator"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:54
+#: lib/idejo_web/live/admin/user_live.ex:181
 #, elixir-autogen, elixir-format
 msgid "Back to users"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:39
+#: lib/idejo_web/live/admin/user_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "Email verified"
 msgstr ""
 
-#: lib/idejo_web/live/admin.ex:21
+#: lib/idejo_web/live/admin.ex:22
 #, elixir-autogen, elixir-format
 msgid "Guest"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:48
-#: lib/idejo_web/live/admin/users_live.ex:60
+#: lib/idejo_web/live/admin/user_live.ex:117
+#: lib/idejo_web/live/admin/users_live.ex:61
 #, elixir-autogen, elixir-format
 msgid "Joined"
 msgstr ""
 
-#: lib/idejo_web/live/admin.ex:19
+#: lib/idejo_web/live/admin.ex:20
 #, elixir-autogen, elixir-format
 msgid "Moderator"
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:116
 #: lib/idejo_web/live/admin/categories_live.ex:186
-#: lib/idejo_web/live/admin/roles_live.ex:155
-#: lib/idejo_web/live/admin/roles_live.ex:234
+#: lib/idejo_web/live/admin/roles_live.ex:144
+#: lib/idejo_web/live/admin/roles_live.ex:223
 #: lib/idejo_web/live/admin/users_live.ex:47
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 
-#: lib/idejo_web/live/admin/users_live.ex:72
+#: lib/idejo_web/live/admin/users_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Next page"
 msgstr ""
@@ -311,7 +311,7 @@ msgstr ""
 msgid "No users on this page."
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:42
+#: lib/idejo_web/live/admin/user_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "Not yet"
 msgstr ""
@@ -322,33 +322,33 @@ msgstr ""
 msgid "Only administrators can open the admin panel."
 msgstr ""
 
-#: lib/idejo_web/live/admin.ex:17
+#: lib/idejo_web/live/admin.ex:18
 #, elixir-autogen, elixir-format
 msgid "Owner"
 msgstr ""
 
-#: lib/idejo_web/live/admin/users_live.ex:67
+#: lib/idejo_web/live/admin/users_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "Pages"
 msgstr ""
 
-#: lib/idejo_web/live/admin/users_live.ex:69
+#: lib/idejo_web/live/admin/users_live.ex:70
 #, elixir-autogen, elixir-format
 msgid "Previous page"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:176
 #: lib/idejo_web/live/admin/roles_live.ex:20
-#: lib/idejo_web/live/admin/roles_live.ex:128
-#: lib/idejo_web/live/admin/user_live.ex:44
-#: lib/idejo_web/live/admin/users_live.ex:57
+#: lib/idejo_web/live/admin/roles_live.ex:117
+#: lib/idejo_web/live/admin/user_live.ex:124
+#: lib/idejo_web/live/admin/users_live.ex:58
 #, elixir-autogen, elixir-format
 msgid "Roles"
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:119
 #: lib/idejo_web/live/admin/email_live.ex:143
-#: lib/idejo_web/live/admin/roles_live.ex:165
+#: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Save"
@@ -379,12 +379,12 @@ msgid "Settings saved."
 msgstr ""
 
 #: lib/idejo_web/live/admin/invites_live.ex:92
-#: lib/idejo_web/live/admin/user_live.ex:47
+#: lib/idejo_web/live/admin/user_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr ""
 
-#: lib/idejo_web/live/admin/user_live.ex:51
+#: lib/idejo_web/live/admin/user_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "URI"
 msgstr ""
@@ -396,7 +396,7 @@ msgstr ""
 msgid "Users"
 msgstr ""
 
-#: lib/idejo_web/live/admin/users_live.ex:54
+#: lib/idejo_web/live/admin/users_live.ex:55
 #, elixir-autogen, elixir-format
 msgid "unverified"
 msgstr ""
@@ -740,7 +740,7 @@ msgstr ""
 msgid "You will be signed out everywhere, then sign in again."
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:175
+#: lib/idejo_web/live/admin/roles_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "1 member"
 msgid_plural "%{count} members"
@@ -753,63 +753,63 @@ msgid "Built-in roles cannot be deleted."
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:121
-#: lib/idejo_web/live/admin/roles_live.ex:167
+#: lib/idejo_web/live/admin/roles_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:161
-#: lib/idejo_web/live/admin/roles_live.ex:238
+#: lib/idejo_web/live/admin/roles_live.ex:150
+#: lib/idejo_web/live/admin/roles_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Colour (#rrggbb, empty for none)"
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:242
+#: lib/idejo_web/live/admin/roles_live.ex:231
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Create role"
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:175
-#: lib/idejo_web/live/admin/roles_live.ex:219
+#: lib/idejo_web/live/admin/roles_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:216
+#: lib/idejo_web/live/admin/roles_live.ex:205
 #, elixir-autogen, elixir-format
 msgid "Delete the role “%{name}”? Its members lose it."
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:166
-#: lib/idejo_web/live/admin/roles_live.ex:207
+#: lib/idejo_web/live/admin/roles_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:164
-#: lib/idejo_web/live/admin/roles_live.ex:205
+#: lib/idejo_web/live/admin/roles_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Edit %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:130
+#: lib/idejo_web/live/admin/roles_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "Higher roles come first; a member's name takes the colour of their highest role. Owner and administrator always have every right."
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:148
-#: lib/idejo_web/live/admin/roles_live.ex:196
+#: lib/idejo_web/live/admin/roles_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Move %{name} down"
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:137
-#: lib/idejo_web/live/admin/roles_live.ex:185
+#: lib/idejo_web/live/admin/roles_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Move %{name} up"
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:226
+#: lib/idejo_web/live/admin/roles_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "New role"
 msgstr ""
@@ -834,7 +834,7 @@ msgstr ""
 msgid "This role cannot move further."
 msgstr ""
 
-#: lib/idejo_web/live/admin/roles_live.ex:173
+#: lib/idejo_web/live/admin/roles_live.ex:162
 #, elixir-autogen, elixir-format
 msgid "built-in"
 msgstr ""
@@ -1000,4 +1000,74 @@ msgstr ""
 #: lib/idejo_web/live/admin/permissions_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "Where the settings apply"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:113
+#, elixir-autogen, elixir-format
+msgid "Acts as"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Every verified user is a member as well; these roles add to it."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:173
+#, elixir-autogen, elixir-format
+msgid "Give a role"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:176
+#, elixir-autogen, elixir-format
+msgid "Give role"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:134
+#, elixir-autogen, elixir-format
+msgid "No roles given."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:87
+#, elixir-autogen, elixir-format
+msgid "Only an owner can give or remove the owner role."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:158
+#, elixir-autogen, elixir-format
+msgid "Remove"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:152
+#, elixir-autogen, elixir-format
+msgid "Remove the role “%{role}” from %{user}?"
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:55
+#, elixir-autogen, elixir-format
+msgid "Role “%{name}” given."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:73
+#, elixir-autogen, elixir-format
+msgid "Role “%{name}” removed."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:81
+#, elixir-autogen, elixir-format
+msgid "The server must keep at least one owner."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:89
+#, elixir-autogen, elixir-format
+msgid "This role cannot be changed."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:129
+#, elixir-autogen, elixir-format
+msgid "Until the email address is verified, this user acts as guest; only owner and administrator apply before that."
+msgstr ""
+
+#: lib/idejo_web/live/admin/user_live.ex:84
+#, elixir-autogen, elixir-format
+msgid "You cannot remove your own administrator role."
 msgstr ""

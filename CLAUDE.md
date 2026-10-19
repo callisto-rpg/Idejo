@@ -84,6 +84,14 @@ top and guest stays last (`Access.movable?/1`). Every change is audited (`role.c
 `role.update`, `role.reorder`, `role.delete`). Colours are drawn as SVG `fill`, never as
 `style` (SP-05).
 
+Role assignment (RP-06, **Admin → Users → a user**): `Access.assign_role/3` and
+`Access.unassign_role/3`, audited as `role.grant` / `role.revoke`. Only owners give or remove
+the owner role (steward decision, 2026-10-19); guest and member are never given. Removing
+refuses the last owner and an administrator's own administrator role. When a user stops being
+an administrator, their sessions' LiveViews are disconnected so open admin pages re-check.
+The name colour is the colour of the highest-ranked role that has one (`Access.name_colour/1`).
+`Access.grant_role/2` (unaudited) is only for setup and test fixtures.
+
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
 `:view`, `:start`, `:post`, `:moderate`. Each role's right on a category is allow, deny or
 unset; unset follows the role's server-wide setting (a `category_permissions` row with no

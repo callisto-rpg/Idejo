@@ -3,8 +3,8 @@
 
 defmodule IdejoWeb.Admin.UsersLive do
   @moduledoc """
-  Admin panel: list of users, newest first (AD-02). Roles are assigned here from RP-06 and
-  bans from MO-02.
+  Admin panel: list of users, newest first (AD-02). Each user's page gives and removes
+  roles (RP-06); bans come with MO-02.
   """
   use IdejoWeb, :live_view
 
@@ -45,6 +45,7 @@ defmodule IdejoWeb.Admin.UsersLive do
 
       <.table :if={@users != []} id="users" rows={@users} row_id={&"user-#{&1.id}"}>
         <:col :let={user} label={gettext("Name")}>
+          <IdejoWeb.Admin.swatch colour={Access.name_colour(@roles[user.id])} />
           <.link navigate={~p"/admin/users/#{user.id}"} class="link">{user.display_name}</.link>
           <span class="opacity-70">@{user.username}</span>
         </:col>

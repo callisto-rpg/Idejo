@@ -5,6 +5,7 @@ defmodule IdejoWeb.Admin do
   @moduledoc """
   Helpers shared by the admin panel LiveViews (AD-02).
   """
+  use Phoenix.Component
   use Gettext, backend: IdejoWeb.Gettext
 
   alias Idejo.Access.Role
@@ -20,4 +21,18 @@ defmodule IdejoWeb.Admin do
   def role_name(%Role{built_in: true, name: "member"}), do: gettext("Member")
   def role_name(%Role{built_in: true, name: "guest"}), do: gettext("Guest")
   def role_name(%Role{name: name}), do: name
+
+  @doc """
+  A small square in a role's colour, or nothing when it has none. Drawn as an SVG fill, not
+  a style attribute: the content security policy refuses inline styles.
+  """
+  attr :colour, :string, default: nil
+
+  def swatch(assigns) do
+    ~H"""
+    <svg :if={@colour} width="16" height="16" aria-hidden="true" class="inline-block align-middle">
+      <rect width="16" height="16" rx="3" fill={@colour} />
+    </svg>
+    """
+  end
 end
