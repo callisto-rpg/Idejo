@@ -153,14 +153,22 @@ roles or the permission grid. Every later change must keep it true:
 - **Profile** (AC-04): `/users/settings` (`IdejoWeb.UserSettingsLive`, `live_session :signed_in`
   with the `{IdejoWeb.UserAuth, :require_authenticated}` hook) changes the display name
   through `Accounts.update_user_profile/2`, which records an `update` activity. The username
-  never changes (@mentions); the avatar comes with uploads in M4.
+  never changes (@mentions); the avatar comes with uploads in M4. The same page changes the
+  password (AC-01, below).
+- **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
+  password. The row stays (its `uri` and the records naming it keep working) but is
+  anonymised: placeholder email and username that sign-up can never produce, "Deleted user",
+  random password, roles, tokens and links deleted, `status: "deleted"`, and a `delete`
+  activity. `Access.ensure_not_last_owner/1` refuses the last owner.
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
   disconnects the session's LiveViews via `live_socket_id`. Each sign-in gets a socket id,
   stored on its session tokens and kept when a token is reissued. A password reset (AC-02)
   deletes every token of the account and disconnects all its sessions
-  (`UserAuth.disconnect_sessions/1`).
+  (`UserAuth.disconnect_sessions/1`). A password change from the profile (AC-01,
+  `Accounts.update_user_password/3`) needs the current password and does the same for every
+  other session, keeping the one that made the change.
 - **Categories** (RP-03, `Idejo.Forum`, **Admin → Categories**): one level (`parent_id` stays
   unused), ordered by `position`, at `/c/{slug}`. The slug is made from the name at creation
   (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
