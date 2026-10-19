@@ -21,7 +21,7 @@
             {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
           </time>
         </p>
-        <.body message={message} />
+        <MessageComponents.body html={message.body_html} />
       </article>
     </li>
   </ol>

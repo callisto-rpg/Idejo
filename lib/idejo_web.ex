@@ -92,6 +92,7 @@ defmodule IdejoWeb do
 
       # Common modules used in templates
       alias IdejoWeb.Layouts
+      alias IdejoWeb.MessageComponents
       alias Phoenix.LiveView.JS
 
       # Routes generation with the ~p sigil
