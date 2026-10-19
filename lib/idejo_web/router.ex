@@ -30,6 +30,9 @@ defmodule IdejoWeb.Router do
 
     get "/", PageController, :home
 
+    # Public pages (AC-05): server-rendered, no JavaScript needed.
+    get "/c/:slug", CategoryController, :show
+
     # First-run wizard (AD-01), only while the server has no owner.
     get "/setup", SetupController, :new
     post "/setup", SetupController, :create
