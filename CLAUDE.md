@@ -132,6 +132,9 @@ roles or the permission grid. Every later change must keep it true:
   @tag req: "GM-03"
   test "GM-03 appends never extend the window" do
   ```
+- **End-to-end flows** (MVP §4, §8): one test per flow in `test/idejo_web/flows/`, driving the
+  real pages in order with ConnTest and LiveViewTest (no browser), tagged
+  `@tag flow: "admin-sets-up-the-server"` etc.
 - **No third-party scripts, fonts or analytics** (SP-04). Assets are served from the app.
 - **No inline `<script>`, `<style>` or `style=""`** — the content security policy refuses them
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
@@ -225,6 +228,7 @@ mix setup                          # deps, database, assets
 mix phx.server                     # http://localhost:4000
 mix test                           # all tests
 mix test --only req:GM-03          # tests for one requirement
+mix test --only flow:admin-sets-up-the-server   # one end-to-end flow (MVP §4)
 mix format --check-formatted
 mix credo --strict
 mix dialyzer
