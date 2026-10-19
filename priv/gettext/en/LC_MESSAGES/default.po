@@ -765,7 +765,7 @@ msgid "Colour (#rrggbb, empty for none)"
 msgstr ""
 
 #: lib/idejo_web/live/admin/roles_live.ex:242
-#, elixir-autogen, elixir-format
+#, elixir-autogen, elixir-format, fuzzy
 msgid "Create role"
 msgstr ""
 
@@ -862,7 +862,7 @@ msgid "Category “%{name}” saved."
 msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:196
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Create category"
 msgstr ""
 
