@@ -258,6 +258,15 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **Search** (SE-01 to SE-03, `Idejo.Search`): PostgreSQL full text with the `'simple'`
+  configuration (steward decision). `messages.search_vector` is a generated column over
+  `body_md` with `<` and `>` read as spaces (else the parser drops words inside `<script>`),
+  so every commit re-indexes a growing message; titles use an index on
+  `to_tsvector('simple', title)` and are found through the topic's first message. Queries use
+  `websearch_to_tsquery`; results are filtered by view right in the query and optionally by
+  category. Excerpts come from `ts_headline` with `\x01`/`\x02` markers split into segments
+  (`Search.excerpt/1`), never raw HTML. `/search` (`SearchController`, public, GET form, no
+  JavaScript), linked from the header.
 - **Notifications** (NO-01, NO-02, `Idejo.Notifications`, in-app only): one `notifications`
   row per user and message (`kind`: mention, reply, follow). A new message notifies the users
   it mentions, the author it replies to and the topic's followers, in that priority, never
@@ -386,8 +395,9 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 
 Current milestone: **M4**. Do not start work belonging to a later milestone.
 
-M4 exit check (MVP §7): search finds a message by a word added in its last commit; a growing
-message produces one notification (`test/idejo/notifications_test.exs`, NO-02).
+M4 exit check (MVP §7): search finds a message by a word added in its last commit
+(`test/idejo/search_test.exs`, SE-03); a growing message produces one notification
+(`test/idejo/notifications_test.exs`, NO-02).
 
 M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
 end-to-end test (`test/idejo_web/flows/live_conversation_test.exs`, steps 1-4; steward

@@ -41,6 +41,8 @@ defmodule IdejoWeb.Router do
     get "/t/:id", TopicController, :show
     get "/t/:id/:slug", TopicController, :show
     get "/m/:id", MessageController, :show
+    # SE-01: the Search screen (MVP §5), public.
+    get "/search", SearchController, :index
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
 

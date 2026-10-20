@@ -43,6 +43,7 @@ defmodule IdejoWeb.Layouts do
         <a href={~p"/"} class="text-lg font-semibold">{server_name()}</a>
       </div>
       <div class="flex-none flex items-center gap-4">
+        <a href={~p"/search"} id="search-link" class="link">{gettext("Search")}</a>
         <%!-- TP-07: topics with something new, across categories. --%>
         <a
           :if={@current_scope && @current_scope.user}

@@ -1,0 +1,65 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>{gettext("Search")}</.header>
+
+  <form
+    action={~p"/search"}
+    method="get"
+    id="search-form"
+    role="search"
+    class="flex flex-wrap gap-2 items-end"
+  >
+    <label class="grow">
+      <span class="label mb-1">{gettext("Words to find")}</span>
+      <input type="search" name="q" value={@q} class="input w-full" id="search-q" />
+    </label>
+    <label>
+      <span class="label mb-1">{gettext("Category")}</span>
+      <select name="category" class="select" id="search-category">
+        <option value="">{gettext("All categories")}</option>
+        <option
+          :for={category <- @categories}
+          value={category.slug}
+          selected={@category && @category.id == category.id}
+        >
+          {category.name}
+        </option>
+      </select>
+    </label>
+    <button class="btn btn-primary">{gettext("Search")}</button>
+  </form>
+
+  <p :if={String.trim(@q) != "" and @results == [] and @page == 1} id="no-results">
+    {gettext("Nothing found.")}
+  </p>
+
+  <ol :if={@results != []} id="results" class="divide-y divide-base-300">
+    <li
+      :for={%{message: message, excerpt: excerpt} <- @results}
+      id={"result-#{message.id}"}
+      class="py-3"
+    >
+      <.link href={~p"/m/#{message.id}"} class="link font-semibold">{message.topic.title}</.link>
+      <%!-- One line: whitespace between the segments would show before punctuation. --%>
+      <p class="text-sm" phx-no-format><%= for {kind, text} <- excerpt do %><mark :if={kind == :match}>{text}</mark><span :if={kind == :text}>{text}</span><% end %></p>
+      <p class="text-sm opacity-70">
+        {message.topic.category.name} · {message.author.display_name} ·
+        <time datetime={DateTime.to_iso8601(message.opened_at)}>
+          {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
+        </time>
+      </p>
+    </li>
+  </ol>
+
+  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="flex gap-4 mt-4">
+    <.link :if={@page > 1} href={page_path(@q, @category, @page - 1)} class="link">
+      {gettext("Previous page")}
+    </.link>
+    <.link :if={@more?} href={page_path(@q, @category, @page + 1)} class="link">
+      {gettext("Next page")}
+    </.link>
+  </nav>
+</Layouts.app>
