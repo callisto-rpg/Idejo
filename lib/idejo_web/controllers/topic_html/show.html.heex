@@ -11,6 +11,29 @@
         {gettext("Archived: read only")}
       </span>
     </:subtitle>
+    <:actions :if={@current_scope && @current_scope.user}>
+      <.form
+        :if={!@following?}
+        for={%{}}
+        action={~p"/t/#{@topic.id}/follow"}
+        method="post"
+        id="follow-form"
+      >
+        <button class="btn btn-sm">{gettext("Follow")}</button>
+      </.form>
+      <.form
+        :if={@following?}
+        for={%{}}
+        action={~p"/t/#{@topic.id}/follow"}
+        method="delete"
+        id="unfollow-form"
+      >
+        <button class="btn btn-sm" aria-describedby="following-note">
+          {gettext("Unfollow")}
+        </button>
+        <span id="following-note" class="sr-only">{gettext("You follow this topic.")}</span>
+      </.form>
+    </:actions>
   </.header>
 
   {live_render(@conn, IdejoWeb.TopicLive,

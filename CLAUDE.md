@@ -258,6 +258,12 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **Follow** (TP-13, `Idejo.Reading`): `follows` rows (user, topic, `following`). Starting a
+  topic or posting in it follows it (`Reading.auto_follow/2` inside the transaction that
+  writes the message); an explicit unfollow stays as `following: false`, so posting again does
+  not undo it (steward decision: followers get notified of new messages, with NO-01). The
+  topic page has Follow / Unfollow forms posting to `/t/{id}/follow` (`FollowController`,
+  POST / DELETE, no JavaScript needed).
 - **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
   Preview, used for every message (the first message now, replies and the composer later).
   Nothing typed is stored or sent before posting; the preview is rendered for the author only.

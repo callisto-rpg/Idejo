@@ -4,7 +4,8 @@
 defmodule Idejo.Reading do
   @moduledoc """
   Unread tracking (TP-07): each user's read position per topic, the unread marker of topic
-  lists (TP-03) and the topics with something new across categories.
+  lists (TP-03) and the topics with something new across categories. And following topics
+  (TP-13).
 
   Opening a topic marks everything in it read, and so does each message that arrives while
   the topic is open (steward decision). A message is unread when it was opened after the read
@@ -13,6 +14,11 @@ defmodule Idejo.Reading do
 
   With no position, a topic counts as read up to the user's sign-up: a new member does not
   start with every old topic marked new.
+
+  Following (steward decision): starting a topic or posting in it follows it
+  (`auto_follow/2`, in the same transaction), and followers are notified of new messages
+  (NO-01, with notifications). An explicit unfollow is kept as `following: false`, so posting
+  again does not follow again; only "Follow" does.
   """
   import Ecto.Query
 
@@ -20,7 +26,7 @@ defmodule Idejo.Reading do
   alias Idejo.Accounts.User
   alias Idejo.Forum.{Category, Topic}
   alias Idejo.Messages.Message
-  alias Idejo.Reading.ReadPosition
+  alias Idejo.Reading.{Follow, ReadPosition}
   alias Idejo.Repo
 
   @doc """
@@ -43,6 +49,48 @@ defmodule Idejo.Reading do
     Repo.insert!(
       %ReadPosition{user_id: user_id, topic_id: topic_id, last_read_message_id: latest},
       on_conflict: {:replace, [:last_read_message_id, :updated_at]},
+      conflict_target: [:user_id, :topic_id]
+    )
+
+    :ok
+  end
+
+  @doc "Follows the topic (TP-13), also after an earlier unfollow."
+  @spec follow(User.t(), Topic.t()) :: :ok
+  def follow(%User{} = user, %Topic{} = topic), do: set_following(user.id, topic.id, true)
+
+  @doc "Stops following the topic (TP-13); posting there later does not follow it again."
+  @spec unfollow(User.t(), Topic.t()) :: :ok
+  def unfollow(%User{} = user, %Topic{} = topic), do: set_following(user.id, topic.id, false)
+
+  @doc """
+  Follows the topic for its starter or a poster, unless they unfollowed it before. Called
+  inside the transaction that writes their message.
+  """
+  @spec auto_follow(Ecto.UUID.t(), Ecto.UUID.t()) :: {:ok, :followed}
+  def auto_follow(user_id, topic_id) do
+    Repo.insert!(%Follow{user_id: user_id, topic_id: topic_id, following: true},
+      on_conflict: :nothing,
+      conflict_target: [:user_id, :topic_id]
+    )
+
+    {:ok, :followed}
+  end
+
+  @doc "Returns true when the user follows the topic. Visitors follow nothing."
+  @spec following?(User.t() | nil, Topic.t()) :: boolean()
+  def following?(nil, _topic), do: false
+
+  def following?(%User{id: user_id}, %Topic{id: topic_id}) do
+    Repo.exists?(
+      from f in Follow,
+        where: f.user_id == ^user_id and f.topic_id == ^topic_id and f.following
+    )
+  end
+
+  defp set_following(user_id, topic_id, following) do
+    Repo.insert!(%Follow{user_id: user_id, topic_id: topic_id, following: following},
+      on_conflict: {:replace, [:following, :updated_at]},
       conflict_target: [:user_id, :topic_id]
     )
 

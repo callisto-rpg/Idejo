@@ -108,6 +108,9 @@ defmodule IdejoWeb.Router do
 
     # TP-07: topics with something new across categories, no JavaScript needed.
     get "/unread", UnreadController, :index
+    # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
+    post "/t/:id/follow", FollowController, :create
+    delete "/t/:id/follow", FollowController, :delete
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive
