@@ -150,6 +150,8 @@ defmodule IdejoWeb.LiveTopicTest do
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:guest), general, :view, :deny)
     {:ok, lv, _html} = watch(conn, topic)
     assert ids(lv) == []
-    refute render(lv) =~ "Hi"
+    # The text, not the whole render: the signed session in it can contain any letters.
+    refute lv |> element("#topic-live") |> render() |> LazyHTML.from_fragment() |> LazyHTML.text() =~
+             "Hi"
   end
 end

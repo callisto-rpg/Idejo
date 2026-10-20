@@ -258,6 +258,16 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **Notifications** (NO-01, NO-02, `Idejo.Notifications`, in-app only): one `notifications`
+  row per user and message (`kind`: mention, reply, follow). A new message notifies the users
+  it mentions, the author it replies to and the topic's followers, in that priority, never
+  its author or anyone who may not view the topic (`notify_new/2`); an append or an edit
+  notifies only someone newly mentioned, turning their earlier notification for that message
+  into an unread mention (`notify_mentions/2`). Both run inside the transaction that writes
+  the message; any new way of writing a message must call them. `/notifications`
+  (`NotificationController`, no JavaScript) lists them unread first; `/notifications/{id}`
+  marks one read and redirects to `/m/{id}`. The header link shows the unread count, counted
+  per page render (not live). Notifications for topics the user can no longer view are hidden.
 - **@mentions** (TP-10, @user only, no autocomplete: steward decision): every body renders
   through `Idejo.Messages.Body.to_html/1` (messages, previews, versions), never
   `Idejo.Markdown.to_html/1` directly. `Markdown.mentions/1` finds `@username` outside code and
@@ -375,6 +385,9 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 - [ ] M5 — Moderation and operations
 
 Current milestone: **M4**. Do not start work belonging to a later milestone.
+
+M4 exit check (MVP §7): search finds a message by a word added in its last commit; a growing
+message produces one notification (`test/idejo/notifications_test.exs`, NO-02).
 
 M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
 end-to-end test (`test/idejo_web/flows/live_conversation_test.exs`, steps 1-4; steward
