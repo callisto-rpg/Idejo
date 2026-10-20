@@ -110,6 +110,10 @@ defmodule IdejoWeb.Router do
 
     # TP-07: topics with something new across categories, no JavaScript needed.
     get "/unread", UnreadController, :index
+    # NO-01: the Notifications screen (MVP §5).
+    get "/notifications", NotificationController, :index
+    post "/notifications/read", NotificationController, :read_all
+    get "/notifications/:id", NotificationController, :show
     # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
     post "/t/:id/follow", FollowController, :create
     delete "/t/:id/follow", FollowController, :delete

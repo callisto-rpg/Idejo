@@ -52,6 +52,7 @@ defmodule IdejoWeb.Layouts do
         >
           {gettext("Unread")}
         </a>
+        <.notifications_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
         <.theme_toggle />
       </div>
     </header>
@@ -65,6 +66,23 @@ defmodule IdejoWeb.Layouts do
     <.site_footer />
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :user, :map, required: true
+
+  # NO-01: the Notifications screen, with the unread count. Counted when the layout renders,
+  # so it is current on each page; it does not change live on an open page.
+  defp notifications_link(assigns) do
+    assigns = assign(assigns, :count, Idejo.Notifications.unread_count(assigns.user))
+
+    ~H"""
+    <a href={~p"/notifications"} id="notifications-link" class="link">
+      {gettext("Notifications")}
+      <span :if={@count > 0} class="badge badge-sm badge-primary">
+        {@count}<span class="sr-only">{gettext(" unread")}</span>
+      </span>
+    </a>
     """
   end
 

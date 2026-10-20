@@ -425,6 +425,7 @@ defmodule Idejo.Forum do
     with {:ok, topic} <- Repo.insert(topic),
          {:ok, message} <- Repo.insert(message),
          {:ok, _} <- Idejo.Reading.auto_follow(user.id, topic.id),
+         {:ok, _} <- Idejo.Notifications.notify_new(message, topic),
          {:ok, _} <-
            insert_activity(user, topic.uri, category.uri, topic_payload(title, source)),
          {:ok, _} <- insert_activity(user, message.uri, topic.uri, %{"type" => "Note"}) do
@@ -619,6 +620,7 @@ defmodule Idejo.Forum do
            |> Ecto.Changeset.change(message_count: topic.message_count + 1, last_activity_at: now)
            |> Repo.update(),
          {:ok, _} <- Idejo.Reading.auto_follow(user.id, topic.id),
+         {:ok, _} <- Idejo.Notifications.notify_new(message, topic),
          {:ok, _} <-
            insert_activity(user, message.uri, topic.uri, reply_payload(reply_to)) do
       {:ok, message}

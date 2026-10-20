@@ -31,6 +31,7 @@ defmodule Idejo.Messages do
   alias Idejo.Forum
   alias Idejo.Forum.Topic
   alias Idejo.Messages.{Body, Message, OpenMessage, Version}
+  alias Idejo.Notifications
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -143,6 +144,8 @@ defmodule Idejo.Messages do
     with {:ok, message} <- Repo.insert(message),
          {:ok, _} <- touch_topic(topic, now, 1),
          {:ok, _} <- Idejo.Reading.auto_follow(author.id, topic.id),
+         # NO-02: a growing message notifies once, when it opens.
+         {:ok, _} <- Notifications.notify_new(message, topic),
          {:ok, _} <- activity(author, message, "create", topic.uri) do
       {:ok, message}
     end
@@ -165,12 +168,17 @@ defmodule Idejo.Messages do
 
     with {:ok, _} <- if(edit?, do: keep_version(open, now), else: {:ok, nil}),
          {:ok, message} <- update_body(open, text, changed?, edit?),
-         {:ok, _} <- if(changed?, do: touch_topic(open.topic_id, now, 0), else: {:ok, nil}) do
+         {:ok, _} <- if(changed?, do: touch_topic(open.topic_id, now, 0), else: {:ok, nil}),
+         {:ok, _} <- if(changed?, do: notify_mentions(message), else: {:ok, 0}) do
       if break? and window_ended?(message, now),
         do: close_locked(message, now),
         else: {:ok, message}
     end
   end
+
+  # NO-02: an append notifies only someone newly @mentioned.
+  defp notify_mentions(message),
+    do: Notifications.notify_mentions(message, Repo.get!(Topic, message.topic_id))
 
   defp keep_version(message, now) do
     Repo.insert(%Version{message_id: message.id, body_md: message.body_md, created_at: now})
@@ -303,6 +311,7 @@ defmodule Idejo.Messages do
 
     with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
          {:ok, message} <- update_body(message, text, true, edit?),
+         {:ok, _} <- Notifications.notify_mentions(message, topic),
          {:ok, _} <- activity(author, message, "update", topic.uri) do
       {:ok, message}
     end
