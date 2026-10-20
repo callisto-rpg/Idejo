@@ -36,6 +36,16 @@
     </:actions>
   </.header>
 
+  <blockquote :if={@forked_from} id="forked-from" class="border-l-2 border-base-300 pl-3 text-sm">
+    <.link href={~p"/m/#{@forked_from.id}"} class="link">
+      {gettext("Continued from %{name} in “%{topic}”",
+        name: @forked_from.author.display_name,
+        topic: @forked_from.topic.title
+      )}
+    </.link>
+    <span class="opacity-70">{Idejo.Forum.excerpt(@forked_from)}</span>
+  </blockquote>
+
   {live_render(@conn, IdejoWeb.TopicLive,
     id: "topic-#{@topic.id}",
     session: %{"topic_id" => @topic.id, "reply_to_id" => @reply_to_id}

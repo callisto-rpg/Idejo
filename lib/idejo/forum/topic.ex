@@ -24,6 +24,8 @@ defmodule Idejo.Forum.Topic do
     field :last_activity_at, :utc_datetime_usec
     belongs_to :category, Idejo.Forum.Category
     belongs_to :author, Idejo.Accounts.User
+    # TP-09: the message this topic was started from, if any.
+    belongs_to :forked_from, Idejo.Messages.Message, foreign_key: :forked_from_message_id
     has_many :messages, Idejo.Messages.Message
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
