@@ -174,3 +174,12 @@
   & h1 { font-size: 1.25em; }
   & h2 { font-size: 1.125em; }
 }
+
+/* GM-06: a body taller than the screen is collapsed until "Show all" (assets/js/show_all.js). */
+.message-collapsible > .show-all { display: none; }
+.message-collapsible[data-collapsed] > .show-all { display: inline; }
+.message-collapsible[data-collapsed] > .message-body {
+  max-height: 60vh;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 75%, transparent);
+}

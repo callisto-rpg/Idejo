@@ -218,6 +218,11 @@ roles or the permission grid. Every later change must keep it true:
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect. No Ctrl+Enter on touch screens for now (steward decision).
+- **Long messages** (GM-06): no size limit anywhere (no length validation on bodies). In
+  `TopicLive` bodies use `MessageComponents.collapsible_body/1`: the `ShowAll` hook
+  (`assets/js/show_all.js`) collapses a body taller than the window, with a "Show all" button,
+  and re-measures growing messages. Its state lives in `data-collapsed` / `data-expanded`, kept
+  across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows.
 - **Edits and earlier versions** (GM-10, GM-11): open messages are edited in the composer;
   closed ones with `Messages.edit/3` (the author only, in an open topic; the text kept as
   written, no `.` added), from an "Edit" button that opens the message editor in place.
