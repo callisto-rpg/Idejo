@@ -70,6 +70,15 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 10 to 600; messages already open keep their window."
           )}
         </p>
+        <.input
+          field={@form[:upload_max_mb]}
+          type="number"
+          label={gettext("Largest image upload (MB)")}
+          min="1"
+          max="20"
+          step="1"
+          required
+        />
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>

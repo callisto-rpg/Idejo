@@ -31,6 +31,10 @@ config :idejo,
 # once a server has content, since URIs are stored at creation.
 config :idejo, :base_uri, "http://localhost:4000"
 
+# TP-12: where uploaded images are stored on local disk (production: IDEJO_UPLOADS_DIR, the
+# Compose volume /data/uploads by default).
+config :idejo, :uploads_dir, Path.expand("../tmp/uploads", __DIR__)
+
 # SP-02: passwords are hashed with Argon2id at a pinned cost (3 passes, 2^16 KiB = 64 MiB,
 # 4 lanes), so a dependency update cannot silently weaken it. Tests lower the cost.
 config :argon2_elixir, argon2_type: 2, t_cost: 3, m_cost: 16, parallelism: 4

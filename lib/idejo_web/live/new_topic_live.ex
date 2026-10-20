@@ -18,6 +18,7 @@ defmodule IdejoWeb.NewTopicLive do
 
   alias Idejo.Forum
   alias Idejo.Messages.Body
+  alias IdejoWeb.ImageUploads
 
   @impl true
   def mount(%{"id" => id}, _session, %{assigns: %{live_action: :fork}} = socket) do
@@ -46,7 +47,8 @@ defmodule IdejoWeb.NewTopicLive do
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
              |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
-             |> assign(editor_mode: :write, preview_html: "")}
+             |> assign(editor_mode: :write, preview_html: "")
+             |> ImageUploads.allow(:editor_image)}
         end
     end
   end
@@ -65,7 +67,8 @@ defmodule IdejoWeb.NewTopicLive do
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
            |> assign(source: nil, categories: [], category: category)
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
-           |> assign(editor_mode: :write, preview_html: "")}
+           |> assign(editor_mode: :write, preview_html: "")
+           |> ImageUploads.allow(:editor_image)}
         else
           {:ok,
            socket
@@ -78,7 +81,9 @@ defmodule IdejoWeb.NewTopicLive do
   @impl true
   def handle_event("validate", %{"topic" => params}, socket) do
     form = params |> Forum.change_new_topic() |> Map.put(:action, :validate)
-    {:noreply, assign(socket, :form, to_form(form, as: :topic))}
+
+    {:noreply,
+     socket |> assign(:form, to_form(form, as: :topic)) |> ImageUploads.check(:editor_image)}
   end
 
   def handle_event("editor_mode", %{"mode" => "preview"}, socket) do
@@ -157,6 +162,8 @@ defmodule IdejoWeb.NewTopicLive do
           label={gettext("First message (Markdown)")}
           mode={@editor_mode}
           preview_html={@preview_html}
+          upload={@uploads.editor_image}
+          image_error={@image_error}
         />
         <.button class="btn btn-primary">{gettext("Post topic")}</.button>
       </.form>

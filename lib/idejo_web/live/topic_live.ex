@@ -42,6 +42,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
+  alias IdejoWeb.ImageUploads
   alias IdejoWeb.UserComponents
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
@@ -66,7 +67,8 @@ defmodule IdejoWeb.TopicLive do
            tick: nil,
            forks: %{},
            can_fork?: false,
-           user_card: nil
+           user_card: nil,
+           image_error: nil
          )}
 
       topic ->
@@ -85,6 +87,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> put_forks()
+         |> ImageUploads.allow(:composer_image, can_post?)
+         |> ImageUploads.allow(:edit_image, can_post?)
          |> sync_composer()
          |> schedule_tick()}
     end
@@ -339,7 +343,15 @@ defmodule IdejoWeb.TopicLive do
         %{"edit" => params},
         %{assigns: %{editing: {id, _}}} = socket
       ),
-      do: {:noreply, assign(socket, :editing, {id, to_form(params, as: :edit)})}
+      do:
+        {:noreply,
+         socket
+         |> assign(:editing, {id, to_form(params, as: :edit)})
+         |> ImageUploads.check(:edit_image)}
+
+  # TP-12: an image pasted or dropped into the composer was refused before uploading.
+  def handle_event("validate_image", _params, socket),
+    do: {:noreply, ImageUploads.check(socket, :composer_image)}
 
   def handle_event(
         "editor_mode",
@@ -381,7 +393,17 @@ defmodule IdejoWeb.TopicLive do
   def render(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
     {before, after_} = split(assigns.messages, mine)
-    assigns = assign(assigns, before: before, mine: mine, later: after_)
+    # TP-12: allowed at mount for those who could post then; nil otherwise.
+    uploads = assigns[:uploads] || %{}
+
+    assigns =
+      assign(assigns,
+        before: before,
+        mine: mine,
+        later: after_,
+        composer_upload: uploads[:composer_image],
+        edit_upload: uploads[:edit_image]
+      )
 
     ~H"""
     <div id="topic-live" phx-hook="Mentions">
@@ -425,6 +447,8 @@ defmodule IdejoWeb.TopicLive do
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
+            edit_upload={@edit_upload}
+            image_error={@image_error}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -434,6 +458,8 @@ defmodule IdejoWeb.TopicLive do
             roles={@roles}
             author={@current_scope.user}
             now={@now}
+            upload={@composer_upload}
+            image_error={@image_error}
           />
         </li>
         <li :for={message <- @later} :key={message.id} id={"message-#{message.id}"}>
@@ -449,6 +475,8 @@ defmodule IdejoWeb.TopicLive do
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
+            edit_upload={@edit_upload}
+            image_error={@image_error}
           />
         </li>
       </ol>
@@ -511,6 +539,8 @@ defmodule IdejoWeb.TopicLive do
   attr :editing, :any, required: true
   attr :editor_mode, :atom, required: true
   attr :preview_html, :string, required: true
+  attr :edit_upload, :any, default: nil
+  attr :image_error, :string, default: nil
 
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
@@ -568,6 +598,8 @@ defmodule IdejoWeb.TopicLive do
           label={gettext("Edit your message (Markdown)")}
           mode={@editor_mode}
           preview_html={@preview_html}
+          upload={@edit_upload}
+          image_error={@image_error}
         />
         <div class="flex gap-2">
           <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
@@ -665,6 +697,8 @@ defmodule IdejoWeb.TopicLive do
   attr :roles, :map, required: true
   attr :author, :map, required: true
   attr :now, DateTime, required: true
+  attr :upload, :any, required: true
+  attr :image_error, :string, required: true
 
   # No countdown, button or status around it (GM-07): only the text box. The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
@@ -719,6 +753,12 @@ defmodule IdejoWeb.TopicLive do
             {gettext("Ctrl+Enter starts a new message.")}
         <% end %>
       </p>
+      <%!-- TP-12: images pasted or dropped into the composer upload through this input; the
+           composer shows no button (GM-07). --%>
+      <form :if={@upload} id="composer-image-form" phx-change="validate_image" class="hidden">
+        <.live_file_input upload={@upload} />
+      </form>
+      <p :if={@image_error} role="alert" class="text-sm text-error mt-1">{@image_error}</p>
     </section>
     """
   end
