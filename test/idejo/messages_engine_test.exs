@@ -210,6 +210,24 @@ defmodule Idejo.MessagesEngineTest do
     assert Repo.reload!(first).state == "closed"
   end
 
+  @tag req: "GM-13"
+  test "GM-13 a growing message counts as one message in its topic", %{
+    general: general,
+    topic: topic,
+    author: author
+  } do
+    commit!(author, topic, "One")
+    commit!(author, topic, "One. Two")
+    commit!(author, topic, "One. Two. Three", break: true)
+    commit!(author, topic, "One. Two. Three.\nFour")
+
+    assert Repo.reload!(topic).message_count == 2
+    assert length(Forum.list_messages(topic)) == 2
+    assert {[%{id: id, message_count: 2}], false} = Forum.list_topics(general)
+    assert id == topic.id
+    # Notifications, unread counts and search follow with M4 (NO, TP-07, SE).
+  end
+
   @tag req: "NF-02"
   test "NF-02 a commit is in the database before it is acknowledged", %{
     topic: topic,
