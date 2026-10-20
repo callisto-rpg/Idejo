@@ -41,6 +41,8 @@ defmodule IdejoWeb.Router do
     get "/t/:id", TopicController, :show
     get "/t/:id/:slug", TopicController, :show
     get "/m/:id", MessageController, :show
+    # A user's URI (FD-01): the card an @mention leads to (TP-10).
+    get "/u/:id", UserController, :show
 
     # First-run wizard (AD-01), only while the server has no owner.
     get "/setup", SetupController, :new

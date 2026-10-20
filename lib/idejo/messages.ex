@@ -30,7 +30,7 @@ defmodule Idejo.Messages do
   alias Idejo.Federation
   alias Idejo.Forum
   alias Idejo.Forum.Topic
-  alias Idejo.Messages.{Message, OpenMessage, Version}
+  alias Idejo.Messages.{Body, Message, OpenMessage, Version}
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -137,7 +137,7 @@ defmodule Idejo.Messages do
       opened_at: now,
       closes_at: DateTime.add(now, window, :second),
       body_md: text,
-      body_html: Idejo.Markdown.to_html(text)
+      body_html: Body.to_html(text)
     }
 
     with {:ok, message} <- Repo.insert(message),
@@ -182,7 +182,7 @@ defmodule Idejo.Messages do
     message
     |> Ecto.Changeset.change(
       body_md: text,
-      body_html: Idejo.Markdown.to_html(text),
+      body_html: Body.to_html(text),
       edited: message.edited or edit?
     )
     |> Repo.update()
