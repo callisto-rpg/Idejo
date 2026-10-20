@@ -519,6 +519,7 @@ defmodule IdejoWeb.TopicLive do
 
     ~H"""
     <span class="text-sm inline-flex items-center gap-2">
+      <UserComponents.avatar user={@author} />
       <span class="font-semibold">{@author.display_name}</span>
       <span :if={@role} class="opacity-70 inline-flex items-center gap-1">
         <Admin.swatch colour={@role.colour} />

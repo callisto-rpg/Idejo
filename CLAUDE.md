@@ -168,13 +168,17 @@ roles or the permission grid. Every later change must keep it true:
 - **Profile** (AC-04): `/users/settings` (`IdejoWeb.UserSettingsLive`, `live_session :signed_in`
   with the `{IdejoWeb.UserAuth, :require_authenticated}` hook) changes the display name
   through `Accounts.update_user_profile/2`, which records an `update` activity. The username
-  never changes (@mentions); the avatar comes with uploads in M4. The same page changes the
-  password (AC-01, below).
+  never changes (@mentions). The same page sets and removes the avatar
+  (`Accounts.set_avatar/2`, `remove_avatar/1`, with an `update` activity carrying `icon`):
+  `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
+  `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's
+  file and row are deleted. Show users with `UserComponents.avatar/1` (picture or initial,
+  decorative). The same page changes the password (AC-01, below).
 - **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
   password. The row stays (its `uri` and the records naming it keep working) but is
   anonymised: placeholder email and username that sign-up can never produce, "Deleted user",
-  random password, roles, tokens and links deleted, `status: "deleted"`, and a `delete`
-  activity. `Access.ensure_not_last_owner/1` refuses the last owner.
+  random password, roles, tokens, links and avatar deleted, `status: "deleted"`, and a
+  `delete` activity. `Access.ensure_not_last_owner/1` refuses the last owner.
 - **Passwords and sessions** (SP-02): Argon2id cost is pinned in `config/config.exs`. Session
   and remember-me cookies are encrypted, HttpOnly, SameSite=Lax and Secure (`:secure_cookies`,
   off only in dev). Sign-in renews the session; sign-out deletes the server-side token and
@@ -402,14 +406,18 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 - [x] M1 — Accounts and structure — roles, categories, permission grid, invites, profile, admin pages, audit log; exit test "admin sets up the server"
 - [x] M2 — Topics
 - [x] M3 — Growing messages
-- [ ] **M4 — Around the conversation**
-- [ ] M5 — Moderation and operations
+- [x] M4 — Around the conversation
+- [ ] **M5 — Moderation and operations**
 
-Current milestone: **M4**. Do not start work belonging to a later milestone.
+Current milestone: **M5**. Do not start work belonging to a later milestone.
 
 M4 exit check (MVP §7): search finds a message by a word added in its last commit
 (`test/idejo/search_test.exs`, SE-03); a growing message produces one notification
 (`test/idejo/notifications_test.exs`, NO-02).
+Not implemented in M4, left for later:
+- live delivery of the notification count (it is counted per page render);
+- removing uploads that no message or avatar uses (images inserted, then deleted before
+  sending).
 
 M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
 end-to-end test (`test/idejo_web/flows/live_conversation_test.exs`, steps 1-4; steward

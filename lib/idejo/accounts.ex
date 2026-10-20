@@ -11,6 +11,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Access.UserRole
   alias Idejo.Federation
   alias Idejo.Repo
+  alias Idejo.Uploads
 
   alias Idejo.Accounts.{Invite, User, UserNotifier, UserToken}
   alias Idejo.Audit
@@ -385,6 +386,46 @@ defmodule Idejo.Accounts do
     end
   end
 
+  ## Avatar (AC-04)
+
+  @doc """
+  Sets the user's avatar from the image at `path` (`Idejo.Uploads.store_avatar/2`), records
+  an `update` activity and deletes the picture it replaces.
+  """
+  @spec set_avatar(User.t(), Path.t()) ::
+          {:ok, User.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
+  def set_avatar(%User{} = user, path) do
+    with {:ok, upload} <- Uploads.store_avatar(user, path) do
+      Repo.transact(fn -> replace_avatar(user, upload.id) end)
+    end
+  end
+
+  @doc "Removes the user's avatar; they are shown with their initial again (AC-04)."
+  @spec remove_avatar(User.t()) :: {:ok, User.t()}
+  def remove_avatar(%User{avatar_id: nil} = user), do: {:ok, user}
+  def remove_avatar(%User{} = user), do: Repo.transact(fn -> replace_avatar(user, nil) end)
+
+  defp replace_avatar(user, avatar_id) do
+    with {:ok, updated} <- user |> Ecto.Changeset.change(avatar_id: avatar_id) |> Repo.update(),
+         {:ok, _activity} <- Repo.insert(Federation.activity_changeset(person_update(updated))),
+         :ok <- Uploads.delete(user.avatar_id) do
+      {:ok, updated}
+    end
+  end
+
+  defp person_update(user) do
+    icon = Uploads.avatar_url(user)
+
+    %{
+      actor_uri: user.uri,
+      verb: "update",
+      object_uri: user.uri,
+      payload:
+        %{"type" => "Person", "username" => user.username, "name" => user.display_name}
+        |> then(&if(icon, do: Map.put(&1, "icon", icon), else: &1))
+    }
+  end
+
   ## Account deletion (AC-07)
 
   @doc """
@@ -423,9 +464,13 @@ defmodule Idejo.Accounts do
           display_name: "Deleted user",
           password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
           confirmed_at: nil,
-          status: "deleted"
+          status: "deleted",
+          avatar_id: nil
         )
         |> Repo.update!()
+
+      # AC-04: the picture goes with the account.
+      :ok = Uploads.delete(user.avatar_id)
 
       Repo.insert!(
         Federation.activity_changeset(%{

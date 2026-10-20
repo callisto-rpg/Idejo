@@ -13,6 +13,10 @@ defmodule Idejo.Uploads do
   are refused, so a small file cannot unpack into a huge one.
 
   Files are served at `/uploads/<id>.<ext>` to anyone with the link (steward decision).
+
+  Avatars (AC-04) pass the same checks, then become a 256 px square cropped from the centre,
+  always WebP, so a user's avatar is at `/uploads/<avatar_id>.webp` (`avatar_url/1`) without
+  loading its upload.
   """
   import Ecto.Query, warn: false
 
@@ -48,10 +52,61 @@ defmodule Idejo.Uploads do
           {:ok, Upload.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
   def store_image(%User{} = user, path) do
     with :ok <- check_size(path),
-         {:ok, image, format} <- open(path),
+         {:ok, image, format} <- open(path, -1),
          :ok <- check_pixels(image) do
       save(user, image, format)
     end
+  end
+
+  @avatar_size 256
+
+  @doc """
+  Stores the image at `path` as `user`'s avatar picture (AC-04): checked like any image, then
+  a #{@avatar_size} px WebP square without metadata. Only the first frame of an animation.
+  """
+  @spec store_avatar(User.t(), Path.t()) ::
+          {:ok, Upload.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
+  def store_avatar(%User{} = user, path) do
+    with :ok <- check_size(path),
+         {:ok, image, {ext, _mime}} <- open(path, 1),
+         :ok <- check_pixels(image),
+         image = if(ext == "jpg", do: Image.autorotate!(image), else: image),
+         {:ok, square} <- Image.thumbnail(image, @avatar_size, crop: :center) do
+      save(user, square, {"webp", "image/webp"})
+    else
+      {:error, reason} when reason in [:too_large, :not_an_image, :too_many_pixels] ->
+        {:error, reason}
+
+      _ ->
+        {:error, :not_an_image}
+    end
+  end
+
+  @doc "The public path of a user's avatar, or `nil` when they have none (AC-04)."
+  @spec avatar_url(User.t()) :: String.t() | nil
+  def avatar_url(%User{avatar_id: nil}), do: nil
+  def avatar_url(%User{avatar_id: id}), do: "/uploads/#{id}.webp"
+
+  @doc "Deletes an upload and its file, e.g. a replaced avatar. Unknown ids do nothing."
+  @spec delete(Ecto.UUID.t() | nil) :: :ok
+  def delete(nil), do: :ok
+
+  def delete(id) do
+    case Repo.get(Upload, id) do
+      nil ->
+        :ok
+
+      upload ->
+        Repo.delete!(upload)
+        remove_file(upload.path)
+    end
+  end
+
+  # The name is one this module made (`<uuid>.<ext>`), read back from the database.
+  # sobelow_skip ["Traversal.FileModule"]
+  defp remove_file(name) do
+    File.rm(Path.join(dir(), name))
+    :ok
   end
 
   defp check_size(path) do
@@ -62,9 +117,10 @@ defmodule Idejo.Uploads do
     end
   end
 
-  # All frames, so an animated GIF or WebP keeps moving; the loader names the real format.
-  defp open(path) do
-    with {:ok, image} <- Image.open(path, pages: -1, fail_on: :error),
+  # `pages: -1` keeps every frame, so an animated GIF or WebP keeps moving; the loader names
+  # the real format.
+  defp open(path, pages) do
+    with {:ok, image} <- Image.open(path, pages: pages, fail_on: :error),
          {:ok, loader} <- VipsImage.header_value(image, "vips-loader"),
          {_ext, _mime} = format <- Map.get(@formats, loader) do
       {:ok, image, format}
