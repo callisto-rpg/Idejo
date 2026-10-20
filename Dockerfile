@@ -97,6 +97,10 @@ ENV LC_ALL=en_US.UTF-8
 WORKDIR "/app"
 RUN chown nobody /app
 
+# TP-12, AD-05: the data directories, owned by the app's user. A new named volume mounted
+# here (deploy/docker-compose.yml) takes this ownership, so the app can write to it.
+RUN mkdir -p /data/uploads /data/backups && chown nobody /data/uploads /data/backups
+
 # set runner ENV
 ENV MIX_ENV="prod"
 

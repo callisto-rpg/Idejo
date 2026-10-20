@@ -29,6 +29,8 @@ defmodule IdejoWeb.Router do
   scope "/", IdejoWeb do
     get "/sitemap.xml", SitemapController, :sitemap
     get "/robots.txt", SitemapController, :robots
+    # TP-12: uploaded images, public, no session.
+    get "/uploads/:name", UploadController, :show
   end
 
   scope "/", IdejoWeb do

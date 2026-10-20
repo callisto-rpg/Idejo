@@ -62,6 +62,36 @@ export function sentRuns(sent, value) {
   return runs
 }
 
+// TP-12: calls `send` with the image files pasted or dropped on `el`, instead of the
+// browser's default; other pastes and drops are left alone.
+export function onImages(el, send) {
+  const images = list => Array.from(list || []).filter(f => f.type.startsWith("image/")).slice(0, 1)
+  el.addEventListener("paste", e => {
+    const files = images(e.clipboardData && e.clipboardData.files)
+    if (files.length) { e.preventDefault(); send(files) }
+  })
+  el.addEventListener("dragover", e => {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault()
+  })
+  el.addEventListener("drop", e => {
+    const files = images(e.dataTransfer && e.dataTransfer.files)
+    if (files.length) { e.preventDefault(); send(files) }
+  })
+}
+
+// Inserts `text` at the caret of a text box, on a line of its own, and puts the caret after it.
+export function insertAtCaret(input, text) {
+  const start = input.selectionStart ?? input.value.length
+  const end = input.selectionEnd ?? start
+  const before = input.value.slice(0, start)
+  const after = input.value.slice(end)
+  const lead = before === "" || before.endsWith("\n") ? "" : "\n"
+  const trail = after.startsWith("\n") ? "" : "\n"
+  input.value = before + lead + text + trail + after
+  const caret = (before + lead + text + trail).length
+  input.setSelectionRange(caret, caret)
+}
+
 const escape = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 export const Composer = {
@@ -81,6 +111,14 @@ export const Composer = {
     })
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
+    // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
+    // unsent, like anything typed.
+    onImages(this.input, files => this.upload("composer_image", files))
+    this.handleEvent("image_uploaded", ({upload, markdown}) => {
+      if (upload !== "composer_image") return
+      insertAtCaret(this.input, markdown)
+      this.paint()
+    })
     this.paint()
   },
 

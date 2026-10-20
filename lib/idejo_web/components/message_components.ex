@@ -63,11 +63,18 @@ defmodule IdejoWeb.MessageComponents do
   Nothing typed here leaves the author's page until the form is submitted: the preview is
   rendered for them alone. The LiveView handles `"editor_mode"` with `%{"mode" =>
   "write" | "preview"}` and passes the preview's HTML (`Idejo.Messages.Body.to_html/1`).
+
+  With `upload` (an image upload allowed with `IdejoWeb.ImageUploads.allow/3`), it takes
+  images (TP-12): an "Add image" picker, and pasting or dropping one into the text (the
+  `EditorImages` hook), which inserts its Markdown at the caret. The form's `phx-change`
+  handler calls `IdejoWeb.ImageUploads.check/2`.
   """
   attr :field, Phoenix.HTML.FormField, required: true
   attr :label, :string, required: true
   attr :mode, :atom, values: [:write, :preview], default: :write
   attr :preview_html, :string, default: ""
+  attr :upload, :any, default: nil, doc: "a `Phoenix.LiveView.UploadConfig`, or nil"
+  attr :image_error, :string, default: nil
 
   def editor(assigns) do
     ~H"""
@@ -97,8 +104,18 @@ defmodule IdejoWeb.MessageComponents do
         </button>
       </div>
       <%!-- Kept in the form while previewing, so the text is still posted. --%>
-      <div hidden={@mode == :preview}>
+      <div
+        hidden={@mode == :preview}
+        id={"#{@field.id}-write"}
+        phx-hook={@upload && "EditorImages"}
+        data-upload={@upload && @upload.name}
+      >
         <.input field={@field} type="textarea" label={@label} rows="10" />
+        <label :if={@upload} class="flex items-center gap-2 text-sm mb-2">
+          <span>{gettext("Add image")}</span>
+          <.live_file_input upload={@upload} class="file-input file-input-sm" />
+        </label>
+        <p :if={@image_error} role="alert" class="text-sm text-error mb-2">{@image_error}</p>
       </div>
       <div :if={@mode == :preview} id={"#{@field.id}-preview"} role="tabpanel">
         <p :if={String.trim(@preview_html) == ""} class="opacity-70">

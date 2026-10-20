@@ -48,6 +48,9 @@ if source_url = System.get_env("IDEJO_SOURCE_URL") do
 end
 
 if config_env() == :prod do
+  # TP-12: uploaded images, on local disk (the Compose volume).
+  config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

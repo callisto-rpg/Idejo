@@ -258,6 +258,18 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
+  decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
+  re-encoded in the same format without metadata (SP-05), animated frames kept, JPEGs turned
+  upright, at most 40 megapixels and `upload_max_mb` (default 3, **Admin → Settings**).
+  Stored in `:uploads_dir` (`IDEJO_UPLOADS_DIR`, the `/data/uploads` volume in production;
+  `tmp/test_uploads`, emptied by `test_helper.exs`, in tests) as `<id>.<ext>`, with an
+  `uploads` row; served by `UploadController` at `/uploads/<id>.<ext>` without a session, to
+  anyone with the link (steward decision), `nosniff`, cached for good. LiveViews take images
+  through `IdejoWeb.ImageUploads` (`allow/3`, `check/2` in `phx-change`): paste or drop into
+  the composer (`composer_image`, hidden input, no button: GM-07) or the editor
+  (`EditorImages` hook), plus the editor's "Add image" picker; `"image_uploaded"` brings the
+  Markdown back to the caret, unsent. Tests make images with `Idejo.ImageFixtures`.
 - **Search** (SE-01 to SE-03, `Idejo.Search`): PostgreSQL full text with the `'simple'`
   configuration (steward decision). `messages.search_vector` is a generated column over
   `body_md` with `<` and `>` read as spaces (else the parser drops words inside `<script>`),
