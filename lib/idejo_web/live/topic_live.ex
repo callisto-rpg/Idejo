@@ -35,6 +35,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
+  alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
 
@@ -86,6 +87,8 @@ defmodule IdejoWeb.TopicLive do
     Access.subscribe_permissions()
     # While this view lives, the user's open message here stays open (GM-12).
     if user, do: Messages.Authors.present(topic.id, user.id)
+    # Whatever came between the page and the connection is seen now (TP-07).
+    Reading.mark_read(user, topic)
   end
 
   defp put_messages(socket, messages) do
@@ -139,6 +142,8 @@ defmodule IdejoWeb.TopicLive do
   def handle_info({:message, message}, socket) do
     message = Repo.preload(message, [:author, :versions, reply_to: :author], force: true)
     old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
+    # A message that arrives while the topic is open is read (TP-07); appends change nothing.
+    if is_nil(old), do: Reading.mark_read(user(socket), socket.assigns.topic)
 
     {:noreply,
      socket

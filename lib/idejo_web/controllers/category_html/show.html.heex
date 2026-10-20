@@ -20,6 +20,7 @@
       <.link href={~p"/t/#{topic.id}/#{topic.slug}"} class="link font-semibold">
         {topic.title}
       </.link>
+      <.unread_marker count={@unread[topic.id]} />
       <span :if={topic.pinned} class="badge badge-sm ml-1">{gettext("Pinned")}</span>
       <span :if={topic.state == "archived"} class="badge badge-sm ml-1">{gettext("Archived")}</span>
       <p class="text-sm opacity-70">

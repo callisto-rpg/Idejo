@@ -5,11 +5,13 @@ defmodule IdejoWeb.CategoryController do
   @moduledoc """
   The public category page at `/c/{slug}` (AC-05), server-rendered so it works without
   JavaScript (AX-04, CL-02): its topics, pinned first, then the most recently active (TP-03),
-  and a “New topic” button for those who may start one (TP-01).
+  with the signed-in user's unread count (TP-07), and a “New topic” button for those who may
+  start one (TP-01).
   """
   use IdejoWeb, :controller
 
   alias Idejo.Forum
+  alias Idejo.Reading
 
   def show(conn, %{"slug" => slug} = params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
@@ -28,6 +30,7 @@ defmodule IdejoWeb.CategoryController do
           page_title: category.name,
           can_start?: Forum.can_start_topic?(user, category),
           topics: topics,
+          unread: Reading.unread_counts(user, Enum.map(topics, & &1.id)),
           page: page,
           more?: more?,
           canonical_url: canonical_url(category, page)

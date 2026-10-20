@@ -248,8 +248,16 @@ roles or the permission grid. Every later change must keep it true:
   messages (`Messages.close_as_moderator/2`, a "Close message" button). Tests run with a
   one-hour grace and pass `grace_ms:` when they need one.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
-  pinned first, then by `last_activity_at`, with starter, message count and last activity.
-  The unread marker waits for read positions (TP-07, M4).
+  pinned first, then by `last_activity_at`, with starter, message count, last activity and,
+  for signed-in users, the unread marker (`CategoryHTML.unread_marker/1`, "N new").
+- **Unread** (TP-07, `Idejo.Reading`): one `read_positions` row per user and topic, holding
+  the last message seen. Opening a topic (`TopicController`, and `TopicLive` on connect)
+  marks it read with `Reading.mark_read/2`, and so does every new message arriving while it
+  is open (steward decision); appends do not move it. Unread = messages by others opened
+  after that message (`opened_at`), so a growing message counts once and never turns unread
+  again as it grows (GM-13). Without a position, everything before the user's sign-up is
+  read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
+  unread messages across viewable categories (`Reading.list_unread_topics/2`).
 - **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
   Preview, used for every message (the first message now, replies and the composer later).
   Nothing typed is stored or sent before posting; the preview is rendered for the author only.

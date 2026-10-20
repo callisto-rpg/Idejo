@@ -8,12 +8,14 @@ defmodule IdejoWeb.TopicController do
   to it, so the URI and old links keep working after a rename.
 
   The messages, live (TP-04), and the message form come from `IdejoWeb.TopicLive`, embedded
-  here; its first render is part of this page's HTML. `?reply_to={message id}` opens the form
+  here; its first render is part of this page's HTML. Opening it marks the topic read for a
+  signed-in user (TP-07). `?reply_to={message id}` opens the form
   as a reply to that message (TP-08), without JavaScript needed to choose it.
   """
   use IdejoWeb, :controller
 
   alias Idejo.Forum
+  alias Idejo.Reading
 
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
@@ -25,6 +27,9 @@ defmodule IdejoWeb.TopicController do
 
       topic ->
         if params["slug"] == topic.slug do
+          # Opening a topic marks everything in it read (TP-07).
+          Reading.mark_read(user, topic)
+
           render(conn, :show,
             topic: topic,
             page_title: topic.title,
