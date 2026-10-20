@@ -142,6 +142,7 @@ defmodule Idejo.Messages do
 
     with {:ok, message} <- Repo.insert(message),
          {:ok, _} <- touch_topic(topic, now, 1),
+         {:ok, _} <- Idejo.Reading.auto_follow(author.id, topic.id),
          {:ok, _} <- activity(author, message, "create", topic.uri) do
       {:ok, message}
     end
