@@ -28,12 +28,13 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/idejo"
 import topbar from "../vendor/topbar"
 import {Composer} from "./composer"
+import {ShowAll} from "./show_all"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer},
+  hooks: {...colocatedHooks, Composer, ShowAll},
 })
 
 // Show progress bar on live navigation and form submits

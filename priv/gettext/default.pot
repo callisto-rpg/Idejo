@@ -97,7 +97,7 @@ msgstr ""
 msgid "Member"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:524
+#: lib/idejo_web/live/topic_live.ex:528
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -165,7 +165,7 @@ msgstr ""
 msgid "This verification link is invalid or has expired."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:526
+#: lib/idejo_web/live/topic_live.ex:530
 #, elixir-autogen, elixir-format
 msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
 msgstr ""
@@ -783,7 +783,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:209
 #: lib/idejo_web/live/admin/roles_live.ex:196
-#: lib/idejo_web/live/topic_live.ex:447
+#: lib/idejo_web/live/topic_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -1246,17 +1246,17 @@ msgid_plural "“%{name}” has %{count} topics. Where should they go?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/components/message_components.ex:73
+#: lib/idejo_web/components/message_components.ex:105
 #, elixir-autogen, elixir-format
 msgid "Nothing to preview yet."
 msgstr ""
 
-#: lib/idejo_web/components/message_components.ex:64
+#: lib/idejo_web/components/message_components.ex:96
 #, elixir-autogen, elixir-format
 msgid "Preview"
 msgstr ""
 
-#: lib/idejo_web/components/message_components.ex:53
+#: lib/idejo_web/components/message_components.ex:85
 #, elixir-autogen, elixir-format
 msgid "Write"
 msgstr ""
@@ -1293,7 +1293,7 @@ msgstr ""
 msgid "Permalink to this message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:508
+#: lib/idejo_web/live/topic_live.ex:512
 #, elixir-autogen, elixir-format
 msgid "Cancel reply"
 msgstr ""
@@ -1303,17 +1303,17 @@ msgstr ""
 msgid "In reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:455
+#: lib/idejo_web/live/topic_live.ex:459
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:453
+#: lib/idejo_web/live/topic_live.ex:457
 #, elixir-autogen, elixir-format
 msgid "Reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:506
+#: lib/idejo_web/live/topic_live.ex:510
 #, elixir-autogen, elixir-format
 msgid "Replying to %{name}:"
 msgstr ""
@@ -1338,7 +1338,7 @@ msgstr ""
 msgid "You can no longer view this topic."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:502
+#: lib/idejo_web/live/topic_live.ex:506
 #, elixir-autogen, elixir-format
 msgid "Your message"
 msgstr ""
@@ -1353,17 +1353,17 @@ msgstr ""
 msgid "This message cannot be edited."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:474
+#: lib/idejo_web/live/topic_live.ex:478
 #, elixir-autogen, elixir-format
 msgid "view earlier version"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:438
+#: lib/idejo_web/live/topic_live.ex:442
 #, elixir-autogen, elixir-format
 msgid "Close message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:436
+#: lib/idejo_web/live/topic_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "Close this message? Its author will start a new one."
 msgstr ""
@@ -1371,4 +1371,9 @@ msgstr ""
 #: lib/idejo_web/live/topic_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "This message cannot be closed."
+msgstr ""
+
+#: lib/idejo_web/components/message_components.ex:54
+#, elixir-autogen, elixir-format
+msgid "Show all"
 msgstr ""

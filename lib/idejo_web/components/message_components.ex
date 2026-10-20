@@ -11,6 +11,8 @@ defmodule IdejoWeb.MessageComponents do
 
   import IdejoWeb.CoreComponents, only: [input: 1]
 
+  alias Phoenix.LiveView.JS
+
   @doc """
   A message's body: HTML sanitised by `Idejo.Markdown` before it was stored or previewed
   (FD-03), so it is shown as is. This is the one place message HTML is output raw.
@@ -22,6 +24,36 @@ defmodule IdejoWeb.MessageComponents do
   def body(assigns) do
     ~H"""
     <div class="message-body" {@rest}>{Phoenix.HTML.raw(@html)}</div>
+    """
+  end
+
+  @doc """
+  A message's body in a topic, with no size limit (GM-06). The `ShowAll` hook
+  (`assets/js/show_all.js`) collapses a body taller than the screen and shows the "Show all"
+  button; it keeps that state in `data-collapsed` / `data-expanded`, which patches leave alone.
+  Without JavaScript the whole body is shown and the button stays hidden.
+  """
+  attr :id, :string, required: true
+  attr :html, :string, required: true
+
+  def collapsible_body(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="message-collapsible"
+      phx-hook="ShowAll"
+      phx-mounted={JS.ignore_attributes(["data-collapsed", "data-expanded"])}
+    >
+      <.body id={"#{@id}-text"} html={@html} tabindex="-1" />
+      <button
+        type="button"
+        class="show-all link text-sm"
+        aria-controls={"#{@id}-text"}
+        aria-expanded="false"
+      >
+        {gettext("Show all")}
+      </button>
+    </div>
     """
   end
 

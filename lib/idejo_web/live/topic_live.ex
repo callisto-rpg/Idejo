@@ -425,7 +425,11 @@ defmodule IdejoWeb.TopicLive do
           </button>
         </div>
       </.form>
-      <MessageComponents.body :if={!@edit_form} html={@message.body_html} />
+      <MessageComponents.collapsible_body
+        :if={!@edit_form}
+        id={"message-#{@message.id}-body"}
+        html={@message.body_html}
+      />
       <.versions :if={@message.edited} message={@message} />
       <button
         :if={@can_moderate? and @message.state == "open" and @viewer.id != @message.author_id}
