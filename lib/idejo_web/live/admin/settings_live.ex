@@ -3,7 +3,9 @@
 
 defmodule IdejoWeb.Admin.SettingsLive do
   @moduledoc """
-  Admin panel: server-wide settings (AD-02).
+  Admin panel: server-wide settings (AD-02), with the growing-message window (AD-04,
+  GM-15). A new window applies to messages opened after the change; open messages keep the
+  `closes_at` fixed at their first commit (GM-03).
   """
   use IdejoWeb, :live_view
 
@@ -53,6 +55,21 @@ defmodule IdejoWeb.Admin.SettingsLive do
             {gettext("Only people with an invite"), "invite_only"}
           ]}
         />
+        <.input
+          field={@form[:gm_window_seconds]}
+          type="number"
+          label={gettext("Growing-message window (seconds)")}
+          min="10"
+          max="600"
+          step="1"
+          aria-describedby="gm-window-help"
+          required
+        />
+        <p id="gm-window-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 10 to 600; messages already open keep their window."
+          )}
+        </p>
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>

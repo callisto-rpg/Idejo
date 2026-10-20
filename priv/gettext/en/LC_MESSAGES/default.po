@@ -342,7 +342,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/categories_live.ex:158
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
-#: lib/idejo_web/live/admin/settings_live.ex:57
+#: lib/idejo_web/live/admin/settings_live.ex:74
 #: lib/idejo_web/live/topic_live.ex:512
 #: lib/idejo_web/live/user_settings_live.ex:129
 #, elixir-autogen, elixir-format
@@ -350,25 +350,25 @@ msgid "Save"
 msgstr ""
 
 #: lib/idejo_web/live/admin/email_live.ex:142
-#: lib/idejo_web/live/admin/settings_live.ex:56
+#: lib/idejo_web/live/admin/settings_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
 
 #: lib/idejo_web/controllers/setup_html/new.html.heex:39
-#: lib/idejo_web/live/admin/settings_live.ex:46
+#: lib/idejo_web/live/admin/settings_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Server name"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:134
-#: lib/idejo_web/live/admin/settings_live.ex:16
-#: lib/idejo_web/live/admin/settings_live.ex:43
+#: lib/idejo_web/live/admin/settings_live.ex:18
+#: lib/idejo_web/live/admin/settings_live.ex:45
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:31
+#: lib/idejo_web/live/admin/settings_live.ex:33
 #, elixir-autogen, elixir-format
 msgid "Settings saved."
 msgstr ""
@@ -580,7 +580,7 @@ msgstr ""
 msgid "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “Idejo is not set up yet” (see “Set up your server” in the deployment guide)."
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:52
+#: lib/idejo_web/live/admin/settings_live.ex:54
 #, elixir-autogen, elixir-format
 msgid "Anyone"
 msgstr ""
@@ -642,7 +642,7 @@ msgstr ""
 msgid "New invite link — copy it and send it to one person:"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:53
+#: lib/idejo_web/live/admin/settings_live.ex:55
 #, elixir-autogen, elixir-format
 msgid "Only people with an invite"
 msgstr ""
@@ -657,7 +657,7 @@ msgstr ""
 msgid "Used by %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:50
+#: lib/idejo_web/live/admin/settings_live.ex:52
 #, elixir-autogen, elixir-format
 msgid "Who can sign up"
 msgstr ""
@@ -1434,4 +1434,14 @@ msgstr ""
 #: lib/idejo_web/live/topic_live.ex:642
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Your message is open."
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:61
+#, elixir-autogen, elixir-format
+msgid "Growing-message window (seconds)"
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:69
+#, elixir-autogen, elixir-format
+msgid "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 10 to 600; messages already open keep their window."
 msgstr ""
