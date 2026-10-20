@@ -101,6 +101,8 @@ defmodule IdejoWeb.ComposerTest do
 
   @tag req: "GM-07"
   test "GM-07 readers see an open message like a closed one", %{conn: conn, topic: topic} do
+    # The open state exists only as hidden text for assistive technology (AX-03), so that is
+    # the one difference allowed.
     {:ok, lv, _html} = watch(conn, topic)
     {:ok, reader, _html} = watch(build_conn(), topic)
 
@@ -115,9 +117,11 @@ defmodule IdejoWeb.ComposerTest do
       |> String.replace(~r/<time.*?<\/time>/s, "TIME")
       |> String.replace(~r/<div[^>]*class="message-body"[^>]*>.*?<\/div>/s, "BODY")
       |> String.replace(~r/<span class="font-semibold">.*?<\/span>/s, "NAME")
+      |> String.replace(~r/<span class="sr-only">.*?<\/span>/s, "")
     end
 
     assert shape.(open.id) == shape.(first.id)
+    assert has_element?(reader, "#message-#{open.id} .sr-only", "(still being written)")
   end
 
   @tag req: "GM-05"

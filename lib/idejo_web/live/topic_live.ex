@@ -24,6 +24,11 @@ defmodule IdejoWeb.TopicLive do
   up. With no open message it sits at the end. The `Composer` hook (`assets/js/composer.js`)
   sends the whole text on Enter, or with `"break"` on Ctrl+Enter, to `Idejo.Messages.commit/4`
   and keeps it in the box; the reply tells it whether the message closed (GM-05).
+
+  **For assistive technology** (AX-02, AX-03) the open state exists only as text: a hidden
+  live region announces each message once when it opens and once when it closes, never at
+  appends; open messages read "still being written"; and the composer is described by the
+  time left in the author's window, updated every second while it runs.
   """
   use IdejoWeb, :live_view
 
@@ -49,7 +54,10 @@ defmodule IdejoWeb.TopicLive do
            messages: [],
            roles: %{},
            editing: nil,
-           can_moderate?: false
+           can_moderate?: false,
+           announcement: nil,
+           now: DateTime.utc_now(),
+           tick: nil
          )}
 
       topic ->
@@ -63,9 +71,11 @@ defmodule IdejoWeb.TopicLive do
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(editing: nil, editor_mode: :write, preview_html: "")
+         |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
-         |> sync_composer()}
+         |> sync_composer()
+         |> schedule_tick()}
     end
   end
 
@@ -128,7 +138,18 @@ defmodule IdejoWeb.TopicLive do
   @impl true
   def handle_info({:message, message}, socket) do
     message = Repo.preload(message, [:author, :versions, reply_to: :author], force: true)
-    {:noreply, put_messages(socket, upsert(socket.assigns.messages, message))}
+    old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
+
+    {:noreply,
+     socket
+     |> announce(old, message)
+     |> put_messages(upsert(socket.assigns.messages, message))
+     |> schedule_tick()}
+  end
+
+  # The time left in the author's window, for the composer's description (AX-03).
+  def handle_info(:tick, socket) do
+    {:noreply, socket |> assign(now: DateTime.utc_now(), tick: nil) |> schedule_tick()}
   end
 
   # The grid changed: the viewer may have lost the view or post right since mount.
@@ -154,8 +175,66 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # No countdown is shown (GM-07); the window's end only matters to Ctrl+Enter, which the
-  # server checks. Its text equivalent for assistive technology comes with AX-03.
-  def handle_info({:window_ended, _message_id}, socket), do: {:noreply, socket}
+  # server checks. Its text equivalent is the composer's description (AX-03).
+  def handle_info({:window_ended, _message_id}, socket),
+    do: {:noreply, assign(socket, :now, DateTime.utc_now())}
+
+  # AX-02: a message is announced when it opens and when it closes, never at an append or
+  # an edit. One posted closed opens and closes at once, so it is announced once.
+  defp announce(socket, old, message) do
+    text =
+      case {old && old.state, message.state} do
+        {nil, "open"} -> opened_text(socket, message)
+        {nil, "closed"} -> posted_text(socket, message)
+        {"open", "closed"} -> closed_text(socket, message)
+        _ -> nil
+      end
+
+    if text do
+      # A new id each time, so the same words twice in a row are still read out.
+      assign(socket, :announcement, {System.unique_integer([:positive]), text})
+    else
+      socket
+    end
+  end
+
+  defp opened_text(socket, message) do
+    if mine?(socket, message),
+      do: gettext("You started a message."),
+      else: gettext("%{name} started a message.", name: message.author.display_name)
+  end
+
+  defp closed_text(socket, message) do
+    if mine?(socket, message),
+      do: gettext("Your message is complete."),
+      else: gettext("%{name}’s message is complete.", name: message.author.display_name)
+  end
+
+  defp posted_text(socket, message) do
+    if mine?(socket, message),
+      do: gettext("You posted a message."),
+      else: gettext("New message from %{name}.", name: message.author.display_name)
+  end
+
+  defp mine?(socket, message) do
+    user = user(socket)
+    user != nil and user.id == message.author_id
+  end
+
+  # One timer at a time, only while the viewer's own open message is inside its window.
+  defp schedule_tick(%{assigns: %{tick: nil}} = socket) do
+    case open_message(socket.assigns.messages, user(socket)) do
+      %{closes_at: closes_at} ->
+        if connected?(socket) and DateTime.after?(closes_at, DateTime.utc_now()),
+          do: assign(socket, :tick, Process.send_after(self(), :tick, 1000)),
+          else: socket
+
+      nil ->
+        socket
+    end
+  end
+
+  defp schedule_tick(socket), do: socket
 
   # Messages keep their place; a new one goes at the end (GM-08: ordered by first commit).
   defp upsert(messages, message) do
@@ -267,6 +346,12 @@ defmodule IdejoWeb.TopicLive do
 
     ~H"""
     <div id="topic-live">
+      <%!-- AX-02: read out when a message opens or closes; the list itself is not live. --%>
+      <div id="topic-announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
+        <span :if={@announcement} id={"announcement-#{elem(@announcement, 0)}"}>
+          {elem(@announcement, 1)}
+        </span>
+      </div>
       <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
         {gettext("You can no longer view this topic.")}
       </p>
@@ -291,6 +376,7 @@ defmodule IdejoWeb.TopicLive do
             reply_to={@reply_to}
             roles={@roles}
             author={@current_scope.user}
+            now={@now}
           />
         </li>
         <li :for={message <- @later} :key={message.id} id={"message-#{message.id}"}>
@@ -385,6 +471,10 @@ defmodule IdejoWeb.TopicLive do
     <article aria-labelledby={"message-#{@message.id}-author"}>
       <p id={"message-#{@message.id}-author"} class="flex items-center gap-2">
         <.author_line author={@message.author} roles={@roles} />
+        <%!-- GM-07, AX-03: the open state has no visible sign, only this text. --%>
+        <span :if={@message.state == "open"} class="sr-only">
+          {gettext("(still being written)")}
+        </span>
         <.link
           href={~p"/m/#{@message.id}"}
           class="text-sm opacity-70 link link-hover"
@@ -498,10 +588,15 @@ defmodule IdejoWeb.TopicLive do
   attr :reply_to, :any, required: true
   attr :roles, :map, required: true
   attr :author, :map, required: true
+  attr :now, DateTime, required: true
 
   # No countdown, button or status around it (GM-07): only the text box. The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
+  # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
+    assigns =
+      assign(assigns, :left, assigns.mine && DateTime.diff(assigns.mine.closes_at, assigns.now))
+
     ~H"""
     <section aria-label={gettext("Your message")}>
       <p :if={@mine}><.author_line author={@author} roles={@roles} /></p>
@@ -526,11 +621,28 @@ defmodule IdejoWeb.TopicLive do
           class="composer-input"
           rows="1"
           aria-label={gettext("Message")}
+          aria-describedby="composer-window"
           placeholder={
             gettext("Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line")
           }
         ></textarea>
       </div>
+      <p id="composer-window" class="sr-only">
+        <%= cond do %>
+          <% is_nil(@mine) -> %>
+            {gettext("Enter starts a new message.")}
+          <% @left > 0 -> %>
+            {gettext("Your message is open.")}
+            {ngettext(
+              "Ctrl+Enter starts a new message in %{count} second.",
+              "Ctrl+Enter starts a new message in %{count} seconds.",
+              @left
+            )}
+          <% true -> %>
+            {gettext("Your message is open.")}
+            {gettext("Ctrl+Enter starts a new message.")}
+        <% end %>
+      </p>
     </section>
     """
   end

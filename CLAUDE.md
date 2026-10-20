@@ -218,6 +218,13 @@ roles or the permission grid. Every later change must keep it true:
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect. No Ctrl+Enter on touch screens for now (steward decision).
+- **Assistive text** (AX-02, AX-03, GM-07): the open state is never visible, only text.
+  `TopicLive` has one hidden live region (`#topic-announcer`, `role="status"`) that announces
+  a message when it opens and when it closes (or once, when posted closed), never at appends
+  or edits; the message list is never `aria-live`. Open messages carry an `sr-only` "(still
+  being written)". The composer's text box is `aria-describedby="composer-window"`: the open
+  state and the time left in the window, re-rendered by a one-second `:tick` while the
+  viewer's own window runs and on `{:window_ended, id}`.
 - **Long messages** (GM-06): no size limit anywhere (no length validation on bodies). In
   `TopicLive` bodies use `MessageComponents.collapsible_body/1`: the `ShowAll` hook
   (`assets/js/show_all.js`) collapses a body taller than the window, with a "Show all" button,
