@@ -62,7 +62,7 @@ defmodule IdejoWeb.MessageComponents do
 
   Nothing typed here leaves the author's page until the form is submitted: the preview is
   rendered for them alone. The LiveView handles `"editor_mode"` with `%{"mode" =>
-  "write" | "preview"}` and passes the preview's HTML (`Idejo.Markdown.to_html/1`).
+  "write" | "preview"}` and passes the preview's HTML (`Idejo.Messages.Body.to_html/1`).
   """
   attr :field, Phoenix.HTML.FormField, required: true
   attr :label, :string, required: true

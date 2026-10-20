@@ -183,3 +183,11 @@
   overflow: hidden;
   mask-image: linear-gradient(to bottom, black 75%, transparent);
 }
+
+/* TP-10: an @mention, a link to the user's card (/u/{id}); the sanitiser keeps no classes. */
+.message-body a[href^="/u/"] {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--color-primary);
+  &:hover { text-decoration: underline; }
+}

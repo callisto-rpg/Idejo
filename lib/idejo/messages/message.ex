@@ -12,6 +12,8 @@ defmodule Idejo.Messages.Message do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Idejo.Messages.Body
+
   @type t :: %__MODULE__{}
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -51,7 +53,7 @@ defmodule Idejo.Messages.Message do
   end
 
   defp put_html(%Ecto.Changeset{valid?: true, changes: %{body_md: body}} = changeset),
-    do: put_change(changeset, :body_html, Idejo.Markdown.to_html(body))
+    do: put_change(changeset, :body_html, Body.to_html(body))
 
   defp put_html(changeset), do: changeset
 end

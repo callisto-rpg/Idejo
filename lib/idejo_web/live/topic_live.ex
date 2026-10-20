@@ -29,6 +29,10 @@ defmodule IdejoWeb.TopicLive do
   live region announces each message once when it opens and once when it closes, never at
   appends; open messages read "still being written"; and the composer is described by the
   time left in the author's window, updated every second while it runs.
+
+  **@mentions** (TP-10) link to `/u/{id}`. With JavaScript, the `Mentions` hook turns a click
+  on one into `"show_user"`, and the user card opens here in a `<dialog>` (`UserCard` hook)
+  instead of leaving the topic; without it, the link opens the card's page.
   """
   use IdejoWeb, :live_view
 
@@ -38,6 +42,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
+  alias IdejoWeb.UserComponents
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
 
@@ -60,7 +65,8 @@ defmodule IdejoWeb.TopicLive do
            now: DateTime.utc_now(),
            tick: nil,
            forks: %{},
-           can_fork?: false
+           can_fork?: false,
+           user_card: nil
          )}
 
       topic ->
@@ -75,7 +81,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
          |> assign(editing: nil, editor_mode: :write, preview_html: "")
-         |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil)
+         |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, user_card: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> put_forks()
@@ -289,6 +295,18 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # TP-10: a click on an @mention opens that user's card in a dialog.
+  def handle_event("show_user", %{"id" => id}, socket) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %{} = user <- Idejo.Accounts.get_user(id) do
+      {:noreply, assign(socket, :user_card, UserComponents.card_data(user))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("hide_user", _params, socket), do: {:noreply, assign(socket, :user_card, nil)}
+
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
 
@@ -328,7 +346,7 @@ defmodule IdejoWeb.TopicLive do
         %{"mode" => "preview"},
         %{assigns: %{editing: {_, form}}} = socket
       ) do
-    html = Idejo.Markdown.to_html(form.params["body"] || "")
+    html = Messages.Body.to_html(form.params["body"] || "")
     {:noreply, assign(socket, editor_mode: :preview, preview_html: html)}
   end
 
@@ -366,7 +384,23 @@ defmodule IdejoWeb.TopicLive do
     assigns = assign(assigns, before: before, mine: mine, later: after_)
 
     ~H"""
-    <div id="topic-live">
+    <div id="topic-live" phx-hook="Mentions">
+      <dialog
+        :if={@user_card}
+        id="user-card"
+        class="modal"
+        phx-hook="UserCard"
+        aria-labelledby="user-card-name"
+      >
+        <div class="modal-box">
+          <UserComponents.user_card card={@user_card} />
+          <div class="modal-action">
+            <button type="button" class="btn btn-sm" phx-click="hide_user">
+              {gettext("Close")}
+            </button>
+          </div>
+        </div>
+      </dialog>
       <%!-- AX-02: read out when a message opens or closes; the list itself is not live. --%>
       <div id="topic-announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
         <span :if={@announcement} id={"announcement-#{elem(@announcement, 0)}"}>
@@ -619,7 +653,7 @@ defmodule IdejoWeb.TopicLive do
               {Calendar.strftime(version.created_at, "%Y-%m-%d %H:%M:%S UTC")}
             </time>
           </p>
-          <MessageComponents.body html={Idejo.Markdown.to_html(version.body_md)} />
+          <MessageComponents.body html={Messages.Body.to_html(version.body_md)} />
         </li>
       </ol>
     </details>

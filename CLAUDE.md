@@ -258,6 +258,15 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **@mentions** (TP-10, @user only, no autocomplete: steward decision): every body renders
+  through `Idejo.Messages.Body.to_html/1` (messages, previews, versions), never
+  `Idejo.Markdown.to_html/1` directly. `Markdown.mentions/1` finds `@username` outside code and
+  links; each one naming an active user (case-insensitive) is stored as a link to `/u/{id}`
+  (styled by `a[href^="/u/"]`: the sanitiser keeps no classes). `Body.mentioned_users/1` is
+  for notifications. `/u/{id}` (`UserController`, public) shows the user card
+  (`UserComponents.user_card/1`: initial until avatars, display name, username, roles); in a
+  topic the `Mentions` hook opens it in a `<dialog>` (`UserCard` hook, `"show_user"` /
+  `"hide_user"`) instead (steward decision). Add the full-profile link when profiles exist.
 - **New topic from this** (TP-09): every message has a "New topic from this" link for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
   `NewTopicLive` at `/m/{id}/new-topic` (`:fork`): the source's excerpt and a category choice.

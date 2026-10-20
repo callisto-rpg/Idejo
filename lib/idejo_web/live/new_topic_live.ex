@@ -17,6 +17,7 @@ defmodule IdejoWeb.NewTopicLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Forum
+  alias Idejo.Messages.Body
 
   @impl true
   def mount(%{"id" => id}, _session, %{assigns: %{live_action: :fork}} = socket) do
@@ -83,7 +84,7 @@ defmodule IdejoWeb.NewTopicLive do
   def handle_event("editor_mode", %{"mode" => "preview"}, socket) do
     body = socket.assigns.form.params["body"] || ""
 
-    {:noreply, assign(socket, editor_mode: :preview, preview_html: Idejo.Markdown.to_html(body))}
+    {:noreply, assign(socket, editor_mode: :preview, preview_html: Body.to_html(body))}
   end
 
   def handle_event("editor_mode", %{"mode" => "write"}, socket),
