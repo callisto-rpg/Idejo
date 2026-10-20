@@ -321,6 +321,7 @@ mix test                           # all tests
 mix test --only req:GM-03          # tests for one requirement
 mix test --only flow:admin-sets-up-the-server   # one end-to-end flow (MVP §4)
 mix test --only flow:member-starts-a-topic       # the M2 exit check
+mix test --only flow:live-conversation           # the M3 exit flow (with --only req:NF-02)
 mix format --check-formatted
 mix credo --strict
 mix dialyzer
@@ -338,14 +339,20 @@ Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup ste
 - [x] M0 — Foundations — repo, headers, NOTICE, CLA check, CI, Compose with HTTPS
 - [x] M1 — Accounts and structure — roles, categories, permission grid, invites, profile, admin pages, audit log; exit test "admin sets up the server"
 - [x] M2 — Topics
-- [ ] **M3 — Growing messages**
-- [ ] M4 — Around the conversation
+- [x] M3 — Growing messages
+- [ ] **M4 — Around the conversation**
 - [ ] M5 — Moderation and operations
 
-Current milestone: **M3**. Do not start work belonging to a later milestone.
+Current milestone: **M4**. Do not start work belonging to a later milestone.
 
 M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
-end-to-end test; a server restart mid-message loses nothing.
+end-to-end test (`test/idejo_web/flows/live_conversation_test.exs`, steps 1-4; steward
+decision); a server restart mid-message loses nothing
+(`test/idejo_web/live/restart_mid_message_test.exs`, NF-02: restarts the engine's processes,
+not async).
+Not implemented in M3, left for M4:
+- step 5 of the flow, "New topic from this" (TP-09): add it to the flow test;
+- GM-13 for notifications, unread counts and search; its test covers the message count now.
 
 M2 exit check (MVP §7): the "member starts a topic" flow passes as an end-to-end test; a public
 topic renders without JavaScript.
