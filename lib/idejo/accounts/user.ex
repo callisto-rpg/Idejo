@@ -23,6 +23,8 @@ defmodule Idejo.Accounts.User do
     field :status, :string, default: "active"
     field :origin, :string, default: "local"
     field :confirmed_at, :utc_datetime
+    # AC-04: the avatar, an upload stored as `<avatar_id>.webp` (Idejo.Uploads.avatar_url/1).
+    field :avatar_id, :binary_id
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 

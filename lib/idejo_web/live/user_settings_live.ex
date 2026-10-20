@@ -3,13 +3,19 @@
 
 defmodule IdejoWeb.UserSettingsLive do
   @moduledoc """
-  Profile and account: the signed-in user changes their display name (AC-04) and password
-  (AC-01), and can delete their account (AC-07). The avatar comes with uploads (M4).
+  Profile and account: the signed-in user changes their display name and avatar (AC-04)
+  and password (AC-01), and can delete their account (AC-07).
+
+  The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/2`: a 256 px
+  WebP square without metadata), and can be removed.
   """
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts
+  alias Idejo.Uploads
+  alias IdejoWeb.ImageUploads
   alias IdejoWeb.UserAuth
+  alias IdejoWeb.UserComponents
 
   @impl true
   def mount(_params, session, socket) do
@@ -21,7 +27,52 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:session_token, session["user_token"])
      |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
      |> assign(:password_form, password_form(user))
-     |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))}
+     |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
+     |> assign(:image_error, nil)
+     |> allow_upload(:avatar,
+       accept: Uploads.extensions(),
+       max_entries: 1,
+       max_file_size: Uploads.max_bytes(),
+       auto_upload: true,
+       progress: &avatar_progress/3
+     )}
+  end
+
+  # AC-04: a chosen picture becomes the avatar as soon as it has uploaded.
+  defp avatar_progress(:avatar, entry, socket) do
+    if entry.done? do
+      user = socket.assigns.current_scope.user
+
+      result =
+        consume_uploaded_entry(socket, entry, fn %{path: path} ->
+          {:ok, Accounts.set_avatar(user, path)}
+        end)
+
+      case result do
+        # A full page load, so the header and everything else show the new picture.
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, gettext("Avatar saved."))
+           |> redirect(to: ~p"/users/settings")}
+
+        {:error, :too_large} ->
+          {:noreply, assign(socket, :image_error, gettext("This image is too large."))}
+
+        {:error, :too_many_pixels} ->
+          {:noreply, assign(socket, :image_error, gettext("This image has too many pixels."))}
+
+        {:error, _} ->
+          {:noreply,
+           assign(
+             socket,
+             :image_error,
+             gettext("Only JPEG, PNG, GIF and WebP images can be added.")
+           )}
+      end
+    else
+      {:noreply, socket}
+    end
   end
 
   defp password_form(user, changeset \\ nil),
@@ -49,6 +100,16 @@ defmodule IdejoWeb.UserSettingsLive do
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset, as: :profile))}
     end
+  end
+
+  def handle_event("validate_avatar", _params, socket),
+    do: {:noreply, ImageUploads.check(socket, :avatar)}
+
+  def handle_event("remove_avatar", _params, socket) do
+    {:ok, _user} = Accounts.remove_avatar(socket.assigns.current_scope.user)
+
+    {:noreply,
+     socket |> put_flash(:info, gettext("Avatar removed.")) |> redirect(to: ~p"/users/settings")}
   end
 
   def handle_event("validate_password", %{"password" => params}, socket) do
@@ -128,6 +189,29 @@ defmodule IdejoWeb.UserSettingsLive do
         />
         <.button class="btn btn-primary">{gettext("Save")}</.button>
       </.form>
+
+      <section class="mt-10" aria-labelledby="avatar-heading">
+        <h2 id="avatar-heading" class="font-semibold mb-2">{gettext("Avatar")}</h2>
+        <div class="flex items-center gap-4">
+          <UserComponents.avatar user={@current_scope.user} size={:medium} />
+          <form id="avatar-form" phx-change="validate_avatar" phx-submit="validate_avatar">
+            <label class="flex flex-col gap-1 text-sm">
+              <span>{gettext("Choose a picture (JPEG, PNG, GIF or WebP)")}</span>
+              <.live_file_input upload={@uploads.avatar} class="file-input file-input-sm" />
+            </label>
+          </form>
+          <button
+            :if={@current_scope.user.avatar_id}
+            type="button"
+            id="remove-avatar"
+            class="btn btn-sm"
+            phx-click="remove_avatar"
+          >
+            {gettext("Remove avatar")}
+          </button>
+        </div>
+        <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
+      </section>
 
       <section class="mt-10" aria-labelledby="password-heading">
         <h2 id="password-heading" class="font-semibold mb-2">{gettext("Change password")}</h2>
