@@ -258,6 +258,14 @@ roles or the permission grid. Every later change must keep it true:
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
   read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories (`Reading.list_unread_topics/2`).
+- **New topic from this** (TP-09): every message has a "New topic from this" link for users
+  who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
+  `NewTopicLive` at `/m/{id}/new-topic` (`:fork`): the source's excerpt and a category choice.
+  `Forum.create_topic/4` with `forked_from: message` sets `topics.forked_from_message_id`
+  (needs view of the source and `:start` in the target), adds `forkedFrom` to the activity and
+  broadcasts `{:forked, message_id}` to the source topic. The new topic's page shows
+  "Continued from …"; the source message shows "Continued in …" (`Forum.list_forks/2`). Both
+  only when the viewer may view the other topic.
 - **Follow** (TP-13, `Idejo.Reading`): `follows` rows (user, topic, `following`). Starting a
   topic or posting in it follows it (`Reading.auto_follow/2` inside the transaction that
   writes the message); an explicit unfollow stays as `following: false`, so posting again does
@@ -365,7 +373,7 @@ decision); a server restart mid-message loses nothing
 (`test/idejo_web/live/restart_mid_message_test.exs`, NF-02: restarts the engine's processes,
 not async).
 Not implemented in M3, left for M4:
-- step 5 of the flow, "New topic from this" (TP-09): add it to the flow test;
+- step 5 of the flow, "New topic from this" (TP-09): added to the flow test with TP-09;
 - GM-13 for notifications, unread counts and search; its test covers the message count now.
 
 M2 exit check (MVP §7): the "member starts a topic" flow passes as an end-to-end test; a public

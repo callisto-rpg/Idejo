@@ -35,6 +35,7 @@ defmodule IdejoWeb.TopicController do
             page_title: topic.title,
             reply_to_id: params["reply_to"],
             following?: Reading.following?(user, topic),
+            forked_from: forked_from(user, topic),
             # Without ?reply_to=, which only opens the form.
             canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
           )
@@ -44,5 +45,13 @@ defmodule IdejoWeb.TopicController do
           |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
         end
     end
+  end
+
+  # TP-09: the message this topic was started from, when the viewer may see it.
+  defp forked_from(_user, %{forked_from_message_id: nil}), do: nil
+
+  defp forked_from(user, topic) do
+    with %{} = message <- Forum.get_viewable_message(user, topic.forked_from_message_id),
+         do: Idejo.Repo.preload(message, :author)
   end
 end

@@ -324,17 +324,63 @@ defmodule Idejo.Forum do
   The user needs the `:start` right there (`{:error, :forbidden}` otherwise). The first
   message is posted closed together with the title (GM-14): it never was open. The topic and
   the message each get a URI (FD-01) and a `create` activity (FD-02), all in one transaction.
-  """
-  @spec create_topic(User.t(), Category.t(), map()) ::
-          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
-  def create_topic(%User{} = user, %Category{} = category, attrs) do
-    form = change_new_topic(attrs)
 
-    cond do
-      not can_start_topic?(user, category) -> {:error, :forbidden}
-      not form.valid? -> {:error, Map.put(form, :action, :insert)}
-      true -> Repo.transact(fn -> insert_topic(user, category, form.changes) end)
-    end
+  `forked_from: message` starts it from a message of another topic (TP-09, "New topic from
+  this"), any message the user may view, theirs or someone else's. The new topic links back
+  to it, and the source topic's viewers get `{:forked, message_id}`.
+  """
+  @spec create_topic(User.t(), Category.t(), map(), keyword()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
+    form = change_new_topic(attrs)
+    source = opts[:forked_from]
+
+    result =
+      cond do
+        not can_start_topic?(user, category) -> {:error, :forbidden}
+        source && !get_viewable_message(user, source.id) -> {:error, :forbidden}
+        not form.valid? -> {:error, Map.put(form, :action, :insert)}
+        true -> Repo.transact(fn -> insert_topic(user, category, form.changes, source) end)
+      end
+
+    # The source topic's viewers get its new "continued in" link (TP-04).
+    with {:ok, _topic} when source != nil <- result,
+         do: Messages.broadcast(source.topic_id, {:forked, source.id})
+
+    result
+  end
+
+  @doc """
+  The categories where the user may start a topic (TP-01, TP-09), in order: they may view
+  them and have the `:start` right; never the Archive.
+  """
+  @spec list_startable_categories(User.t() | nil) :: [Category.t()]
+  def list_startable_categories(nil), do: []
+
+  def list_startable_categories(%User{} = user) do
+    from(c in Category, where: not c.archive, order_by: [asc: c.position, asc: c.name])
+    |> Access.where_allowed(user, :start)
+    |> Repo.all()
+    |> Enum.filter(&Access.can?(user, :view, &1))
+  end
+
+  @doc """
+  The topics started from each of the given messages (TP-09) that the user may view, as
+  `%{message_id => [topic]}`, oldest first: the source's "continued in" links.
+  """
+  @spec list_forks(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => [Topic.t()]}
+  def list_forks(_user, []), do: %{}
+
+  def list_forks(user, message_ids) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    from(t in Topic,
+      where: t.forked_from_message_id in ^message_ids,
+      where: t.category_id in subquery(viewable),
+      order_by: [asc: t.created_at, asc: t.id]
+    )
+    |> Repo.all()
+    |> Enum.group_by(& &1.forked_from_message_id)
   end
 
   @doc """
@@ -346,7 +392,7 @@ defmodule Idejo.Forum do
   def can_start_topic?(_user, %Category{archive: true}), do: false
   def can_start_topic?(%User{} = user, category), do: Access.can?(user, :start, category)
 
-  defp insert_topic(user, category, %{title: title, body: body}) do
+  defp insert_topic(user, category, %{title: title, body: body}, source) do
     now = DateTime.utc_now()
     topic_id = Federation.generate_id()
     message_id = Federation.generate_id()
@@ -358,6 +404,7 @@ defmodule Idejo.Forum do
         category_id: category.id,
         author_id: user.id,
         slug: slugify(title, "topic"),
+        forked_from_message_id: source && source.id,
         message_count: 1,
         last_activity_at: now
       }
@@ -379,11 +426,16 @@ defmodule Idejo.Forum do
          {:ok, message} <- Repo.insert(message),
          {:ok, _} <- Idejo.Reading.auto_follow(user.id, topic.id),
          {:ok, _} <-
-           insert_activity(user, topic.uri, category.uri, %{"type" => "Page", "name" => title}),
+           insert_activity(user, topic.uri, category.uri, topic_payload(title, source)),
          {:ok, _} <- insert_activity(user, message.uri, topic.uri, %{"type" => "Note"}) do
       {:ok, topic}
     end
   end
+
+  defp topic_payload(title, nil), do: %{"type" => "Page", "name" => title}
+
+  defp topic_payload(title, source),
+    do: %{"type" => "Page", "name" => title, "forkedFrom" => source.uri}
 
   defp insert_activity(user, object_uri, target_uri, payload) do
     Repo.insert(

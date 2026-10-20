@@ -58,7 +58,9 @@ defmodule IdejoWeb.TopicLive do
            can_moderate?: false,
            announcement: nil,
            now: DateTime.utc_now(),
-           tick: nil
+           tick: nil,
+           forks: %{},
+           can_fork?: false
          )}
 
       topic ->
@@ -71,10 +73,12 @@ defmodule IdejoWeb.TopicLive do
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
+         |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
          |> assign(editing: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
+         |> put_forks()
          |> sync_composer()
          |> schedule_tick()}
     end
@@ -89,6 +93,12 @@ defmodule IdejoWeb.TopicLive do
     if user, do: Messages.Authors.present(topic.id, user.id)
     # Whatever came between the page and the connection is seen now (TP-07).
     Reading.mark_read(user, topic)
+  end
+
+  # TP-09: each message's "continued in" topics that the viewer may see.
+  defp put_forks(socket) do
+    ids = Enum.map(socket.assigns.messages, & &1.id)
+    assign(socket, :forks, Forum.list_forks(user(socket), ids))
   end
 
   defp put_messages(socket, messages) do
@@ -157,6 +167,9 @@ defmodule IdejoWeb.TopicLive do
     {:noreply, socket |> assign(now: DateTime.utc_now(), tick: nil) |> schedule_tick()}
   end
 
+  # Someone started a topic from one of these messages (TP-09).
+  def handle_info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
+
   # The grid changed: the viewer may have lost the view or post right since mount.
   def handle_info(:permissions_changed, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
@@ -172,10 +185,13 @@ defmodule IdejoWeb.TopicLive do
 
       topic ->
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(
            can_post?: Forum.can_post?(user, topic),
-           can_moderate?: user != nil and Access.can?(user, :moderate, topic.category)
-         )}
+           can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
+           can_fork?: Forum.list_startable_categories(user) != []
+         )
+         |> put_forks()}
     end
   end
 
@@ -370,6 +386,8 @@ defmodule IdejoWeb.TopicLive do
             roles={@roles}
             viewer={@current_scope && @current_scope.user}
             can_moderate?={@can_moderate?}
+            can_fork?={@can_fork?}
+            forks={Map.get(@forks, message.id, [])}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -392,6 +410,8 @@ defmodule IdejoWeb.TopicLive do
             roles={@roles}
             viewer={@current_scope && @current_scope.user}
             can_moderate?={@can_moderate?}
+            can_fork?={@can_fork?}
+            forks={Map.get(@forks, message.id, [])}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -452,6 +472,8 @@ defmodule IdejoWeb.TopicLive do
   attr :roles, :map, required: true
   attr :viewer, :any, required: true
   attr :can_moderate?, :boolean, required: true
+  attr :can_fork?, :boolean, required: true
+  attr :forks, :list, required: true
   attr :editing, :any, required: true
   attr :editor_mode, :atom, required: true
   attr :preview_html, :string, required: true
@@ -526,6 +548,13 @@ defmodule IdejoWeb.TopicLive do
         html={@message.body_html}
       />
       <.versions :if={@message.edited} message={@message} />
+      <%!-- TP-09: a discreet link to each topic started from this message. --%>
+      <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="text-xs opacity-70 mt-1">
+        {gettext("Continued in")}
+        <%= for {fork, i} <- Enum.with_index(@forks) do %>
+          <span :if={i > 0}>, </span><.link href={~p"/t/#{fork.id}/#{fork.slug}"} class="link">{fork.title}</.link>
+        <% end %>
+      </p>
       <button
         :if={@can_moderate? and @message.state == "open" and @viewer.id != @message.author_id}
         type="button"
@@ -545,6 +574,14 @@ defmodule IdejoWeb.TopicLive do
       >
         {gettext("Edit")}
       </button>
+      <.link
+        :if={@can_fork?}
+        href={~p"/m/#{@message.id}/new-topic"}
+        class="link text-sm mr-3"
+        id={"message-#{@message.id}-fork"}
+      >
+        {gettext("New topic from this")}
+      </.link>
       <.link
         :if={@can_post?}
         href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}

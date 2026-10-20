@@ -9,12 +9,47 @@ defmodule IdejoWeb.NewTopicLive do
   The first message is written in the message editor every message uses (TP-02). Nobody
   else sees it while it is typed: nothing is stored or sent anywhere before "Post topic", and
   the preview is rendered for the author alone. It is then posted closed, with the title.
+
+  At `/m/{id}/new-topic` it starts a topic from that message (TP-09, "New topic from this"):
+  any message the user may view, shown as a linked excerpt, into any category where they may
+  start topics (chosen in the form; the source's category first when allowed).
   """
   use IdejoWeb, :live_view
 
   alias Idejo.Forum
 
   @impl true
+  def mount(%{"id" => id}, _session, %{assigns: %{live_action: :fork}} = socket) do
+    user = socket.assigns.current_scope.user
+
+    case Forum.get_viewable_message(user, id) do
+      nil ->
+        raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
+
+      source ->
+        source = Idejo.Repo.preload(source, :author)
+
+        case Forum.list_startable_categories(user) do
+          [] ->
+            {:ok,
+             socket
+             |> put_flash(:error, gettext("You cannot start topics."))
+             |> redirect(to: ~p"/m/#{source.id}")}
+
+          categories ->
+            default =
+              Enum.find(categories, hd(categories), &(&1.id == source.topic.category_id))
+
+            {:ok,
+             socket
+             |> assign(:page_title, gettext("New topic from a message"))
+             |> assign(source: source, categories: categories, category: default)
+             |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
+             |> assign(editor_mode: :write, preview_html: "")}
+        end
+    end
+  end
+
   def mount(%{"slug" => slug}, _session, socket) do
     user = socket.assigns.current_scope.user
 
@@ -27,7 +62,7 @@ defmodule IdejoWeb.NewTopicLive do
           {:ok,
            socket
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
-           |> assign(:category, category)
+           |> assign(source: nil, categories: [], category: category)
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
            |> assign(editor_mode: :write, preview_html: "")}
         else
@@ -57,7 +92,9 @@ defmodule IdejoWeb.NewTopicLive do
   def handle_event("post", %{"topic" => params}, socket) do
     user = socket.assigns.current_scope.user
 
-    case Forum.create_topic(user, socket.assigns.category, params) do
+    {category, opts} = target(socket, params)
+
+    case Forum.create_topic(user, category, params, opts) do
       {:ok, topic} ->
         {:noreply, redirect(socket, to: ~p"/t/#{topic.id}/#{topic.slug}")}
 
@@ -65,11 +102,21 @@ defmodule IdejoWeb.NewTopicLive do
         {:noreply,
          socket
          |> put_flash(:error, gettext("You cannot start topics in this category."))
-         |> redirect(to: ~p"/c/#{socket.assigns.category.slug}")}
+         |> redirect(to: ~p"/c/#{category.slug}")}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form, as: :topic))}
     end
+  end
+
+  # A topic from a message goes to the chosen category, one the user may start topics in.
+  defp target(%{assigns: %{source: nil, category: category}}, _params), do: {category, []}
+
+  defp target(%{assigns: %{source: source} = assigns}, params) do
+    category =
+      Enum.find(assigns.categories, assigns.category, &(&1.id == params["category_id"]))
+
+    {category, forked_from: source}
   end
 
   @impl true
@@ -78,12 +125,31 @@ defmodule IdejoWeb.NewTopicLive do
     <Layouts.app flash={@flash} current_scope={@current_scope}>
       <.header>
         {gettext("New topic")}
-        <:subtitle>
+        <:subtitle :if={!@source}>
           <.link href={~p"/c/#{@category.slug}"} class="link">{@category.name}</.link>
         </:subtitle>
       </.header>
 
+      <blockquote :if={@source} id="forked-from" class="border-l-2 border-base-300 pl-3 text-sm">
+        <.link href={~p"/m/#{@source.id}"} class="link">
+          {gettext("From %{name} in “%{topic}”",
+            name: @source.author.display_name,
+            topic: @source.topic.title
+          )}
+        </.link>
+        <span class="opacity-70">{Forum.excerpt(@source)}</span>
+      </blockquote>
+
       <.form for={@form} id="new-topic-form" phx-change="validate" phx-submit="post">
+        <.input
+          :if={@source}
+          name="topic[category_id]"
+          id="topic_category_id"
+          type="select"
+          label={gettext("Category")}
+          options={Enum.map(@categories, &{&1.name, &1.id})}
+          value={@form.params["category_id"] || @category.id}
+        />
         <.input field={@form[:title]} type="text" label={gettext("Title")} maxlength="150" required />
         <MessageComponents.editor
           field={@form[:body]}

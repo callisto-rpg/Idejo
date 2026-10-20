@@ -3,8 +3,8 @@
 
 defmodule IdejoWeb.Flows.LiveConversationTest do
   @moduledoc """
-  MVP §4, "Live conversation", steps 1-4: the exit check of M3 (MVP §7). Step 5, "New topic
-  from this" (TP-09), is added in M4 (steward decision).
+  MVP §4, "Live conversation": steps 1-4 were the exit check of M3 (MVP §7); step 5, "New
+  topic from this" (TP-09), came with M4 (steward decision).
 
   It drives the real topic page as members would: the author types in the composer and
   presses Enter or Ctrl+Enter (the `Composer` hook's `"commit"` push), another member replies
@@ -195,5 +195,31 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
     assert Repo.reload!(topic).message_count == 4
     assert length(Forum.list_messages(topic)) == 4
     assert Messages.list_versions(message) |> length() == 1
+
+    # 5. A side question comes up: Bo selects Ada's message and chooses "New topic from
+    #    this"; the new topic links back to it.
+    assert has_element?(other, "#message-#{message.id}-fork", "New topic from this")
+    {:ok, fork_lv, _html} = live(other_conn, ~p"/m/#{message.id}/new-topic")
+    assert has_element?(fork_lv, ~s(#forked-from a[href="/m/#{message.id}"]))
+
+    {:ok, fork_conn} =
+      fork_lv
+      |> form("#new-topic-form", topic: %{title: "Snacks", body: "Sweet or salty?"})
+      |> render_submit()
+      |> follow_redirect(other_conn)
+
+    fork = Repo.get_by!(Forum.Topic, title: "Snacks")
+    assert fork.forked_from_message_id == message.id
+    assert fork.category_id == general.id
+
+    fork_page = html_response(fork_conn, 200)
+    assert fork_page =~ ~s(href="/m/#{message.id}")
+    assert fork_page =~ "Continued from Ada in “Tonight”"
+
+    assert has_element?(
+             visitor,
+             ~s(#message-#{message.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"]),
+             "Snacks"
+           )
   end
 end

@@ -114,6 +114,8 @@ defmodule IdejoWeb.Router do
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive
+      # TP-09: "New topic from this" message.
+      live "/m/:id/new-topic", NewTopicLive, :fork
     end
   end
 
