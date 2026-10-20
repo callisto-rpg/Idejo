@@ -106,6 +106,9 @@ defmodule IdejoWeb.Router do
   scope "/", IdejoWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    # TP-07: topics with something new across categories, no JavaScript needed.
+    get "/unread", UnreadController, :index
+
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive
     end

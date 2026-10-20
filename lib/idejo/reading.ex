@@ -1,0 +1,119 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule Idejo.Reading do
+  @moduledoc """
+  Unread tracking (TP-07): each user's read position per topic, the unread marker of topic
+  lists (TP-03) and the topics with something new across categories.
+
+  Opening a topic marks everything in it read, and so does each message that arrives while
+  the topic is open (steward decision). A message is unread when it was opened after the read
+  position's message and by someone else. A growing message keeps its `opened_at`, so it is
+  one unread item and does not turn unread again as it grows (GM-13).
+
+  With no position, a topic counts as read up to the user's sign-up: a new member does not
+  start with every old topic marked new.
+  """
+  import Ecto.Query
+
+  alias Idejo.Access
+  alias Idejo.Accounts.User
+  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Messages.Message
+  alias Idejo.Reading.ReadPosition
+  alias Idejo.Repo
+
+  @doc """
+  Marks everything in the topic read for the user: their position moves to its latest
+  message. Visitors (`nil`) have no position.
+  """
+  @spec mark_read(User.t() | nil, Topic.t()) :: :ok
+  def mark_read(nil, _topic), do: :ok
+
+  def mark_read(%User{id: user_id}, %Topic{id: topic_id}) do
+    latest =
+      from(m in Message,
+        where: m.topic_id == ^topic_id,
+        order_by: [desc: m.opened_at, desc: m.id],
+        limit: 1,
+        select: m.id
+      )
+      |> Repo.one()
+
+    Repo.insert!(
+      %ReadPosition{user_id: user_id, topic_id: topic_id, last_read_message_id: latest},
+      on_conflict: {:replace, [:last_read_message_id, :updated_at]},
+      conflict_target: [:user_id, :topic_id]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Returns the number of unread messages in each of the given topics that has any, as
+  `%{topic_id => count}`. Visitors get `%{}`.
+  """
+  @spec unread_counts(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => pos_integer()}
+  def unread_counts(nil, _topic_ids), do: %{}
+  def unread_counts(_user, []), do: %{}
+
+  def unread_counts(%User{} = user, topic_ids) do
+    user
+    |> unread_messages()
+    |> where([m], m.topic_id in ^topic_ids)
+    |> group_by([m], m.topic_id)
+    |> select([m], {m.topic_id, count(m.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  The topics with unread messages across every category the user may view, most recently
+  active first, 30 a page: `{[{topic, unread_count}], more?}`. Topics come with their author
+  and category.
+  """
+  @spec list_unread_topics(User.t(), keyword()) :: {[{Topic.t(), pos_integer()}], boolean()}
+  def list_unread_topics(%User{} = user, opts \\ []) do
+    per_page = Keyword.get(opts, :per_page, 30)
+    page = max(Keyword.get(opts, :page, 1), 1)
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    counts =
+      user
+      |> unread_messages()
+      |> group_by([m], m.topic_id)
+      |> select([m], %{topic_id: m.topic_id, count: count(m.id)})
+
+    rows =
+      Repo.all(
+        from t in Topic,
+          join: c in subquery(counts),
+          on: c.topic_id == t.id,
+          where: t.category_id in subquery(viewable),
+          order_by: [desc: t.last_activity_at, desc: t.id],
+          offset: ^((page - 1) * per_page),
+          limit: ^(per_page + 1),
+          preload: [:author, :category],
+          select: {t, c.count}
+      )
+
+    {Enum.take(rows, per_page), length(rows) > per_page}
+  end
+
+  # Messages by others opened after the user's read position in their topic, or after the
+  # user signed up where they have none.
+  defp unread_messages(%User{id: user_id, created_at: signed_up}) do
+    from m in Message,
+      left_join: rp in ReadPosition,
+      on: rp.topic_id == m.topic_id and rp.user_id == ^user_id,
+      left_join: last in Message,
+      on: last.id == rp.last_read_message_id,
+      where: m.author_id != ^user_id,
+      where:
+        m.opened_at >
+          coalesce(
+            last.opened_at,
+            coalesce(rp.updated_at, type(^signed_up, :utc_datetime_usec))
+          )
+  end
+end

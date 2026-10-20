@@ -42,7 +42,16 @@ defmodule IdejoWeb.Layouts do
       <div class="flex-1">
         <a href={~p"/"} class="text-lg font-semibold">{server_name()}</a>
       </div>
-      <div class="flex-none">
+      <div class="flex-none flex items-center gap-4">
+        <%!-- TP-07: topics with something new, across categories. --%>
+        <a
+          :if={@current_scope && @current_scope.user}
+          href={~p"/unread"}
+          id="unread-link"
+          class="link"
+        >
+          {gettext("Unread")}
+        </a>
         <.theme_toggle />
       </div>
     </header>
