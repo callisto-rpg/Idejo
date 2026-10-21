@@ -10,6 +10,12 @@
       <span :if={@topic.state == "archived"} id="topic-archived" class="badge badge-sm ml-2">
         {gettext("Archived: read only")}
       </span>
+      <span :if={@topic.state == "locked"} id="topic-locked" class="badge badge-sm ml-2">
+        {gettext("Locked: read only")}
+      </span>
+      <span :if={@topic.pinned} id="topic-pinned" class="badge badge-sm ml-2">
+        {gettext("Pinned")}
+      </span>
     </:subtitle>
     <:actions :if={@current_scope && @current_scope.user}>
       <.form
@@ -35,6 +41,45 @@
       </.form>
     </:actions>
   </.header>
+
+  <%!-- TP-14: moderator tools, a plain form (no JavaScript needed); each action is logged. --%>
+  <details :if={@can_moderate?} id="topic-moderation" class="text-sm">
+    <summary class="cursor-pointer">{gettext("Moderate this topic")}</summary>
+    <.form
+      for={%{}}
+      action={~p"/t/#{@topic.id}/moderate"}
+      method="post"
+      id="topic-moderation-form"
+      class="mt-2 flex flex-wrap items-end gap-2"
+    >
+      <label class="grow">
+        <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+        <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+      </label>
+      <button
+        :if={@topic.state == "open"}
+        name="action"
+        value="lock"
+        class="btn btn-sm"
+      >
+        {gettext("Lock")}
+      </button>
+      <button
+        :if={@topic.state == "locked"}
+        name="action"
+        value="unlock"
+        class="btn btn-sm"
+      >
+        {gettext("Unlock")}
+      </button>
+      <button :if={!@topic.pinned} name="action" value="pin" class="btn btn-sm">
+        {gettext("Pin")}
+      </button>
+      <button :if={@topic.pinned} name="action" value="unpin" class="btn btn-sm">
+        {gettext("Unpin")}
+      </button>
+    </.form>
+  </details>
 
   <blockquote :if={@forked_from} id="forked-from" class="border-l-2 border-base-300 pl-3 text-sm">
     <.link href={~p"/m/#{@forked_from.id}"} class="link">

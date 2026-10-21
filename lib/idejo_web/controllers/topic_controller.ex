@@ -36,6 +36,7 @@ defmodule IdejoWeb.TopicController do
             reply_to_id: params["reply_to"],
             following?: Reading.following?(user, topic),
             forked_from: forked_from(user, topic),
+            can_moderate?: user != nil and Idejo.Access.can?(user, :moderate, topic.category),
             # Without ?reply_to=, which only opens the form.
             canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
           )

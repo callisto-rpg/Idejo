@@ -121,6 +121,8 @@ defmodule IdejoWeb.Router do
     # MO-03: the moderation log, for moderators.
     get "/moderation/log", ModerationController, :log
     # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
+    # TP-14: moderators lock, unlock, pin or unpin a topic (a plain form).
+    post "/t/:id/moderate", TopicModerationController, :create
     post "/t/:id/follow", FollowController, :create
     delete "/t/:id/follow", FollowController, :delete
 
