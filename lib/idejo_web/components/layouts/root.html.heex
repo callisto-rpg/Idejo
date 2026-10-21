@@ -18,6 +18,14 @@
     </script>
   </head>
   <body>
+    <%!-- AX-01: the first stop of the keyboard skips the navigation. --%>
+    <a
+      href="#main"
+      id="skip-link"
+      class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:p-2 focus:bg-base-100"
+    >
+      {gettext("Skip to content")}
+    </a>
     <nav
       aria-label={gettext("Account")}
       class="w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end"

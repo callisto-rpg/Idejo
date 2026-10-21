@@ -109,6 +109,12 @@
 
 /* This file is for your main application CSS */
 
+/* AX-01: whatever has the keyboard focus is clearly outlined, whatever the component. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Composer (GM-02, GM-10): a transparent textarea over a backdrop that draws
    sent text in higher contrast than unsent text. Both share the same box. */
 .composer {
@@ -117,8 +123,11 @@
   border-radius: var(--radius-field);
   background: var(--color-base-100);
 }
+/* AX-01: the composer's text box draws no outline of its own (it is transparent over the
+   backdrop), so the box around it shows the focus. */
 .composer:focus-within {
-  border-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .composer-backdrop,
 .composer-input {

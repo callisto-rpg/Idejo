@@ -79,13 +79,22 @@ defmodule IdejoWeb.MessageComponents do
   def editor(assigns) do
     ~H"""
     <div id={"#{@field.id}-editor"} class="message-editor">
-      <div role="tablist" aria-label={@label} class="tabs tabs-border mb-2">
+      <%!-- AX-01: the ARIA tabs pattern; the EditorTabs hook adds the arrow keys. --%>
+      <div
+        role="tablist"
+        id={"#{@field.id}-tabs"}
+        aria-label={@label}
+        class="tabs tabs-border mb-2"
+        phx-hook="EditorTabs"
+      >
         <button
           type="button"
           role="tab"
           id={"#{@field.id}-write-tab"}
           class={["tab", @mode == :write && "tab-active"]}
           aria-selected={to_string(@mode == :write)}
+          aria-controls={"#{@field.id}-write"}
+          tabindex={if @mode == :write, do: "0", else: "-1"}
           phx-click="editor_mode"
           phx-value-mode="write"
         >
@@ -97,6 +106,8 @@ defmodule IdejoWeb.MessageComponents do
           id={"#{@field.id}-preview-tab"}
           class={["tab", @mode == :preview && "tab-active"]}
           aria-selected={to_string(@mode == :preview)}
+          aria-controls={@mode == :preview && "#{@field.id}-preview"}
+          tabindex={if @mode == :preview, do: "0", else: "-1"}
           phx-click="editor_mode"
           phx-value-mode="preview"
         >
@@ -107,6 +118,8 @@ defmodule IdejoWeb.MessageComponents do
       <div
         hidden={@mode == :preview}
         id={"#{@field.id}-write"}
+        role="tabpanel"
+        aria-labelledby={"#{@field.id}-write-tab"}
         phx-hook={@upload && "EditorImages"}
         data-upload={@upload && @upload.name}
       >
@@ -117,7 +130,12 @@ defmodule IdejoWeb.MessageComponents do
         </label>
         <p :if={@image_error} role="alert" class="text-sm text-error mb-2">{@image_error}</p>
       </div>
-      <div :if={@mode == :preview} id={"#{@field.id}-preview"} role="tabpanel">
+      <div
+        :if={@mode == :preview}
+        id={"#{@field.id}-preview"}
+        role="tabpanel"
+        aria-labelledby={"#{@field.id}-preview-tab"}
+      >
         <p :if={String.trim(@preview_html) == ""} class="opacity-70">
           {gettext("Nothing to preview yet.")}
         </p>

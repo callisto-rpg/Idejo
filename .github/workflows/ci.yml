@@ -107,5 +107,7 @@ jobs:
         env:
           IDEJO_PG_BIN_DIR: /usr/lib/postgresql/18/bin
 
-  # Added in M2–M3: end-to-end flows (MVP §4) with Playwright + axe accessibility checks.
+  # End-to-end flows (MVP §4) and the accessibility checks (AX-01) run inside `mix test`
+  # above: ConnTest/LiveViewTest flows and IdejoWeb.Accessibility, no browser (steward
+  # decision; docs/accessibility.md lists what is checked by hand).
   # Added in M5: k6 load test (NF-01, NF-04) on release branches.

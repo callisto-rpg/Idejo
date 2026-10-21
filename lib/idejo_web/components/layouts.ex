@@ -42,7 +42,7 @@ defmodule IdejoWeb.Layouts do
       <div class="flex-1">
         <a href={~p"/"} class="text-lg font-semibold">{server_name()}</a>
       </div>
-      <div class="flex-none flex items-center gap-4">
+      <nav aria-label={gettext("Site")} class="flex-none flex items-center gap-4">
         <a href={~p"/search"} id="search-link" class="link">{gettext("Search")}</a>
         <%!-- TP-07: topics with something new, across categories. --%>
         <a
@@ -56,10 +56,11 @@ defmodule IdejoWeb.Layouts do
         <.notifications_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
         <.moderation_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
         <.theme_toggle />
-      </div>
+      </nav>
     </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
+    <%!-- AX-01: the skip link's target; tabindex lets it take the focus in every browser. --%>
+    <main id="main" tabindex="-1" class="px-4 py-20 sm:px-6 lg:px-8 focus:outline-none">
       <div class="mx-auto max-w-2xl space-y-4">
         {render_slot(@inner_block)}
       </div>
@@ -288,13 +289,18 @@ defmodule IdejoWeb.Layouts do
   """
   def theme_toggle(assigns) do
     ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
+    <div
+      role="group"
+      aria-label={gettext("Theme")}
+      class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full"
+    >
       <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0 transition-[left]" />
 
       <button
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
+        aria-label={gettext("Use the system's theme")}
       >
         <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -303,6 +309,7 @@ defmodule IdejoWeb.Layouts do
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
+        aria-label={gettext("Use the light theme")}
       >
         <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -311,6 +318,7 @@ defmodule IdejoWeb.Layouts do
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
+        aria-label={gettext("Use the dark theme")}
       >
         <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
