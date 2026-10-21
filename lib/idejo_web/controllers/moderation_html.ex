@@ -13,6 +13,8 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("message.close"), do: gettext("Closed an open message")
   def action_label("message.delete"), do: gettext("Deleted a message")
   def action_label("message.edit"), do: gettext("Edited a message")
+  def action_label("user.ban"), do: gettext("Banned an account")
+  def action_label("user.unban"), do: gettext("Lifted a ban")
   def action_label("topic.lock"), do: gettext("Locked a topic")
   def action_label("topic.unlock"), do: gettext("Unlocked a topic")
   def action_label("topic.pin"), do: gettext("Pinned a topic")
@@ -31,4 +33,12 @@ defmodule IdejoWeb.ModerationHTML do
   def target_label(%{target_type: "message"}), do: gettext("message")
   def target_label(%{target_type: "topic"}), do: gettext("topic")
   def target_label(%{target_type: "user"}), do: gettext("user")
+
+  @doc "When a ban ends, from its log entry: a time, or for good."
+  def ban_until(%{action: "user.ban", details: %{"until" => nil}}), do: gettext("for good")
+
+  def ban_until(%{action: "user.ban", details: %{"until" => until}}),
+    do: gettext("until %{time}", time: until)
+
+  def ban_until(_entry), do: nil
 end

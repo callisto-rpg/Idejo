@@ -6,4 +6,63 @@
   <section aria-labelledby="user-card-name" class="card bg-base-200 p-6">
     <.user_card card={@card} />
   </section>
+
+  <%!-- MO-02: bans, for server moderators; plain forms, each logged (MO-03). --%>
+  <section :if={@server_moderator?} id="ban" aria-labelledby="ban-heading" class="mt-6 space-y-2">
+    <h2 id="ban-heading" class="font-semibold">{gettext("Ban")}</h2>
+    <p :if={@banned? and is_nil(@user.banned_until)} id="banned-state">
+      {gettext("Banned for good.")}
+    </p>
+    <p :if={@banned? and @user.banned_until} id="banned-state">
+      {gettext("Banned until %{time}.",
+        time: Calendar.strftime(@user.banned_until, "%Y-%m-%d %H:%M UTC")
+      )}
+    </p>
+    <.form
+      :if={@bannable? and not @banned?}
+      for={%{}}
+      action={~p"/u/#{@user.id}/ban"}
+      method="post"
+      id="ban-form"
+      class="flex flex-wrap items-end gap-2"
+    >
+      <label>
+        <span class="label mb-1">{gettext("For")}</span>
+        <select name="days" class="select select-sm" id="ban-days">
+          <option value="1">{gettext("1 day")}</option>
+          <option value="7">{gettext("7 days")}</option>
+          <option value="30">{gettext("30 days")}</option>
+          <option value="365">{gettext("1 year")}</option>
+          <option value="forever">{gettext("For good")}</option>
+        </select>
+      </label>
+      <label class="grow">
+        <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+        <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+      </label>
+      <button
+        class="btn btn-sm btn-error"
+        data-confirm={gettext("Ban this account? It is signed out at once.")}
+      >
+        {gettext("Ban account")}
+      </button>
+    </.form>
+    <.form
+      :if={@user.banned_at}
+      for={%{}}
+      action={~p"/u/#{@user.id}/ban"}
+      method="delete"
+      id="unban-form"
+      class="flex flex-wrap items-end gap-2"
+    >
+      <label class="grow">
+        <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+        <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+      </label>
+      <button class="btn btn-sm">{gettext("Lift ban")}</button>
+    </.form>
+    <p :if={!@bannable? and !@user.banned_at} class="text-sm opacity-70" id="not-bannable">
+      {gettext("This account cannot be banned.")}
+    </p>
+  </section>
 </Layouts.app>

@@ -391,6 +391,15 @@ roles or the permission grid. Every later change must keep it true:
   badge. `Messages.edit_as_moderator/4` edits others' closed messages like an author's edit
   (versions kept). Each message has a "Moderate" form for moderators (`"moderate_message"`:
   close or delete, with a reason); every action is logged.
+- **Bans** (MO-02, `Accounts.ban_user/4`, `unban_user/3`; extra review: DV-06): only server
+  moderators (`Access.server_moderator?/1`: owners, administrators, or a role allowing
+  `:moderate` server-wide) ban, for 1/7/30/365 days or for good, from the user card page
+  (`BanController`, POST / DELETE `/u/{id}/ban`). Owners, administrators and oneself are never
+  banned. A ban deletes the account's session tokens (and the controller disconnects its
+  LiveViews); `Accounts.get_user_by_session_token/1` returns nothing for a banned account and
+  sign-in says it is banned only after the right password. `Accounts.banned?/2` ends a ban by
+  itself at `banned_until`. Logged as `user.ban` / `user.unban` with no category: server
+  moderators see those entries. `Moderation.moderator?/1` counts server moderators.
 - **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls
   `Moderation.record(moderator, "subject.action", target, reason: …, details: …)` in the same
   transaction as the action; `target` is a message, topic or user, and the entry keeps the

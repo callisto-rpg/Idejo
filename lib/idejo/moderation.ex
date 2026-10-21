@@ -16,7 +16,8 @@ defmodule Idejo.Moderation do
   without its entry. The log is append-only: the database refuses updates and deletes.
 
   Who sees it: owners and administrators see every entry; a moderator sees the entries about
-  the categories they may moderate (the `:moderate` right).
+  the categories they may moderate (the `:moderate` right), and server moderators the
+  server-wide ones too (bans).
   """
   import Ecto.Query, warn: false
 
@@ -198,14 +199,15 @@ defmodule Idejo.Moderation do
   end
 
   @doc """
-  Returns true when the user may moderate somewhere: an owner or administrator, or the
-  `:moderate` right in at least one category.
+  Returns true when the user may moderate somewhere: a server moderator (owners and
+  administrators included, `Access.server_moderator?/1`), or the `:moderate` right in at least
+  one category.
   """
   @spec moderator?(User.t() | nil) :: boolean()
   def moderator?(nil), do: false
 
   def moderator?(%User{} = user) do
-    Access.administrator?(user) or
+    Access.server_moderator?(user) or
       Category |> Access.where_allowed(user, :moderate) |> Repo.exists?()
   end
 
@@ -231,12 +233,19 @@ defmodule Idejo.Moderation do
     {Enum.take(rows, per_page), length(rows) > per_page}
   end
 
+  # Server-wide entries (bans, MO-02) have no category: server moderators see them.
   defp visible_to(query, user) do
-    if Access.administrator?(user) do
-      query
-    else
-      moderated = Category |> Access.where_allowed(user, :moderate) |> select([c], c.id)
-      where(query, [a], a.category_id in subquery(moderated))
+    cond do
+      Access.administrator?(user) ->
+        query
+
+      Access.server_moderator?(user) ->
+        moderated = Category |> Access.where_allowed(user, :moderate) |> select([c], c.id)
+        where(query, [a], is_nil(a.category_id) or a.category_id in subquery(moderated))
+
+      true ->
+        moderated = Category |> Access.where_allowed(user, :moderate) |> select([c], c.id)
+        where(query, [a], a.category_id in subquery(moderated))
     end
   end
 end

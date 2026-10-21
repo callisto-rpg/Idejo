@@ -15,19 +15,39 @@ defmodule IdejoWeb.UserSessionController do
   end
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
-    if user = Accounts.get_user_by_email_and_password(email, password) do
-      conn
-      |> put_flash(:info, gettext("Welcome back!"))
-      |> UserAuth.log_in_user(user, user_params)
-    else
-      form = Phoenix.Component.to_form(Map.delete(user_params, "password"), as: "user")
+    user = Accounts.get_user_by_email_and_password(email, password)
 
-      # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
-      conn
-      |> put_flash(:error, gettext("Invalid email or password"))
-      |> render(:new, page_title: gettext("Sign in"), form: form)
+    cond do
+      # MO-02: told only once the password is right, so nobody learns of a ban by guessing.
+      user && Accounts.banned?(user) ->
+        form = Phoenix.Component.to_form(Map.delete(user_params, "password"), as: "user")
+
+        conn
+        |> put_flash(:error, banned_message(user))
+        |> render(:new, page_title: gettext("Sign in"), form: form)
+
+      user ->
+        conn
+        |> put_flash(:info, gettext("Welcome back!"))
+        |> UserAuth.log_in_user(user, user_params)
+
+      true ->
+        form = Phoenix.Component.to_form(Map.delete(user_params, "password"), as: "user")
+
+        # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
+        conn
+        |> put_flash(:error, gettext("Invalid email or password"))
+        |> render(:new, page_title: gettext("Sign in"), form: form)
     end
   end
+
+  defp banned_message(%{banned_until: nil}), do: gettext("This account is banned.")
+
+  defp banned_message(%{banned_until: until}),
+    do:
+      gettext("This account is banned until %{time}.",
+        time: Calendar.strftime(until, "%Y-%m-%d %H:%M UTC")
+      )
 
   def delete(conn, _params) do
     conn

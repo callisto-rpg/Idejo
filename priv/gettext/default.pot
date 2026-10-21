@@ -82,7 +82,7 @@ msgstr ""
 msgid "Hi %{name},\n\nPlease verify your email address by visiting the link below:\n\n%{url}\n\nIf you didn't create an account, you can ignore this email.\n"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:27
+#: lib/idejo_web/controllers/user_session_controller.ex:39
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
@@ -133,7 +133,8 @@ msgstr ""
 #: lib/idejo_web/components/layouts/root.html.heex:34
 #: lib/idejo_web/controllers/user_registration_html/new.html.heex:13
 #: lib/idejo_web/controllers/user_session_controller.ex:12
-#: lib/idejo_web/controllers/user_session_controller.ex:28
+#: lib/idejo_web/controllers/user_session_controller.ex:27
+#: lib/idejo_web/controllers/user_session_controller.ex:40
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:9
 #: lib/idejo_web/controllers/user_session_html/new.html.heex:52
 #, elixir-autogen, elixir-format
@@ -150,7 +151,7 @@ msgstr ""
 msgid "Sign up"
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:34
+#: lib/idejo_web/controllers/user_session_controller.ex:54
 #, elixir-autogen, elixir-format
 msgid "Signed out."
 msgstr ""
@@ -203,7 +204,7 @@ msgstr ""
 msgid "We sent a new link to %{email}."
 msgstr ""
 
-#: lib/idejo_web/controllers/user_session_controller.ex:20
+#: lib/idejo_web/controllers/user_session_controller.ex:31
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
 msgstr ""
@@ -292,7 +293,7 @@ msgid "Name"
 msgstr ""
 
 #: lib/idejo_web/controllers/category_html/show.html.heex:48
-#: lib/idejo_web/controllers/moderation_html/log.html.heex:35
+#: lib/idejo_web/controllers/moderation_html/log.html.heex:36
 #: lib/idejo_web/controllers/notification_html/index.html.heex:46
 #: lib/idejo_web/controllers/search_html/index.html.heex:62
 #: lib/idejo_web/controllers/unread_html/index.html.heex:36
@@ -323,7 +324,7 @@ msgid "Owner"
 msgstr ""
 
 #: lib/idejo_web/controllers/category_html/show.html.heex:43
-#: lib/idejo_web/controllers/moderation_html/log.html.heex:30
+#: lib/idejo_web/controllers/moderation_html/log.html.heex:31
 #: lib/idejo_web/controllers/notification_html/index.html.heex:41
 #: lib/idejo_web/controllers/search_html/index.html.heex:57
 #: lib/idejo_web/controllers/unread_html/index.html.heex:31
@@ -333,7 +334,7 @@ msgid "Pages"
 msgstr ""
 
 #: lib/idejo_web/controllers/category_html/show.html.heex:45
-#: lib/idejo_web/controllers/moderation_html/log.html.heex:32
+#: lib/idejo_web/controllers/moderation_html/log.html.heex:33
 #: lib/idejo_web/controllers/notification_html/index.html.heex:43
 #: lib/idejo_web/controllers/search_html/index.html.heex:59
 #: lib/idejo_web/controllers/unread_html/index.html.heex:33
@@ -1697,22 +1698,22 @@ msgstr ""
 msgid "No moderator actions yet."
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html/log.html.heex:20
+#: lib/idejo_web/controllers/moderation_html/log.html.heex:21
 #, elixir-autogen, elixir-format
 msgid "Reason:"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:31
+#: lib/idejo_web/controllers/moderation_html.ex:33
 #, elixir-autogen, elixir-format
 msgid "message"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:32
+#: lib/idejo_web/controllers/moderation_html.ex:34
 #, elixir-autogen, elixir-format
 msgid "topic"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:33
+#: lib/idejo_web/controllers/moderation_html.ex:35
 #, elixir-autogen, elixir-format
 msgid "user"
 msgstr ""
@@ -1732,7 +1733,7 @@ msgstr ""
 msgid "Locked"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:16
+#: lib/idejo_web/controllers/moderation_html.ex:18
 #, elixir-autogen, elixir-format
 msgid "Locked a topic"
 msgstr ""
@@ -1752,12 +1753,14 @@ msgstr ""
 msgid "Pin"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:18
+#: lib/idejo_web/controllers/moderation_html.ex:20
 #, elixir-autogen, elixir-format
 msgid "Pinned a topic"
 msgstr ""
 
 #: lib/idejo_web/controllers/topic_html/show.html.heex:56
+#: lib/idejo_web/controllers/user_html/show.html.heex:40
+#: lib/idejo_web/controllers/user_html/show.html.heex:59
 #: lib/idejo_web/live/topic_live.ex:710
 #: lib/idejo_web/live/topic_live.ex:747
 #, elixir-autogen, elixir-format
@@ -1789,7 +1792,7 @@ msgstr ""
 msgid "Unlock"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:17
+#: lib/idejo_web/controllers/moderation_html.ex:19
 #, elixir-autogen, elixir-format
 msgid "Unlocked a topic"
 msgstr ""
@@ -1799,7 +1802,7 @@ msgstr ""
 msgid "Unpin"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:19
+#: lib/idejo_web/controllers/moderation_html.ex:21
 #, elixir-autogen, elixir-format
 msgid "Unpinned a topic"
 msgstr ""
@@ -1819,7 +1822,7 @@ msgstr ""
 msgid "Move to"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:20
+#: lib/idejo_web/controllers/moderation_html.ex:22
 #, elixir-autogen, elixir-format
 msgid "Moved a topic"
 msgstr ""
@@ -1857,7 +1860,7 @@ msgstr[1] ""
 msgid "Dismiss"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:22
+#: lib/idejo_web/controllers/moderation_html.ex:24
 #, elixir-autogen, elixir-format
 msgid "Dismissed reports about a message"
 msgstr ""
@@ -1909,7 +1912,7 @@ msgstr ""
 msgid "Resolve"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:21
+#: lib/idejo_web/controllers/moderation_html.ex:23
 #, elixir-autogen, elixir-format
 msgid "Resolved reports about a message"
 msgstr ""
@@ -1975,4 +1978,115 @@ msgstr[1] ""
 #: lib/idejo_web/live/topic_live.ex:350
 #, elixir-autogen, elixir-format
 msgid "This could not be done."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:32
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:35
+#, elixir-autogen, elixir-format
+msgid "1 year"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:34
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:33
+#, elixir-autogen, elixir-format
+msgid "7 days"
+msgstr ""
+
+#: lib/idejo_web/controllers/ban_controller.ex:24
+#, elixir-autogen, elixir-format
+msgid "Account banned."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:12
+#, elixir-autogen, elixir-format
+msgid "Ban"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:47
+#, elixir-autogen, elixir-format
+msgid "Ban account"
+msgstr ""
+
+#: lib/idejo_web/controllers/ban_controller.ex:38
+#, elixir-autogen, elixir-format
+msgid "Ban lifted."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "Ban this account? It is signed out at once."
+msgstr ""
+
+#: lib/idejo_web/controllers/moderation_html.ex:16
+#, elixir-autogen, elixir-format
+msgid "Banned an account"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:14
+#, elixir-autogen, elixir-format
+msgid "Banned for good."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:17
+#, elixir-autogen, elixir-format
+msgid "Banned until %{time}."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:30
+#, elixir-autogen, elixir-format
+msgid "For"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:36
+#, elixir-autogen, elixir-format
+msgid "For good"
+msgstr ""
+
+#: lib/idejo_web/controllers/user_html/show.html.heex:62
+#, elixir-autogen, elixir-format
+msgid "Lift ban"
+msgstr ""
+
+#: lib/idejo_web/controllers/moderation_html.ex:17
+#, elixir-autogen, elixir-format
+msgid "Lifted a ban"
+msgstr ""
+
+#: lib/idejo_web/controllers/ban_controller.ex:28
+#: lib/idejo_web/controllers/user_html/show.html.heex:65
+#, elixir-autogen, elixir-format
+msgid "This account cannot be banned."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_controller.ex:48
+#, elixir-autogen, elixir-format
+msgid "This account is banned until %{time}."
+msgstr ""
+
+#: lib/idejo_web/controllers/user_session_controller.ex:44
+#, elixir-autogen, elixir-format
+msgid "This account is banned."
+msgstr ""
+
+#: lib/idejo_web/controllers/ban_controller.ex:42
+#, elixir-autogen, elixir-format
+msgid "This ban could not be lifted."
+msgstr ""
+
+#: lib/idejo_web/controllers/moderation_html.ex:38
+#, elixir-autogen, elixir-format
+msgid "for good"
+msgstr ""
+
+#: lib/idejo_web/controllers/moderation_html.ex:41
+#, elixir-autogen, elixir-format
+msgid "until %{time}"
 msgstr ""
