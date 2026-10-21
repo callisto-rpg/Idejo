@@ -512,7 +512,10 @@ load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; d
 ```
 
 Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:
-`docs/deploying.md`.
+`docs/deploying.md`. For the people who use it: `docs/admin-guide.md` (admin panel,
+permissions, moderation) and `docs/member-guide.md` (one page: the keys and the composer).
+They quote the interface's labels: a change to a label, a setting or a workflow updates them
+in the same pull request (DV-01).
 
 ## Milestones (MVP §7)
 

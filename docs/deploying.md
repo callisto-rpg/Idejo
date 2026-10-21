@@ -255,6 +255,9 @@ The wizard asks for:
 When you submit, you are signed in and taken to **Admin → Email**: press **Send test email**
 to check that email works. The wizard is then gone for good.
 
+Next, set up categories, roles and permissions with the [admin guide](admin-guide.md), and
+give your members the one-page [member guide](member-guide.md).
+
 ## Day-to-day operations
 
 Run these from `~/idejo`. To save typing, define a shortcut once:
