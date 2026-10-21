@@ -46,6 +46,20 @@ defmodule IdejoWeb.FirstMessageEditorTest do
     refute has_element?(lv, "#topic_body-preview")
   end
 
+  @tag req: "TP-11"
+  test "TP-11 the preview shows Markdown and code blocks as they will be posted", %{
+    conn: conn
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/c/general/new")
+    type(lv, "Code", "A *list*:\n\n- one\n\n```\nIO.puts(:hi)\n```")
+    lv |> element("#topic_body-preview-tab") |> render_click()
+
+    preview = lv |> element("#topic_body-preview") |> render()
+    assert preview =~ "<em>list</em>"
+    assert preview =~ "<li>one</li>"
+    assert preview =~ ~r/<pre[^>]*><code[^>]*>IO.puts\(:hi\)/
+  end
+
   @tag req: "TP-02"
   test "TP-02 nobody sees the first message while it is typed", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/c/general/new")

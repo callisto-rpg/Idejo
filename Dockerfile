@@ -76,6 +76,9 @@ RUN mix assets.deploy
 COPY config/runtime.exs config/
 
 COPY rel rel
+# LI-01: the release carries the licence and the NOTICE (copy_licence/1 in mix.exs).
+COPY LICENSE NOTICE ./
+COPY LICENSES LICENSES
 RUN mix release
 
 # start a new build stage so that the final image will only contain

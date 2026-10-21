@@ -15,8 +15,18 @@ defmodule Idejo.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      dialyzer: [plt_local_path: "priv/plts"]
+      dialyzer: [plt_local_path: "priv/plts"],
+      releases: [idejo: [steps: [:assemble, &copy_licence/1]]]
     ]
+  end
+
+  @licence_files ~w(LICENSE NOTICE LICENSES)
+
+  # LI-01: the licence text and the NOTICE ship with every install, at the release's root.
+  @doc false
+  def copy_licence(%Mix.Release{path: path} = release) do
+    for file <- @licence_files, do: File.cp_r!(file, Path.join(path, file))
+    release
   end
 
   # Configuration for the OTP application.

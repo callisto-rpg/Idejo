@@ -138,12 +138,20 @@ roles or the permission grid. Every later change must keep it true:
   # SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   # SPDX-License-Identifier: AGPL-3.0-only
   ```
-  Files that cannot hold comments are covered in `REUSE.toml`.
+  Files that cannot hold comments are covered in `REUSE.toml`. `LICENSE`, `NOTICE` and
+  `LICENSES/` ship at the root of every release (`copy_licence/1` in `mix.exs`, and the
+  Dockerfile copies them into the build).
 - **Tests per requirement** (DV-02): name the test after the ID and tag it.
   ```elixir
   @tag req: "GM-03"
   test "GM-03 appends never extend the window" do
   ```
+  `test/idejo/requirements_test.exs` enforces it: every MVP ID (read from the MVP sheet's
+  requirements table by `Idejo.Requirements`) has a tagged test, each tagged test starts with
+  its ID, and every tagged ID exists in a sheet. IDs whose tests come with a later PR are in
+  its `@pending` (remove the ID when its tests land, or the test fails); process-only IDs
+  (DV-05, LI-08) are in `@by_review`. Requirements met by repository files (SP-01, LI-01,
+  DV-01, DV-03, DV-04, DV-06) are tested in `test/idejo/repository_test.exs`.
 - **Async tests and shared rows**: async tests run side by side, each in its own sandbox
   transaction, and a lock taken there lasts until the test ends (`Forum` locks categories,
   `Access` locks roles). So in async tests: give unique columns values of their own

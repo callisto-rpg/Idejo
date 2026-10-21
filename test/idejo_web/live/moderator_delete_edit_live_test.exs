@@ -54,6 +54,33 @@ defmodule IdejoWeb.ModeratorDeleteEditLiveTest do
     refute has_element?(mod_view, "#message-#{a.id}-moderate")
   end
 
+  @tag req: "MO-06"
+  test "MO-06 moderators see every earlier version of an edited message, even deleted", %{
+    topic: topic,
+    author: author,
+    moderator: moderator
+  } do
+    {:ok, message} = Forum.post_message(author, topic, %{"body" => "Draft one"})
+    {:ok, message} = Messages.edit(author, message, "Draft two")
+    {:ok, message} = Messages.edit(author, message, "Final words")
+
+    {:ok, mod_view, _html} = watch(log_in_user(build_conn(), moderator), topic)
+    versions = mod_view |> element("#message-#{message.id}-versions") |> render()
+    assert versions =~ "Draft one"
+    assert versions =~ "Draft two"
+
+    {:ok, _} = Messages.delete_as_moderator(moderator, message, "Spam")
+    {:ok, mod_view, _html} = watch(log_in_user(build_conn(), moderator), topic)
+    assert has_element?(mod_view, "#message-#{message.id}", "Final words")
+    versions = mod_view |> element("#message-#{message.id}-versions") |> render()
+    assert versions =~ "Draft one"
+    assert versions =~ "Draft two"
+
+    {:ok, reader, _html} = watch(build_conn(), topic)
+    refute has_element?(reader, "#message-#{message.id}-versions")
+    refute render(reader) =~ "Draft"
+  end
+
   @tag req: "MO-02"
   test "MO-02 a moderator deletes and edits from the topic, with a reason", %{
     topic: topic,
