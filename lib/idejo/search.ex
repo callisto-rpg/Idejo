@@ -59,6 +59,8 @@ defmodule Idejo.Search do
         join: t in Topic,
         on: t.id == m.topic_id,
         where: t.category_id in subquery(viewable),
+        # MO-02: a message deleted by a moderator is never found.
+        where: is_nil(m.deleted_at),
         where:
           fragment("? @@ websearch_to_tsquery('simple', ?)", m.search_vector, ^text) or
             (fragment(

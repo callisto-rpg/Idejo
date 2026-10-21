@@ -81,7 +81,7 @@ defmodule Idejo.Moderation do
           {:ok, Report.t()} | {:error, :forbidden | Ecto.Changeset.t()}
   def report_message(%User{} = user, %Message{} = message, attrs) do
     cond do
-      message.author_id == user.id ->
+      message.author_id == user.id or message.deleted_at != nil ->
         {:error, :forbidden}
 
       is_nil(Idejo.Forum.get_viewable_message(user, message.id)) ->
@@ -183,6 +183,18 @@ defmodule Idejo.Moderation do
         {:ok, count}
       end
     end
+  end
+
+  @doc """
+  Marks a message's open reports resolved by `moderator`, inside the caller's transaction:
+  when the message is deleted (MO-02), which answers them.
+  """
+  @spec resolve_reports_of(User.t(), Message.t()) :: {non_neg_integer(), nil}
+  def resolve_reports_of(%User{} = moderator, %Message{id: id}) do
+    Repo.update_all(
+      from(r in Report, where: r.message_id == ^id and r.status == "open"),
+      set: [status: "resolved", handled_by_id: moderator.id, handled_at: DateTime.utc_now()]
+    )
   end
 
   @doc """

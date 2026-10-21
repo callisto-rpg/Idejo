@@ -46,7 +46,7 @@ defmodule IdejoWeb.ReportController do
     user = conn.assigns.current_scope.user
 
     case Forum.get_viewable_message(user, id) do
-      %{author_id: author_id} = message when author_id != user.id ->
+      %{author_id: author_id, deleted_at: nil} = message when author_id != user.id ->
         Idejo.Repo.preload(message, :author)
 
       _ ->

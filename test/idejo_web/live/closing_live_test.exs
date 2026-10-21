@@ -64,10 +64,16 @@ defmodule IdejoWeb.ClosingLiveTest do
     refute has_element?(member_view, "#message-#{open.id} button", "Close message")
 
     {:ok, lv, _html} = watch(log_in_user(build_conn(), moderator), topic)
-    lv |> element("#message-#{open.id} button", "Close message") |> render_click()
+    assert has_element?(lv, "#message-#{open.id}-moderate-form button", "Close message")
+
+    # With an optional reason for the moderation log (MO-03).
+    lv
+    |> form("#message-#{open.id}-moderate-form", %{"reason" => "Left open"})
+    |> render_submit(%{"do" => "close"})
 
     assert Repo.reload!(open).state == "closed"
     refute has_element?(lv, "#message-#{open.id} button", "Close message")
+    assert Repo.one!(Idejo.Moderation.Action).reason == "Left open"
   end
 
   @tag req: "GM-16"

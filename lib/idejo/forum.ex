@@ -479,7 +479,7 @@ defmodule Idejo.Forum do
     result =
       cond do
         not can_start_topic?(user, category) -> {:error, :forbidden}
-        source && !get_viewable_message(user, source.id) -> {:error, :forbidden}
+        source && !forkable?(user, source) -> {:error, :forbidden}
         not form.valid? -> {:error, Map.put(form, :action, :insert)}
         true -> Repo.transact(fn -> insert_topic(user, category, form.changes, source) end)
       end
@@ -489,6 +489,14 @@ defmodule Idejo.Forum do
          do: Messages.broadcast(source.topic_id, {:forked, source.id})
 
     result
+  end
+
+  # TP-09: a message the user may view, not deleted by a moderator (MO-02).
+  defp forkable?(user, source) do
+    case get_viewable_message(user, source.id) do
+      %Message{deleted_at: nil} -> true
+      _ -> false
+    end
   end
 
   @doc """

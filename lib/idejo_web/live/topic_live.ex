@@ -331,20 +331,30 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
 
-  # A moderator closes someone's open message (GM-16).
-  def handle_event("close_message", %{"id" => id}, socket) do
-    with %{state: "open"} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
-         {:ok, _} <- Messages.close_as_moderator(user(socket), message) do
-      {:noreply, socket}
-    else
-      _ -> {:noreply, put_flash(socket, :error, gettext("This message cannot be closed."))}
+  # A moderator closes someone's open message (GM-16) or deletes a message (MO-02), with an
+  # optional reason for the log. The changed message arrives as an event.
+  def handle_event("moderate_message", %{"message_id" => id, "do" => action} = params, socket) do
+    message = Enum.find(socket.assigns.messages, &(&1.id == id))
+    reason = params["reason"]
+
+    result =
+      case {action, message} do
+        {_, nil} -> :error
+        {"close", %{state: "open"}} -> Messages.close_as_moderator(user(socket), message, reason)
+        {"delete", _} -> Messages.delete_as_moderator(user(socket), message, reason)
+        _ -> :error
+      end
+
+    case result do
+      {:ok, _} -> {:noreply, socket}
+      _ -> {:noreply, put_flash(socket, :error, gettext("This could not be done."))}
     end
   end
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
-      %{state: "closed"} = message ->
+      %{state: "closed", deleted_at: nil} = message ->
         form = to_form(%{"body" => message.body_md}, as: :edit)
         {:noreply, assign(socket, editing: {id, form}, editor_mode: :write, preview_html: "")}
 
@@ -382,11 +392,18 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("editor_mode", %{"mode" => "write"}, socket),
     do: {:noreply, assign(socket, :editor_mode, :write)}
 
-  def handle_event("save_edit", %{"edit" => %{"body" => body}}, socket) do
+  def handle_event("save_edit", %{"edit" => %{"body" => body} = params}, socket) do
     {id, _form} = socket.assigns.editing
     message = Enum.find(socket.assigns.messages, &(&1.id == id))
+    user = user(socket)
 
-    case Messages.edit(user(socket), message, body) do
+    # The author edits (GM-10); a moderator edits someone else's message (MO-02), logged.
+    result =
+      if message.author_id == user.id,
+        do: Messages.edit(user, message, body),
+        else: Messages.edit_as_moderator(user, message, body, params["reason"])
+
+    case result do
       # The edited message arrives like everyone else's view of it, as an event.
       {:ok, _message} ->
         {:noreply, assign(socket, :editing, nil)}
@@ -418,6 +435,7 @@ defmodule IdejoWeb.TopicLive do
         before: before,
         mine: mine,
         later: after_,
+        deleted_runs: Map.merge(deleted_runs(before), deleted_runs(after_)),
         composer_upload: uploads[:composer_image],
         edit_upload: uploads[:edit_image]
       )
@@ -451,7 +469,12 @@ defmodule IdejoWeb.TopicLive do
       </p>
 
       <ol id="messages" class="space-y-6">
-        <li :for={message <- @before} :key={message.id} id={"message-#{message.id}"}>
+        <li
+          :for={message <- @before}
+          :key={message.id}
+          id={"message-#{message.id}"}
+          hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+        >
           <.message
             message={message}
             topic={@topic}
@@ -461,6 +484,7 @@ defmodule IdejoWeb.TopicLive do
             can_moderate?={@can_moderate?}
             can_fork?={@can_fork?}
             forks={Map.get(@forks, message.id, [])}
+            deleted_run={@deleted_runs[message.id]}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -479,7 +503,12 @@ defmodule IdejoWeb.TopicLive do
             image_error={@image_error}
           />
         </li>
-        <li :for={message <- @later} :key={message.id} id={"message-#{message.id}"}>
+        <li
+          :for={message <- @later}
+          :key={message.id}
+          id={"message-#{message.id}"}
+          hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+        >
           <.message
             message={message}
             topic={@topic}
@@ -489,6 +518,7 @@ defmodule IdejoWeb.TopicLive do
             can_moderate?={@can_moderate?}
             can_fork?={@can_fork?}
             forks={Map.get(@forks, message.id, [])}
+            deleted_run={@deleted_runs[message.id]}
             editing={@editing}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
@@ -518,6 +548,38 @@ defmodule IdejoWeb.TopicLive do
     </div>
     """
   end
+
+  # Who may edit this message: its author while it is closed (GM-10), or a moderator, someone
+  # else's closed message (MO-02). Deleted messages are edited by nobody.
+  defp edit_rights(%{message: message, viewer: viewer} = assigns) do
+    editable? = viewer != nil and message.state == "closed" and is_nil(message.deleted_at)
+    own? = viewer != nil and viewer.id == message.author_id
+
+    [
+      own_closed?: editable? and own? and assigns.can_post?,
+      mod_edit?: editable? and not own? and assigns.can_moderate?
+    ]
+  end
+
+  # MO-02: for readers, a run of deleted messages shows as one line. Maps each deleted
+  # message's id to `{:first, count}` for the first of its run, `:rest` for the others.
+  defp deleted_runs(messages) do
+    messages
+    |> Enum.chunk_by(&(&1.deleted_at != nil))
+    |> Enum.filter(fn [first | _] -> first.deleted_at != nil end)
+    |> Enum.flat_map(fn [first | rest] = run ->
+      [{first.id, {:first, length(run)}} | Enum.map(rest, &{&1.id, :rest})]
+    end)
+    |> Map.new()
+  end
+
+  defp deleted_text({:first, count}),
+    do:
+      ngettext(
+        "Message deleted by a moderator",
+        "%{count} messages deleted by a moderator",
+        count
+      )
 
   # The messages before the author's open message and the ones after it; with none open,
   # everything comes before and the composer goes to the end.
@@ -554,6 +616,7 @@ defmodule IdejoWeb.TopicLive do
   attr :can_moderate?, :boolean, required: true
   attr :can_fork?, :boolean, required: true
   attr :forks, :list, required: true
+  attr :deleted_run, :any, default: nil
   attr :editing, :any, required: true
   attr :editor_mode, :atom, required: true
   attr :preview_html, :string, required: true
@@ -568,16 +631,21 @@ defmodule IdejoWeb.TopicLive do
         _ -> nil
       end
 
-    assigns =
-      assign(assigns,
-        edit_form: editing,
-        own_closed?:
-          assigns.can_post? and assigns.viewer != nil and
-            assigns.viewer.id == assigns.message.author_id and assigns.message.state == "closed"
-      )
+    assigns = assign(assigns, [edit_form: editing] ++ edit_rights(assigns))
 
     ~H"""
-    <article aria-labelledby={"message-#{@message.id}-author"}>
+    <%!-- MO-02: readers see a placeholder for a deleted message, one line for a run of them. --%>
+    <p
+      :if={@message.deleted_at && !@can_moderate? && match?({:first, _}, @deleted_run)}
+      id={"message-#{@message.id}-deleted"}
+      class="text-sm italic opacity-70"
+    >
+      {deleted_text(@deleted_run)}
+    </p>
+    <article
+      :if={is_nil(@message.deleted_at) or @can_moderate?}
+      aria-labelledby={"message-#{@message.id}-author"}
+    >
       <p id={"message-#{@message.id}-author"} class="flex items-center gap-2">
         <.author_line author={@message.author} roles={@roles} />
         <%!-- GM-07, AX-03: the open state has no visible sign, only this text. --%>
@@ -593,6 +661,13 @@ defmodule IdejoWeb.TopicLive do
             {Calendar.strftime(@message.opened_at, "%Y-%m-%d %H:%M UTC")}
           </time>
         </.link>
+        <span
+          :if={@message.deleted_at}
+          id={"message-#{@message.id}-deleted"}
+          class="badge badge-sm badge-warning"
+        >
+          {gettext("Deleted by a moderator")}
+        </span>
       </p>
       <blockquote
         :if={@message.reply_to}
@@ -602,7 +677,12 @@ defmodule IdejoWeb.TopicLive do
         <.link href={~p"/m/#{@message.reply_to.id}"} class="link">
           {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
         </.link>
-        <span class="opacity-70">{Forum.excerpt(@message.reply_to)}</span>
+        <span :if={is_nil(@message.reply_to.deleted_at)} class="opacity-70">
+          {Forum.excerpt(@message.reply_to)}
+        </span>
+        <span :if={@message.reply_to.deleted_at} class="italic opacity-70">
+          {gettext("Message deleted by a moderator")}
+        </span>
       </blockquote>
       <.form
         :if={@edit_form}
@@ -613,11 +693,22 @@ defmodule IdejoWeb.TopicLive do
       >
         <MessageComponents.editor
           field={@edit_form[:body]}
-          label={gettext("Edit your message (Markdown)")}
+          label={
+            if @mod_edit?,
+              do: gettext("Edit this message (Markdown)"),
+              else: gettext("Edit your message (Markdown)")
+          }
           mode={@editor_mode}
           preview_html={@preview_html}
           upload={@edit_upload}
           image_error={@image_error}
+        />
+        <.input
+          :if={@mod_edit?}
+          field={@edit_form[:reason]}
+          type="text"
+          label={gettext("Reason (shown in the moderation log)")}
+          maxlength="500"
         />
         <div class="flex gap-2">
           <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
@@ -639,18 +730,46 @@ defmodule IdejoWeb.TopicLive do
           <span :if={i > 0}>, </span><.link href={~p"/t/#{fork.id}/#{fork.slug}"} class="link">{fork.title}</.link>
         <% end %>
       </p>
-      <button
-        :if={@can_moderate? and @message.state == "open" and @viewer.id != @message.author_id}
-        type="button"
-        class="link text-sm mr-3"
-        phx-click="close_message"
-        phx-value-id={@message.id}
-        data-confirm={gettext("Close this message? Its author will start a new one.")}
+      <%!-- GM-16, MO-02: moderator actions, each with an optional reason for the log (MO-03). --%>
+      <details
+        :if={@can_moderate? and is_nil(@message.deleted_at) and @viewer.id != @message.author_id}
+        id={"message-#{@message.id}-moderate"}
+        class="text-sm mt-1"
       >
-        {gettext("Close message")}
-      </button>
+        <summary class="cursor-pointer opacity-70">{gettext("Moderate")}</summary>
+        <form
+          phx-submit="moderate_message"
+          id={"message-#{@message.id}-moderate-form"}
+          class="mt-2 flex flex-wrap items-end gap-2"
+        >
+          <input type="hidden" name="message_id" value={@message.id} />
+          <label class="grow">
+            <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+            <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+          </label>
+          <button
+            :if={@message.state == "open"}
+            name="do"
+            value="close"
+            class="btn btn-sm"
+            data-confirm={gettext("Close this message? Its author will start a new one.")}
+          >
+            {gettext("Close message")}
+          </button>
+          <button
+            name="do"
+            value="delete"
+            class="btn btn-sm btn-error"
+            data-confirm={
+              gettext("Delete this message? Readers will see that a moderator deleted it.")
+            }
+          >
+            {gettext("Delete message")}
+          </button>
+        </form>
+      </details>
       <button
-        :if={@own_closed? and !@edit_form}
+        :if={(@own_closed? or @mod_edit?) and !@edit_form}
         type="button"
         class="link text-sm mr-3"
         phx-click="edit"
@@ -660,7 +779,7 @@ defmodule IdejoWeb.TopicLive do
       </button>
       <%!-- MO-01: anyone signed in may report someone else's message. --%>
       <.link
-        :if={@viewer && @viewer.id != @message.author_id}
+        :if={@viewer && @viewer.id != @message.author_id && is_nil(@message.deleted_at)}
         href={~p"/m/#{@message.id}/report"}
         class="link text-sm mr-3"
         id={"message-#{@message.id}-report"}
@@ -668,7 +787,7 @@ defmodule IdejoWeb.TopicLive do
         {gettext("Report")}
       </.link>
       <.link
-        :if={@can_fork?}
+        :if={@can_fork? and is_nil(@message.deleted_at)}
         href={~p"/m/#{@message.id}/new-topic"}
         class="link text-sm mr-3"
         id={"message-#{@message.id}-fork"}
@@ -676,7 +795,7 @@ defmodule IdejoWeb.TopicLive do
         {gettext("New topic from this")}
       </.link>
       <.link
-        :if={@can_post?}
+        :if={@can_post? and is_nil(@message.deleted_at)}
         href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
         class="link text-sm"
         aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}

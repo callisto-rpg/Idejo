@@ -54,8 +54,11 @@ defmodule IdejoWeb.TopicController do
   # TP-09: the message this topic was started from, when the viewer may see it.
   defp forked_from(_user, %{forked_from_message_id: nil}), do: nil
 
+  # A source deleted by a moderator (MO-02) is not shown either.
   defp forked_from(user, topic) do
-    with %{} = message <- Forum.get_viewable_message(user, topic.forked_from_message_id),
-         do: Idejo.Repo.preload(message, :author)
+    case Forum.get_viewable_message(user, topic.forked_from_message_id) do
+      %{deleted_at: nil} = message -> Idejo.Repo.preload(message, :author)
+      _ -> nil
+    end
   end
 end
