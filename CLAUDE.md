@@ -424,6 +424,15 @@ roles or the permission grid. Every later change must keep it true:
   `X-Forwarded-For` only when the peer is on a private network (Caddy); `:behind_proxy` turns
   it off. Off in tests (`config :idejo, :rate_limits, enabled: false`); `rate_limit_test.exs`
   turns them on (not async) and uses addresses and accounts of its own.
+- **Command-line recovery** (AD-09, `Idejo.Release`; extra review: DV-06):
+  `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `health`) runs
+  `Idejo.Release` functions with `bin/idejo rpc` when the server is running, else
+  `bin/idejo eval` (which starts only the repo, through `Ecto.Migrator.with_repo`). They print
+  on standard output (under rpc standard error goes to the server's log) and fail with
+  `exit({:shutdown, 1})`, never `System.halt/1`, which under rpc would stop the server. The
+  owner reset prints a random password, ends every session (disconnecting LiveViews when the
+  endpoint runs: the one web call `Release` makes) and is audited as `user.password_reset`
+  with no admin. Backup and restore (AD-05) join this script. Usage: `docs/deploying.md`.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and

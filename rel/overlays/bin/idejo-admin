@@ -1,0 +1,55 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Command-line recovery (AD-09). In the production bundle:
+#
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env exec app bin/idejo-admin health
+#
+# or, when the app container is not running, `run --rm app` instead of `exec app`.
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+usage() {
+  cat <<USAGE
+Usage: bin/idejo-admin COMMAND
+
+Commands:
+  reset-owner-password [USERNAME]   give an owner a new password and end their sessions
+  health                            check the server, database, migrations and uploads
+USAGE
+}
+
+# Inside the running server when there is one (so ended sessions are disconnected at once),
+# else in a fresh VM that starts only the database connection.
+run() {
+  if ./idejo pid >/dev/null 2>&1; then
+    exec ./idejo rpc "$1"
+  else
+    exec ./idejo eval "$1"
+  fi
+}
+
+# Passes an argument to Elixir as a string literal, whatever it contains.
+quote() {
+  printf '"%s"' "$(printf '%s' "$1" | sed 's/[\\"#]/\\&/g')"
+}
+
+case "${1:-}" in
+  reset-owner-password)
+    if [ $# -gt 2 ]; then usage >&2; exit 64; fi
+    run "Idejo.Release.reset_owner_password($(quote "${2:-}"))"
+    ;;
+  health)
+    if [ $# -gt 1 ]; then usage >&2; exit 64; fi
+    run "Idejo.Release.health()"
+    ;;
+  -h | --help | help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 64
+    ;;
+esac

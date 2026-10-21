@@ -271,6 +271,7 @@ source ~/.bashrc
 | Restart the app | `idejo restart app` |
 | Stop everything | `idejo down` (data is kept in Docker volumes) |
 | Start again | `idejo up -d` |
+| Health check | `idejo exec app bin/idejo-admin health` |
 
 **Updating to a new version:**
 
@@ -295,11 +296,37 @@ Copy the dumps off the server from time to time (e.g. `scp` to your computer). T
 certificates live in the `caddy_data` volume; never delete it with `down -v`, or Caddy has to
 request new ones and can hit Let's Encrypt rate limits.
 
+## Recovery from the command line
+
+Everything day-to-day happens in the web admin panel. When that is out of reach, the app
+container carries a recovery tool, `bin/idejo-admin` (AD-09):
+
+```sh
+idejo exec app bin/idejo-admin health
+idejo exec app bin/idejo-admin reset-owner-password
+```
+
+If the app container is not running (it keeps restarting, or you stopped it), use
+`idejo run --rm app bin/idejo-admin …` instead of `idejo exec app bin/idejo-admin …`.
+
+**`health`** checks that the server is running, the database answers, every migration has
+run, an owner exists and the uploads directory can be written, one line each. It ends with
+exit status 1 when a check failed, so it can drive a monitoring script.
+
+**`reset-owner-password [USERNAME]`** gives an owner a new random password and prints it
+once. Every session of that account ends, open pages included. If the server has more than
+one owner, name the one to reset; the command lists them. Sign in with the printed password,
+then change it in your profile. The reset is recorded in the audit log.
+
+Nothing else is needed: the command works without email and whether or not you remember the
+owner's address.
+
 ## Troubleshooting
 
 | Symptom | Likely cause and fix |
 | --- | --- |
 | Caddy logs `challenge failed` or `no such host` | DNS does not point at the server yet (re-check `dig`, step 1), or ports 80/443 are closed in the provider's firewall. Caddy retries by itself. |
+| Owner password lost, or email not set up for a reset link | `idejo exec app bin/idejo-admin reset-owner-password` (see [Recovery](#recovery-from-the-command-line)). |
 | `app` keeps restarting | `idejo logs app`. `SECRET_KEY_BASE is missing` or `DATABASE_URL` errors mean an empty value in `deploy/.env`. |
 | `password authentication failed for user "idejo"` | `POSTGRES_PASSWORD` was changed after the first start. The database keeps the first password: restore the old value. |
 | Build stops with `Killed` or exit code 137 | Out of memory: add swap (step 4) and run the `up` command again. |
