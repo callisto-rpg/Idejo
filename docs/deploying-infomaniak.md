@@ -385,25 +385,35 @@ idejo up -d --build
 
 ### Backups
 
-Automatic nightly backups come in a later version (AD-05). Until then:
+Idejo backs itself up every night at 03:00 UTC (the database and the images, in one file)
+and keeps the last 7, on the server.
 
-1. **Database copy on the server**, before every update:
-
-   ```sh
-   mkdir -p ~/backups
-   idejo exec -T db pg_dump -U idejo -Fc idejo > ~/backups/idejo-$(date +%F).dump
-   ```
-
-2. **Copy the backups to your computer** from time to time. **On your computer:**
+1. **Make a backup now**, before every update:
 
    ```sh
-   scp -r ubuntu@203.0.113.10:backups ./idejo-backups
+   idejo exec app bin/idejo-admin backup
    ```
+
+2. **Copy the backups to your computer** from time to time. On the server:
+
+   ```sh
+   idejo cp app:/data/backups/. ~/idejo-backups
+   ```
+
+   Then **on your computer:**
+
+   ```sh
+   scp -r ubuntu@203.0.113.10:idejo-backups ./
+   ```
+
+   Keep a copy of `deploy/.env` with them, in your password manager.
 
 3. **Infomaniak snapshots:** on your VPS page in the Manager, **Snapshots** saves the whole
    server. Take one before big changes.
 
-Never run `idejo down -v`: the `-v` deletes your database and certificates.
+To put a backup back, see "Restore a backup" in [the deployment guide](deploying.md#restore-a-backup).
+
+Never run `idejo down -v`: the `-v` deletes your database, backups and certificates.
 
 ---
 

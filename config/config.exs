@@ -35,6 +35,18 @@ config :idejo, :base_uri, "http://localhost:4000"
 # Compose volume /data/uploads by default).
 config :idejo, :uploads_dir, Path.expand("../tmp/uploads", __DIR__)
 
+# AD-05: nightly backups (database and uploads) on local disk, the newest 7 kept. Backups are
+# Oban jobs; the cron runs in UTC.
+config :idejo, :backup_dir, Path.expand("../tmp/backups", __DIR__)
+
+config :idejo, Oban,
+  repo: Idejo.Repo,
+  queues: [maintenance: 1],
+  plugins: [
+    Oban.Plugins.Pruner,
+    {Oban.Plugins.Cron, crontab: [{"0 3 * * *", Idejo.Backup.Worker}]}
+  ]
+
 # SP-02: passwords are hashed with Argon2id at a pinned cost (3 passes, 2^16 KiB = 64 MiB,
 # 4 lanes), so a dependency update cannot silently weaken it. Tests lower the cost.
 config :argon2_elixir, argon2_type: 2, t_cost: 3, m_cost: 16, parallelism: 4

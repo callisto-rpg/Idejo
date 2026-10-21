@@ -11,7 +11,15 @@ defmodule Idejo.ReleaseTest do
   alias Idejo.Accounts
   alias Idejo.Accounts.UserToken
   alias Idejo.Audit
+  alias Idejo.Backup
   alias Idejo.Release
+
+  # The health check reads the backup directory; other tests leave backups there.
+  setup do
+    File.rm_rf!(Backup.dir())
+    File.mkdir_p!(Backup.dir())
+    :ok
+  end
 
   describe "reset_owner_password!/1" do
     @tag req: "AD-09"
@@ -92,11 +100,11 @@ defmodule Idejo.ReleaseTest do
 
   describe "health" do
     @tag req: "AD-09"
-    test "AD-09 checks the server, database, migrations, owner and uploads" do
+    test "AD-09 checks the server, database, migrations, owner, uploads and backup" do
       checks = Release.health_checks()
 
       assert Enum.map(checks, &elem(&1, 0)) ==
-               ~w(server database migrations owner uploads)
+               ~w(server database migrations owner uploads backup)
 
       assert {"owner", :warning, _} = List.keyfind(checks, "owner", 0)
       assert Enum.all?(checks, &(elem(&1, 1) in [:ok, :warning]))
@@ -123,6 +131,41 @@ defmodule Idejo.ReleaseTest do
 
       output = capture_io(fn -> assert catch_exit(Release.health()) == {:shutdown, 1} end)
       assert output =~ "Some checks failed."
+    end
+  end
+
+  describe "backup and restore" do
+    defp backup_check, do: List.keyfind(Release.health_checks(), "backup", 0)
+
+    @tag req: "AD-09"
+    test "AD-09 health reports the last backup" do
+      assert {"backup", :warning, "none yet" <> _} = backup_check()
+
+      path = Path.join(Backup.dir(), "idejo-20261020-030000.tar")
+      File.write!(path, "")
+      assert {"backup", :ok, "idejo-20261020-030000.tar, 0 h ago"} = backup_check()
+
+      File.touch!(path, System.os_time(:second) - 27 * 3600)
+      assert {"backup", :error, detail} = backup_check()
+      assert detail =~ "27 h ago"
+    end
+
+    @tag req: "AD-09", pg_tools: true
+    test "AD-09 backup makes one now" do
+      output = capture_io(fn -> assert Release.backup() == :ok end)
+
+      assert [%{path: path}] = Backup.list()
+      assert output =~ "Backup written to #{path}"
+    end
+
+    @tag req: "AD-09"
+    test "AD-09 restore refuses while the server runs" do
+      output =
+        capture_io(fn ->
+          assert catch_exit(Release.restore("idejo-20261020-030000.tar")) == {:shutdown, 1}
+        end)
+
+      assert output =~ "Stop the server before restoring."
     end
   end
 end

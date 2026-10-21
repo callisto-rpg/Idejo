@@ -15,6 +15,8 @@ defmodule Idejo.Application do
       Idejo.Repo,
       {DNSCluster, query: Application.get_env(:idejo, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Idejo.PubSub},
+      # Background jobs, stored in PostgreSQL: the nightly backup (AD-05).
+      {Oban, Application.fetch_env!(:idejo, Oban)},
       # Growing messages: one timer process per open message (GM-03), rebuilt at boot.
       {Registry, keys: :unique, name: Idejo.Messages.Registry},
       {DynamicSupervisor, name: Idejo.Messages.OpenMessageSupervisor, strategy: :one_for_one},

@@ -86,6 +86,16 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+# AD-05: pg_dump and pg_restore for backups, from the PostgreSQL project's apt repository
+# (its signing key ships with postgresql-common). The major version must match the database
+# image in deploy/docker-compose.yml: change both together.
+ARG PG_MAJOR=18
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-common \
+  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+  && apt-get install -y --no-install-recommends postgresql-client-${PG_MAJOR} \
+  && rm -rf /var/lib/apt/lists/*
+
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
   && locale-gen

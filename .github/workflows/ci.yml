@@ -96,8 +96,16 @@ jobs:
             deps
             _build
           key: mix-test-${{ runner.os }}-${{ hashFiles('.tool-versions', 'mix.lock') }}
+      # AD-05: the backup tests need pg_dump and pg_restore matching the database (18).
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo apt-get install -y --no-install-recommends postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
       - run: mix deps.get
       - run: mix test --warnings-as-errors
+        env:
+          IDEJO_PG_BIN_DIR: /usr/lib/postgresql/18/bin
 
   # Added in M2–M3: end-to-end flows (MVP §4) with Playwright + axe accessibility checks.
   # Added in M5: k6 load test (NF-01, NF-04) on release branches.
