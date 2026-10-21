@@ -97,7 +97,7 @@ msgstr ""
 msgid "Member"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:749
+#: lib/idejo_web/live/topic_live.ex:751
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -165,7 +165,7 @@ msgstr ""
 msgid "This verification link is invalid or has expired."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:752
+#: lib/idejo_web/live/topic_live.ex:754
 #, elixir-autogen, elixir-format
 msgid "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
 msgstr ""
@@ -356,7 +356,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/email_live.ex:143
 #: lib/idejo_web/live/admin/roles_live.ex:154
 #: lib/idejo_web/live/admin/settings_live.ex:83
-#: lib/idejo_web/live/topic_live.ex:621
+#: lib/idejo_web/live/topic_live.ex:623
 #: lib/idejo_web/live/user_settings_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Save"
@@ -766,7 +766,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/categories_live.ex:160
 #: lib/idejo_web/live/admin/categories_live.ex:268
 #: lib/idejo_web/live/admin/roles_live.ex:156
-#: lib/idejo_web/live/topic_live.ex:623
+#: lib/idejo_web/live/topic_live.ex:625
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -796,7 +796,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/categories_live.ex:209
 #: lib/idejo_web/live/admin/roles_live.ex:196
-#: lib/idejo_web/live/topic_live.ex:657
+#: lib/idejo_web/live/topic_live.ex:659
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr ""
@@ -1304,87 +1304,87 @@ msgstr ""
 msgid "last activity"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:588
+#: lib/idejo_web/live/topic_live.ex:590
 #, elixir-autogen, elixir-format
 msgid "Permalink to this message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:733
+#: lib/idejo_web/live/topic_live.ex:735
 #, elixir-autogen, elixir-format
 msgid "Cancel reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:601
+#: lib/idejo_web/live/topic_live.ex:603
 #, elixir-autogen, elixir-format
 msgid "In reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:673
+#: lib/idejo_web/live/topic_live.ex:675
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:671
+#: lib/idejo_web/live/topic_live.ex:673
 #, elixir-autogen, elixir-format
 msgid "Reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:731
+#: lib/idejo_web/live/topic_live.ex:733
 #, elixir-autogen, elixir-format
 msgid "Replying to %{name}:"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:510
+#: lib/idejo_web/live/topic_live.ex:512
 #, elixir-autogen, elixir-format
 msgid "Sign in to take part."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:505
+#: lib/idejo_web/live/topic_live.ex:507
 #, elixir-autogen, elixir-format
 msgid "This topic takes no new messages."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:310
+#: lib/idejo_web/live/topic_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "You cannot post in this topic."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:448
+#: lib/idejo_web/live/topic_live.ex:450
 #, elixir-autogen, elixir-format
 msgid "You can no longer view this topic."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:727
+#: lib/idejo_web/live/topic_live.ex:729
 #, elixir-autogen, elixir-format
 msgid "Your message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:614
+#: lib/idejo_web/live/topic_live.ex:616
 #, elixir-autogen, elixir-format
 msgid "Edit your message (Markdown)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:403
+#: lib/idejo_web/live/topic_live.ex:405
 #, elixir-autogen, elixir-format
 msgid "This message cannot be edited."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:692
+#: lib/idejo_web/live/topic_live.ex:694
 #, elixir-autogen, elixir-format
 msgid "view earlier version"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:648
+#: lib/idejo_web/live/topic_live.ex:650
 #, elixir-autogen, elixir-format
 msgid "Close message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:646
+#: lib/idejo_web/live/topic_live.ex:648
 #, elixir-autogen, elixir-format
 msgid "Close this message? Its author will start a new one."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:338
+#: lib/idejo_web/live/topic_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "This message cannot be closed."
 msgstr ""
@@ -1394,60 +1394,60 @@ msgstr ""
 msgid "Show all"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:250
+#: lib/idejo_web/live/topic_live.ex:252
 #, elixir-autogen, elixir-format
 msgid "%{name} started a message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:256
+#: lib/idejo_web/live/topic_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "%{name}’s message is complete."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:583
+#: lib/idejo_web/live/topic_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "(still being written)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:762
+#: lib/idejo_web/live/topic_live.ex:764
 #, elixir-autogen, elixir-format
 msgid "Ctrl+Enter starts a new message in %{count} second."
 msgid_plural "Ctrl+Enter starts a new message in %{count} seconds."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/topic_live.ex:769
+#: lib/idejo_web/live/topic_live.ex:771
 #, elixir-autogen, elixir-format
 msgid "Ctrl+Enter starts a new message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:759
+#: lib/idejo_web/live/topic_live.ex:761
 #, elixir-autogen, elixir-format
 msgid "Enter starts a new message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:262
+#: lib/idejo_web/live/topic_live.ex:264
 #, elixir-autogen, elixir-format
 msgid "New message from %{name}."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:261
+#: lib/idejo_web/live/topic_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "You posted a message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:249
+#: lib/idejo_web/live/topic_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "You started a message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:255
+#: lib/idejo_web/live/topic_live.ex:257
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Your message is complete."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:761
-#: lib/idejo_web/live/topic_live.ex:768
+#: lib/idejo_web/live/topic_live.ex:763
+#: lib/idejo_web/live/topic_live.ex:770
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Your message is open."
 msgstr ""
@@ -1508,12 +1508,12 @@ msgstr ""
 msgid "Category"
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_html/show.html.heex:86
+#: lib/idejo_web/controllers/topic_html/show.html.heex:96
 #, elixir-autogen, elixir-format
 msgid "Continued from %{name} in “%{topic}”"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:635
+#: lib/idejo_web/live/topic_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Continued in"
 msgstr ""
@@ -1528,7 +1528,7 @@ msgstr ""
 msgid "New topic from a message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:665
+#: lib/idejo_web/live/topic_live.ex:667
 #, elixir-autogen, elixir-format, fuzzy
 msgid "New topic from this"
 msgstr ""
@@ -1538,7 +1538,7 @@ msgstr ""
 msgid "You cannot start topics."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:436
+#: lib/idejo_web/live/topic_live.ex:438
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Close"
 msgstr ""
@@ -1702,22 +1702,22 @@ msgstr ""
 msgid "Reason:"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:26
+#: lib/idejo_web/controllers/moderation_html.ex:27
 #, elixir-autogen, elixir-format, fuzzy
 msgid "message"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:27
+#: lib/idejo_web/controllers/moderation_html.ex:28
 #, elixir-autogen, elixir-format, fuzzy
 msgid "topic"
 msgstr ""
 
-#: lib/idejo_web/controllers/moderation_html.ex:28
+#: lib/idejo_web/controllers/moderation_html.ex:29
 #, elixir-autogen, elixir-format
 msgid "user"
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:31
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:53
 #, elixir-autogen, elixir-format
 msgid "Archived topics are neither locked nor unlocked."
 msgstr ""
@@ -1762,22 +1762,22 @@ msgstr ""
 msgid "Reason (shown in the moderation log)"
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:36
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:58
 #, elixir-autogen, elixir-format
 msgid "Topic locked."
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:38
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:60
 #, elixir-autogen, elixir-format
 msgid "Topic pinned."
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:37
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:59
 #, elixir-autogen, elixir-format
 msgid "Topic unlocked."
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:39
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "Topic unpinned."
 msgstr ""
@@ -1802,7 +1802,32 @@ msgstr ""
 msgid "Unpinned a topic"
 msgstr ""
 
-#: lib/idejo_web/controllers/topic_moderation_controller.ex:34
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:56
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You cannot moderate this topic."
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:89
+#, elixir-autogen, elixir-format
+msgid "Move"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_html/show.html.heex:84
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Move to"
+msgstr ""
+
+#: lib/idejo_web/controllers/moderation_html.ex:18
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Moved a topic"
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:24
+#, elixir-autogen, elixir-format
+msgid "Topic moved to %{category}."
+msgstr ""
+
+#: lib/idejo_web/controllers/topic_moderation_controller.ex:29
+#, elixir-autogen, elixir-format, fuzzy
+msgid "You cannot move this topic there."
 msgstr ""

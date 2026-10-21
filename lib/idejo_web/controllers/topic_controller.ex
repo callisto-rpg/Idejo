@@ -26,6 +26,8 @@ defmodule IdejoWeb.TopicController do
         raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
 
       topic ->
+        can_moderate? = user != nil and Idejo.Access.can?(user, :moderate, topic.category)
+
         if params["slug"] == topic.slug do
           # Opening a topic marks everything in it read (TP-07).
           Reading.mark_read(user, topic)
@@ -36,7 +38,8 @@ defmodule IdejoWeb.TopicController do
             reply_to_id: params["reply_to"],
             following?: Reading.following?(user, topic),
             forked_from: forked_from(user, topic),
-            can_moderate?: user != nil and Idejo.Access.can?(user, :moderate, topic.category),
+            can_moderate?: can_moderate?,
+            move_targets: if(can_moderate?, do: Forum.list_move_targets(user, topic), else: []),
             # Without ?reply_to=, which only opens the form.
             canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
           )

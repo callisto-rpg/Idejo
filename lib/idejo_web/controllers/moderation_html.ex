@@ -15,6 +15,7 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("topic.unlock"), do: gettext("Unlocked a topic")
   def action_label("topic.pin"), do: gettext("Pinned a topic")
   def action_label("topic.unpin"), do: gettext("Unpinned a topic")
+  def action_label("topic.move"), do: gettext("Moved a topic")
   def action_label(action), do: action
 
   @doc "Where the target of an action is: its permalink or URI path."
