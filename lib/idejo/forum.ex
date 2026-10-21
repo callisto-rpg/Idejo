@@ -19,6 +19,7 @@ defmodule Idejo.Forum do
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
+  alias Idejo.RateLimit
   alias Idejo.Repo
 
   @doc """
@@ -471,7 +472,7 @@ defmodule Idejo.Forum do
   to it, and the source topic's viewers get `{:forked, message_id}`.
   """
   @spec create_topic(User.t(), Category.t(), map(), keyword()) ::
-          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+          {:ok, Topic.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
     form = change_new_topic(attrs)
     source = opts[:forked_from]
@@ -481,6 +482,7 @@ defmodule Idejo.Forum do
         not can_start_topic?(user, category) -> {:error, :forbidden}
         source && !forkable?(user, source) -> {:error, :forbidden}
         not form.valid? -> {:error, Map.put(form, :action, :insert)}
+        RateLimit.check(:new_topic, user.id) != :ok -> {:error, :rate_limited}
         true -> Repo.transact(fn -> insert_topic(user, category, form.changes, source) end)
       end
 
@@ -725,7 +727,7 @@ defmodule Idejo.Forum do
   Refused with `{:error, :forbidden}` without the right or in a locked or archived topic.
   """
   @spec post_message(User.t(), Topic.t(), map()) ::
-          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+          {:ok, Message.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def post_message(%User{} = user, %Topic{} = topic, attrs) do
     form = change_new_message(attrs)
 
@@ -737,6 +739,7 @@ defmodule Idejo.Forum do
         cond do
           not can_post?(user, topic) -> {:error, :forbidden}
           not form.valid? -> {:error, Map.put(form, :action, :insert)}
+          RateLimit.check(:new_message, user.id) != :ok -> {:error, :rate_limited}
           true -> insert_message(user, topic, form, attrs["reply_to_id"])
         end
       end)

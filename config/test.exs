@@ -53,6 +53,10 @@ config :idejo, announce_setup: false, setup_redirect: false
 # Tests run Idejo.Messages.Recovery themselves, inside the SQL sandbox.
 config :idejo, recover_open_messages: false
 
+# SP-05: no rate limits in the suite (thousands of requests from 127.0.0.1); the rate limit
+# tests turn them on.
+config :idejo, :rate_limits, enabled: false
+
 # TP-12: uploads go to a scratch directory, emptied by test_helper.exs.
 config :idejo, :uploads_dir, Path.expand("../tmp/test_uploads", __DIR__)
 

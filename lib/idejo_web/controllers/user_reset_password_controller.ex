@@ -8,6 +8,9 @@ defmodule IdejoWeb.UserResetPasswordController do
   """
   use IdejoWeb, :controller
 
+  # SP-05: reset emails and attempts are limited per IP address.
+  plug IdejoWeb.Plugs.RateLimit, :reset_password when action in [:create, :update]
+
   alias Idejo.Accounts
   alias IdejoWeb.UserAuth
 

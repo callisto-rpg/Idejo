@@ -26,6 +26,7 @@ defmodule Idejo.Moderation do
   alias Idejo.Forum.{Category, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Moderation.{Action, Report}
+  alias Idejo.RateLimit
   alias Idejo.Repo
 
   @doc """
@@ -79,7 +80,7 @@ defmodule Idejo.Moderation do
   changeset.
   """
   @spec report_message(User.t(), Message.t(), map()) ::
-          {:ok, Report.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+          {:ok, Report.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def report_message(%User{} = user, %Message{} = message, attrs) do
     cond do
       message.author_id == user.id or message.deleted_at != nil ->
@@ -87,6 +88,9 @@ defmodule Idejo.Moderation do
 
       is_nil(Idejo.Forum.get_viewable_message(user, message.id)) ->
         {:error, :forbidden}
+
+      RateLimit.check(:report, user.id) != :ok ->
+        {:error, :rate_limited}
 
       true ->
         %Report{message_id: message.id, reporter_id: user.id}

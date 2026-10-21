@@ -118,5 +118,9 @@ defmodule IdejoWeb.ImageUploads do
   defp message(:not_an_image), do: gettext("Only JPEG, PNG, GIF and WebP images can be added.")
   defp message(:too_many_pixels), do: gettext("This image has too many pixels.")
   defp message(:too_many_files), do: gettext("Add one image at a time.")
+
+  defp message(:rate_limited),
+    do: gettext("You have added many images lately. Please try again later.")
+
   defp message(_), do: gettext("This image could not be added.")
 end
