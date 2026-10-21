@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Idejo.AccessTest do
-  use Idejo.DataCase, async: true
+  # Not async: it writes the built-in roles directly, rows every test shares, to test the
+  # database triggers; outside `Idejo.Access`, so without its roles lock.
+  use Idejo.DataCase, async: false
 
   import Idejo.AccountsFixtures
 

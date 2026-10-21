@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule Idejo.AccessRoleAssignmentTest do
-  use Idejo.DataCase, async: true
+  # Not async: it moves and recolours the built-in roles, rows every test shares.
+  use Idejo.DataCase, async: false
 
   import Idejo.AccountsFixtures
 
@@ -22,19 +23,19 @@ defmodule Idejo.AccessRoleAssignmentTest do
   describe "giving and removing roles" do
     @tag req: "RP-06"
     test "RP-06 users hold several roles", %{admin: admin} do
-      {:ok, team} = Access.create_role(admin, %{"name" => "Team"})
+      {:ok, team} = Access.create_role(admin, %{"name" => unique_role_name("Team")})
       user = user_fixture()
 
       assert {:ok, _} = Access.assign_role(admin, user, role(:moderator))
       assert {:ok, _} = Access.assign_role(admin, user, team)
 
-      assert names(user) == ~w(moderator member Team)
-      assert Enum.map(Access.assigned_roles(user), & &1.name) == ~w(moderator Team)
+      assert names(user) == ["moderator", "member", team.name]
+      assert Enum.map(Access.assigned_roles(user), & &1.name) == ["moderator", team.name]
     end
 
     @tag req: "RP-06"
     test "RP-06 giving and removing are audited once", %{admin: admin} do
-      user = user_fixture(%{username: "ada"})
+      user = user_fixture()
 
       {:ok, _} = Access.assign_role(admin, user, role(:moderator))
       {:ok, _} = Access.assign_role(admin, user, role(:moderator))
@@ -43,9 +44,9 @@ defmodule Idejo.AccessRoleAssignmentTest do
 
       assert [revoke, grant] = Audit.list_entries(limit: 2)
       assert grant.change == "role.grant"
-      assert grant.after == %{"user" => "ada", "role" => "moderator"}
+      assert grant.after == %{"user" => user.username, "role" => "moderator"}
       assert revoke.change == "role.revoke"
-      assert revoke.before == %{"user" => "ada", "role" => "moderator"}
+      assert revoke.before == %{"user" => user.username, "role" => "moderator"}
       assert revoke.admin_id == admin.id
       assert length(Audit.list_entries()) == 2
     end
@@ -122,8 +123,11 @@ defmodule Idejo.AccessRoleAssignmentTest do
     @tag req: "RP-06"
     test "RP-06 the highest-ranked role with a colour sets the name colour", %{admin: admin} do
       {:ok, _} = Access.update_role(admin, role(:moderator), %{"colour" => "#2255aa"})
-      {:ok, team} = Access.create_role(admin, %{"name" => "Team", "colour" => "#aa2255"})
-      {:ok, plain} = Access.create_role(admin, %{"name" => "Plain"})
+
+      {:ok, team} =
+        Access.create_role(admin, %{"name" => unique_role_name("Team"), "colour" => "#aa2255"})
+
+      {:ok, plain} = Access.create_role(admin, %{"name" => unique_role_name("Plain")})
       {:ok, _} = Access.move_role(admin, plain, :up)
       {:ok, _} = Access.move_role(admin, plain, :up)
       {:ok, _} = Access.move_role(admin, plain, :up)
@@ -139,7 +143,7 @@ defmodule Idejo.AccessRoleAssignmentTest do
 
       # Plain now ranks above moderator but has no colour, so it does not count.
       {:ok, _} = Access.assign_role(admin, user, Repo.reload!(plain))
-      assert hd(Access.roles_of(user)).name == "Plain"
+      assert hd(Access.roles_of(user)).name == plain.name
       assert Access.name_colour(Access.roles_of(user)) == "#2255aa"
     end
   end

@@ -349,8 +349,15 @@ defmodule Idejo.Access do
   @spec update_role(User.t(), Role.t(), map()) :: {:ok, Role.t()} | {:error, Ecto.Changeset.t()}
   def update_role(%User{} = admin, %Role{} = role, attrs) do
     case Role.changeset(role, attrs) do
-      %Ecto.Changeset{changes: changes} when changes == %{} -> {:ok, role}
-      changeset -> Repo.transact(fn -> save_role(admin, role, changeset) end)
+      %Ecto.Changeset{changes: changes} when changes == %{} ->
+        {:ok, role}
+
+      # Under the roles lock like every change to roles, so they always lock in the same order.
+      changeset ->
+        Repo.transact(fn ->
+          lock_roles()
+          save_role(admin, role, changeset)
+        end)
     end
   end
 
