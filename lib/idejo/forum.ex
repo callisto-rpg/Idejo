@@ -18,6 +18,7 @@ defmodule Idejo.Forum do
   alias Idejo.Forum.{Category, Topic}
   alias Idejo.Messages
   alias Idejo.Messages.Message
+  alias Idejo.Moderation
   alias Idejo.Repo
 
   @doc """
@@ -301,6 +302,77 @@ defmodule Idejo.Forum do
         error -> {:halt, error}
       end
     end)
+  end
+
+  ## Moderating topics (TP-14)
+
+  @doc """
+  Locks, unlocks, pins or unpins a topic, as a moderator (TP-14): someone with the
+  `:moderate` right in its category (`{:error, :forbidden}` otherwise).
+
+  A locked topic takes no new messages, and locking closes its open messages (GM-12). Pinned
+  topics come first in their category. Archived topics are neither locked nor unlocked
+  (`{:error, :archived}`). Each change records a moderation log entry (MO-03) with the
+  optional reason and an `update` activity (FD-02) in one transaction; then the topic's
+  viewers get `{:topic_changed, topic_id}`. A change to what already is does nothing.
+  """
+  @spec moderate_topic(User.t(), Topic.t(), :lock | :unlock | :pin | :unpin, String.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | :archived | Ecto.Changeset.t()}
+  def moderate_topic(%User{} = moderator, %Topic{} = topic, action, reason \\ nil)
+      when action in [:lock, :unlock, :pin, :unpin] do
+    result =
+      Repo.transact(fn ->
+        topic =
+          Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+          |> Repo.preload(:category)
+
+        cond do
+          not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+          action in [:lock, :unlock] and topic.state == "archived" -> {:error, :archived}
+          true -> apply_moderation(moderator, topic, action, reason)
+        end
+      end)
+
+    with {:ok, {topic, closed}} <- result do
+      Messages.announce_closed(closed)
+      Messages.broadcast(topic.id, {:topic_changed, topic.id})
+      {:ok, topic}
+    end
+  end
+
+  defp apply_moderation(moderator, topic, action, reason) do
+    changes = moderation_changes(action)
+
+    if Enum.all?(changes, fn {field, value} -> Map.get(topic, field) == value end) do
+      {:ok, {topic, []}}
+    else
+      closed = if action == :lock, do: Messages.close_open_in_topics([topic.id]), else: []
+
+      with {:ok, updated} <- topic |> Ecto.Changeset.change(changes) |> Repo.update(),
+           {:ok, _} <- Moderation.record(moderator, "topic.#{action}", updated, reason: reason),
+           {:ok, _} <- topic_update_activity(moderator, updated) do
+        {:ok, {updated, closed}}
+      end
+    end
+  end
+
+  defp moderation_changes(:lock), do: [state: "locked"]
+  defp moderation_changes(:unlock), do: [state: "open"]
+  defp moderation_changes(:pin), do: [pinned: true]
+  defp moderation_changes(:unpin), do: [pinned: false]
+
+  defp topic_update_activity(actor, topic) do
+    category_uri = Repo.one!(from c in Category, where: c.id == ^topic.category_id, select: c.uri)
+
+    Repo.insert(
+      Federation.activity_changeset(%{
+        actor_uri: actor.uri,
+        verb: "update",
+        object_uri: topic.uri,
+        target_uri: category_uri,
+        payload: %{"type" => "Page", "state" => topic.state, "pinned" => topic.pinned}
+      })
+    )
   end
 
   ## Topics (TP-01)

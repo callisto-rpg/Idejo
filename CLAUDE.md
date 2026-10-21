@@ -245,7 +245,7 @@ roles or the permission grid. Every later change must keep it true:
   preloads `:versions`.
 - **Closing** (GM-12, GM-16): archiving topics closes their open messages
   (`Messages.close_open_in_topics/1` inside the transaction, `announce_closed/1` after it);
-  locking (MO-02) must do the same. `Idejo.Messages.Authors` tracks live topic views
+  locking (TP-14, `Forum.moderate_topic/4`) does the same. `Idejo.Messages.Authors` tracks live topic views
   (`present/2`, called by `TopicLive`); when a user's last view of a topic is gone for the
   grace (30 s, `:gm_disconnect_grace_ms`; steward decision) their open message there closes.
   `Recovery` starts that grace for every open message at boot. Moderators close others' open
@@ -362,6 +362,13 @@ roles or the permission grid. Every later change must keep it true:
   framework branding in the interface.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
+- **Lock and pin** (TP-14): `Forum.moderate_topic(moderator, topic, :lock | :unlock | :pin |
+  :unpin, reason)` needs `:moderate` in the topic's category; locking closes open messages,
+  archived topics are never locked or unlocked. Each change is logged (MO-03) with an
+  `update` activity, then broadcasts `{:topic_changed, id}` so `TopicLive` rechecks the post
+  right. Moderators get a "Moderate this topic" form on the topic page
+  (`TopicModerationController`, POST `/t/{id}/moderate`, no JavaScript); topic lists and
+  pages show Locked and Pinned badges.
 - **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls
   `Moderation.record(moderator, "subject.action", target, reason: …, details: …)` in the same
   transaction as the action; `target` is a message, topic or user, and the entry keeps the

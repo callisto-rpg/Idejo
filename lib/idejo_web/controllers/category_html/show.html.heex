@@ -23,6 +23,7 @@
       <.unread_marker count={@unread[topic.id]} />
       <span :if={topic.pinned} class="badge badge-sm ml-1">{gettext("Pinned")}</span>
       <span :if={topic.state == "archived"} class="badge badge-sm ml-1">{gettext("Archived")}</span>
+      <span :if={topic.state == "locked"} class="badge badge-sm ml-1">{gettext("Locked")}</span>
       <p class="text-sm opacity-70">
         <span class="topic-starter">{topic.author.display_name}</span>
         ·
