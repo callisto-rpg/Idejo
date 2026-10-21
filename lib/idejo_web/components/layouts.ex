@@ -54,6 +54,7 @@ defmodule IdejoWeb.Layouts do
           {gettext("Unread")}
         </a>
         <.notifications_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
+        <.moderation_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
         <.theme_toggle />
       </div>
     </header>
@@ -83,6 +84,22 @@ defmodule IdejoWeb.Layouts do
       <span :if={@count > 0} class="badge badge-sm badge-primary">
         {@count}<span class="sr-only">{gettext(" unread")}</span>
       </span>
+    </a>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  # MO-03: the Moderation screen, for users who may moderate somewhere.
+  defp moderation_link(assigns) do
+    ~H"""
+    <a
+      :if={Idejo.Moderation.moderator?(@user)}
+      href={~p"/moderation/log"}
+      id="moderation-link"
+      class="link"
+    >
+      {gettext("Moderation")}
     </a>
     """
   end
