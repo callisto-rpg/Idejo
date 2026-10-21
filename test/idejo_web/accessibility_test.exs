@@ -115,10 +115,17 @@ defmodule IdejoWeb.AccessibilityTest do
   end
 
   @tag req: "AX-01"
-  test "AX-01 moderation and admin pages", %{conn: conn, admin: admin, general: general} do
+  test "AX-01 moderation and admin pages", %{
+    conn: conn,
+    admin: admin,
+    general: general,
+    member: member
+  } do
     conn = log_in_user(conn, admin)
 
     assert_all_accessible(conn, [
+      # The user card with its "User actions" (MO-02).
+      ~p"/u/#{member.id}",
       ~p"/moderation",
       ~p"/moderation/log",
       ~p"/admin",

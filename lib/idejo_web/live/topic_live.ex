@@ -336,7 +336,10 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("show_user", %{"id" => id}, socket) do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %{} = user <- Idejo.Accounts.get_user(id) do
-      {:noreply, assign(socket, :user_card, UserComponents.card_data(user))}
+      topic = socket.assigns.topic
+      return_to = topic && ~p"/t/#{topic.id}/#{topic.slug}"
+      card = UserComponents.card_data(user, user(socket), return_to: return_to)
+      {:noreply, assign(socket, :user_card, card)}
     else
       _ -> {:noreply, socket}
     end
