@@ -9,6 +9,7 @@
 # or, when the app container is not running, `run --rm app` instead of `exec app`.
 set -eu
 
+caller_dir=$PWD
 cd -P -- "$(dirname -- "$0")"
 
 usage() {
@@ -17,7 +18,12 @@ Usage: bin/idejo-admin COMMAND
 
 Commands:
   reset-owner-password [USERNAME]   give an owner a new password and end their sessions
-  health                            check the server, database, migrations and uploads
+  backup                            make a backup now, in the backup directory
+  restore FILE [--yes]              replace the database and uploads with a backup's
+                                    (server stopped; FILE alone is looked for in the
+                                    backup directory)
+  health                            check the server, database, migrations, uploads
+                                    and last backup
 USAGE
 }
 
@@ -40,6 +46,33 @@ case "${1:-}" in
   reset-owner-password)
     if [ $# -gt 2 ]; then usage >&2; exit 64; fi
     run "Idejo.Release.reset_owner_password($(quote "${2:-}"))"
+    ;;
+  backup)
+    if [ $# -gt 1 ]; then usage >&2; exit 64; fi
+    run "Idejo.Release.backup()"
+    ;;
+  restore)
+    if [ $# -lt 2 ] || [ $# -gt 3 ] || { [ $# -eq 3 ] && [ "$3" != "--yes" ]; }; then
+      usage >&2
+      exit 64
+    fi
+    if ./idejo pid >/dev/null 2>&1; then
+      echo "Stop the server before restoring." >&2
+      exit 1
+    fi
+    file=$2
+    case $file in
+      /*) ;;
+      */*) file="$caller_dir/$file" ;;
+    esac
+    if [ $# -eq 2 ]; then
+      echo "This replaces the database and the uploaded files with those of $2."
+      echo "What is there now is backed up first."
+      printf 'Type "restore" to go on: '
+      read -r answer || answer=
+      if [ "$answer" != "restore" ]; then echo "Nothing changed."; exit 1; fi
+    fi
+    exec ./idejo eval "Idejo.Release.restore($(quote "$file"))"
     ;;
   health)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi

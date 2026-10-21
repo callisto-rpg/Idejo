@@ -42,6 +42,12 @@ if config_env() == :dev do
     ]
 end
 
+# AD-05: where pg_dump and pg_restore are, when not on the PATH (they must match the
+# PostgreSQL server's major version).
+if pg_bin_dir = System.get_env("IDEJO_PG_BIN_DIR") do
+  config :idejo, :pg_bin_dir, pg_bin_dir
+end
+
 # LI-03: where a modified server publishes its own source code.
 if source_url = System.get_env("IDEJO_SOURCE_URL") do
   config :idejo, :source_url, source_url
@@ -50,6 +56,8 @@ end
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")
+  # AD-05: nightly backups, on local disk (the Compose volume).
+  config :idejo, :backup_dir, System.get_env("IDEJO_BACKUP_DIR", "/data/backups")
 
   database_url =
     System.get_env("DATABASE_URL") ||

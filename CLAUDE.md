@@ -425,14 +425,31 @@ roles or the permission grid. Every later change must keep it true:
   it off. Off in tests (`config :idejo, :rate_limits, enabled: false`); `rate_limit_test.exs`
   turns them on (not async) and uses addresses and accounts of its own.
 - **Command-line recovery** (AD-09, `Idejo.Release`; extra review: DV-06):
-  `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `health`) runs
+  `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `backup`,
+  `restore FILE [--yes]`, `health`) runs
   `Idejo.Release` functions with `bin/idejo rpc` when the server is running, else
   `bin/idejo eval` (which starts only the repo, through `Ecto.Migrator.with_repo`). They print
   on standard output (under rpc standard error goes to the server's log) and fail with
   `exit({:shutdown, 1})`, never `System.halt/1`, which under rpc would stop the server. The
   owner reset prints a random password, ends every session (disconnecting LiveViews when the
   endpoint runs: the one web call `Release` makes) and is audited as `user.password_reset`
-  with no admin. Backup and restore (AD-05) join this script. Usage: `docs/deploying.md`.
+  with no admin. `restore` runs only with the server stopped (eval), after a typed
+  confirmation. Usage: `docs/deploying.md`.
+- **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
+  (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
+  `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),
+  `database.dump` (`pg_dump -Fc`, taken before the uploads so every file it names is there)
+  and `uploads/<name>`; written as `.tmp` and renamed. `Idejo.Backup.Worker` runs at 03:00 UTC
+  (Oban cron, queue `maintenance`) and keeps the newest 7 (steward decision; v1's NF-07
+  says 14). `restore/1` refuses archives with other names or from a newer schema, backs up
+  first, drops and recreates schema `public`, `pg_restore`s, migrates, replaces the uploads
+  and audits `backup.restore`. `pg_dump`/`pg_restore` must match the server's major
+  version: the Dockerfile installs `postgresql-client-${PG_MAJOR}` from the PostgreSQL apt
+  repository (change it with the `db` image), `IDEJO_PG_BIN_DIR` points elsewhere. Tests
+  needing them are tagged `pg_tools` (skipped with a note when missing, never on CI); the
+  restore test uses a database of its own through a dynamic repo, outside the sandbox.
+- **Background jobs**: Oban (`config :idejo, Oban`, `oban_jobs` migration pinned to
+  version 14), `testing: :manual` in tests (use `Oban.Testing`).
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and

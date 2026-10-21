@@ -19,6 +19,7 @@ defmodule Idejo.Release do
   alias Idejo.Accounts
   alias Idejo.Accounts.User
   alias Idejo.Audit
+  alias Idejo.Backup
   alias Idejo.Repo
 
   def migrate do
@@ -120,6 +121,47 @@ defmodule Idejo.Release do
   defp reset_error({:several_owners, usernames}),
     do: "This server has several owners; name one: #{Enum.join(usernames, ", ")}"
 
+  ## Backup and restore (AD-05, AD-09)
+
+  @doc """
+  `bin/idejo-admin backup`: makes a backup now, like the nightly one, and keeps the newest
+  `Idejo.Backup.keep/0`.
+  """
+  @spec backup() :: :ok
+  def backup do
+    case with_repo(&Backup.create/0) do
+      {:ok, path} ->
+        IO.puts("Backup written to #{path}")
+        for name <- Backup.prune(), do: IO.puts("Old backup #{name} deleted")
+        :ok
+
+      {:error, reason} ->
+        fail("Backup failed: #{reason}")
+    end
+  end
+
+  @doc """
+  `bin/idejo-admin restore FILE`: replaces the database and the uploads with a backup's,
+  after backing up what is there now. Only while the server is stopped. A bare file name is
+  looked for in the backup directory; `bin/idejo-admin` makes other paths absolute.
+  """
+  @spec restore(String.t()) :: :ok
+  def restore(file) do
+    if Process.whereis(IdejoWeb.Endpoint), do: fail("Stop the server before restoring.")
+    path = if Path.basename(file) == file, do: Path.join(Backup.dir(), file), else: file
+
+    case with_repo(fn -> Backup.restore(path) end) do
+      {:ok, before} ->
+        IO.puts("""
+        Restored #{path}.
+        What was there before is in #{before}.\
+        """)
+
+      {:error, reason} ->
+        fail("Restore failed: #{reason}")
+    end
+  end
+
   ## Health (AD-09)
 
   @doc """
@@ -140,7 +182,7 @@ defmodule Idejo.Release do
 
   @doc """
   Runs the health checks: `{name, :ok | :warning | :error, detail}` for the server, the
-  database, migrations, the owner and the uploads directory.
+  database, migrations, the owner, the uploads directory and the last backup.
   """
   @spec health_checks() :: [{String.t(), :ok | :warning | :error, String.t()}]
   def health_checks do
@@ -154,7 +196,7 @@ defmodule Idejo.Release do
 
     checks =
       [{"server", check_server()}, {"database", database}] ++
-        needs_database ++ [{"uploads", check_uploads()}]
+        needs_database ++ [{"uploads", check_uploads()}, {"backup", check_backup()}]
 
     Enum.map(checks, fn {name, {status, detail}} -> {name, status, detail} end)
   end
@@ -204,6 +246,22 @@ defmodule Idejo.Release do
       {:ok, "#{dir} writable"}
     else
       {:error, reason} -> {:error, "#{dir} not writable: #{:file.format_error(reason)}"}
+    end
+  end
+
+  # The nightly backup runs at 03:00 UTC: one older than a day and a bit means a night failed.
+  defp check_backup do
+    case Backup.list() do
+      [] ->
+        {:warning, "none yet; the first is made at 03:00 UTC"}
+
+      [%{name: name, path: path} | _] ->
+        {:ok, %{mtime: mtime}} = File.stat(path, time: :posix)
+        hours = div(System.os_time(:second) - mtime, 3600)
+
+        if hours < 26,
+          do: {:ok, "#{name}, #{hours} h ago"},
+          else: {:error, "#{name}, #{hours} h ago; see the app log for why backups fail"}
     end
   end
 

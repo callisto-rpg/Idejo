@@ -59,6 +59,10 @@ config :idejo, :rate_limits, enabled: false
 
 # TP-12: uploads go to a scratch directory, emptied by test_helper.exs.
 config :idejo, :uploads_dir, Path.expand("../tmp/test_uploads", __DIR__)
+config :idejo, :backup_dir, Path.expand("../tmp/test_backups", __DIR__)
+
+# Jobs run only when a test runs them (Oban.Testing).
+config :idejo, Oban, testing: :manual
 
 # Views end with each test; their disconnect grace (GM-12) must not fire during the run.
 # Tests that need one pass `grace_ms:` to Idejo.Messages.Authors.

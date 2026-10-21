@@ -38,6 +38,7 @@ services:
       - "4000"
 
   db:
+    # The major version must match PG_MAJOR in the Dockerfile (pg_dump for backups, AD-05).
     image: postgres:18-alpine
     restart: unless-stopped
     environment:

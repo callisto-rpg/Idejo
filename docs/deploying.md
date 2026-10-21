@@ -273,7 +273,8 @@ source ~/.bashrc
 | Start again | `idejo up -d` |
 | Health check | `idejo exec app bin/idejo-admin health` |
 
-**Updating to a new version:**
+**Updating to a new version:** make a backup first (`idejo exec app bin/idejo-admin backup`,
+see [Backups](#backups)), then:
 
 ```sh
 cd ~/idejo
@@ -284,17 +285,79 @@ idejo up -d --build
 Migrations run automatically when the app starts. The site is briefly unavailable while the
 new app container replaces the old one.
 
-**Backing up by hand.** Nightly backups and restore (AD-05) arrive in M5. Until then, take a
-database dump before every update:
+The certificates live in the `caddy_data` volume; never delete it with `down -v`, or Caddy
+has to request new ones and can hit Let's Encrypt rate limits. `down -v` would delete the
+database, the images and the backups too.
+
+## Backups
+
+Every night at 03:00 UTC Idejo backs up the database and the uploaded images into one file,
+`idejo-YYYYMMDD-HHMMSS.tar` (UTC), in the `backups` volume (`/data/backups` in the app
+container). The newest 7 are kept; older ones are deleted. `idejo exec app bin/idejo-admin
+health` shows when the last one was made; a failed backup is written to the app log.
+
+**Make one now**, e.g. before an update:
 
 ```sh
-mkdir -p ~/backups
-idejo exec -T db pg_dump -U idejo -Fc idejo > ~/backups/idejo-$(date +%F).dump
+idejo exec app bin/idejo-admin backup
 ```
 
-Copy the dumps off the server from time to time (e.g. `scp` to your computer). The
-certificates live in the `caddy_data` volume; never delete it with `down -v`, or Caddy has to
-request new ones and can hit Let's Encrypt rate limits.
+**Keep copies off the server.** A backup on the same disk does not survive the loss of the
+server. Copy the backups out of the volume, then to another computer:
+
+```sh
+idejo cp app:/data/backups/. ~/idejo-backups               # on the server
+scp -r idejo@203.0.113.10:idejo-backups ./               # on your computer
+```
+
+Keep a copy of `deploy/.env` with them, in your password manager: the SMTP password stored
+in the backup can only be read with the same `SECRET_KEY_BASE`. With another key, everything
+works except email until you enter the SMTP password again in **Admin → Email**.
+
+### Restore a backup
+
+Restoring replaces the whole database and every uploaded image with the backup's. Idejo
+first backs up what is there now (the command prints that file's name), so a restore can be
+undone by restoring that file. A backup made by a newer version of Idejo is refused: update
+Idejo first.
+
+1. Stop the app (the database keeps running):
+
+   ```sh
+   idejo stop app
+   ```
+
+2. Restore. A file name alone is looked for in the backups volume; the command asks you to
+   type `restore` to confirm:
+
+   ```sh
+   idejo run --rm app bin/idejo-admin restore idejo-20261021-030000.tar
+   ```
+
+3. Start the app again; it runs the migrations a backup from an older version needs:
+
+   ```sh
+   idejo start app
+   ```
+
+Everyone has to sign in again only if they were signed in after the backup was made.
+
+### Restore on another server
+
+To move to a new server, or after losing one:
+
+1. Install Idejo on the new server (steps 1 to 9), with the old `deploy/.env` if you have it
+   (keep `IDEJO_DOMAIN`, and point the domain at the new server). Do not run the setup
+   wizard: the backup brings your owner account back.
+2. Copy the backup to the new server (on your computer:
+   `scp idejo-20261021-030000.tar idejo@NEW-SERVER:`), then into the backups volume:
+
+   ```sh
+   idejo cp ~/idejo-20261021-030000.tar app:/data/backups/
+   ```
+
+3. Restore it as above: `idejo stop app`, `idejo run --rm app bin/idejo-admin restore
+   idejo-20261021-030000.tar`, `idejo start app`.
 
 ## Recovery from the command line
 
@@ -304,13 +367,17 @@ container carries a recovery tool, `bin/idejo-admin` (AD-09):
 ```sh
 idejo exec app bin/idejo-admin health
 idejo exec app bin/idejo-admin reset-owner-password
+idejo exec app bin/idejo-admin backup
 ```
+
+`restore` is described under [Restore a backup](#restore-a-backup).
 
 If the app container is not running (it keeps restarting, or you stopped it), use
 `idejo run --rm app bin/idejo-admin …` instead of `idejo exec app bin/idejo-admin …`.
 
 **`health`** checks that the server is running, the database answers, every migration has
-run, an owner exists and the uploads directory can be written, one line each. It ends with
+run, an owner exists, the uploads directory can be written and the last backup is less
+than a day old, one line each. It ends with
 exit status 1 when a check failed, so it can drive a monitoring script.
 
 **`reset-owner-password [USERNAME]`** gives an owner a new random password and prints it
