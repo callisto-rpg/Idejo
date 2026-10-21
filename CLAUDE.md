@@ -381,6 +381,16 @@ roles or the permission grid. Every later change must keep it true:
   message, oldest first; Resolve or Dismiss closes all of a message's open reports
   (`Moderation.handle_reports/4`), logged as `report.resolve` / `report.dismiss`. The header's
   Moderation link shows how many messages wait (`Moderation.open_report_count/1`).
+- **Moderator delete and edit** (MO-02): `Messages.delete_as_moderator/3` sets
+  `deleted_at`/`deleted_by_id` (closing an open message first), counts the topic one message
+  less and resolves its open reports; the text and versions stay for moderators (steward
+  decision). Every reader-facing query must leave deleted messages out (search, notifications,
+  unread counts) and every action refuse them (report, fork, edit). `TopicLive` shows readers
+  "Message deleted by a moderator", a run of them as one "N messages deleted by a moderator"
+  line (the other `<li>`s stay, `hidden`, for permalinks); moderators see the text with a
+  badge. `Messages.edit_as_moderator/4` edits others' closed messages like an author's edit
+  (versions kept). Each message has a "Moderate" form for moderators (`"moderate_message"`:
+  close or delete, with a reason); every action is logged.
 - **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls
   `Moderation.record(moderator, "subject.action", target, reason: …, details: …)` in the same
   transaction as the action; `target` is a message, topic or user, and the entry keeps the

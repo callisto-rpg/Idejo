@@ -294,6 +294,7 @@ defmodule Idejo.Messages do
 
         cond do
           message.author_id != author.id -> {:error, :forbidden}
+          message.deleted_at != nil -> {:error, :forbidden}
           message.state != "closed" -> {:error, :forbidden}
           not Forum.can_post?(author, topic) -> {:error, :forbidden}
           String.trim(text) == "" -> {:error, :blank}
@@ -384,6 +385,98 @@ defmodule Idejo.Messages do
   defp close_logged(moderator, message, reason) do
     with {:ok, message} <- close_locked(message, DateTime.utc_now()),
          {:ok, _} <- Moderation.record(moderator, "message.close", message, reason: reason) do
+      {:ok, message}
+    end
+  end
+
+  @doc """
+  Deletes a message, as a moderator of its topic's category (MO-02), with an optional
+  reason. The message stays, with its text and versions, for moderators (steward decision):
+  readers see a placeholder, and search, notifications and unread counts leave it out. An
+  open message is closed first. The topic counts one message less, the message's open reports
+  are resolved, and the moderation log records it (MO-03), in one transaction; then the
+  message is broadcast. Deleting a deleted message does nothing.
+  """
+  @spec delete_as_moderator(User.t(), Message.t(), String.t() | nil) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def delete_as_moderator(%User{} = moderator, %Message{} = message, reason \\ nil) do
+    as_moderator(moderator, message, fn locked -> delete_logged(moderator, locked, reason) end)
+  end
+
+  @doc """
+  Edits someone's closed message, as a moderator of its category (MO-02), with an optional
+  reason. Like an author's edit (GM-10, GM-11): changing text keeps the earlier version,
+  which moderators can see (MO-06). Open messages are closed first by the moderator
+  (`{:error, :open}`), deleted ones are not edited (`{:error, :deleted}`), and a blank text is
+  refused (`{:error, :blank}`). Logged (MO-03); then broadcast.
+  """
+  @spec edit_as_moderator(User.t(), Message.t(), String.t(), String.t() | nil) ::
+          {:ok, Message.t()}
+          | {:error, :forbidden | :open | :deleted | :blank | Ecto.Changeset.t()}
+  def edit_as_moderator(%User{} = moderator, %Message{} = message, text, reason \\ nil)
+      when is_binary(text) do
+    text = String.trim_trailing(text)
+
+    as_moderator(moderator, message, fn locked ->
+      cond do
+        locked.deleted_at -> {:error, :deleted}
+        locked.state == "open" -> {:error, :open}
+        String.trim(text) == "" -> {:error, :blank}
+        text == locked.body_md -> {:ok, locked}
+        true -> moderator_edit(moderator, locked, text, reason)
+      end
+    end)
+  end
+
+  # Checks the moderate right, runs `fun` on the locked message in a transaction, and
+  # announces the result once committed.
+  defp as_moderator(moderator, message, fun) do
+    topic = Topic |> Repo.get!(message.topic_id) |> Repo.preload(:category)
+
+    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+      result =
+        Repo.transact(fn ->
+          fun.(Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE"))
+        end)
+
+      with {:ok, message} <- result, do: after_commit(message)
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp delete_logged(_moderator, %Message{deleted_at: %DateTime{}} = message, _reason),
+    do: {:ok, message}
+
+  defp delete_logged(moderator, message, reason) do
+    now = DateTime.utc_now()
+
+    with {:ok, message} <-
+           if(message.state == "open", do: close_locked(message, now), else: {:ok, message}),
+         {:ok, message} <-
+           message
+           |> Ecto.Changeset.change(deleted_at: now, deleted_by_id: moderator.id)
+           |> Repo.update(),
+         {1, _} <-
+           Repo.update_all(from(t in Topic, where: t.id == ^message.topic_id),
+             inc: [message_count: -1]
+           ),
+         {_, _} <- Moderation.resolve_reports_of(moderator, message),
+         {:ok, _} <- Moderation.record(moderator, "message.delete", message, reason: reason) do
+      {:ok, message}
+    end
+  end
+
+  defp moderator_edit(moderator, message, text, reason) do
+    now = DateTime.utc_now()
+    edit? = not String.starts_with?(text, message.body_md)
+    topic_uri = Repo.one!(from t in Topic, where: t.id == ^message.topic_id, select: t.uri)
+
+    with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
+         {:ok, message} <- update_body(message, text, true, edit?),
+         {:ok, _} <- Moderation.record(moderator, "message.edit", message, reason: reason),
+         {:ok, _} <- activity(moderator, message, "update", topic_uri) do
       {:ok, message}
     end
   end

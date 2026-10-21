@@ -190,6 +190,8 @@ defmodule Idejo.Notifications do
       join: m in assoc(n, :message),
       join: t in Topic,
       on: t.id == m.topic_id,
-      where: n.user_id == ^user_id and t.category_id in subquery(viewable)
+      where: n.user_id == ^user_id and t.category_id in subquery(viewable),
+      # MO-02: nothing about a message a moderator deleted.
+      where: is_nil(m.deleted_at)
   end
 end

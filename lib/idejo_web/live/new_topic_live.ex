@@ -25,7 +25,8 @@ defmodule IdejoWeb.NewTopicLive do
     user = socket.assigns.current_scope.user
 
     case Forum.get_viewable_message(user, id) do
-      nil ->
+      # MO-02: a deleted message starts no topic.
+      result when is_nil(result) or result.deleted_at != nil ->
         raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
 
       source ->

@@ -27,6 +27,9 @@ defmodule Idejo.Messages.Message do
     field :body_md, :string
     field :body_html, :string
     field :edited, :boolean, default: false
+    # MO-02: deleted by a moderator; readers see a placeholder, moderators the text.
+    field :deleted_at, :utc_datetime_usec
+    belongs_to :deleted_by, Idejo.Accounts.User
     belongs_to :topic, Idejo.Forum.Topic
     belongs_to :author, Idejo.Accounts.User
     belongs_to :reply_to, __MODULE__

@@ -157,6 +157,8 @@ defmodule Idejo.Reading do
       left_join: last in Message,
       on: last.id == rp.last_read_message_id,
       where: m.author_id != ^user_id,
+      # MO-02: a message deleted by a moderator is nothing new to read.
+      where: is_nil(m.deleted_at),
       where:
         m.opened_at >
           coalesce(
