@@ -119,6 +119,7 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The role above each author's name (GM-07): their highest-ranked one, with the name colour.
+  # Only authors not seen yet are looked up, so most events cost no query (NF-01).
   defp add_roles(socket, messages) do
     missing =
       messages
@@ -126,6 +127,10 @@ defmodule IdejoWeb.TopicLive do
       |> Enum.uniq_by(& &1.id)
       |> Enum.reject(&Map.has_key?(socket.assigns.roles, &1.id))
 
+    if missing == [], do: socket, else: assign_roles(socket, missing)
+  end
+
+  defp assign_roles(socket, missing) do
     roles =
       missing
       |> Access.roles_of_users()
@@ -161,7 +166,8 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def handle_info({:message, message}, socket) do
-    message = Repo.preload(message, [:author, :versions, reply_to: :author], force: true)
+    # Loaded once by the broadcast (NF-01); this costs nothing then.
+    message = Repo.preload(message, Messages.shown())
     old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
     # A message that arrives while the topic is open is read (TP-07); appends change nothing.
     if is_nil(old), do: Reading.mark_read(user(socket), socket.assigns.topic)

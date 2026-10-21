@@ -37,6 +37,7 @@ defmodule Idejo.Messages do
   alias Idejo.Repo
   alias Idejo.Settings
 
+  @shown [:author, :versions, reply_to: :author]
   @pubsub Idejo.PubSub
 
   @doc "Subscribes the caller to a topic's message events."
@@ -47,10 +48,23 @@ defmodule Idejo.Messages do
   @spec unsubscribe(Ecto.UUID.t()) :: :ok
   def unsubscribe(topic_id), do: Phoenix.PubSub.unsubscribe(@pubsub, "topic:" <> topic_id)
 
-  @doc "Broadcasts a message event on a topic."
+  @doc """
+  Broadcasts a message event on a topic. A `{:message, message}` goes out with what a topic
+  view shows of it loaded (author, versions, the message it replies to), loaded here once
+  rather than by each of the topic's viewers (NF-01).
+  """
   @spec broadcast(Ecto.UUID.t(), term()) :: :ok | {:error, term()}
+  def broadcast(topic_id, {:message, %Message{} = message}) do
+    message = Repo.preload(message, @shown, force: true)
+    Phoenix.PubSub.broadcast(@pubsub, "topic:" <> topic_id, {:message, message})
+  end
+
   def broadcast(topic_id, event),
     do: Phoenix.PubSub.broadcast(@pubsub, "topic:" <> topic_id, event)
+
+  @doc "What a topic view shows of a message besides its own fields, for `Repo.preload/2`."
+  @spec shown() :: list()
+  def shown, do: @shown
 
   @doc "Returns the author's open message in the topic, or `nil` (GM-09: at most one)."
   @spec open_message(User.t(), Topic.t()) :: Message.t() | nil
