@@ -56,6 +56,36 @@ defmodule Idejo.MessagesEditTest do
     assert DateTime.compare(first.created_at, second.created_at) in [:lt, :eq]
   end
 
+  @tag req: "TP-05"
+  test "TP-05 a message that only grew keeps just its final text", %{
+    topic: topic,
+    author: author
+  } do
+    {:ok, _} = Messages.commit(author, topic, "First")
+    {:ok, _} = Messages.commit(author, topic, "First. Second")
+    {:ok, open} = Messages.commit(author, topic, "First. Second. Third")
+    {:ok, closed} = Messages.close(open)
+
+    assert closed.body_md == "First. Second. Third."
+    refute closed.edited
+    assert Messages.list_versions(closed) == []
+    # One row for the whole message, none per commit.
+    assert Enum.count(Forum.list_messages(topic), &(&1.author_id == author.id)) == 2
+  end
+
+  @tag req: "TP-05"
+  test "TP-05 an edit keeps the history", %{author: author, closed: closed} do
+    {:ok, edited} = Messages.edit(author, closed, "The meeting is on Tuesday.")
+    {:ok, edited} = Messages.edit(author, edited, "The meeting is on Wednesday.")
+
+    assert edited.edited
+
+    assert Enum.map(Messages.list_versions(edited), & &1.body_md) == [
+             "The meeting is on Monday.",
+             "The meeting is on Tuesday."
+           ]
+  end
+
   @tag req: "GM-10"
   test "GM-10 adding text at the end is not an edit", %{author: author, closed: closed} do
     {:ok, longer} = Messages.edit(author, closed, "The meeting is on Monday. At ten.")

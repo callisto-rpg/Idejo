@@ -255,9 +255,11 @@ defmodule Idejo.Messages do
 
   defp activity_for_close(message) do
     author = Repo.get!(User, message.author_id)
-    topic_uri = Repo.one!(from t in Topic, where: t.id == ^message.topic_id, select: t.uri)
-    activity(author, message, "update", topic_uri)
+    activity(author, message, "update", topic_uri(message))
   end
+
+  defp topic_uri(message),
+    do: Repo.one!(from t in Topic, where: t.id == ^message.topic_id, select: t.uri)
 
   defp activity(author, message, verb, topic_uri) do
     Repo.insert(
@@ -474,7 +476,8 @@ defmodule Idejo.Messages do
              inc: [message_count: -1]
            ),
          {_, _} <- Moderation.resolve_reports_of(moderator, message),
-         {:ok, _} <- Moderation.record(moderator, "message.delete", message, reason: reason) do
+         {:ok, _} <- Moderation.record(moderator, "message.delete", message, reason: reason),
+         {:ok, _} <- activity(moderator, message, "delete", topic_uri(message)) do
       {:ok, message}
     end
   end
@@ -482,7 +485,7 @@ defmodule Idejo.Messages do
   defp moderator_edit(moderator, message, text, reason) do
     now = DateTime.utc_now()
     edit? = not String.starts_with?(text, message.body_md)
-    topic_uri = Repo.one!(from t in Topic, where: t.id == ^message.topic_id, select: t.uri)
+    topic_uri = topic_uri(message)
 
     with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
          {:ok, message} <- update_body(message, text, true, edit?),
