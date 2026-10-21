@@ -46,6 +46,9 @@ defmodule IdejoWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  # SP-05: the visitor's real address behind Caddy, then a limit on every request.
+  plug IdejoWeb.Plugs.ClientIp
+  plug IdejoWeb.Plugs.RateLimit, :request
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,

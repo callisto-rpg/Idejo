@@ -394,7 +394,8 @@ defmodule Idejo.Accounts do
   an `update` activity and deletes the picture it replaces.
   """
   @spec set_avatar(User.t(), Path.t()) ::
-          {:ok, User.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
+          {:ok, User.t()}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
   def set_avatar(%User{} = user, path) do
     with {:ok, upload} <- Uploads.store_avatar(user, path) do
       Repo.transact(fn -> replace_avatar(user, upload.id) end)

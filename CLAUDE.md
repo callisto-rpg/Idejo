@@ -408,6 +408,15 @@ roles or the permission grid. Every later change must keep it true:
   JavaScript) shows moderators the entries of the categories they moderate, and owners and
   administrators all of them; `Moderation.moderator?/1` gates it and the header link. Add a
   label for each new action in `ModerationHTML.action_label/1`.
+- **Rate limits** (SP-05, `Idejo.RateLimit`, Hammer/ETS; extra review: DV-06): per IP in
+  plugs (`IdejoWeb.Plugs.RateLimit`: `:request` on every request in the endpoint, `:sign_in`,
+  `:sign_up`, `:reset_password` in their controllers; 429 with `Retry-After`), per user in the
+  contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload` →
+  `{:error, :rate_limited}`, which every caller must handle). Limits are in
+  `Idejo.RateLimit`. `IdejoWeb.Plugs.ClientIp` takes the visitor's address from the rightmost
+  `X-Forwarded-For` only when the peer is on a private network (Caddy); `:behind_proxy` turns
+  it off. Off in tests (`config :idejo, :rate_limits, enabled: false`); `rate_limit_test.exs`
+  turns them on (not async) and uses addresses and accounts of its own.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and

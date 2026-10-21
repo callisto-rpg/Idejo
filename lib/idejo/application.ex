@@ -20,6 +20,8 @@ defmodule Idejo.Application do
       {DynamicSupervisor, name: Idejo.Messages.OpenMessageSupervisor, strategy: :one_for_one},
       # Closes an open message once its author has been gone for the grace (GM-12).
       Idejo.Messages.Authors,
+      # SP-05: rate limit counters, in memory.
+      {Idejo.RateLimit, clean_period: :timer.minutes(10)},
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),

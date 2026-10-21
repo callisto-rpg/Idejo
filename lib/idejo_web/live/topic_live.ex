@@ -311,6 +311,15 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:can_post?, false)
          |> put_flash(:error, gettext("You cannot post in this topic."))}
 
+      # SP-05: the text stays in the composer, unsent; Enter again a little later.
+      {:error, :rate_limited} ->
+        {:reply, %{error: true},
+         put_flash(
+           socket,
+           :error,
+           gettext("You are sending very fast. Wait a moment, then press Enter again.")
+         )}
+
       {:error, _changeset} ->
         {:reply, %{error: true}, socket}
     end

@@ -86,6 +86,8 @@ defmodule Idejo.MixProject do
       # Images (TP-12): libvips through Vix, to re-encode uploads and strip their metadata
       # (SP-05). Apache-2.0 (image), MIT (vix); libvips itself is LGPL, steward-approved.
       {:image, "~> 0.72.0"},
+      # Rate limits on every endpoint (SP-05), in memory (ETS). MIT (LI-06).
+      {:hammer, "~> 7.5"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.16.0", only: [:dev, :test], runtime: false},

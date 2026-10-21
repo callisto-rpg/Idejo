@@ -39,6 +39,11 @@ defmodule IdejoWeb.ReportController do
           form: to_form(Map.put(changeset, :action, :insert), as: :report),
           page_title: gettext("Report a message")
         )
+
+      {:error, _too_many_or_forbidden} ->
+        conn
+        |> put_flash(:error, gettext("You cannot report this message now."))
+        |> redirect(to: ~p"/m/#{message.id}")
     end
   end
 

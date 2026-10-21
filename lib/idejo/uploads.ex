@@ -21,6 +21,7 @@ defmodule Idejo.Uploads do
   import Ecto.Query, warn: false
 
   alias Idejo.Accounts.User
+  alias Idejo.RateLimit
   alias Idejo.Repo
   alias Idejo.Settings
   alias Idejo.Uploads.Upload
@@ -49,9 +50,11 @@ defmodule Idejo.Uploads do
   saved. Returns the new upload, or why it was refused.
   """
   @spec store_image(User.t(), Path.t()) ::
-          {:ok, Upload.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
+          {:ok, Upload.t()}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
   def store_image(%User{} = user, path) do
     with :ok <- check_size(path),
+         :ok <- RateLimit.check(:upload, user.id),
          {:ok, image, format} <- open(path, -1),
          :ok <- check_pixels(image) do
       save(user, image, format)
@@ -65,16 +68,19 @@ defmodule Idejo.Uploads do
   a #{@avatar_size} px WebP square without metadata. Only the first frame of an animation.
   """
   @spec store_avatar(User.t(), Path.t()) ::
-          {:ok, Upload.t()} | {:error, :too_large | :not_an_image | :too_many_pixels}
+          {:ok, Upload.t()}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
   def store_avatar(%User{} = user, path) do
     with :ok <- check_size(path),
+         :ok <- RateLimit.check(:upload, user.id),
          {:ok, image, {ext, _mime}} <- open(path, 1),
          :ok <- check_pixels(image),
          image = if(ext == "jpg", do: Image.autorotate!(image), else: image),
          {:ok, square} <- Image.thumbnail(image, @avatar_size, crop: :center) do
       save(user, square, {"webp", "image/webp"})
     else
-      {:error, reason} when reason in [:too_large, :not_an_image, :too_many_pixels] ->
+      {:error, reason}
+      when reason in [:too_large, :not_an_image, :too_many_pixels, :rate_limited] ->
         {:error, reason}
 
       _ ->

@@ -111,6 +111,14 @@ defmodule IdejoWeb.NewTopicLive do
          |> put_flash(:error, gettext("You cannot start topics in this category."))
          |> redirect(to: ~p"/c/#{category.slug}")}
 
+      {:error, :rate_limited} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("You have started many topics lately. Please try again later.")
+         )}
+
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form, as: :topic))}
     end

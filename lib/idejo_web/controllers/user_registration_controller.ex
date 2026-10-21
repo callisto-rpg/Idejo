@@ -4,6 +4,9 @@
 defmodule IdejoWeb.UserRegistrationController do
   use IdejoWeb, :controller
 
+  # SP-05: sign-up spam is slowed per IP address.
+  plug IdejoWeb.Plugs.RateLimit, :sign_up when action == :create
+
   alias Idejo.Accounts
   alias Idejo.Accounts.User
   alias Idejo.Settings

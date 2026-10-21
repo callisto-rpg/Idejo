@@ -4,6 +4,9 @@
 defmodule IdejoWeb.UserSessionController do
   use IdejoWeb, :controller
 
+  # SP-05: password guessing is slowed per IP address.
+  plug IdejoWeb.Plugs.RateLimit, :sign_in when action == :create
+
   alias Idejo.Accounts
   alias IdejoWeb.UserAuth
 

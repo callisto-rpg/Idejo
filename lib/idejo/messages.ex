@@ -33,6 +33,7 @@ defmodule Idejo.Messages do
   alias Idejo.Messages.{Body, Message, OpenMessage, Version}
   alias Idejo.Moderation
   alias Idejo.Notifications
+  alias Idejo.RateLimit
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -75,16 +76,19 @@ defmodule Idejo.Messages do
     * `:reply_to_id` - when this Enter opens a message, the message it replies to (TP-08).
   """
   @spec commit(User.t(), Topic.t(), String.t(), keyword()) ::
-          {:ok, Message.t() | nil} | {:error, :forbidden | Ecto.Changeset.t()}
+          {:ok, Message.t() | nil} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def commit(%User{} = author, %Topic{} = topic, text, opts \\ []) when is_binary(text) do
     result =
       Repo.transact(fn ->
         # Locked, so the open message and the topic's state cannot change under this commit.
         topic = Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
 
-        if Forum.can_post?(author, topic),
-          do: commit_locked(author, topic, normalize(text), opts),
-          else: {:error, :forbidden}
+        cond do
+          not Forum.can_post?(author, topic) -> {:error, :forbidden}
+          # SP-05: every Enter counts.
+          RateLimit.check(:commit, author.id) != :ok -> {:error, :rate_limited}
+          true -> commit_locked(author, topic, normalize(text), opts)
+        end
       end)
 
     with {:ok, %Message{} = message} <- result do
@@ -99,9 +103,16 @@ defmodule Idejo.Messages do
     now = DateTime.utc_now()
 
     cond do
-      open == nil and text == "" -> {:ok, nil}
-      open == nil -> open_new(author, topic, text, now, opts[:reply_to_id])
-      true -> append(open, text, now, Keyword.get(opts, :break, false))
+      open == nil and text == "" ->
+        {:ok, nil}
+
+      # SP-05: and a new message counts towards the new messages a minute.
+      open == nil ->
+        with :ok <- RateLimit.check(:new_message, author.id),
+             do: open_new(author, topic, text, now, opts[:reply_to_id])
+
+      true ->
+        append(open, text, now, Keyword.get(opts, :break, false))
     end
   end
 
