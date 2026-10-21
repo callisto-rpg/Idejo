@@ -30,12 +30,19 @@ defmodule IdejoWeb.UserComponents do
   attr :card, :map, required: true, doc: "from `card_data/1`"
   attr :id, :string, default: "user-card"
 
+  attr :heading, :string,
+    values: ~w(h1 h2),
+    default: "h2",
+    doc: "h1 on the card's own page (AX-01), h2 in a dialog"
+
   def user_card(assigns) do
     ~H"""
     <div id={"#{@id}-content"} class="flex items-start gap-4">
       <.avatar user={@card.user} size={:large} />
       <div>
-        <h2 id={"#{@id}-name"} class="text-lg font-semibold">{@card.user.display_name}</h2>
+        <.dynamic_tag tag_name={@heading} id={"#{@id}-name"} class="text-lg font-semibold">
+          {@card.user.display_name}
+        </.dynamic_tag>
         <p class="opacity-70">@{@card.user.username}</p>
         <ul :if={@card.roles != []} class="mt-2 flex flex-wrap gap-2" aria-label={gettext("Roles")}>
           <li :for={role <- @card.roles} class="badge badge-sm gap-1">

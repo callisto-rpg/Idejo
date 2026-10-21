@@ -61,6 +61,7 @@ defmodule IdejoWeb.TopicLive do
            messages: [],
            roles: %{},
            editing: nil,
+           refocus: nil,
            can_moderate?: false,
            announcement: nil,
            now: DateTime.utc_now(),
@@ -82,7 +83,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
-         |> assign(editing: nil, editor_mode: :write, preview_html: "")
+         |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, user_card: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
@@ -372,7 +373,7 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("cancel_edit", _params, socket), do: {:noreply, assign(socket, :editing, nil)}
+  def handle_event("cancel_edit", _params, socket), do: {:noreply, close_editor(socket)}
 
   def handle_event(
         "validate_edit",
@@ -415,7 +416,7 @@ defmodule IdejoWeb.TopicLive do
     case result do
       # The edited message arrives like everyone else's view of it, as an event.
       {:ok, _message} ->
-        {:noreply, assign(socket, :editing, nil)}
+        {:noreply, close_editor(socket)}
 
       {:error, :blank} ->
         form =
@@ -427,10 +428,17 @@ defmodule IdejoWeb.TopicLive do
       {:error, _} ->
         {:noreply,
          socket
-         |> assign(:editing, nil)
+         |> close_editor()
          |> put_flash(:error, gettext("This message cannot be edited."))}
     end
   end
+
+  # AX-01: the keyboard focus goes back to the message's Edit button, which the editor
+  # replaced (it takes the focus when it is mounted again).
+  defp close_editor(%{assigns: %{editing: {id, _}}} = socket),
+    do: assign(socket, editing: nil, refocus: id)
+
+  defp close_editor(socket), do: assign(socket, :editing, nil)
 
   @impl true
   def render(assigns) do
@@ -495,6 +503,7 @@ defmodule IdejoWeb.TopicLive do
             forks={Map.get(@forks, message.id, [])}
             deleted_run={@deleted_runs[message.id]}
             editing={@editing}
+            refocus={@refocus}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
             edit_upload={@edit_upload}
@@ -529,6 +538,7 @@ defmodule IdejoWeb.TopicLive do
             forks={Map.get(@forks, message.id, [])}
             deleted_run={@deleted_runs[message.id]}
             editing={@editing}
+            refocus={@refocus}
             editor_mode={@editor_mode}
             preview_html={@preview_html}
             edit_upload={@edit_upload}
@@ -627,6 +637,7 @@ defmodule IdejoWeb.TopicLive do
   attr :forks, :list, required: true
   attr :deleted_run, :any, default: nil
   attr :editing, :any, required: true
+  attr :refocus, :string, default: nil, doc: "the message whose editor just closed (AX-01)"
   attr :editor_mode, :atom, required: true
   attr :preview_html, :string, required: true
   attr :edit_upload, :any, default: nil
@@ -699,6 +710,7 @@ defmodule IdejoWeb.TopicLive do
         id={"edit-message-#{@message.id}"}
         phx-change="validate_edit"
         phx-submit="save_edit"
+        phx-mounted={JS.focus(to: "#edit-message-#{@message.id} textarea")}
       >
         <MessageComponents.editor
           field={@edit_form[:body]}
@@ -779,8 +791,10 @@ defmodule IdejoWeb.TopicLive do
       </details>
       <button
         :if={(@own_closed? or @mod_edit?) and !@edit_form}
+        id={"message-#{@message.id}-edit"}
         type="button"
         class="link text-sm mr-3"
+        phx-mounted={@refocus == @message.id && JS.focus()}
         phx-click="edit"
         phx-value-id={@message.id}
       >

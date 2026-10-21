@@ -95,7 +95,7 @@ defmodule Idejo.RepositoryTest do
   end
 
   @tag req: "DV-03"
-  test "DV-03 formatter, linter, type checks and tests run from the command line and in CI" do
+  test "DV-03 formatter, linter, type checks, tests and accessibility checks run everywhere" do
     precommit = Mix.Project.config()[:aliases][:precommit]
     ci = read(".github/workflows/ci.yml")
 
@@ -108,6 +108,9 @@ defmodule Idejo.RepositoryTest do
       assert step in precommit
       assert ci =~ ci_step
     end
+
+    # The accessibility checks are tests (AX-01), so they run wherever the tests do.
+    assert read("test/idejo_web/accessibility_test.exs") =~ ~s(@tag req: "AX-01")
   end
 
   @tag req: "DV-04"

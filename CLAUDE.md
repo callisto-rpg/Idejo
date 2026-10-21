@@ -167,6 +167,15 @@ roles or the permission grid. Every later change must keep it true:
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
   `assets/css/`; a dependency that needs inline code gets the per-request nonce from
   `conn.assigns.script_csp_nonce` / `style_csp_nonce`.
+- **Accessibility** (AX-01, `docs/accessibility.md`): every page has a skip link to
+  `<main id="main">` first, one `<h1>`, no skipped heading level, named `<nav>`s, labels and
+  names on every control, and a visible `:focus-visible` outline (never `outline: none`
+  without a replacement). `test/idejo_web/accessibility_test.exs` audits every page with
+  `IdejoWeb.Accessibility.audit/2` (`test/support/accessibility.ex`): add new pages to its
+  lists. When markup that has the focus is replaced (an editor opening or closing), move the
+  focus on purpose (`phx-mounted={JS.focus(...)}`, as `TopicLive` does with `refocus`). The
+  editor's Write / Preview tabs follow the ARIA tabs pattern (`EditorTabs` hook). Screen
+  readers are checked by hand before a release (checklist in the doc).
 - **Public pages must work without JavaScript** (AX-04, CL-02). Use controllers, not LiveView.
 - **All UI strings via Gettext** (`gettext/1`), never hard-coded (AX-05 readiness).
 - **Content stored twice**: Markdown source and sanitised HTML (FD-03).

@@ -31,12 +31,13 @@ import {Composer} from "./composer"
 import {ShowAll} from "./show_all"
 import {Mentions, UserCard} from "./user_card"
 import {EditorImages} from "./editor_images"
+import {EditorTabs} from "./editor_tabs"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ShowAll, Mentions, UserCard, EditorImages},
+  hooks: {...colocatedHooks, Composer, ShowAll, Mentions, UserCard, EditorImages, EditorTabs},
 })
 
 // Show progress bar on live navigation and form submits

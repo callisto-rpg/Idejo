@@ -9,7 +9,6 @@ defmodule Idejo.RequirementsTest do
   # MVP requirements whose tests come with a later pull request of M5 (MVP §7). Remove an ID
   # when its tests land: the last test below fails until then.
   @pending %{
-    "AX-01" => "accessibility audit (keyboard, focus, landmarks), next in M5",
     "NF-01" => "load test, live delivery within 200 ms",
     "NF-03" => "page speed on a mid-range phone, measured with the load test",
     "NF-04" => "load test on 2 vCPU / 2 GB",
