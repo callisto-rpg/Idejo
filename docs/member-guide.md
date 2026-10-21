@@ -1,0 +1,82 @@
+<!--
+SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+SPDX-License-Identifier: AGPL-3.0-only
+-->
+
+# Writing in Idejo
+
+Idejo looks like a forum (categories, topics, messages) and every topic is a live chat.
+What is different is how you write: **your message grows as you go.**
+
+## The keys
+
+| Key | What it does |
+| --- | --- |
+| **Enter** | Sends what you wrote. Everyone sees it at once. Keep typing and press Enter again: it joins the **same message**, on the same line. |
+| **Shift+Enter** | A line break, as in any text box. Nothing is sent. |
+| **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
+
+The text box below the topic is where you write. Its placeholder repeats the keys.
+
+## How a message grows
+
+1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
+   in the box**, in stronger contrast than what you have not sent yet. If your sentence had
+   no punctuation, Idejo adds a full stop.
+2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
+   Others can reply meanwhile; their replies appear below your message, which keeps growing.
+3. For a short while after your message starts (45 seconds, unless your server changed it),
+   you can only add to it. Nothing shows this to others; it only means that one quick
+   thought stays one message.
+4. When you are done, press **Ctrl+Enter**: the message is complete, and your next line
+   starts a new message.
+
+Your message also completes when you leave the topic for more than 30 seconds, when the
+topic is locked, or when a moderator closes it.
+
+**On a phone or tablet** there is no Ctrl+Enter yet: your message keeps growing until you
+leave the topic.
+
+## Changing what you wrote
+
+- **While your message is open**, change the text right in the box and press Enter. The
+  changed part shows as unsent until you do.
+- **After it is complete**, use **Edit** under it.
+
+Once you change text you had already sent, a small **view earlier version** link appears
+under the message, so everyone can see what it said before. Adding to the end is not a
+change and keeps no history.
+
+## Around a message
+
+- **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
+  reply** to undo it). Your next new message is shown as a reply to theirs.
+- **@username** mentions someone. They get a notification; click a mention to see their
+  card.
+- **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
+  for a new topic or an edit, there is also **Add image**.
+- **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
+  lines, `> quotes`, lists and links. Messages have no length limit; a long one shows a
+  **Show all** button.
+- **New topic from this** turns a side question into its own topic, linked both ways.
+- **Report** sends a message to the moderators, with a reason. Only they see that you
+  reported it.
+- Each message's time is its **permanent link**.
+
+## Finding your way
+
+- **New topic**, on a category's page: a title and a first message, with **Preview**.
+  Nobody sees it before you post it.
+- **Unread** (top of the page) lists topics with messages you have not seen. A message
+  counts once, however much it grows.
+- **Notifications** shows your mentions, replies to you and new messages in topics you
+  follow.
+- **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
+  unfollow them.
+- **Search** finds words in messages and titles.
+
+## Your account
+
+Click your name in the top right corner (**Profile and account**) to change your display
+name, add a picture, change your password, or delete your account. Your messages stay after
+that, shown as "Deleted user".
