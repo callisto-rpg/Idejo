@@ -3,9 +3,14 @@
 
 defmodule Idejo.Moderation do
   @moduledoc """
-  Moderation (MO). This module holds the moderation log (MO-03): every moderator action
-  records one entry, with the moderator, the target (a message, topic or user), the reason
-  and the time.
+  Moderation (MO): reports (MO-01) and the moderation log (MO-03).
+
+  Members report a message with a reason; the moderators of its category (owners and
+  administrators everywhere, steward decision) see the open reports grouped by message, and
+  resolve or dismiss them all at once, which is logged.
+
+  Every moderator action records one log entry, with the moderator, the target (a message,
+  topic or user), the reason and the time.
 
   Call `record/4` inside the same transaction as the action, so an action is never taken
   without its entry. The log is append-only: the database refuses updates and deletes.
@@ -19,7 +24,7 @@ defmodule Idejo.Moderation do
   alias Idejo.Accounts.User
   alias Idejo.Forum.{Category, Topic}
   alias Idejo.Messages.Message
-  alias Idejo.Moderation.Action
+  alias Idejo.Moderation.{Action, Report}
   alias Idejo.Repo
 
   @doc """
@@ -58,6 +63,125 @@ defmodule Idejo.Moderation do
     case String.trim(reason) do
       "" -> nil
       reason -> reason
+    end
+  end
+
+  ## Reports (MO-01)
+
+  @doc "A changeset for the report form."
+  @spec change_report(map()) :: Ecto.Changeset.t()
+  def change_report(attrs \\ %{}), do: Report.changeset(%Report{}, attrs)
+
+  @doc """
+  Reports a message, as `user`, with a reason: a message they may view and did not write
+  (`{:error, :forbidden}` otherwise). Once per open report: a second gets an error on the
+  changeset.
+  """
+  @spec report_message(User.t(), Message.t(), map()) ::
+          {:ok, Report.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def report_message(%User{} = user, %Message{} = message, attrs) do
+    cond do
+      message.author_id == user.id ->
+        {:error, :forbidden}
+
+      is_nil(Idejo.Forum.get_viewable_message(user, message.id)) ->
+        {:error, :forbidden}
+
+      true ->
+        %Report{message_id: message.id, reporter_id: user.id}
+        |> Report.changeset(attrs)
+        |> Repo.insert()
+    end
+  end
+
+  @doc """
+  The open reports the moderator may handle, grouped by message, the longest waiting first:
+  `[%{message: message, reports: [report]}]`, with the message's author and topic and each
+  report's reporter.
+  """
+  @spec list_open_reports(User.t()) :: [%{message: Message.t(), reports: [Report.t()]}]
+  def list_open_reports(%User{} = moderator) do
+    moderator
+    |> open_reports()
+    |> order_by([r], asc: r.created_at, asc: r.id)
+    |> preload([:reporter, message: [:author, :topic]])
+    |> Repo.all()
+    |> Enum.group_by(& &1.message_id)
+    |> Enum.map(fn {_id, [first | _] = reports} ->
+      %{message: first.message, reports: reports}
+    end)
+    |> Enum.sort_by(fn %{reports: [first | _]} -> first.created_at end, DateTime)
+  end
+
+  @doc "How many messages have open reports the moderator may handle."
+  @spec open_report_count(User.t() | nil) :: non_neg_integer()
+  def open_report_count(nil), do: 0
+
+  def open_report_count(%User{} = moderator) do
+    moderator
+    |> open_reports()
+    |> select([r], count(r.message_id, :distinct))
+    |> Repo.one()
+  end
+
+  defp open_reports(moderator) do
+    query =
+      from r in Report,
+        join: m in assoc(r, :message),
+        join: t in Topic,
+        on: t.id == m.topic_id,
+        where: r.status == "open"
+
+    if Access.administrator?(moderator) do
+      query
+    else
+      moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
+      where(query, [_r, _m, t], t.category_id in subquery(moderated))
+    end
+  end
+
+  @doc """
+  Resolves or dismisses every open report of a message, as a moderator of its category, with
+  an optional note; logged as `report.resolve` or `report.dismiss` (MO-03).
+  """
+  @spec handle_reports(User.t(), Message.t(), :resolve | :dismiss, String.t() | nil) ::
+          {:ok, non_neg_integer()} | {:error, :forbidden | :no_reports}
+  def handle_reports(%User{} = moderator, %Message{} = message, outcome, note \\ nil)
+      when outcome in [:resolve, :dismiss] do
+    category =
+      Repo.one!(
+        from t in Topic,
+          join: c in assoc(t, :category),
+          where: t.id == ^message.topic_id,
+          select: c
+      )
+
+    if Access.can?(moderator, :moderate, category) do
+      Repo.transact(fn -> close_reports(moderator, message, outcome, note) end)
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp close_reports(moderator, message, outcome, note) do
+    status = if outcome == :resolve, do: "resolved", else: "dismissed"
+
+    {count, _} =
+      Repo.update_all(
+        from(r in Report, where: r.message_id == ^message.id and r.status == "open"),
+        set: [status: status, handled_by_id: moderator.id, handled_at: DateTime.utc_now()]
+      )
+
+    if count == 0 do
+      {:error, :no_reports}
+    else
+      with {:ok, _} <-
+             record(moderator, "report.#{outcome}", message,
+               reason: note,
+               details: %{"reports" => count}
+             ) do
+        {:ok, count}
+      end
     end
   end
 

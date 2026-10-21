@@ -658,6 +658,15 @@ defmodule IdejoWeb.TopicLive do
       >
         {gettext("Edit")}
       </button>
+      <%!-- MO-01: anyone signed in may report someone else's message. --%>
+      <.link
+        :if={@viewer && @viewer.id != @message.author_id}
+        href={~p"/m/#{@message.id}/report"}
+        class="link text-sm mr-3"
+        id={"message-#{@message.id}-report"}
+      >
+        {gettext("Report")}
+      </.link>
       <.link
         :if={@can_fork?}
         href={~p"/m/#{@message.id}/new-topic"}

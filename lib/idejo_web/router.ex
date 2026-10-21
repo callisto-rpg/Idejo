@@ -118,8 +118,13 @@ defmodule IdejoWeb.Router do
     get "/notifications", NotificationController, :index
     post "/notifications/read", NotificationController, :read_all
     get "/notifications/:id", NotificationController, :show
-    # MO-03: the moderation log, for moderators.
+    # MO-01, MO-03: the report queue and the moderation log, for moderators.
+    get "/moderation", ModerationController, :index
+    post "/moderation/reports/:message_id", ModerationController, :handle_reports
     get "/moderation/log", ModerationController, :log
+    # MO-01: report a message.
+    get "/m/:id/report", ReportController, :new
+    post "/m/:id/report", ReportController, :create
     # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
     # TP-14: moderators lock, unlock, pin or unpin a topic (a plain form).
     post "/t/:id/moderate", TopicModerationController, :create

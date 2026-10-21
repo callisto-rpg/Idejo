@@ -1,0 +1,61 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {gettext("Moderation")}
+    <:subtitle>{gettext("Reported messages, the longest waiting first.")}</:subtitle>
+    <:actions>
+      <.link href={~p"/moderation/log"} class="link" id="log-link">{gettext("Moderation log")}</.link>
+    </:actions>
+  </.header>
+
+  <p :if={@queue == []} id="no-reports">{gettext("No open reports.")}</p>
+
+  <ol :if={@queue != []} id="reports" class="divide-y divide-base-300">
+    <li
+      :for={%{message: message, reports: reports} <- @queue}
+      id={"reported-#{message.id}"}
+      class="py-4 space-y-2"
+    >
+      <p>
+        <.link href={~p"/m/#{message.id}"} class="link font-semibold">
+          {gettext("%{name} in “%{topic}”",
+            name: message.author.display_name,
+            topic: message.topic.title
+          )}
+        </.link>
+        <span class="badge badge-sm ml-1">{ngettext(
+          "1 report",
+          "%{count} reports",
+          length(reports)
+        )}</span>
+      </p>
+      <p class="text-sm opacity-70">{Idejo.Forum.excerpt(message)}</p>
+      <ul class="text-sm list-disc pl-5">
+        <li :for={report <- reports} id={"report-#{report.id}"}>
+          <span class="font-semibold">{report.reporter.display_name}</span>:
+          <span class="report-reason">{report.reason}</span>
+          <time class="opacity-70" datetime={DateTime.to_iso8601(report.created_at)}>
+            ({Calendar.strftime(report.created_at, "%Y-%m-%d %H:%M UTC")})
+          </time>
+        </li>
+      </ul>
+      <.form
+        for={%{}}
+        action={~p"/moderation/reports/#{message.id}"}
+        method="post"
+        id={"handle-#{message.id}"}
+        class="flex flex-wrap items-end gap-2"
+      >
+        <label class="grow">
+          <span class="label mb-1">{gettext("Note (shown in the moderation log)")}</span>
+          <input type="text" name="note" maxlength="500" class="input input-sm w-full" />
+        </label>
+        <button name="outcome" value="resolve" class="btn btn-sm btn-primary">{gettext("Resolve")}</button>
+        <button name="outcome" value="dismiss" class="btn btn-sm">{gettext("Dismiss")}</button>
+      </.form>
+    </li>
+  </ol>
+</Layouts.app>
