@@ -150,12 +150,11 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
   versions are kept, and moderators see every version of any edited message.
 
 **Bans.** Server moderators (owners, administrators, and roles allowed to moderate
-server-wide) ban from the person's own page, `/u/…`. To get there, open an @mention of them
-in a new tab (Ctrl+click or middle-click it; a plain click shows their card in the topic),
-or, as an administrator, open the address shown as **URI** on their page in **Admin →
-Users**. Under **Ban**, choose 1 day, 7 days, 30 days, a year or for good, and a reason.
-They are signed out at once and cannot sign in until the ban ends or is lifted with **Lift
-ban**. Their messages stay. Owners and administrators cannot be banned.
+server-wide) see **User actions** on a person's card: click an @mention of them in a topic,
+or open their page, `/u/…`. Choose **Ban…**, then 1 day, 7 days, 30 days, a year or for
+good, and a reason. They are signed out at once and cannot sign in until the ban ends or is
+lifted with **Lift ban**, in the same menu. Their messages stay. Owners and administrators
+cannot be banned.
 
 ## Backups and recovery
 
