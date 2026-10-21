@@ -9,9 +9,8 @@ defmodule Idejo.RequirementsTest do
   # MVP requirements whose tests come with a later pull request of M5 (MVP §7). Remove an ID
   # when its tests land: the last test below fails until then.
   @pending %{
-    "NF-01" => "load test, live delivery within 200 ms",
-    "NF-03" => "page speed on a mid-range phone, measured with the load test",
-    "NF-04" => "load test on 2 vCPU / 2 GB",
+    "NF-03" =>
+      "page speed on a mid-range phone over 4G: needs a browser measurement, not planned",
     "LI-05" => "the CLA document (docs/legal/CLA.md) is not in the repository yet"
   }
 
@@ -20,6 +19,12 @@ defmodule Idejo.RequirementsTest do
   @by_review %{
     "DV-05" => "one requirement per pull request, reviewed by a person",
     "LI-08" => "the steward writes the specifications and reviews every change"
+  }
+
+  # MVP requirements checked by the load test (load/run.sh) before each release, not by
+  # mix test; docs/load-testing.md holds the last results.
+  @by_load_test %{
+    "NF-04" => "200 people online on 2 vCPU / 2 GB"
   }
 
   @tag req: "DV-02"
@@ -31,6 +36,7 @@ defmodule Idejo.RequirementsTest do
           id not in tested,
           not Map.has_key?(@pending, id),
           not Map.has_key?(@by_review, id),
+          not Map.has_key?(@by_load_test, id),
           do: id
 
     assert missing == [], "MVP requirements without a test tagged req: ID: #{inspect(missing)}"
@@ -54,8 +60,12 @@ defmodule Idejo.RequirementsTest do
     mvp = Requirements.mvp()
     tested = MapSet.new(Requirements.tagged_tests(), &elem(&1, 0))
 
-    for id <- Map.keys(@pending) ++ Map.keys(@by_review) do
+    for id <- Map.keys(@pending) ++ Map.keys(@by_review) ++ Map.keys(@by_load_test) do
       assert id in mvp, "#{id} is not an MVP requirement"
+    end
+
+    for id <- Map.keys(@by_load_test) do
+      assert File.read!("docs/load-testing.md") =~ id, "docs/load-testing.md does not cover #{id}"
     end
 
     for {id, why} <- @pending do

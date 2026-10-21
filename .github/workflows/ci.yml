@@ -110,4 +110,5 @@ jobs:
   # End-to-end flows (MVP §4) and the accessibility checks (AX-01) run inside `mix test`
   # above: ConnTest/LiveViewTest flows and IdejoWeb.Accessibility, no browser (steward
   # decision; docs/accessibility.md lists what is checked by hand).
-  # Added in M5: k6 load test (NF-01, NF-04) on release branches.
+  # The load test (NF-01, NF-04) runs by hand before each release, on a 4-CPU machine:
+  # load/run.sh, results in docs/load-testing.md (steward decision: a local run is enough).

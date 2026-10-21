@@ -150,7 +150,8 @@ roles or the permission grid. Every later change must keep it true:
   requirements table by `Idejo.Requirements`) has a tagged test, each tagged test starts with
   its ID, and every tagged ID exists in a sheet. IDs whose tests come with a later PR are in
   its `@pending` (remove the ID when its tests land, or the test fails); process-only IDs
-  (DV-05, LI-08) are in `@by_review`. Requirements met by repository files (SP-01, LI-01,
+  (DV-05, LI-08) are in `@by_review`, and NF-04, checked by the load test, in
+  `@by_load_test`. Requirements met by repository files (SP-01, LI-01,
   DV-01, DV-03, DV-04, DV-06) are tested in `test/idejo/repository_test.exs`.
 - **Async tests and shared rows**: async tests run side by side, each in its own sandbox
   transaction, and a lock taken there lasts until the test ends (`Forum` locks categories,
@@ -232,6 +233,10 @@ roles or the permission grid. Every later change must keep it true:
   A reply's `reply_to_id` must be a message of the same topic, set when the reply opens;
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
   links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
+- **Live updates stay cheap** (NF-01): `Messages.broadcast/2` sends `{:message, m}` with
+  `Messages.shown/0` loaded once; a topic view must do no database work per update (every
+  viewer handles every Enter). Keep it so: check with `load/run.sh --hot --writers 10`
+  (p95 within 200 ms) and `load/top.exs`.
 - **Live topics** (TP-04): the topic page stays a controller and embeds `IdejoWeb.TopicLive`
   (`live_render/3`, session `"topic_id"`, `"reply_to_id"`) for every viewer: the message list
   (a keyed comprehension, `#message-{id}`, kept for permalinks) and the composer for posters.
@@ -500,6 +505,7 @@ mix sobelow --config
 mix deps.audit && mix hex.audit
 reuse lint                         # SPDX headers (pip install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
+load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
 ```
 
 Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:

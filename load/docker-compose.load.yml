@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Load test (NF-04): the production bundle on the minimum server, 2 vCPU and 2 GB for the app
+# and the database together (both pinned to CPUs 0 and 1, memory split between them). The app
+# is reached directly on localhost:4100, without Caddy. load/run.sh uses it; see
+# docs/load-testing.md.
+
+services:
+  app:
+    cpuset: "0,1"
+    mem_limit: 1536m
+    environment:
+      PHX_HOST: localhost
+    ports:
+      - "127.0.0.1:4100:4000"
+    volumes:
+      - ../load:/load:ro
+
+  db:
+    cpuset: "0,1"
+    mem_limit: 512m
