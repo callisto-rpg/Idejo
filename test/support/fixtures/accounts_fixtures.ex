@@ -13,6 +13,12 @@ defmodule Idejo.AccountsFixtures do
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"
   def unique_username, do: "user_#{System.unique_integer([:positive])}"
+
+  # Unique columns get values of their own in every test: async tests run side by side in
+  # the sandbox, and two inserting the same username or role name wait on each other, which
+  # deadlocks with the categories lock that Forum holds until the end of a test.
+  def unique_username(base), do: "#{base}_#{System.unique_integer([:positive])}"
+  def unique_role_name(base), do: "#{base} #{System.unique_integer([:positive])}"
   def valid_user_password, do: "hello world!"
 
   def valid_user_attributes(attrs \\ %{}) do

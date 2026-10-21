@@ -16,9 +16,9 @@ defmodule Idejo.NotificationsTest do
   setup do
     admin = user_with_role_fixture(:administrator)
     {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
-    ada = user_fixture(%{username: "ada", display_name: "Ada"})
-    bo = user_fixture(%{username: "bo_b", display_name: "Bo"})
-    cy = user_fixture(%{username: "cy_c", display_name: "Cy"})
+    ada = user_fixture(%{username: unique_username("ada"), display_name: "Ada"})
+    bo = user_fixture(%{username: unique_username("bo"), display_name: "Bo"})
+    cy = user_fixture(%{username: unique_username("cy"), display_name: "Cy"})
     {:ok, topic} = Forum.create_topic(ada, general, %{"title" => "Plans", "body" => "Tonight?"})
 
     on_exit(fn ->
@@ -45,13 +45,18 @@ defmodule Idejo.NotificationsTest do
     :ok = Reading.follow(dee, topic)
 
     {:ok, reply} =
-      Forum.post_message(bo, topic, %{"body" => "Yes! cc @cy_c", "reply_to_id" => first.id})
+      Forum.post_message(bo, topic, %{
+        "body" => "Yes! cc @#{cy.username}",
+        "reply_to_id" => first.id
+      })
 
     # Ada (starter, so a follower) is replied to; Cy is mentioned; Dee follows; never Bo.
     assert kinds(reply) == %{ada.id => "reply", cy.id => "mention", dee.id => "follow"}
 
     # Someone in several groups gets one notification, of the first kind: mention.
-    {:ok, again} = Forum.post_message(cy, topic, %{"body" => "@ada", "reply_to_id" => reply.id})
+    {:ok, again} =
+      Forum.post_message(cy, topic, %{"body" => "@#{ada.username}", "reply_to_id" => reply.id})
+
     assert kinds(again)[ada.id] == "mention"
     assert kinds(again)[bo.id] == "reply"
     refute Map.has_key?(kinds(again), cy.id)
@@ -72,14 +77,24 @@ defmodule Idejo.NotificationsTest do
     assert kinds(open) == %{bo.id => "follow"}
 
     # An append notifies only someone newly mentioned; Bo's follow becomes that mention.
-    {:ok, _} = Messages.commit(ada, topic, "First line. More 10. Hey @bo_b")
+    {:ok, _} = Messages.commit(ada, topic, "First line. More 10. Hey @#{bo.username}")
     assert kinds(open) == %{bo.id => "mention"}
-    {:ok, _} = Messages.commit(ada, topic, "First line. More 10. Hey @bo_b and @cy_c")
+
+    {:ok, _} =
+      Messages.commit(ada, topic, "First line. More 10. Hey @#{bo.username} and @#{cy.username}")
+
     assert kinds(open) == %{bo.id => "mention", cy.id => "mention"}
 
     # Read, it stays read when later appends mention Bo again.
     :ok = Notifications.mark_all_read(bo)
-    {:ok, _} = Messages.commit(ada, topic, "First line. More 10. Hey @bo_b and @cy_c. @bo_b!")
+
+    {:ok, _} =
+      Messages.commit(
+        ada,
+        topic,
+        "First line. More 10. Hey @#{bo.username} and @#{cy.username}. @#{bo.username}!"
+      )
+
     assert Notifications.unread_count(bo) == 0
     assert Repo.aggregate(from(n in Notification, where: n.user_id == ^bo.id), :count) == 1
   end
@@ -91,7 +106,7 @@ defmodule Idejo.NotificationsTest do
     topic: topic
   } do
     {:ok, posted} = Forum.post_message(ada, topic, %{"body" => "Who is in?"})
-    {:ok, edited} = Messages.edit(ada, posted, "Who is in, @cy_c?")
+    {:ok, edited} = Messages.edit(ada, posted, "Who is in, @#{cy.username}?")
     assert kinds(edited)[cy.id] == "mention"
   end
 
@@ -110,7 +125,7 @@ defmodule Idejo.NotificationsTest do
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:member), general, :view, :deny)
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:guest), general, :view, :deny)
 
-    {:ok, after_} = Forum.post_message(ada, topic, %{"body" => "After, @bo_b"})
+    {:ok, after_} = Forum.post_message(ada, topic, %{"body" => "After, @#{bo.username}"})
     assert kinds(after_) == %{}
     # And earlier ones are no longer shown.
     assert Notifications.unread_count(bo) == 0

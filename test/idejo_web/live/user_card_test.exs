@@ -13,12 +13,18 @@ defmodule IdejoWeb.UserCardTest do
   setup do
     admin = user_with_role_fixture(:administrator)
     {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
-    {:ok, team} = Access.create_role(admin, %{"name" => "Team", "colour" => "#336699"})
-    ada = user_fixture(%{username: "ada_love", display_name: "Ada"})
+
+    {:ok, team} =
+      Access.create_role(admin, %{"name" => unique_role_name("Team"), "colour" => "#336699"})
+
+    ada = user_fixture(%{username: unique_username("ada_love"), display_name: "Ada"})
     :ok = Access.grant_role(ada, team)
 
     {:ok, topic} =
-      Forum.create_topic(user_fixture(), general, %{"title" => "Chat", "body" => "Hi @ada_love"})
+      Forum.create_topic(user_fixture(), general, %{
+        "title" => "Chat",
+        "body" => "Hi @#{ada.username}"
+      })
 
     %{ada: ada, topic: topic}
   end
@@ -34,7 +40,7 @@ defmodule IdejoWeb.UserCardTest do
     page = build_conn() |> get(~p"/u/#{ada.id}") |> html_response(200)
     doc = LazyHTML.from_document(page)
     assert doc |> LazyHTML.query("#user-card-name") |> LazyHTML.text() =~ "Ada"
-    assert page =~ "@ada_love"
+    assert page =~ "@#{ada.username}"
     assert doc |> LazyHTML.query("#user-card-content li") |> LazyHTML.text() =~ "Team"
     assert doc |> LazyHTML.query("#user-card-content li") |> LazyHTML.text() =~ "Member"
 
@@ -56,7 +62,7 @@ defmodule IdejoWeb.UserCardTest do
     render_hook(lv, "show_user", %{"id" => ada.id})
     assert has_element?(lv, "dialog#user-card[phx-hook=UserCard][aria-labelledby=user-card-name]")
     assert has_element?(lv, "#user-card-name", "Ada")
-    assert has_element?(lv, "#user-card", "@ada_love")
+    assert has_element?(lv, "#user-card", "@#{ada.username}")
     assert has_element?(lv, "#user-card li", "Team")
 
     lv |> element("#user-card button", "Close") |> render_click()

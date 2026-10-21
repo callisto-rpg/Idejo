@@ -12,7 +12,7 @@ defmodule IdejoWeb.NotificationControllerTest do
   setup %{conn: conn} do
     admin = user_with_role_fixture(:administrator)
     {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
-    bo = user_fixture(%{username: "bo_b"})
+    bo = user_fixture(%{username: unique_username("bo")})
     ada = user_fixture(%{display_name: "Ada"})
     {:ok, topic} = Forum.create_topic(bo, general, %{"title" => "Plans", "body" => "Tonight?"})
     %{conn: log_in_user(conn, bo), bo: bo, ada: ada, topic: topic}
@@ -34,7 +34,7 @@ defmodule IdejoWeb.NotificationControllerTest do
   } do
     assert conn |> get(~p"/notifications") |> html_response(200) =~ "No notifications yet."
 
-    {:ok, first} = Forum.post_message(ada, topic, %{"body" => "Hi @bo_b"})
+    {:ok, first} = Forum.post_message(ada, topic, %{"body" => "Hi @#{bo.username}"})
     {:ok, second} = Forum.post_message(ada, topic, %{"body" => "Me too"})
     {[newest, oldest], false} = Notifications.list(bo)
     assert newest.message_id == second.id

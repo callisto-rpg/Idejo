@@ -17,7 +17,7 @@ defmodule Idejo.ModerationDeleteEditTest do
   setup do
     admin = user_with_role_fixture(:administrator)
     {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
-    author = user_fixture(%{username: "ada_a"})
+    author = user_fixture()
     {:ok, topic} = Forum.create_topic(author, general, %{"title" => "Plans", "body" => "Hello"})
 
     on_exit(fn ->

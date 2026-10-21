@@ -103,7 +103,7 @@ defmodule Idejo.ForumCategoryDeleteTest do
     member: member,
     topics: [topic | _]
   } do
-    {:ok, team} = Access.create_role(admin, %{"name" => "Team"})
+    {:ok, team} = Access.create_role(admin, %{"name" => unique_role_name("Team")})
     {:ok, _} = Forum.delete_category(admin, old, topics: :archive)
     {:ok, archive} = Forum.archive_category(admin)
 

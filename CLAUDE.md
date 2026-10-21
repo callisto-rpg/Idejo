@@ -144,6 +144,13 @@ roles or the permission grid. Every later change must keep it true:
   @tag req: "GM-03"
   test "GM-03 appends never extend the window" do
   ```
+- **Async tests and shared rows**: async tests run side by side, each in its own sandbox
+  transaction, and a lock taken there lasts until the test ends (`Forum` locks categories,
+  `Access` locks roles). So in async tests: give unique columns values of their own
+  (`unique_username/1`, `unique_role_name/1` in `AccountsFixtures`; never a fixed username or
+  role name), and make a module `async: false` when it writes rows every test shares (built-in
+  roles, settings) outside the contexts. Every change to roles takes `Access`'s roles lock
+  first, every change to categories `Forum`'s, so locks are always taken in the same order.
 - **End-to-end flows** (MVP §4, §8): one test per flow in `test/idejo_web/flows/`, driving the
   real pages in order with ConnTest and LiveViewTest (no browser), tagged
   `@tag flow: "admin-sets-up-the-server"` etc.

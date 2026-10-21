@@ -145,7 +145,7 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
     admin: admin,
     general: general
   } do
-    {:ok, team} = Access.create_role(admin, %{"name" => "Team"})
+    {:ok, team} = Access.create_role(admin, %{"name" => unique_role_name("Team")})
     {:ok, help} = Forum.create_category(admin, %{"name" => "Help"})
     {:ok, lv, _html} = live(conn, ~p"/admin/permissions/#{general.slug}")
 

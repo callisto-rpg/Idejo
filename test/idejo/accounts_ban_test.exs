@@ -74,7 +74,7 @@ defmodule Idejo.AccountsBanTest do
     # Moderating one category is not enough: bans are server-wide.
     admin = user_with_role_fixture(:administrator)
     {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
-    {:ok, role} = Access.create_role(admin, %{"name" => "Helpers"})
+    {:ok, role} = Access.create_role(admin, %{"name" => unique_role_name("Helpers")})
     {:ok, _} = Access.set_permission(admin, role, general, :moderate, :allow)
     helper = user_fixture()
     :ok = Access.grant_role(helper, role)
