@@ -31,6 +31,7 @@ defmodule Idejo.Messages do
   alias Idejo.Forum
   alias Idejo.Forum.Topic
   alias Idejo.Messages.{Body, Message, OpenMessage, Version}
+  alias Idejo.Moderation
   alias Idejo.Notifications
   alias Idejo.Repo
   alias Idejo.Settings
@@ -355,17 +356,36 @@ defmodule Idejo.Messages do
 
   @doc """
   Closes another user's open message, as a moderator: someone with the `:moderate` right in
-  the topic's category (GM-16). `{:error, :forbidden}` otherwise. The moderation log (MO-03)
-  comes with M5.
+  the topic's category (GM-16). `{:error, :forbidden}` otherwise. The action goes in the
+  moderation log (MO-03) with the optional `reason`, in the same transaction.
   """
-  @spec close_as_moderator(User.t(), Message.t()) ::
+  @spec close_as_moderator(User.t(), Message.t(), String.t() | nil) ::
           {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
-  def close_as_moderator(%User{} = moderator, %Message{} = message) do
+  def close_as_moderator(%User{} = moderator, %Message{} = message, reason \\ nil) do
     topic = Topic |> Repo.get!(message.topic_id) |> Repo.preload(:category)
 
-    if Idejo.Access.can?(moderator, :moderate, topic.category),
-      do: close(message),
-      else: {:error, :forbidden}
+    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+      result =
+        Repo.transact(fn ->
+          message = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+          close_logged(moderator, message, reason)
+        end)
+
+      with {:ok, message} <- result, do: after_commit(message)
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  # A message that closed meanwhile stays as it is, and nothing is logged.
+  defp close_logged(_moderator, %Message{state: "closed"} = message, _reason), do: {:ok, message}
+
+  defp close_logged(moderator, message, reason) do
+    with {:ok, message} <- close_locked(message, DateTime.utc_now()),
+         {:ok, _} <- Moderation.record(moderator, "message.close", message, reason: reason) do
+      {:ok, message}
+    end
   end
 
   @doc "Lists a message's earlier versions, oldest first (GM-11)."

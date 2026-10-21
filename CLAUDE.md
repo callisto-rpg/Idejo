@@ -249,7 +249,7 @@ roles or the permission grid. Every later change must keep it true:
   (`present/2`, called by `TopicLive`); when a user's last view of a topic is gone for the
   grace (30 s, `:gm_disconnect_grace_ms`; steward decision) their open message there closes.
   `Recovery` starts that grace for every open message at boot. Moderators close others' open
-  messages (`Messages.close_as_moderator/2`, a "Close message" button). Tests run with a
+  messages (`Messages.close_as_moderator/3`, a "Close message" button; logged, MO-03). Tests run with a
   one-hour grace and pass `grace_ms:` when they need one.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count, last activity and,
@@ -362,6 +362,14 @@ roles or the permission grid. Every later change must keep it true:
   framework branding in the interface.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
+- **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls
+  `Moderation.record(moderator, "subject.action", target, reason: …, details: …)` in the same
+  transaction as the action; `target` is a message, topic or user, and the entry keeps the
+  target's category for visibility. Append-only (database trigger); `target_id` and
+  `category_id` are plain ids, not references. `/moderation/log` (`ModerationController`, no
+  JavaScript) shows moderators the entries of the categories they moderate, and owners and
+  administrators all of them; `Moderation.moderator?/1` gates it and the header link. Add a
+  label for each new action in `ModerationHTML.action_label/1`.
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and

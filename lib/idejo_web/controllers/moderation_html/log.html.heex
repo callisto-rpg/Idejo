@@ -1,0 +1,38 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>{gettext("Moderation log")}</.header>
+
+  <p :if={@entries == [] and @page == 1} id="no-actions">
+    {gettext("No moderator actions yet.")}
+  </p>
+
+  <ol :if={@entries != []} id="mod-actions" class="divide-y divide-base-300">
+    <li :for={entry <- @entries} id={"mod-action-#{entry.id}"} class="py-3">
+      <p>
+        <span class="font-semibold">{entry.moderator.display_name}</span>
+        · {action_label(entry.action)} ·
+        <.link href={target_path(entry)} class="link">{target_label(entry)}</.link>
+      </p>
+      <p :if={entry.reason} class="text-sm">
+        {gettext("Reason:")} <span class="mod-action-reason">{entry.reason}</span>
+      </p>
+      <p class="text-sm opacity-70">
+        <time datetime={DateTime.to_iso8601(entry.created_at)}>
+          {Calendar.strftime(entry.created_at, "%Y-%m-%d %H:%M UTC")}
+        </time>
+      </p>
+    </li>
+  </ol>
+
+  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="flex gap-4 mt-4">
+    <.link :if={@page > 1} href={~p"/moderation/log?page=#{@page - 1}"} class="link">
+      {gettext("Previous page")}
+    </.link>
+    <.link :if={@more?} href={~p"/moderation/log?page=#{@page + 1}"} class="link">
+      {gettext("Next page")}
+    </.link>
+  </nav>
+</Layouts.app>
