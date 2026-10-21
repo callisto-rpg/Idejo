@@ -22,7 +22,7 @@ defmodule IdejoWeb.Plugs.ClientIp do
   @impl true
   def call(conn, _opts) do
     with true <- Application.get_env(:idejo, :behind_proxy, true),
-         true <- private?(conn.remote_ip),
+         true <- private?(unmap(conn.remote_ip)),
          [header | _] <- get_req_header(conn, "x-forwarded-for"),
          {:ok, ip} <- rightmost(header) do
       %{conn | remote_ip: ip}
@@ -39,6 +39,15 @@ defmodule IdejoWeb.Plugs.ClientIp do
     |> String.to_charlist()
     |> :inet.parse_strict_address()
   end
+
+  # Bandit listens on IPv6 as well, so an IPv4 peer such as Caddy on the Compose network
+  # arrives as an IPv4-mapped IPv6 address (::ffff:172.18.0.3).
+  defp unmap({0, 0, 0, 0, 0, 0xFFFF, high, low}),
+    do:
+      {Bitwise.bsr(high, 8), Bitwise.band(high, 0xFF), Bitwise.bsr(low, 8),
+       Bitwise.band(low, 0xFF)}
+
+  defp unmap(ip), do: ip
 
   defp private?({10, _, _, _}), do: true
   defp private?({172, b, _, _}) when b in 16..31, do: true

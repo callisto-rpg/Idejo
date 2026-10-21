@@ -67,6 +67,22 @@ defmodule IdejoWeb.RateLimitTest do
 
     assert proxied.remote_ip == {198, 51, 100, 7}
 
+    # Caddy as Bandit sees it on the Compose network: ::ffff:172.18.0.3.
+    mapped =
+      %{build_conn() | remote_ip: {0, 0, 0, 0, 0, 0xFFFF, 0xAC12, 0x0003}}
+      |> put_req_header("x-forwarded-for", "198.51.100.8")
+      |> ClientIp.call([])
+
+    assert mapped.remote_ip == {198, 51, 100, 8}
+
+    # A mapped public address is the internet: its header is not believed.
+    mapped_public =
+      %{build_conn() | remote_ip: {0, 0, 0, 0, 0, 0xFFFF, 0xC633, 0x6409}}
+      |> put_req_header("x-forwarded-for", "10.0.0.1")
+      |> ClientIp.call([])
+
+    assert mapped_public.remote_ip == {0, 0, 0, 0, 0, 0xFFFF, 0xC633, 0x6409}
+
     direct =
       %{build_conn() | remote_ip: {198, 51, 100, 9}}
       |> put_req_header("x-forwarded-for", "10.0.0.1")
