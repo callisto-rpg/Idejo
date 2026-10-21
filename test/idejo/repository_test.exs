@@ -37,6 +37,10 @@ defmodule Idejo.RepositoryTest do
     refute Keyword.has_key?(prod[:idejo], :secure_cookies)
   end
 
+  # Split, so REUSE does not take these strings for this file's own header.
+  @copyright "SPDX-" <> "FileCopyrightText: 2026 Mariano Pictet and contributors"
+  @licence "SPDX-" <> "License-Identifier: AGPL-3.0-only"
+
   @tag req: "LI-01"
   test "LI-01 every source file carries the SPDX header" do
     sources =
@@ -54,8 +58,7 @@ defmodule Idejo.RepositoryTest do
       for path <- sources,
           path != "REUSE.toml",
           head = path |> File.read!() |> String.slice(0, 600),
-          not (head =~ "SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors" and
-                 head =~ "SPDX-License-Identifier: AGPL-3.0-only"),
+          not (head =~ @copyright and head =~ @licence),
           do: path
 
     assert without == []
