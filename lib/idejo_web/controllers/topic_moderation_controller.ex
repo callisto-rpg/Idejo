@@ -3,14 +3,36 @@
 
 defmodule IdejoWeb.TopicModerationController do
   @moduledoc """
-  The topic page's moderator form (TP-14): lock, unlock, pin or unpin, with an optional
-  reason for the moderation log (MO-03). A plain form post, so it works without JavaScript.
+  The topic page's moderator form: lock, unlock, pin or unpin (TP-14), or move to another
+  category (TP-15), with an optional reason for the moderation log (MO-03). A plain form post, so it works without JavaScript.
   """
   use IdejoWeb, :controller
 
   alias Idejo.Forum
 
   @actions %{"lock" => :lock, "unlock" => :unlock, "pin" => :pin, "unpin" => :unpin}
+
+  def create(conn, %{"id" => id, "action" => "move"} = params) do
+    user = conn.assigns.current_scope.user
+
+    with %{} = topic <- Forum.get_viewable_topic(user, id),
+         %{} = target <-
+           Enum.find(Forum.list_move_targets(user, topic), &(&1.id == params["category_id"])) do
+      case Forum.move_topic(user, topic, target, params["reason"]) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, gettext("Topic moved to %{category}.", category: target.name))
+          |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+
+        {:error, _} ->
+          conn
+          |> put_flash(:error, gettext("You cannot move this topic there."))
+          |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+      end
+    else
+      _ -> raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+    end
+  end
 
   def create(conn, %{"id" => id} = params) do
     user = conn.assigns.current_scope.user

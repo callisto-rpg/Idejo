@@ -177,15 +177,17 @@ defmodule IdejoWeb.TopicLive do
     {:noreply, socket |> assign(now: DateTime.utc_now(), tick: nil) |> schedule_tick()}
   end
 
-  # A moderator locked, unlocked, pinned or unpinned the topic (TP-14): the composer goes or
-  # comes back with the post right.
+  # A moderator locked, unlocked, pinned, unpinned (TP-14) or moved (TP-15) the topic: the
+  # composer goes or comes back with the post right, and a viewer who may not view its new
+  # category loses it, as when permissions change.
   def handle_info({:topic_changed, _topic_id}, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
 
   def handle_info({:topic_changed, topic_id}, socket) do
     case Forum.get_viewable_topic(user(socket), topic_id) do
       nil ->
-        {:noreply, socket}
+        Messages.unsubscribe(topic_id)
+        {:noreply, assign(socket, topic: nil, can_post?: false, lost_access?: true, messages: [])}
 
       topic ->
         {:noreply, assign(socket, topic: topic, can_post?: Forum.can_post?(user(socket), topic))}

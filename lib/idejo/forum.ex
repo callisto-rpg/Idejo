@@ -356,6 +356,75 @@ defmodule Idejo.Forum do
     end
   end
 
+  @doc """
+  Moves a topic to another category, as a moderator (TP-15): someone with the `:moderate`
+  right in both its category and the target, which is never the Archive
+  (`{:error, :forbidden}` / `{:error, :invalid_target}` otherwise). Its messages, open ones
+  too, move with it; URIs and links stay (TP-06).
+
+  Logged (MO-03) with the optional reason and the old and new category, with an `update`
+  activity, in one transaction; then the topic's viewers get `{:topic_changed, topic_id}`,
+  so those who may not view the new category stop seeing it.
+  """
+  @spec move_topic(User.t(), Topic.t(), Category.t(), String.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | :invalid_target | Ecto.Changeset.t()}
+  def move_topic(%User{} = moderator, %Topic{} = topic, %Category{} = target, reason \\ nil) do
+    result =
+      Repo.transact(fn ->
+        topic =
+          Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+          |> Repo.preload(:category)
+
+        target = Repo.get(Category, target.id)
+
+        cond do
+          not Access.can?(moderator, :moderate, topic.category) ->
+            {:error, :forbidden}
+
+          is_nil(target) or target.archive or target.id == topic.category_id ->
+            {:error, :invalid_target}
+
+          not Access.can?(moderator, :moderate, target) ->
+            {:error, :forbidden}
+
+          true ->
+            save_move(moderator, topic, target, reason)
+        end
+      end)
+
+    with {:ok, topic} <- result, do: Messages.broadcast(topic.id, {:topic_changed, topic.id})
+    result
+  end
+
+  defp save_move(moderator, topic, target, reason) do
+    details = %{
+      "from" => %{"id" => topic.category.id, "name" => topic.category.name},
+      "to" => %{"id" => target.id, "name" => target.name}
+    }
+
+    # Logged under the category it left, where its moderators look for it; `details` has both.
+    with {:ok, _} <-
+           Moderation.record(moderator, "topic.move", topic, reason: reason, details: details),
+         {:ok, moved} <- topic |> Ecto.Changeset.change(category_id: target.id) |> Repo.update(),
+         {:ok, _} <- topic_update_activity(moderator, moved) do
+      {:ok, %{moved | category: target}}
+    end
+  end
+
+  @doc """
+  The categories a moderator may move the topic to (TP-15): those they moderate, other than
+  its own and the Archive, in order.
+  """
+  @spec list_move_targets(User.t(), Topic.t()) :: [Category.t()]
+  def list_move_targets(%User{} = moderator, %Topic{category_id: current}) do
+    from(c in Category,
+      where: not c.archive and c.id != ^current,
+      order_by: [asc: c.position, asc: c.name]
+    )
+    |> Access.where_allowed(moderator, :moderate)
+    |> Repo.all()
+  end
+
   defp moderation_changes(:lock), do: [state: "locked"]
   defp moderation_changes(:unlock), do: [state: "open"]
   defp moderation_changes(:pin), do: [pinned: true]

@@ -78,6 +78,16 @@
       <button :if={@topic.pinned} name="action" value="unpin" class="btn btn-sm">
         {gettext("Unpin")}
       </button>
+      <%!-- TP-15: to a category the moderator also moderates. --%>
+      <span :if={@move_targets != []} class="flex items-end gap-2">
+        <label>
+          <span class="label mb-1">{gettext("Move to")}</span>
+          <select name="category_id" id="move-target" class="select select-sm">
+            <option :for={category <- @move_targets} value={category.id}>{category.name}</option>
+          </select>
+        </label>
+        <button name="action" value="move" class="btn btn-sm">{gettext("Move")}</button>
+      </span>
     </.form>
   </details>
 

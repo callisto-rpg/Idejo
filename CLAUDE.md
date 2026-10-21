@@ -369,6 +369,11 @@ roles or the permission grid. Every later change must keep it true:
   right. Moderators get a "Moderate this topic" form on the topic page
   (`TopicModerationController`, POST `/t/{id}/moderate`, no JavaScript); topic lists and
   pages show Locked and Pinned badges.
+- **Move a topic** (TP-15): `Forum.move_topic(moderator, topic, target, reason)` needs
+  `:moderate` in both categories (`Forum.list_move_targets/2`), never into the Archive; open
+  messages stay open and links keep working. Logged under the old category with `from`/`to`
+  in `details`, plus an `update` activity; `{:topic_changed, id}` makes viewers who may not
+  view the new category lose the topic. A "Move to" choice in the topic page's moderator form.
 - **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls
   `Moderation.record(moderator, "subject.action", target, reason: …, details: …)` in the same
   transaction as the action; `target` is a message, topic or user, and the entry keeps the
