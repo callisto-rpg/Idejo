@@ -1,0 +1,32 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {gettext("Report a message")}
+    <:subtitle>{gettext("Only the moderators see your report and your name.")}</:subtitle>
+  </.header>
+
+  <blockquote id="reported-message" class="border-l-2 border-base-300 pl-3 text-sm">
+    <.link href={~p"/m/#{@message.id}"} class="link">
+      {gettext("%{name} in “%{topic}”",
+        name: @message.author.display_name,
+        topic: @message.topic.title
+      )}
+    </.link>
+    <span class="opacity-70">{Idejo.Forum.excerpt(@message)}</span>
+  </blockquote>
+
+  <.form for={@form} action={~p"/m/#{@message.id}/report"} method="post" id="report-form">
+    <.input
+      field={@form[:reason]}
+      type="textarea"
+      label={gettext("Why should moderators look at it?")}
+      maxlength="1000"
+      required
+    />
+    <.button class="btn btn-primary">{gettext("Send report")}</.button>
+    <.link href={~p"/m/#{@message.id}"} class="btn btn-ghost">{gettext("Cancel")}</.link>
+  </.form>
+</Layouts.app>

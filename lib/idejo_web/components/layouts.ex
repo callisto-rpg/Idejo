@@ -90,16 +90,22 @@ defmodule IdejoWeb.Layouts do
 
   attr :user, :map, required: true
 
-  # MO-03: the Moderation screen, for users who may moderate somewhere.
+  # MO-01, MO-03: the Moderation screen, for users who may moderate somewhere, with the number
+  # of reported messages waiting.
   defp moderation_link(assigns) do
+    assigns = assign(assigns, :reports, Idejo.Moderation.open_report_count(assigns.user))
+
     ~H"""
     <a
       :if={Idejo.Moderation.moderator?(@user)}
-      href={~p"/moderation/log"}
+      href={~p"/moderation"}
       id="moderation-link"
       class="link"
     >
       {gettext("Moderation")}
+      <span :if={@reports > 0} class="badge badge-sm badge-warning">
+        {@reports}<span class="sr-only">{gettext(" open reports")}</span>
+      </span>
     </a>
     """
   end
