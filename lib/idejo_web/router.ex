@@ -122,6 +122,9 @@ defmodule IdejoWeb.Router do
     get "/moderation", ModerationController, :index
     post "/moderation/reports/:message_id", ModerationController, :handle_reports
     get "/moderation/log", ModerationController, :log
+    # MO-02: server moderators ban an account or lift a ban.
+    post "/u/:id/ban", BanController, :create
+    delete "/u/:id/ban", BanController, :delete
     # MO-01: report a message.
     get "/m/:id/report", ReportController, :new
     post "/m/:id/report", ReportController, :create

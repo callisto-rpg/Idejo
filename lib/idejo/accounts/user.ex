@@ -25,6 +25,9 @@ defmodule Idejo.Accounts.User do
     field :confirmed_at, :utc_datetime
     # AC-04: the avatar, an upload stored as `<avatar_id>.webp` (Idejo.Uploads.avatar_url/1).
     field :avatar_id, :binary_id
+    # MO-02: banned since, and until (nil: for good); see Idejo.Accounts.banned?/1.
+    field :banned_at, :utc_datetime_usec
+    field :banned_until, :utc_datetime_usec
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 

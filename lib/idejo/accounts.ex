@@ -10,6 +10,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Access
   alias Idejo.Access.UserRole
   alias Idejo.Federation
+  alias Idejo.Moderation
   alias Idejo.Repo
   alias Idejo.Uploads
 
@@ -426,6 +427,81 @@ defmodule Idejo.Accounts do
     }
   end
 
+  ## Bans (MO-02)
+
+  @doc """
+  Returns true while the user is banned: banned for good, or until a time still to come.
+  """
+  @spec banned?(User.t(), DateTime.t()) :: boolean()
+  def banned?(%User{} = user, now \\ DateTime.utc_now()) do
+    case user do
+      %{banned_at: nil} -> false
+      %{banned_until: nil} -> true
+      %{banned_until: until} -> DateTime.after?(until, now)
+    end
+  end
+
+  @doc """
+  Bans an account, as a server moderator (`Access.server_moderator?/1`), for good (`until`
+  nil) or until a time to come, with an optional reason (MO-02, steward decision). The
+  account can no longer sign in; its sessions are deleted, and their socket ids returned for
+  `IdejoWeb.UserAuth.disconnect_sessions/1`. Its messages stay. Logged (MO-03).
+
+  Owners and administrators are never banned, nor is the moderator themself
+  (`{:error, :not_bannable}`).
+  """
+  @spec ban_user(User.t(), User.t(), DateTime.t() | nil, String.t() | nil) ::
+          {:ok, {User.t(), [String.t()]}}
+          | {:error, :forbidden | :not_bannable | :past | Ecto.Changeset.t()}
+  def ban_user(%User{} = moderator, %User{} = user, until, reason \\ nil) do
+    cond do
+      not Access.server_moderator?(moderator) -> {:error, :forbidden}
+      user.id == moderator.id or Access.administrator?(user) -> {:error, :not_bannable}
+      user.status != "active" -> {:error, :not_bannable}
+      until != nil and not DateTime.after?(until, DateTime.utc_now()) -> {:error, :past}
+      true -> Repo.transact(fn -> save_ban(moderator, user, until, reason) end)
+    end
+  end
+
+  defp save_ban(moderator, user, until, reason) do
+    socket_ids = session_socket_ids(user)
+
+    with {:ok, banned} <-
+           user
+           |> Ecto.Changeset.change(banned_at: DateTime.utc_now(), banned_until: until)
+           |> Repo.update(),
+         {_, _} <-
+           Repo.delete_all(
+             from t in UserToken, where: t.user_id == ^user.id and t.context == "session"
+           ),
+         {:ok, _} <-
+           Moderation.record(moderator, "user.ban", banned,
+             reason: reason,
+             details: %{"until" => until && DateTime.to_iso8601(until)}
+           ) do
+      {:ok, {banned, socket_ids}}
+    end
+  end
+
+  @doc "Lifts a ban, as a server moderator, with an optional reason; logged (MO-03)."
+  @spec unban_user(User.t(), User.t(), String.t() | nil) ::
+          {:ok, User.t()} | {:error, :forbidden | :not_banned | Ecto.Changeset.t()}
+  def unban_user(%User{} = moderator, %User{} = user, reason \\ nil) do
+    cond do
+      not Access.server_moderator?(moderator) -> {:error, :forbidden}
+      user.banned_at == nil -> {:error, :not_banned}
+      true -> Repo.transact(fn -> save_unban(moderator, user, reason) end)
+    end
+  end
+
+  defp save_unban(moderator, user, reason) do
+    with {:ok, user} <-
+           user |> Ecto.Changeset.change(banned_at: nil, banned_until: nil) |> Repo.update(),
+         {:ok, _} <- Moderation.record(moderator, "user.unban", user, reason: reason) do
+      {:ok, user}
+    end
+  end
+
   ## Account deletion (AC-07)
 
   @doc """
@@ -523,7 +599,12 @@ defmodule Idejo.Accounts do
   """
   def get_user_by_session_token(token) do
     {:ok, query} = UserToken.verify_session_token_query(token)
-    Repo.one(query)
+
+    # MO-02: a banned account has no session, even one left over.
+    case Repo.one(query) do
+      {user, _inserted_at} = found -> if banned?(user), do: nil, else: found
+      nil -> nil
+    end
   end
 
   @doc """

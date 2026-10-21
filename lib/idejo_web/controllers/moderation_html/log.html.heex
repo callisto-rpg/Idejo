@@ -16,6 +16,7 @@
         · {action_label(entry.action)} ·
         <.link href={target_path(entry)} class="link">{target_label(entry)}</.link>
       </p>
+      <p :if={ban_until(entry)} class="text-sm">{ban_until(entry)}</p>
       <p :if={entry.reason} class="text-sm">
         {gettext("Reason:")} <span class="mod-action-reason">{entry.reason}</span>
       </p>

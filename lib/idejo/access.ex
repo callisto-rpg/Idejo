@@ -56,6 +56,26 @@ defmodule Idejo.Access do
   end
 
   @doc """
+  Returns true when the user moderates the whole server: an owner or administrator, or one
+  of their roles allows `:moderate` server-wide (the built-in moderator does). Server-wide
+  actions such as bans (MO-02) need it; moderating one category is not enough.
+  """
+  @spec server_moderator?(User.t() | nil) :: boolean()
+  def server_moderator?(nil), do: false
+
+  def server_moderator?(%User{} = user) do
+    role_ids = Enum.map(roles_of(user), & &1.id)
+
+    administrator?(user) or
+      Repo.exists?(
+        from p in CategoryPermission,
+          where:
+            is_nil(p.category_id) and p.role_id in ^role_ids and p.right == "moderate" and
+              p.effect == "allow"
+      )
+  end
+
+  @doc """
   Returns the roles of several users at once, as a map from user id to the same list
   `roles_of/1` gives. Used by lists such as the admin users page.
   """
