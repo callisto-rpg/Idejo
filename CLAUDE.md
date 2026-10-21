@@ -422,9 +422,12 @@ roles or the permission grid. Every later change must keep it true:
   close or delete, with a reason); every action is logged.
 - **Bans** (MO-02, `Accounts.ban_user/4`, `unban_user/3`; extra review: DV-06): only server
   moderators (`Access.server_moderator?/1`: owners, administrators, or a role allowing
-  `:moderate` server-wide) ban, for 1/7/30/365 days or for good, from the user card page
-  (`BanController`, POST / DELETE `/u/{id}/ban`). Owners, administrators and oneself are never
-  banned. A ban deletes the account's session tokens (and the controller disconnects its
+  `:moderate` server-wide) ban, for 1/7/30/365 days or for good, from the "User actions"
+  button of the user card, on `/u/{id}` and in a topic's dialog
+  (`UserComponents.card_data/3` gives them `actions`; a `<details>`, no JavaScript needed;
+  `BanController`, POST / DELETE `/u/{id}/ban`, back to the topic through a checked
+  `return_to`). New moderation actions on an account join that menu. Owners, administrators
+  and oneself are never banned. A ban deletes the account's session tokens (and the controller disconnects its
   LiveViews); `Accounts.get_user_by_session_token/1` returns nothing for a banned account and
   sign-in says it is banned only after the right password. `Accounts.banned?/2` ends a ban by
   itself at `banned_until`. Logged as `user.ban` / `user.unban` with no category: server

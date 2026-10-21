@@ -9,7 +9,6 @@ defmodule IdejoWeb.UserController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Access
   alias Idejo.Accounts
   alias IdejoWeb.UserComponents
 
@@ -18,24 +17,13 @@ defmodule IdejoWeb.UserController do
          %{} = user <- Accounts.get_user(id) do
       viewer = conn.assigns.current_scope && conn.assigns.current_scope.user
 
+      # MO-02: server moderators get the "User actions" on the card.
       render(conn, :show,
-        card: UserComponents.card_data(user),
-        page_title: user.display_name,
-        # MO-02: server moderators see the ban state and the ban form.
-        server_moderator?: Access.server_moderator?(viewer),
-        bannable?: bannable?(viewer, user),
-        banned?: Accounts.banned?(user),
-        user: user
+        card: UserComponents.card_data(user, viewer),
+        page_title: user.display_name
       )
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Accounts.User
     end
-  end
-
-  defp bannable?(nil, _user), do: false
-
-  defp bannable?(viewer, user) do
-    viewer.id != user.id and user.status == "active" and Access.server_moderator?(viewer) and
-      not Access.administrator?(user)
   end
 end
