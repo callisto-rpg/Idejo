@@ -149,11 +149,14 @@ defmodule IdejoWeb.FollowTest do
 
     assert sidebar_titles(
              html,
-             "#sidebar .sidebar-nav > ul > li > .sidebar-topics > .sidebar-topic > a"
+             "#sidebar .sidebar-nav > ul > li > .sidebar-topics > .sidebar-topic > a .sidebar-topic-name"
            ) ==
              ["Topic 1", "Topic 2", "Topic 3", "Topic 4"]
 
-    assert sidebar_titles(html, "#sidebar details.sidebar-more .sidebar-topic > a") ==
+    assert sidebar_titles(
+             html,
+             "#sidebar details.sidebar-more .sidebar-topic > a .sidebar-topic-name"
+           ) ==
              ["Topic 5", "Topic 6", "Picnic"]
 
     assert html =~ "3 more topics"
@@ -168,7 +171,7 @@ defmodule IdejoWeb.FollowTest do
   } do
     :ok = Reading.follow(member, topic)
     html = conn |> get(~p"/c/#{general.slug}") |> html_response(200)
-    assert sidebar_titles(html, "#sidebar .sidebar-topic > a") == ["Picnic"]
+    assert sidebar_titles(html, "#sidebar .sidebar-topic > a .sidebar-topic-name") == ["Picnic"]
 
     assert html
            |> LazyHTML.from_document()
@@ -187,7 +190,7 @@ defmodule IdejoWeb.FollowTest do
     refute Reading.following?(member, topic)
 
     html = conn |> recycle() |> get(~p"/c/#{general.slug}") |> html_response(200)
-    assert sidebar_titles(html, "#sidebar .sidebar-topic > a") == []
+    assert sidebar_titles(html, "#sidebar .sidebar-topic > a .sidebar-topic-name") == []
 
     # Another server's page, or none, leads to the topic.
     for referer <- ["http://evil.example/c/x", "http://www.example.com//evil.example"] do

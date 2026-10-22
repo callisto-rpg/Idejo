@@ -239,10 +239,18 @@ defmodule IdejoWeb.Layouts do
     summaries = Idejo.Forum.list_category_summaries(assigns.user)
     sections = Idejo.Forum.sections(summaries, Idejo.Forum.list_groups())
 
-    followed =
-      assigns.user |> Idejo.Reading.list_followed_topics() |> Enum.group_by(& &1.category_id)
+    followed_topics = Idejo.Reading.list_followed_topics(assigns.user)
+    followed = Enum.group_by(followed_topics, & &1.category_id)
+    # What is new in each followed topic: its dot (steward decision, 2026-10-23).
+    activity = Idejo.Reading.activity(assigns.user, Enum.map(followed_topics, & &1.id))
 
-    assigns = assign(assigns, summaries: summaries, sections: sections, followed: followed)
+    assigns =
+      assign(assigns,
+        summaries: summaries,
+        sections: sections,
+        followed: followed,
+        activity: activity
+      )
 
     ~H"""
     <aside id="sidebar" class="app-sidebar">
@@ -267,14 +275,24 @@ defmodule IdejoWeb.Layouts do
         <%= case @sections do %>
           <% [{_group, only}] -> %>
             <p class="sidebar-heading">{gettext("Categories")}</p>
-            <.sidebar_categories summaries={only} current={@current} followed={@followed} />
+            <.sidebar_categories
+              summaries={only}
+              current={@current}
+              followed={@followed}
+              activity={@activity}
+            />
           <% several -> %>
             <%!-- RP-03: one foldable section per group, ungrouped last; open by default. --%>
             <details :for={{group, items} <- several} open class="sidebar-group">
               <summary class="sidebar-heading sidebar-group-title">
                 {if group, do: group.name, else: gettext("Other")}
               </summary>
-              <.sidebar_categories summaries={items} current={@current} followed={@followed} />
+              <.sidebar_categories
+                summaries={items}
+                current={@current}
+                followed={@followed}
+                activity={@activity}
+              />
             </details>
         <% end %>
         <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
@@ -290,6 +308,7 @@ defmodule IdejoWeb.Layouts do
   attr :summaries, :list, required: true
   attr :current, :any, required: true
   attr :followed, :map, required: true
+  attr :activity, :map, default: %{}
 
   # The categories of one section of the sidebar, each with the topics the user follows there.
   defp sidebar_categories(assigns) do
@@ -311,13 +330,14 @@ defmodule IdejoWeb.Layouts do
             <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
           </span>
         </a>
-        <.followed_topics topics={Map.get(@followed, category.id, [])} />
+        <.followed_topics topics={Map.get(@followed, category.id, [])} activity={@activity} />
       </li>
     </ul>
     """
   end
 
   attr :topics, :list, required: true
+  attr :activity, :map, default: %{}
 
   @followed_shown 4
 
@@ -329,7 +349,7 @@ defmodule IdejoWeb.Layouts do
 
     ~H"""
     <ul :if={@topics != []} class="sidebar-topics">
-      <.followed_topic :for={topic <- @shown} topic={topic} />
+      <.followed_topic :for={topic <- @shown} topic={topic} activity={@activity[topic.id]} />
       <li :if={@more != []}>
         <details class="sidebar-more">
           <summary>
@@ -339,7 +359,7 @@ defmodule IdejoWeb.Layouts do
             <span class="sidebar-more-open">{gettext("Fewer topics")}</span>
           </summary>
           <ul class="sidebar-topics">
-            <.followed_topic :for={topic <- @more} topic={topic} />
+            <.followed_topic :for={topic <- @more} topic={topic} activity={@activity[topic.id]} />
           </ul>
         </details>
       </li>
@@ -348,14 +368,20 @@ defmodule IdejoWeb.Layouts do
   end
 
   attr :topic, :map, required: true
+  attr :activity, :atom, default: nil, doc: "nil, :new, :reply or :mention (Reading.activity/2)"
 
   # One followed topic, with an unfollow button shown on hover or focus (TP-13). A plain form
-  # post: FollowController leads back to the page it came from.
+  # post: FollowController leads back to the page it came from. Something new there shows as
+  # a dot, grey, orange for a reply to the user, red for a mention, and a stronger name.
   defp followed_topic(assigns) do
     ~H"""
-    <li class="sidebar-topic">
+    <li class={["sidebar-topic", @activity && "has-news"]}>
+      <span class={["sidebar-dot", @activity && "is-#{@activity}"]} aria-hidden="true"></span>
       <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="sidebar-topic-link">
-        {@topic.title}
+        <span class="sidebar-topic-name">{@topic.title}</span><span
+          :if={@activity}
+          class="sr-only"
+        >{activity_text(@activity)}</span>
       </a>
       <.form
         for={%{}}
@@ -375,6 +401,10 @@ defmodule IdejoWeb.Layouts do
     </li>
     """
   end
+
+  defp activity_text(:new), do: gettext(" (new messages)")
+  defp activity_text(:reply), do: gettext(" (a reply to you)")
+  defp activity_text(:mention), do: gettext(" (you were mentioned)")
 
   attr :nonce, :string, default: nil
   attr :user, :any, default: nil

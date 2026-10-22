@@ -135,6 +135,40 @@ defmodule Idejo.Reading do
   end
 
   @doc """
+  What is new for the user in each of the given topics, for the dots of the sidebar (steward
+  decision, 2026-10-23), as `%{topic_id => :new | :reply | :mention}`; topics with nothing
+  unread are left out. Among the unread messages (`unread_counts/2`'s): `:mention` when one
+  @mentions or +mentions the user, else `:reply` when one replies to them, else `:new`. Read
+  from their notifications (NO-01), so the strongest wins.
+  """
+  @spec activity(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => :new | :reply | :mention}
+  def activity(nil, _topic_ids), do: %{}
+  def activity(_user, []), do: %{}
+
+  def activity(%User{id: user_id} = user, topic_ids) do
+    user
+    |> unread_messages()
+    |> where([m], m.topic_id in ^topic_ids)
+    |> join(:left, [m], n in Idejo.Notifications.Notification,
+      on: n.message_id == m.id and n.user_id == ^user_id
+    )
+    |> group_by([m], m.topic_id)
+    |> select([m, ..., n], {
+      m.topic_id,
+      max(
+        fragment(
+          "CASE ? WHEN 'mention' THEN 3 WHEN 'reply' THEN 2 ELSE 1 END",
+          n.kind
+        )
+      )
+    })
+    |> Repo.all()
+    |> Map.new(fn {topic_id, level} ->
+      {topic_id, Enum.at([:new, :reply, :mention], level - 1)}
+    end)
+  end
+
+  @doc """
   The topics with unread messages across every category the user may view, most recently
   active first, 30 a page: `{[{topic, unread_count}], more?}`. Topics come with their author
   and category.
