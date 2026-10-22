@@ -284,7 +284,8 @@ roles or the permission grid. Every later change must keep it true:
   pinned first, then by `last_activity_at`, with starter, message count, last activity and,
   for signed-in users, the unread marker ("N new"). Every topic list (category, home,
   `/unread`) renders rows with `TopicComponents.topic_row/1`; the title link stays a direct
-  child of the `<li>` (tests read `#topics li > a`).
+  child of the `<li>` (tests read `#topics li > a`). The home page's active topics pass
+  `lead={:category}`: the category's mark and name instead of the starter's avatar and name.
 - **Unread** (TP-07, `Idejo.Reading`): one `read_positions` row per user and topic, holding
   the last message seen. Opening a topic (`TopicController`, and `TopicLive` on connect)
   marks it read with `Reading.mark_read/2`, and so does every new message arriving while it

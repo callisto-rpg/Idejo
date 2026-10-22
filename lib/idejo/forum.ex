@@ -70,7 +70,7 @@ defmodule Idejo.Forum do
 
   @doc """
   Lists the most recently active topics the visitor (`nil`) or user may view, across
-  categories, with their author and category: at most `limit`. Archived topics are left out.
+  categories, with their category: at most `limit`. Archived topics are left out.
   """
   @spec list_active_topics(User.t() | nil, pos_integer()) :: [Topic.t()]
   def list_active_topics(user, limit \\ 10) do
@@ -81,7 +81,7 @@ defmodule Idejo.Forum do
         where: t.category_id in subquery(viewable) and t.state != "archived",
         order_by: [desc: t.last_activity_at, desc: t.id],
         limit: ^limit,
-        preload: [:author, :category]
+        preload: :category
     )
   end
 

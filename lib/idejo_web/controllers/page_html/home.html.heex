@@ -45,7 +45,7 @@
   <section :if={@active_topics != []} aria-labelledby="active-heading">
     <h2 id="active-heading" class="section-heading">{gettext("Active topics")}</h2>
     <ol id="active-topics" class="topic-list">
-      <TopicComponents.topic_row :for={topic <- @active_topics} topic={topic} category />
+      <TopicComponents.topic_row :for={topic <- @active_topics} topic={topic} lead={:category} />
     </ol>
   </section>
 </Layouts.app>

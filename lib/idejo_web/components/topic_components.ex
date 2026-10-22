@@ -44,17 +44,21 @@ defmodule IdejoWeb.TopicComponents do
   the message count.
 
   * `category` - also show the topic's category (lists across categories; needs it loaded).
+  * `lead` - `:category` puts the category's mark and name in place of the starter's avatar
+    and name (the home page's active topics; needs the category loaded).
   * `unread` - the "N new" marker (TP-07), or nil.
   """
   attr :topic, :map, required: true
   attr :category, :boolean, default: false
+  attr :lead, :atom, values: [:author, :category], default: :author
   attr :unread, :integer, default: nil
 
   def topic_row(assigns) do
     ~H"""
     <li id={"topic-#{@topic.id}"} class="topic-row">
       <span class="topic-row-avatar">
-        <UserComponents.avatar user={@topic.author} size={:list} />
+        <.category_mark :if={@lead == :category} category={@topic.category} />
+        <UserComponents.avatar :if={@lead == :author} user={@topic.author} size={:list} />
       </span>
       <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="topic-row-title">{@topic.title}</a>
       <span class="topic-row-badges">
@@ -72,12 +76,19 @@ defmodule IdejoWeb.TopicComponents do
         </span>
       </span>
       <p class="topic-row-meta">
-        <a :if={@category} href={~p"/c/#{@topic.category.slug}"} class="topic-category">
+        <a :if={@lead == :category} href={~p"/c/#{@topic.category.slug}"} class="topic-category">
+          {@topic.category.name}
+        </a>
+        <a
+          :if={@lead == :author && @category}
+          href={~p"/c/#{@topic.category.slug}"}
+          class="topic-category"
+        >
           <.category_mark category={@topic.category} />
           {@topic.category.name}
         </a>
-        <span :if={@category} aria-hidden="true">·</span>
-        <span class="topic-starter">{@topic.author.display_name}</span>
+        <span :if={@lead == :author && @category} aria-hidden="true">·</span>
+        <span :if={@lead == :author} class="topic-starter">{@topic.author.display_name}</span>
         <span aria-hidden="true">·</span>
         <span>
           {gettext("last activity")} <.time_ago at={@topic.last_activity_at} />

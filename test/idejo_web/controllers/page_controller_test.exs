@@ -68,6 +68,25 @@ defmodule IdejoWeb.PageControllerTest do
       assert titles == ["Fresh question", "Older news"]
     end
 
+    test "active topics show their category, not their starter", %{conn: conn, help: help} do
+      row =
+        conn
+        |> get(~p"/")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#active-topics li:first-child")
+
+      assert row |> LazyHTML.query(".topic-row-avatar .category-mark") |> Enum.count() == 1
+      assert row |> LazyHTML.query(".topic-row-avatar .avatar") |> Enum.count() == 0
+
+      assert row
+             |> LazyHTML.query(~s(a.topic-category[href="/c/#{help.slug}"]))
+             |> LazyHTML.text() =~
+               "Help"
+
+      refute LazyHTML.text(row) =~ "Sam Starter"
+    end
+
     test "the sidebar lists the categories, the most recently active first", %{conn: conn} do
       names =
         conn

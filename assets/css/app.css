@@ -663,6 +663,8 @@
     &:hover { background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent); }
   }
   .topic-row-avatar { grid-area: avatar; align-self: center; }
+  /* The home page's active topics lead with the category: its mark at the avatar's size. */
+  .topic-row-avatar .category-mark { width: 2.25rem; height: 2.25rem; border-radius: 0.625rem; font-size: 0.875rem; }
   .topic-row-title {
     grid-area: title;
     min-width: 0;
