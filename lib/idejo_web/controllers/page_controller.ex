@@ -12,9 +12,11 @@ defmodule IdejoWeb.PageController do
   """
   def home(conn, _params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
+    categories = Forum.list_category_summaries(user)
 
     render(conn, :home,
-      categories: Forum.list_category_summaries(user),
+      categories: categories,
+      sections: Forum.sections(categories, Forum.list_groups()),
       active_topics: Forum.list_active_topics(user),
       canonical_url: url(~p"/")
     )

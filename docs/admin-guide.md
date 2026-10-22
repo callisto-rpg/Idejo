@@ -80,6 +80,11 @@ The highest role that has a colour colours the person's name in topics.
 
 ### Categories
 
+- **Groups** put categories under headings, on the home page and in the sidebar: create,
+  rename, reorder (the arrows) or delete them (their categories stay, in no group). Choose a
+  category's **Group** when you create or edit it. Categories in no group come last, under
+  **Other**; with a single section, the heading stays **Categories**.
+
 - **New category**: a name, an optional description, and optionally its web address
   (`/c/…`). The address is made from the name if you leave it empty and **never changes**,
   so links keep working when you rename the category.

@@ -11,36 +11,44 @@
     {gettext("Nothing to read here yet.")}
   </p>
 
-  <section :if={@categories != []} aria-labelledby="categories-heading">
-    <h2 id="categories-heading" class="section-heading">{gettext("Categories")}</h2>
-    <ul id="categories" class="category-grid">
-      <li
-        :for={%{category: category} = summary <- @categories}
-        id={"category-#{category.id}"}
-        class={["category-card", "cat-#{category.id}"]}
-      >
-        <div class="category-card-head">
-          <TopicComponents.category_mark category={category} size={:large} />
-          <h3>
-            <a href={~p"/c/#{category.slug}"} class="category-card-link">{category.name}</a>
-          </h3>
-        </div>
-        <p :if={category.description != ""} class="category-card-description">
-          {category.description}
-        </p>
-        <p class="category-card-stats">
-          <span>
-            <.icon name="hero-chat-bubble-left-right" class="size-4" />
-            {ngettext("1 topic", "%{count} topics", summary.topics)}
-          </span>
-          <span :if={summary.last_activity_at}>
-            <.icon name="hero-clock" class="size-4" />
-            <TopicComponents.time_ago at={summary.last_activity_at} />
-          </span>
-        </p>
-      </li>
-    </ul>
-  </section>
+  <%!-- RP-03: one "Categories" section, or one per group (ungrouped last, as "Other"). --%>
+  <div :if={@sections != []} class="category-sections">
+    <section
+      :for={{{group, summaries}, index} <- Enum.with_index(@sections)}
+      aria-labelledby={"categories-heading-#{index}"}
+    >
+      <h2 id={"categories-heading-#{index}"} class="section-heading">
+        {section_title(group, length(@sections))}
+      </h2>
+      <ul id={if index == 0, do: "categories", else: "categories-#{index}"} class="category-grid">
+        <li
+          :for={%{category: category} = summary <- summaries}
+          id={"category-#{category.id}"}
+          class={["category-card", "cat-#{category.id}"]}
+        >
+          <div class="category-card-head">
+            <TopicComponents.category_mark category={category} size={:large} />
+            <h3>
+              <a href={~p"/c/#{category.slug}"} class="category-card-link">{category.name}</a>
+            </h3>
+          </div>
+          <p :if={category.description != ""} class="category-card-description">
+            {category.description}
+          </p>
+          <p class="category-card-stats">
+            <span>
+              <.icon name="hero-chat-bubble-left-right" class="size-4" />
+              {ngettext("1 topic", "%{count} topics", summary.topics)}
+            </span>
+            <span :if={summary.last_activity_at}>
+              <.icon name="hero-clock" class="size-4" />
+              <TopicComponents.time_ago at={summary.last_activity_at} />
+            </span>
+          </p>
+        </li>
+      </ul>
+    </section>
+  </div>
 
   <section :if={@active_topics != []} aria-labelledby="active-heading">
     <h2 id="active-heading" class="section-heading">{gettext("Active topics")}</h2>

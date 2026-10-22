@@ -231,44 +231,35 @@ defmodule IdejoWeb.Layouts do
   attr :user, :any, required: true
   attr :current, :any, required: true
 
-  # The categories the visitor may view, the most recently active first, each with the topics
+  # The categories the visitor may view, in their order and groups, each with the topics
   # the user follows in it (TP-13), oldest followed first. Hidden and shown by the header's
   # button (assets/js/sidebar.js), which the browser remembers.
   defp sidebar(assigns) do
-    summaries =
-      assigns.user
-      |> Idejo.Forum.list_category_summaries()
-      |> Enum.sort_by(&(&1.last_activity_at || ~U[1970-01-01 00:00:00Z]), {:desc, DateTime})
+    # In the home page's order, in the same sections (RP-03).
+    summaries = Idejo.Forum.list_category_summaries(assigns.user)
+    sections = Idejo.Forum.sections(summaries, Idejo.Forum.list_groups())
 
     followed =
       assigns.user |> Idejo.Reading.list_followed_topics() |> Enum.group_by(& &1.category_id)
 
-    assigns = assign(assigns, summaries: summaries, followed: followed)
+    assigns = assign(assigns, summaries: summaries, sections: sections, followed: followed)
 
     ~H"""
     <aside id="sidebar" class="app-sidebar">
       <nav aria-label={gettext("Categories")} class="sidebar-nav">
-        <p class="sidebar-heading">{gettext("Active categories")}</p>
-        <ul :if={@summaries != []}>
-          <li :for={%{category: category} = summary <- @summaries}>
-            <a
-              href={~p"/c/#{category.slug}"}
-              class={[
-                "sidebar-link",
-                "cat-#{category.id}",
-                @current && @current.id == category.id && "is-current"
-              ]}
-              aria-current={@current && @current.id == category.id && "page"}
-            >
-              <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
-              <span class="sidebar-name">{category.name}</span>
-              <span :if={summary.last_activity_at} class="sidebar-when">
-                <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
-              </span>
-            </a>
-            <.followed_topics topics={Map.get(@followed, category.id, [])} />
-          </li>
-        </ul>
+        <%= case @sections do %>
+          <% [{_group, only}] -> %>
+            <p class="sidebar-heading">{gettext("Categories")}</p>
+            <.sidebar_categories summaries={only} current={@current} followed={@followed} />
+          <% several -> %>
+            <%!-- RP-03: one foldable section per group, ungrouped last; open by default. --%>
+            <details :for={{group, items} <- several} open class="sidebar-group">
+              <summary class="sidebar-heading sidebar-group-title">
+                {if group, do: group.name, else: gettext("Other")}
+              </summary>
+              <.sidebar_categories summaries={items} current={@current} followed={@followed} />
+            </details>
+        <% end %>
         <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
         <a href={~p"/"} class="sidebar-link sidebar-all">
           <.icon name="hero-squares-2x2" class="size-4" />
@@ -290,6 +281,36 @@ defmodule IdejoWeb.Layouts do
         <.theme_toggle />
       </div>
     </aside>
+    """
+  end
+
+  attr :summaries, :list, required: true
+  attr :current, :any, required: true
+  attr :followed, :map, required: true
+
+  # The categories of one section of the sidebar, each with the topics the user follows there.
+  defp sidebar_categories(assigns) do
+    ~H"""
+    <ul>
+      <li :for={%{category: category} = summary <- @summaries}>
+        <a
+          href={~p"/c/#{category.slug}"}
+          class={[
+            "sidebar-link",
+            "cat-#{category.id}",
+            @current && @current.id == category.id && "is-current"
+          ]}
+          aria-current={@current && @current.id == category.id && "page"}
+        >
+          <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
+          <span class="sidebar-name">{category.name}</span>
+          <span :if={summary.last_activity_at} class="sidebar-when">
+            <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
+          </span>
+        </a>
+        <.followed_topics topics={Map.get(@followed, category.id, [])} />
+      </li>
+    </ul>
     """
   end
 

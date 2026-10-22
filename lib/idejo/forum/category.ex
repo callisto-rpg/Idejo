@@ -31,6 +31,8 @@ defmodule Idejo.Forum.Category do
     field :archive, :boolean, default: false
     # Sub-categories wait for v1 (RP-05); the column exists but is never set in v0.1.
     belongs_to :parent, __MODULE__
+    # RP-03: the group it is listed under, if any (steward decision, 2026-10-23).
+    belongs_to :group, Idejo.Forum.CategoryGroup, type: Ecto.UUID
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -41,7 +43,7 @@ defmodule Idejo.Forum.Category do
   """
   def create_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :slug, :icon, :colour])
+    |> cast(attrs, [:name, :description, :slug, :icon, :colour, :group_id])
     |> validate_name_and_description()
     |> validate_look()
     |> update_change(:slug, &(&1 && String.trim(&1)))
@@ -60,7 +62,7 @@ defmodule Idejo.Forum.Category do
   """
   def update_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :icon, :colour])
+    |> cast(attrs, [:name, :description, :icon, :colour, :group_id])
     |> validate_name_and_description()
     |> validate_look()
   end
@@ -70,6 +72,7 @@ defmodule Idejo.Forum.Category do
     changeset
     |> update_change(:colour, &(&1 && &1 |> String.trim() |> String.downcase()))
     |> validate_format(:colour, ~r/^#[0-9a-f]{6}$/, message: "must look like #3366ff")
+    |> foreign_key_constraint(:group_id, message: "is not a group")
     |> validate_change(:icon, fn :icon, icon ->
       if CategoryIcons.icon?(icon), do: [], else: [icon: "is not one of the icons"]
     end)

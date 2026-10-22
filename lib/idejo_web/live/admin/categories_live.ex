@@ -22,11 +22,20 @@ defmodule IdejoWeb.Admin.CategoriesLive do
      |> assign(:editing, nil)
      |> assign(:deleting, nil)
      |> assign(:new_form, to_form(Forum.change_new_category(), as: :category))
+     |> assign(:group_form, to_form(Forum.change_group(), as: :group))
+     |> assign(:editing_group, nil)
      |> load()}
   end
 
-  defp load(socket),
-    do: assign(socket, categories: Forum.list_categories(), topics: Forum.topic_counts())
+  defp load(socket) do
+    assign(socket,
+      categories: Forum.list_categories(),
+      topics: Forum.topic_counts(),
+      groups: Forum.list_groups()
+    )
+  end
+
+  defp find_group(socket, id), do: Enum.find(socket.assigns.groups, &(&1.id == id))
 
   defp topic_count(topics, category), do: Map.get(topics, category.id, 0)
   defp admin(socket), do: socket.assigns.current_scope.user
@@ -117,10 +126,76 @@ defmodule IdejoWeb.Admin.CategoriesLive do
     end
   end
 
+  # RP-03: category groups (steward decision, 2026-10-23).
+  def handle_event("create_group", %{"group" => params}, socket) do
+    case Forum.create_group(admin(socket), params) do
+      {:ok, group} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Group “%{name}” created.", name: group.name))
+         |> assign(:group_form, to_form(Forum.change_group(), as: :group))
+         |> load()}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :group_form, to_form(changeset, as: :group))}
+    end
+  end
+
+  def handle_event("edit_group", %{"id" => id}, socket) do
+    group = find_group(socket, id)
+
+    {:noreply,
+     assign(socket, :editing_group, {id, to_form(Forum.change_group(group), as: :group_edit)})}
+  end
+
+  def handle_event("cancel_group", _params, socket),
+    do: {:noreply, assign(socket, :editing_group, nil)}
+
+  def handle_event("update_group", %{"id" => id, "group_edit" => params}, socket) do
+    case Forum.update_group(admin(socket), find_group(socket, id), params) do
+      {:ok, _group} ->
+        {:noreply, socket |> assign(:editing_group, nil) |> load()}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :editing_group, {id, to_form(changeset, as: :group_edit)})}
+    end
+  end
+
+  def handle_event("move_group", %{"id" => id, "direction" => direction}, socket)
+      when direction in ["up", "down"] do
+    {_, _} =
+      {Forum.move_group(
+         admin(socket),
+         find_group(socket, id),
+         String.to_existing_atom(direction)
+       ), nil}
+
+    {:noreply, load(socket)}
+  end
+
+  def handle_event("delete_group", %{"id" => id}, socket) do
+    group = find_group(socket, id)
+    {:ok, _} = Forum.delete_group(admin(socket), group)
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       gettext("Group “%{name}” deleted; its categories stay.", name: group.name)
+     )
+     |> load()}
+  end
+
   defp picked_colour(params, %{"_target" => [_, "colour_picker"]}),
     do: Map.put(params, "colour", params["colour_picker"])
 
   defp picked_colour(params, _all), do: params
+
+  defp group_name(groups, category),
+    do: Enum.find_value(groups, &(&1.id == category.group_id && &1.name))
+
+  defp group_options(groups),
+    do: [{gettext("No group"), ""} | Enum.map(groups, &{&1.name, &1.id})]
 
   defp topics_option(_socket, %{"topics" => "archive"}), do: :archive
 
@@ -255,6 +330,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
               >
                 <.input field={form[:name]} type="text" label={gettext("Name")} required />
                 <.input field={form[:description]} type="textarea" label={gettext("Description")} />
+                <.input
+                  :if={@groups != []}
+                  field={form[:group_id]}
+                  type="select"
+                  label={gettext("Group")}
+                  options={group_options(@groups)}
+                />
                 <.look form={form} id={"edit-#{category.id}"} category_id={category.id} />
                 <div class="flex gap-2">
                   <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
@@ -267,6 +349,9 @@ defmodule IdejoWeb.Admin.CategoriesLive do
               <div class="flex flex-wrap items-center gap-3">
                 <span class="font-semibold">{category.name}</span>
                 <span :if={category.archive} class="badge badge-sm">{gettext("Archive")}</span>
+                <span :if={group_name(@groups, category)} class="badge badge-sm badge-ghost">
+                  {group_name(@groups, category)}
+                </span>
                 <code class="text-sm opacity-70">/c/{category.slug}</code>
                 <span class="text-sm opacity-70">
                   {ngettext("1 topic", "%{count} topics", topic_count(@topics, category))}
@@ -375,6 +460,98 @@ defmodule IdejoWeb.Admin.CategoriesLive do
         </li>
       </ol>
 
+      <%!-- RP-03: groups put categories under named headings, on the home page and in the
+           sidebar (steward decision, 2026-10-23). --%>
+      <section class="mt-8" aria-labelledby="groups-heading">
+        <h2 id="groups-heading" class="font-semibold mb-1">{gettext("Groups")}</h2>
+        <p class="text-sm opacity-70 mb-3">
+          {gettext(
+            "With two or more sections, each group's name heads its categories; categories in no group come last, under Other."
+          )}
+        </p>
+        <ol id="groups" class="space-y-2 mb-3">
+          <li
+            :for={{group, index} <- Enum.with_index(@groups)}
+            id={"group-#{group.id}"}
+            class="flex flex-wrap items-center gap-3 rounded border border-base-300 p-3"
+          >
+            <%= case @editing_group do %>
+              <% {id, form} when id == group.id -> %>
+                <.form
+                  for={form}
+                  id={"edit-group-#{group.id}"}
+                  phx-submit="update_group"
+                  phx-value-id={group.id}
+                  class="flex flex-wrap items-end gap-3 w-full"
+                >
+                  <.input field={form[:name]} type="text" label={gettext("Name")} required />
+                  <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
+                  <button type="button" class="btn btn-sm" phx-click="cancel_group">
+                    {gettext("Cancel")}
+                  </button>
+                </.form>
+              <% _ -> %>
+                <span class="font-semibold">{group.name}</span>
+                <span class="flex-1"></span>
+                <button
+                  :if={index > 0}
+                  type="button"
+                  class="btn btn-xs"
+                  phx-click="move_group"
+                  phx-value-id={group.id}
+                  phx-value-direction="up"
+                  aria-label={gettext("Move %{name} up", name: group.name)}
+                >
+                  <.icon name="hero-arrow-up" />
+                </button>
+                <button
+                  :if={index < length(@groups) - 1}
+                  type="button"
+                  class="btn btn-xs"
+                  phx-click="move_group"
+                  phx-value-id={group.id}
+                  phx-value-direction="down"
+                  aria-label={gettext("Move %{name} down", name: group.name)}
+                >
+                  <.icon name="hero-arrow-down" />
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-xs"
+                  phx-click="edit_group"
+                  phx-value-id={group.id}
+                  aria-label={gettext("Rename %{name}", name: group.name)}
+                >
+                  {gettext("Rename")}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-error"
+                  phx-click="delete_group"
+                  phx-value-id={group.id}
+                  data-confirm={
+                    gettext("Delete the group “%{name}”? Its categories stay, in no group.",
+                      name: group.name
+                    )
+                  }
+                  aria-label={gettext("Delete %{name}", name: group.name)}
+                >
+                  {gettext("Delete")}
+                </button>
+            <% end %>
+          </li>
+        </ol>
+        <.form
+          for={@group_form}
+          id="new-group-form"
+          phx-submit="create_group"
+          class="flex flex-wrap items-end gap-3"
+        >
+          <.input field={@group_form[:name]} type="text" label={gettext("New group")} required />
+          <.button class="btn btn-sm btn-primary">{gettext("Create group")}</.button>
+        </.form>
+      </section>
+
       <section class="mt-8" aria-labelledby="new-category-heading">
         <h2 id="new-category-heading" class="font-semibold mb-2">{gettext("New category")}</h2>
         <.form
@@ -385,6 +562,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
         >
           <.input field={@new_form[:name]} type="text" label={gettext("Name")} required />
           <.input field={@new_form[:description]} type="textarea" label={gettext("Description")} />
+          <.input
+            :if={@groups != []}
+            field={@new_form[:group_id]}
+            type="select"
+            label={gettext("Group")}
+            options={group_options(@groups)}
+          />
           <.look form={@new_form} id="new" category_id={nil} />
           <.input
             field={@new_form[:slug]}

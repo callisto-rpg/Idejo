@@ -612,6 +612,30 @@
     color: var(--ink-soft);
     font-size: 0.875rem;
   }
+  /* RP-03: groups fold away (a <details>, open by default). */
+  .sidebar-group + .sidebar-group { margin-top: 0.75rem; }
+  .sidebar-group-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+    &::-webkit-details-marker { display: none; }
+    &::after {
+      content: "";
+      width: 0.4rem;
+      height: 0.4rem;
+      margin-right: 0.25rem;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(45deg);
+      transition: transform 150ms ease;
+    }
+    &:hover { color: var(--color-base-content); }
+  }
+  .sidebar-group:not([open]) > .sidebar-group-title::after { transform: rotate(-45deg); }
+  .sidebar-group-title:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 0.25rem; }
+
   .sidebar-empty { padding: 0 0.625rem; color: var(--ink-faint); font-size: 0.875rem; }
 
   /* Followed topics under their category (TP-13): the unfollow button shows on hover or
@@ -710,6 +734,9 @@
     text-transform: uppercase;
   }
   section + section { margin-top: 2.5rem; }
+  /* RP-03: the home page's sections of categories, evenly apart. */
+  .category-sections { display: grid; gap: 2rem; }
+  .category-sections > section { margin-top: 0; }
 
   .empty-state {
     padding: 3rem 1rem;
