@@ -119,7 +119,7 @@ defmodule IdejoWeb.TopicComponents do
 
   def topic_row(assigns) do
     ~H"""
-    <li id={"topic-#{@topic.id}"} class="topic-row">
+    <li id={"topic-#{@topic.id}"} class={["topic-row", "cat-#{@topic.category_id}"]}>
       <span class="topic-row-avatar">
         <.category_mark :if={@lead == :category} category={@topic.category} />
         <UserComponents.avatar :if={@lead == :author} user={@topic.author} size={:list} />

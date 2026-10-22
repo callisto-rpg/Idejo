@@ -3,7 +3,7 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <Layouts.app flash={@flash} current_scope={@current_scope} category={@category}>
-  <header class="page-intro page-intro-row">
+  <header class={["page-intro page-intro-row category-intro", "cat-#{@category.id}"]}>
     <TopicComponents.category_mark category={@category} size={:large} />
     <div class="grow">
       <h1>{@category.name}</h1>

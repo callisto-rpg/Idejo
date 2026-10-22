@@ -17,7 +17,7 @@
       <li
         :for={%{category: category} = summary <- @categories}
         id={"category-#{category.id}"}
-        class="category-card"
+        class={["category-card", "cat-#{category.id}"]}
       >
         <div class="category-card-head">
           <TopicComponents.category_mark category={category} size={:large} />

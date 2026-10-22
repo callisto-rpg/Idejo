@@ -8,6 +8,8 @@ defmodule IdejoWeb.Layouts do
   """
   use IdejoWeb, :html
 
+  alias Idejo.Forum.CategoryIcons
+
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -221,7 +223,11 @@ defmodule IdejoWeb.Layouts do
           <li :for={%{category: category} = summary <- @summaries}>
             <a
               href={~p"/c/#{category.slug}"}
-              class={["sidebar-link", @current && @current.id == category.id && "is-current"]}
+              class={[
+                "sidebar-link",
+                "cat-#{category.id}",
+                @current && @current.id == category.id && "is-current"
+              ]}
               aria-current={@current && @current.id == category.id && "page"}
             >
               <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
@@ -308,6 +314,32 @@ defmodule IdejoWeb.Layouts do
         </button>
       </.form>
     </li>
+    """
+  end
+
+  attr :nonce, :string, default: nil
+  attr :user, :any, default: nil
+
+  @doc """
+  Each category's colour as a CSS variable, `--cat` on `.cat-{id}`, for the lines and glows
+  of the elements that belong to it (RP-03): its own colour, or the tint its id gives it. Only
+  the categories the visitor may view, so no other id reaches the page (AC-05). A `<style>`
+  with the request's nonce: the CSP refuses `style` attributes (SP-05); the colours are checked
+  `#rrggbb` and the ids UUIDs, so the rules hold nothing else.
+  """
+  def category_colours(assigns) do
+    rules =
+      for category <- Idejo.Forum.list_viewable_categories(assigns.user), into: "" do
+        colour = category.colour || CategoryIcons.tint(category.id)
+        ".cat-#{category.id}{--cat:#{colour}}"
+      end
+
+    assigns = assign(assigns, :rules, rules)
+
+    ~H"""
+    <style :if={@nonce && @rules != ""} nonce={@nonce}>
+      <%= @rules %>
+    </style>
     """
   end
 
