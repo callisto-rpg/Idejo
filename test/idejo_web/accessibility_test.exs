@@ -173,6 +173,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/admin/roles",
       ~p"/admin/categories",
       ~p"/admin/tags",
+      ~p"/admin/stylesheet",
       ~p"/admin/permissions",
       ~p"/admin/permissions/#{general.slug}"
     ])

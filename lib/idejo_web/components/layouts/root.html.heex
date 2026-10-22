@@ -12,6 +12,11 @@
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- The server's own stylesheet, after Idejo's: Admin → Stylesheet. --%>
+    <link
+      rel="stylesheet"
+      href={~p"/theme.css?v=#{IdejoWeb.ThemeController.version(Idejo.Settings.get(:custom_css))}"}
+    />
     <IdejoWeb.Layouts.category_colours
       nonce={assigns[:style_csp_nonce]}
       user={assigns[:current_scope] && @current_scope.user}

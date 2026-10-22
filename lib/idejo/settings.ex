@@ -15,7 +15,7 @@ defmodule Idejo.Settings do
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
   email (AD-08), the growing-message window (GM-15, AD-04), the image size limit (TP-12), and
-  the About and Rules texts of the welcome card (Markdown).
+  the About and Rules texts of the welcome card (Markdown), and the server's stylesheet.
   """
 
   import Ecto.Changeset
@@ -27,6 +27,11 @@ defmodule Idejo.Settings do
   alias Idejo.Settings.{Secret, Setting}
 
   @smtp_security ~w(starttls tls none)
+
+  # The server's stylesheet (Admin → Stylesheet): this text until an administrator changes it.
+  @default_css_path Path.expand("../../priv/theme/default.css", __DIR__)
+  @external_resource @default_css_path
+  @default_css @default_css_path |> File.read!() |> String.trim()
   @registration_modes ~w(open invite_only)
 
   @definitions %{
@@ -54,7 +59,10 @@ defmodule Idejo.Settings do
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
     # The welcome card and "Rules & Roles" (steward decision, 2026-10-23): Markdown.
     server_about: %{type: :string, default: "", max: 20_000},
-    server_rules: %{type: :string, default: "", max: 20_000}
+    server_rules: %{type: :string, default: "", max: 20_000},
+    # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
+    # 2026-10-23).
+    custom_css: %{type: :string, default: @default_css, max: 100_000}
   }
 
   @type key ::
@@ -70,6 +78,7 @@ defmodule Idejo.Settings do
           | :upload_max_mb
           | :server_about
           | :server_rules
+          | :custom_css
 
   @doc """
   The allowed values of `:registration_mode`: open, or invite-only (AC-02).
@@ -259,7 +268,9 @@ defmodule Idejo.Settings do
     end
   end
 
-  defp default(key) do
+  @doc "A setting's default value: what it is until an administrator changes it."
+  @spec default(key()) :: String.t() | integer()
+  def default(key) when is_map_key(@definitions, key) do
     case @definitions[key].default do
       :noreply ->
         "noreply@" <> (URI.parse(Application.fetch_env!(:idejo, :base_uri)).host || "localhost")

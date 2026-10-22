@@ -1,0 +1,34 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * The server's stylesheet, edited in Admin → Stylesheet. It loads after Idejo's own styles,
+ * so its rules win. "Reset to default" brings back this text.
+ *
+ * Colours of the theme you can use: var(--color-base-100) (boxes), var(--color-base-200)
+ * (the page), var(--color-base-content) (text), var(--color-primary), var(--color-accent).
+ */
+
+:root {
+  /* Cards over the page: a user's card, moderation, the emoji picker, moving messages. */
+  --card-opacity: 70%;
+  --card-blur: 3px;
+
+  /* Other overlays: the welcome card (Rules & Roles). */
+  --overlay-opacity: 80%;
+  --overlay-blur: 6px;
+}
+
+/* Cards: see-through, blurring what is behind them. */
+.modal-box {
+  background: color-mix(in oklab, var(--color-base-100) var(--card-opacity), transparent);
+  -webkit-backdrop-filter: blur(var(--card-blur));
+  backdrop-filter: blur(var(--card-blur));
+}
+
+/* Other overlays. */
+.welcome-card {
+  background: color-mix(in oklab, var(--color-base-100) var(--overlay-opacity), transparent);
+  -webkit-backdrop-filter: blur(var(--overlay-blur));
+  backdrop-filter: blur(var(--overlay-blur));
+}

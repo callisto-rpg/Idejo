@@ -158,6 +158,14 @@ which links are unused, used (and by whom) or expired.
   it, in the welcome card and under **Rules & Roles**. Whoever picks it gets every right the
   role has in **Permissions**, so give such roles no moderation rights.
 
+### Stylesheet
+
+CSS that every page loads after Idejo's own styles, so its rules win: change colours,
+spacing, or anything else. **Save** applies it as pages load; **Reset to default** brings back
+the stylesheet Idejo came with. The default sets how see-through the cards over a page are
+(`--card-opacity`, `--card-blur`: 70% and 3px) and the welcome card (`--overlay-opacity`,
+`--overlay-blur`: 80% and 6px). Each change is in the audit log.
+
 ## Moderation
 
 Moderators (the moderator role, or a role allowed to **Moderate** in a category) see
