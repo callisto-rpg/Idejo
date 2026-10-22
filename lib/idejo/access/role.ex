@@ -5,6 +5,10 @@ defmodule Idejo.Access.Role do
   @moduledoc """
   A role (RP-01, RP-02). Built-in roles are always present; a lower `position` ranks higher.
   Custom roles have a name and an optional colour, and can be renamed, reordered and deleted.
+
+  Role mentions (TP-10, `+role`): `mentionable` lets everyone notify the role's members;
+  `mentions_below` lets its members notify any role ranked below it. Member and guest are
+  never mentioned, so they take neither.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -20,6 +24,8 @@ defmodule Idejo.Access.Role do
     field :colour, :string
     field :position, :integer
     field :built_in, :boolean, default: false
+    field :mentionable, :boolean, default: false
+    field :mentions_below, :boolean, default: false
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -31,12 +37,17 @@ defmodule Idejo.Access.Role do
   def built_in_names, do: @built_in
 
   @doc """
-  A changeset for a role's name and colour. Built-in roles keep their name: only their colour
-  changes. Names are unique ignoring case, so "Member" cannot sit next to the built-in member.
-  The colour is `#rrggbb`, or empty for none.
+  A changeset for a role's name, colour and mention settings. Built-in roles keep their name;
+  member and guest take no mention settings. Names are unique ignoring case, so "Member"
+  cannot sit next to the built-in member. The colour is `#rrggbb`, or empty for none.
   """
   def changeset(role, attrs) do
-    fields = if role.built_in, do: [:colour], else: [:name, :colour]
+    fields =
+      cond do
+        role.built_in and role.name in ~w(member guest) -> [:colour]
+        role.built_in -> [:colour, :mentionable, :mentions_below]
+        true -> [:name, :colour, :mentionable, :mentions_below]
+      end
 
     role
     |> cast(attrs, fields)

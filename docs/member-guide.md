@@ -51,8 +51,13 @@ change and keeps no history.
 
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
   reply** to undo it). Your next new message is shown as a reply to theirs.
-- **@username** mentions someone. They get a notification; click a mention to see their
-  card.
+- **Inline links**, highlighted in the message:
+  - **@username** mentions someone: they get a notification and follow the topic (unless
+    they unfollowed it). Click a mention to see their card.
+  - **+role** notifies everyone with that role who can read the topic, such as
+    **+moderator**. Which roles you may tag is set by the administrators; others stay text.
+  - **#topic**, **/category** and **$tag** link to a topic, a category or a tag. Type its
+    web address name (`#garden-plans`, `/help`, `$bug`); once sent it reads its name.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
   for a new topic or an edit, there is also **Add image**.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````

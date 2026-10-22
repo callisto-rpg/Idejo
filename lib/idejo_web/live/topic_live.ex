@@ -404,7 +404,12 @@ defmodule IdejoWeb.TopicLive do
         %{"mode" => "preview"},
         %{assigns: %{editing: {_, form}}} = socket
       ) do
-    html = Messages.Body.to_html(form.params["body"] || "")
+    html =
+      Messages.Body.to_html(form.params["body"] || "",
+        author: user(socket),
+        category_id: socket.assigns.topic.category_id
+      )
+
     {:noreply, assign(socket, editor_mode: :preview, preview_html: html)}
   end
 
@@ -868,7 +873,9 @@ defmodule IdejoWeb.TopicLive do
               {Calendar.strftime(version.created_at, "%Y-%m-%d %H:%M:%S UTC")}
             </time>
           </p>
-          <MessageComponents.body html={Messages.Body.to_html(version.body_md)} />
+          <MessageComponents.body html={
+            Messages.Body.to_html(version.body_md, Messages.Body.context(@message))
+          } />
         </li>
       </ol>
     </details>

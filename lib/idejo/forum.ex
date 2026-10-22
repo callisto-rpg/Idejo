@@ -693,7 +693,8 @@ defmodule Idejo.Forum do
         closes_at: now,
         closed_at: now
       }
-      |> Message.closed_changeset(%{body_md: body})
+      # The topic is not stored yet: its category says where the links are written.
+      |> Message.closed_changeset(%{body_md: body}, author: user, category_id: category.id)
 
     with {:ok, topic} <- Repo.insert(topic),
          {_, _} <- Repo.insert_all("topic_tags", tag_rows(topic.id, tags)),
@@ -901,7 +902,10 @@ defmodule Idejo.Forum do
              closes_at: now,
              closed_at: now
            }
-           |> Message.closed_changeset(%{body_md: form.changes.body})
+           |> Message.closed_changeset(%{body_md: form.changes.body},
+             author: user,
+             category_id: topic.category_id
+           )
            |> Repo.insert(),
          {:ok, _} <-
            topic

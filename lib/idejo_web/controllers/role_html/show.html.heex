@@ -1,0 +1,26 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>
+      <Admin.swatch colour={@role.colour} />
+      {Admin.role_name(@role)}
+    </h1>
+    <p>{ngettext("1 member", "%{count} members", @count)}</p>
+  </header>
+
+  <ul :if={@members != []} id="role-members" class="role-members">
+    <li :for={user <- @members}>
+      <a href={~p"/u/#{user.id}"} class="role-member">
+        <IdejoWeb.UserComponents.avatar user={user} size={:small} />
+        <span>{user.display_name}</span>
+        <span class="opacity-60">@{user.username}</span>
+      </a>
+    </li>
+  </ul>
+  <p :if={@count > length(@members)} class="empty-state">
+    {gettext("And %{count} more.", count: @count - length(@members))}
+  </p>
+</Layouts.app>

@@ -135,6 +135,13 @@ which links are unused, used (and by whom) or expired.
   shown above each message. Owner and administrator stay on top, guest at the bottom.
 - **Edit** renames a role or changes its colour (built-in roles only change colour);
   **Delete** removes a role you made, and its members lose it.
+- **Can be tagged by everyone**: anyone may notify the role's members by writing
+  **+role** (the role's name as shown in the list, such as `+help-desk`). Out of the box:
+  owner, administrator and moderator.
+- **Can tag roles beneath**: the role's members may notify any role ranked below it, even one
+  not tagged by everyone. Out of the box: owner, administrator and moderator. Member and
+  guest can never be tagged.
+- Each role has a page at `/r/…` listing its members, which a **+role** links to.
 
 ## Moderation
 

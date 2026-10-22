@@ -49,6 +49,8 @@ defmodule IdejoWeb.Router do
     get "/tags", TagController, :index
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
+    # TP-10: a role's page, which a +role mention links to.
+    get "/r/:slug", RoleController, :show
 
     # First-run wizard (AD-01), only while the server has no owner.
     get "/setup", SetupController, :new
