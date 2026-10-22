@@ -81,7 +81,12 @@ The highest role that has a colour colours the person's name in topics.
 - **New category**: a name, an optional description, and optionally its web address
   (`/c/…`). The address is made from the name if you leave it empty and **never changes**,
   so links keep working when you rename the category.
-- **Edit** renames a category or changes its description; the arrows change the order.
+- **Icon** and **Colour**: pick one of the icons (Topics, Sports, More) or **No icon**, and
+  a colour as a hex code (`#3366ff`) or with the colour picker next to it; a preview shows
+  the result. Without a colour, the category keeps a tint of its own; without an icon, it
+  shows its initial.
+- **Edit** renames a category or changes its description, icon or colour; the arrows change
+  the order.
 - **Delete**: a category with topics asks where they go: **Move to** another category, or
   **Archive**. Archived topics become read only and go to the **Archive** category, which is
   hidden from everyone until you show it to some roles in its permissions.

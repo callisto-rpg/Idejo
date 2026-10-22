@@ -12,16 +12,67 @@ defmodule IdejoWeb.TopicComponents do
 
   import IdejoWeb.CoreComponents, only: [icon: 1]
 
+  alias Idejo.Forum.CategoryIcons
   alias IdejoWeb.UserComponents
 
   @hues 8
 
   @doc """
-  A category's mark: its initial on one of #{@hues} tints, picked from its id so it never
-  changes. Decorative; the name is always next to it. Classes, not `style` (SP-05).
+  A category's mark (decorative; the name is always next to it):
+
+    * with an icon (RP-03), the icon on a tile of the category's colour, or of the tint its id
+      gives it;
+    * with a colour but no icon, its initial on a tile of that colour;
+    * with neither, its initial on one of #{@hues} tints, picked from its id so it never
+      changes.
+
+  Colours are SVG `fill` attributes or classes, never `style` (SP-05).
   """
   attr :category, :map, required: true
   attr :size, :atom, values: [:small, :large], default: :small
+
+  def category_mark(%{category: %{icon: icon} = category} = assigns) when is_binary(icon) do
+    colour = Map.get(category, :colour) || CategoryIcons.tint(category.id)
+    assigns = assign(assigns, :shapes, CategoryIcons.shapes(icon, colour))
+
+    ~H"""
+    <svg
+      :if={@shapes}
+      viewBox="0 0 32 32"
+      class={["category-mark category-mark-svg", @size == :large && "category-mark-lg"]}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <.icon_shapes shapes={@shapes} />
+    </svg>
+    """
+  end
+
+  def category_mark(%{category: %{colour: "#" <> _ = colour}} = assigns) do
+    assigns = assign(assigns, colour: colour, ink: CategoryIcons.contrast(colour))
+
+    ~H"""
+    <svg
+      viewBox="0 0 32 32"
+      class={["category-mark category-mark-svg", @size == :large && "category-mark-lg"]}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect width="32" height="32" rx="7" fill={@colour} />
+      <text
+        x="16"
+        y="16.5"
+        text-anchor="middle"
+        dominant-baseline="central"
+        font-size="16"
+        font-weight="700"
+        fill={@ink}
+      >
+        {initial(@category)}
+      </text>
+    </svg>
+    """
+  end
 
   def category_mark(assigns) do
     ~H"""
@@ -29,8 +80,21 @@ defmodule IdejoWeb.TopicComponents do
       class={["category-mark", "hue-#{hue(@category)}", @size == :large && "category-mark-lg"]}
       aria-hidden="true"
     >
-      {@category.name |> String.first() |> String.upcase()}
+      {initial(@category)}
     </span>
+    """
+  end
+
+  defp initial(category), do: category.name |> String.first() |> String.upcase()
+
+  @doc "An icon's shapes (`Idejo.Forum.CategoryIcons.shapes/2`), as SVG elements."
+  attr :shapes, :list, required: true
+
+  def icon_shapes(assigns) do
+    ~H"""
+    <.dynamic_tag :for={{tag, attrs, children} <- @shapes} tag_name={tag} {attrs}>
+      <.icon_shapes shapes={children} />
+    </.dynamic_tag>
     """
   end
 

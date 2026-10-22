@@ -15,7 +15,14 @@ defmodule IdejoWeb.AccessibilityTest do
 
   setup do
     admin = user_with_role_fixture(:administrator)
-    {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
+    # RP-03: one category with an icon and a colour, the other as it was.
+    {:ok, general} =
+      Forum.create_category(admin, %{
+        "name" => "General",
+        "icon" => "general",
+        "colour" => "#0fa05c"
+      })
+
     {:ok, _other} = Forum.create_category(admin, %{"name" => "Other"})
     member = user_fixture(%{display_name: "Ada"})
     reader = user_fixture(%{display_name: "Bea"})

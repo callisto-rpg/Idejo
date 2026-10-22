@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule IdejoWeb.CategoryIconNames do
+  @moduledoc """
+  The names of the category icons (`Idejo.Forum.CategoryIcons`) and of their sets, through
+  Gettext (AX-05): for the icon picker in **Admin → Categories**.
+  """
+  use Gettext, backend: IdejoWeb.Gettext
+
+  @doc "An icon's name."
+  @spec name(String.t()) :: String.t()
+  def name("games"), do: gettext("Games")
+  def name("sports"), do: gettext("Sports")
+  def name("live"), do: gettext("Live")
+  def name("cinema"), do: gettext("Cinema")
+  def name("music"), do: gettext("Music")
+  def name("plants"), do: gettext("Plants")
+  def name("animals"), do: gettext("Animals")
+  def name("books"), do: gettext("Books")
+  def name("food"), do: gettext("Food")
+  def name("travel"), do: gettext("Travel")
+  def name("art"), do: gettext("Art")
+  def name("science"), do: gettext("Science")
+  def name("news"), do: gettext("News")
+  def name("photo"), do: gettext("Photography")
+  def name("tech"), do: gettext("Tech")
+  def name("learning"), do: gettext("Learning")
+  def name("soccer"), do: gettext("Soccer")
+  def name("football"), do: gettext("American football")
+  def name("rugby"), do: gettext("Rugby")
+  def name("tennis"), do: gettext("Tennis")
+  def name("basketball"), do: gettext("Basketball")
+  def name("baseball"), do: gettext("Baseball")
+  def name("volleyball"), do: gettext("Volleyball")
+  def name("hockey"), do: gettext("Ice hockey")
+  def name("golf"), do: gettext("Golf")
+  def name("tabletennis"), do: gettext("Table tennis")
+  def name("swimming"), do: gettext("Swimming")
+  def name("cycling"), do: gettext("Cycling")
+  def name("running"), do: gettext("Running")
+  def name("skiing"), do: gettext("Skiing")
+  def name("boxing"), do: gettext("Boxing")
+  def name("motorsport"), do: gettext("Motorsport")
+  def name("general"), do: gettext("General")
+  def name("qa"), do: gettext("Q&A / Help")
+  def name("announce"), do: gettext("Announcements")
+  def name("intro"), do: gettext("Introductions")
+  def name("feedback"), do: gettext("Feedback")
+  def name("events"), do: gettext("Events")
+  def name("showcase"), do: gettext("Showcase")
+  def name("market"), do: gettext("Marketplace")
+  def name("health"), do: gettext("Health & fitness")
+  def name("fashion"), do: gettext("Fashion")
+  def name("diy"), do: gettext("Home & DIY")
+  def name("parenting"), do: gettext("Parenting")
+  def name("relationships"), do: gettext("Relationships")
+  def name("cars"), do: gettext("Cars & motors")
+  def name("pets"), do: gettext("Pets")
+  def name("finance"), do: gettext("Finance")
+  def name("careers"), do: gettext("Careers")
+  def name("history"), do: gettext("History")
+  def name("philosophy"), do: gettext("Philosophy")
+  def name("languages"), do: gettext("Languages")
+  def name("politics"), do: gettext("Politics & society")
+  def name("tv"), do: gettext("TV & series")
+  def name("comics"), do: gettext("Anime & comics")
+  def name("writing"), do: gettext("Writing")
+  def name("crafts"), do: gettext("Crafts")
+  def name("boardgames"), do: gettext("Board games")
+  def name("podcasts"), do: gettext("Podcasts")
+  def name("nature"), do: gettext("Nature & outdoors")
+  def name("space"), do: gettext("Space")
+  def name("environment"), do: gettext("Environment")
+  def name("weather"), do: gettext("Weather")
+  def name(id), do: id
+
+  @doc "A set's name."
+  @spec group_name(atom()) :: String.t()
+  def group_name(:topics), do: gettext("Topics")
+  def group_name(:sports), do: gettext("Sports")
+  def group_name(:more), do: gettext("More")
+end
