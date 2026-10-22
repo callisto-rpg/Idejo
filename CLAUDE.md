@@ -487,7 +487,9 @@ roles or the permission grid. Every later change must keep it true:
   home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
   lists `Forum.list_category_summaries/1` (view right, in the query) in the home page's
   order and sections (`Forum.sections/2`; groups fold away as `<details>`); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
-  before paint by `theme.js`) and opens it as a drawer on narrow ones; All categories, Filter
+  before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
+  swipe right opens it and left closes it (`swipe/5`: not from the left edge, not in code,
+  tables, text boxes or the emoji picker; steward decision, 2026-10-23); All categories, Filter
   by tag and Rules & Roles sit above its categories. The home page shows no title (its `<h1>`
   is `sr-only`: the header names the server) and its sections open with `.section-divider`
   titles (Fraunces, a line across the page). The home page is a

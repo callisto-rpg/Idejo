@@ -90,7 +90,8 @@ change and keeps no history.
   page (click a group's name to fold it away), and under each one the topics you follow there, in the order you joined them. Past four,
   **N more topics** shows the rest. The **×** next to a topic (shown when you point at it)
   unfollows it. The button at the top left hides the sidebar, and your browser remembers;
-  on a phone the same button opens it.
+  on a phone the same button opens it, and so does a swipe to the right (a swipe to the left
+  closes it).
 - **New topic**, on a category's page: a title, its **tags** (at least one, when the
   category has any) and a first message, with **Preview**. Nobody sees it before you post it.
 - **Tags** show under a topic's title and in topic lists. Clicking one opens
