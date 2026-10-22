@@ -766,7 +766,8 @@
     font-size: 0.75rem;
     font-weight: 500;
     line-height: 1.25rem;
-    &::before { content: "#"; margin-right: 0.0625rem; color: var(--ink-faint); }
+    /* $ names a tag, as in $tag links (TP-10); # is for topics. */
+    &::before { content: "$"; margin-right: 0.0625rem; color: var(--ink-faint); }
     &:hover { color: var(--color-base-content); border-color: color-mix(in oklab, var(--color-primary) 40%, transparent); }
   }
   /* "Filter by tag": the tags to choose, grouped by where they belong. */
@@ -822,6 +823,7 @@
     gap: 0.75rem;
     font-size: 0.9375rem;
   }
+  .author-name { color: inherit; text-decoration: none; &:hover { text-decoration: underline; } }
   .author-role {
     display: inline-flex;
     align-items: center;
