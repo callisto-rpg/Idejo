@@ -344,7 +344,17 @@ roles or the permission grid. Every later change must keep it true:
   by migration, edited in **Admin → Roles** (audited in `role.update`). Notifications:
   `Body.mentioned_users/1` and `Body.mentioned_role_members/2` (members who may view get a
   mention); an @mentioned user who may view the topic also follows it (`auto_follow`, so an
-  explicit unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members. `/u/{id}` (`UserController`, public) shows the user card
+  explicit unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members.
+  **Suggestions while typing**: after `@`, `+`, `#`, `/` or `$` at the start of a word, the
+  composer and the message editor show a list (`assets/js/suggest.js`: the `Suggest` class,
+  used by the `Composer` hook before its own Enter handler, and the `EditorSuggest` hook; an
+  ARIA combobox on the text box with a `role="listbox"` `<ul>` beside it). The LiveView answers
+  `"suggest"` (`sign`, `q`) with `IdejoWeb.Suggestions.reply/3`, from
+  `Idejo.Suggestions.suggest/4`: recent items first (people who wrote in this topic, then in
+  the topics the user last read; the topics, categories and tags of those topics; roles the
+  user may tag, by rank), then the rest matching by name or slug, at most 8, filtered by view
+  right in the query. Click, or arrows and Enter/Tab, inserts the username or slug and a
+  space; Escape closes. `/u/{id}` (`UserController`, public) shows the user card
   (`UserComponents.user_card/1`: initial until avatars, display name, username, roles); in a
   topic the `Mentions` hook opens it in a `<dialog>` (`UserCard` hook, `"show_user"` /
   `"hide_user"`) instead (steward decision). Add the full-profile link when profiles exist.

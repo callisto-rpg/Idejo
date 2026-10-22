@@ -92,6 +92,8 @@ export function insertAtCaret(input, text) {
   input.setSelectionRange(caret, caret)
 }
 
+import {Suggest} from "./suggest"
+
 const escape = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 export const Composer = {
@@ -103,6 +105,9 @@ export const Composer = {
     this.restore(this.el.dataset.sent || "")
 
     this.input.addEventListener("input", () => this.paint())
+    // TP-10: suggestions while typing an inline link; added first, so its Enter picks.
+    this.suggest = new Suggest(this.input, this.el.querySelector("[role=listbox]"),
+      (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply))
     this.input.addEventListener("keydown", e => {
       if (e.key !== "Enter" || e.isComposing || e.shiftKey) return
       e.preventDefault()
