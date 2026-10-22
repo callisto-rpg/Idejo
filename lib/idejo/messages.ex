@@ -164,7 +164,7 @@ defmodule Idejo.Messages do
       opened_at: now,
       closes_at: DateTime.add(now, window, :second),
       body_md: text,
-      body_html: Body.to_html(text)
+      body_html: Body.to_html(text, author: author, category_id: topic.category_id)
     }
 
     with {:ok, message} <- Repo.insert(message),
@@ -216,7 +216,7 @@ defmodule Idejo.Messages do
     message
     |> Ecto.Changeset.change(
       body_md: text,
-      body_html: Body.to_html(text),
+      body_html: Body.to_html(text, Body.context(message)),
       edited: message.edited or edit?
     )
     |> Repo.update()

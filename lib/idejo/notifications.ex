@@ -5,13 +5,15 @@ defmodule Idejo.Notifications do
   @moduledoc """
   In-app notifications (NO-01, NO-02; in-app only in v0.1).
 
-  A new message notifies, once each: the users it @mentions (TP-10), the author of the
-  message it replies to (TP-08) and the topic's followers (TP-13, steward decision), never its
-  author and never someone who may not view the topic. Someone in several of these gets one
-  notification, of the first kind in that order.
+  A new message notifies, once each: the users it @mentions and the members of the roles it
+  +mentions (TP-10, when its author may notify them), the author of the message it replies to
+  (TP-08) and the topic's followers (TP-13, steward decision), never its author and never
+  someone who may not view the topic. Someone in several of these gets one notification, of
+  the first kind in that order. An @mentioned user who may view the topic also follows it,
+  unless they unfollowed it before (steward decision, 2026-10-22).
 
   A growing message notifies once, when it opens (NO-02, GM-13): an append, or an edit,
-  notifies only someone newly @mentioned. Their earlier reply or follow notification for that
+  notifies only someone newly mentioned. Their earlier reply or follow notification for that
   message becomes a mention and unread again, so it stays one item.
 
   Both are called inside the transaction that writes the message.
@@ -29,7 +31,7 @@ defmodule Idejo.Notifications do
   @doc "Notifies for a message just posted or opened in `topic`."
   @spec notify_new(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_new(%Message{} = message, %Topic{} = topic) do
-    mentioned = message.body_md |> Body.mentioned_users() |> Enum.map(& &1.id)
+    mentioned = mentioned(message, topic)
     replied = replied_author(message)
     followers = followers(topic.id)
 
@@ -67,11 +69,7 @@ defmodule Idejo.Notifications do
   """
   @spec notify_mentions(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_mentions(%Message{} = message, %Topic{} = topic) do
-    mentioned =
-      message.body_md
-      |> Body.mentioned_users()
-      |> Enum.map(& &1.id)
-      |> List.delete(message.author_id)
+    mentioned = message |> mentioned(topic) |> List.delete(message.author_id)
 
     now = DateTime.utc_now()
 
@@ -100,6 +98,20 @@ defmodule Idejo.Notifications do
       )
 
     {:ok, count}
+  end
+
+  # The users the message mentions: @users, who follow the topic when they may view it, and
+  # the members of the +roles its author may notify.
+  defp mentioned(message, topic) do
+    users =
+      message.body_md
+      |> Body.mentioned_users()
+      |> Enum.map(& &1.id)
+      |> List.delete(message.author_id)
+
+    for user_id <- may_view(users, topic), do: Idejo.Reading.auto_follow(user_id, topic.id)
+
+    Enum.uniq(users ++ Body.mentioned_role_members(message.body_md, Body.context(message)))
   end
 
   defp replied_author(%Message{reply_to_id: nil}), do: nil

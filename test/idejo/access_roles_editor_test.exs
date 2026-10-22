@@ -68,7 +68,13 @@ defmodule Idejo.AccessRolesEditorTest do
                Audit.list_entries()
 
       assert admin_id == admin.id
-      assert after_ == %{"name" => "Team", "colour" => "#3366ff", "position" => 4}
+      assert after_ == %{
+               "name" => "Team",
+               "colour" => "#3366ff",
+               "position" => 4,
+               "mentionable" => false,
+               "mentions_below" => false
+             }
     end
   end
 

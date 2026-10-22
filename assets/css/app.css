@@ -1007,10 +1007,24 @@
   mask-image: linear-gradient(to bottom, black 75%, transparent);
 }
 
-/* TP-10: an @mention, a link to the user's card (/u/{id}); the sanitiser keeps no classes. */
-.message-body a[href^="/u/"] {
+/* TP-10: inline links, highlighted: @user (/u/), +role (/r/), #topic (/t/), /category (/c/),
+   $tag (/tags?). The sanitiser keeps no classes, so they are told apart by their address. */
+.message-body :is(a[href^="/u/"], a[href^="/r/"], a[href^="/t/"], a[href^="/c/"], a[href^="/tags?"]) {
+  padding: 0 0.1875rem;
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--color-primary) 9%, transparent);
   text-decoration: none;
   font-weight: 600;
   color: var(--color-primary);
   &:hover { text-decoration: underline; }
+}
+
+.role-members { display: grid; gap: 0.25rem; }
+.role-member {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius-field);
+  &:hover { background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
 }

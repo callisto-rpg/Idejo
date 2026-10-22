@@ -97,7 +97,15 @@ defmodule IdejoWeb.NewTopicLive do
   def handle_event("editor_mode", %{"mode" => "preview"}, socket) do
     body = socket.assigns.form.params["body"] || ""
 
-    {:noreply, assign(socket, editor_mode: :preview, preview_html: Body.to_html(body))}
+    {:noreply,
+     assign(socket,
+       editor_mode: :preview,
+       preview_html:
+         Body.to_html(body,
+           author: socket.assigns.current_scope.user,
+           category_id: socket.assigns.category.id
+         )
+     )}
   end
 
   def handle_event("editor_mode", %{"mode" => "write"}, socket),

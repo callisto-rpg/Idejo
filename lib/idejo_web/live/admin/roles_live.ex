@@ -109,6 +109,30 @@ defmodule IdejoWeb.Admin.RolesLive do
     Access.movable?(role) and neighbour != nil and Access.movable?(neighbour)
   end
 
+  # TP-10: member and guest are never mentioned, so they take no mention settings.
+  defp mentionable_kind?(%Role{built_in: true, name: name}), do: name not in ~w(member guest)
+  defp mentionable_kind?(%Role{}), do: true
+
+  attr :form, :any, required: true
+
+  # TP-10 role mentions (+role): who may notify the role, and whom its members may notify.
+  defp mention_settings(assigns) do
+    ~H"""
+    <.input
+      field={@form[:mentionable]}
+      type="select"
+      label={gettext("Can be tagged by everyone")}
+      options={[{gettext("No"), "false"}, {gettext("Yes"), "true"}]}
+    />
+    <.input
+      field={@form[:mentions_below]}
+      type="select"
+      label={gettext("Can tag roles beneath")}
+      options={[{gettext("No"), "false"}, {gettext("Yes"), "true"}]}
+    />
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -151,6 +175,7 @@ defmodule IdejoWeb.Admin.RolesLive do
                   placeholder="#3366ff"
                   spellcheck="false"
                 />
+                <.mention_settings :if={mentionable_kind?(role)} form={form} />
                 <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                 <button type="button" class="btn btn-sm" phx-click="cancel_edit">
                   {gettext("Cancel")}
@@ -162,6 +187,11 @@ defmodule IdejoWeb.Admin.RolesLive do
               <span :if={role.built_in} class="badge badge-sm">{gettext("built-in")}</span>
               <span :if={!role.built_in} class="text-sm opacity-70">
                 {ngettext("1 member", "%{count} members", Map.get(@holders, role.id, 0))}
+              </span>
+              <span :if={mentionable_kind?(role)} class="text-sm opacity-70">
+                <code>+{Access.role_slug(role)}</code>
+                <span :if={role.mentionable}>· {gettext("can be tagged by everyone")}</span>
+                <span :if={role.mentions_below}>· {gettext("can tag roles beneath")}</span>
               </span>
               <span class="flex-1"></span>
               <button
@@ -228,6 +258,7 @@ defmodule IdejoWeb.Admin.RolesLive do
             placeholder="#3366ff"
             spellcheck="false"
           />
+          <.mention_settings form={@new_form} />
           <.button class="btn btn-primary">{gettext("Create role")}</.button>
         </.form>
       </section>

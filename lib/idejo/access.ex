@@ -448,7 +448,72 @@ defmodule Idejo.Access do
     |> Map.new()
   end
 
-  defp role_snapshot(role), do: Audit.snapshot(role, [:name, :colour, :position])
+  defp role_snapshot(role),
+    do: Audit.snapshot(role, [:name, :colour, :position, :mentionable, :mentions_below])
+
+  ## Role mentions (TP-10, +role)
+
+  @doc """
+  A role's name as written after `+`: its slug ("Help desk" is `+help-desk`).
+  """
+  @spec role_slug(Role.t()) :: String.t()
+  def role_slug(%Role{name: name}), do: Idejo.Forum.slugify(name, "role")
+
+  @doc "The role a `+slug` names, for its page; never member or guest."
+  @spec get_role_by_slug(String.t()) :: Role.t() | nil
+  def get_role_by_slug(slug) when is_binary(slug) do
+    from(r in Role, where: not (r.built_in and r.name in ~w(member guest)))
+    |> Repo.all()
+    |> Enum.find(&(role_slug(&1) == String.downcase(slug)))
+  end
+
+  @doc """
+  The active members of a role, by display name, at most `limit`, with how many there are in
+  all: `{users, count}`. For the role's page (`/r/{slug}`), which a `+role` links to.
+  """
+  @spec list_role_members(Role.t(), pos_integer()) :: {[User.t()], non_neg_integer()}
+  def list_role_members(%Role{id: role_id}, limit \\ 100) do
+    members =
+      from u in User,
+        join: ur in UserRole,
+        on: ur.user_id == u.id and ur.role_id == ^role_id,
+        where: u.status == "active"
+
+    {Repo.all(from u in members, order_by: [asc: u.display_name, asc: u.id], limit: ^limit),
+     Repo.aggregate(members, :count)}
+  end
+
+  @doc """
+  The roles the user may notify with `+role` (TP-10; steward decision, 2026-10-22), highest
+  rank first: every role that is `mentionable`, and every role ranked below one of the user's
+  roles that has `mentions_below`. Owners and administrators may notify every role. Member
+  and guest are never mentioned; visitors mention nothing.
+  """
+  @spec mentionable_roles(User.t() | nil) :: [Role.t()]
+  def mentionable_roles(nil), do: []
+
+  def mentionable_roles(%User{} = user) do
+    candidates =
+      Repo.all(
+        from r in Role,
+          where: not (r.built_in and r.name in ~w(member guest)),
+          order_by: [asc: r.position]
+      )
+
+    if administrator?(user) do
+      candidates
+    else
+      # Lower position ranks higher; the highest-ranked role that mentions below decides.
+      top =
+        user
+        |> roles_of()
+        |> Enum.filter(& &1.mentions_below)
+        |> Enum.map(& &1.position)
+        |> Enum.min(fn -> nil end)
+
+      Enum.filter(candidates, &(&1.mentionable or (top != nil and &1.position > top)))
+    end
+  end
 
   # Positions are rewritten as a whole; one change at a time.
   defp lock_roles, do: Repo.query!("LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE")

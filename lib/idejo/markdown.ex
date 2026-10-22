@@ -9,9 +9,15 @@ defmodule Idejo.Markdown do
   stored HTML is safe to show as is. No syntax highlighting: MDEx would colour code with
   inline styles, which the content security policy refuses (SP-05).
 
-  @mentions (TP-10): `mentions/1` finds the usernames written as `@name` in the text, never
-  in code or inside a link (`a@b.com` is a mail link); `to_html/2` with `mentions:` turns the
-  ones that name a user into a link to that user's URI path, `/u/{id}`.
+  Inline links (TP-10; steward decision, 2026-10-22): `references/1` finds what the text
+  names, never in code or inside a link (`a@b.com` is a mail link):
+
+    * `@username` - a user;
+    * `+role` - a role, by its name as a slug (`+help-desk`);
+    * `#slug` - a topic, `/slug` - a category, `$slug` - a tag.
+
+  `to_html/2` with `links:` turns the ones it is given into links, keeping what the author
+  typed unless it is given a label.
   """
 
   @options [
@@ -25,23 +31,52 @@ defmodule Idejo.Markdown do
   # digit or another @.
   @mention ~r/(?<![\w@])@([A-Za-z0-9_]{3,30})(?!\w)/u
 
+  # Every inline link, whole, for splitting text: @user, +role, #topic, /category, $tag. A
+  # slug is letters and digits in parts joined by single dashes; roles and tags start with a
+  # letter ("+1", "$5" stay text). None may follow a letter or digit ("C#", "and/or"), and a
+  # /category is no part of a path ("/usr/bin", "a/b").
+  @reference ~r"(?<![\w@])@[A-Za-z0-9_]{3,30}(?!\w)|(?<![\w+])\+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w#&])\#[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w/.:~-])/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\w/])|(?<![\w$])\$[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)"u
+
+  @sigils %{"@" => :user, "+" => :role, "#" => :topic, "/" => :category, "$" => :tag}
+
+  @typedoc "What an inline link names: its kind and its lowercased username or slug."
+  @type inline_link :: {:user | :role | :topic | :category | :tag, String.t()}
+
   @doc """
-  Renders Markdown to sanitised HTML. `mentions:` maps lowercased usernames to user ids;
-  each `@name` among them becomes a link to `/u/{id}`, keeping what the author typed.
+  Renders Markdown to sanitised HTML. `links:` maps references (`references/1`) to
+  `{path, label}`: each one written in the text becomes a link to `path`, showing `label`, or
+  what the author typed when the label is nil.
   """
   @spec to_html(String.t(), keyword()) :: String.t()
   def to_html(markdown, opts \\ [])
 
   def to_html(markdown, opts) when is_binary(markdown) do
-    case Keyword.get(opts, :mentions, %{}) do
-      users when users == %{} ->
+    case Keyword.get(opts, :links, %{}) do
+      links when links == %{} ->
         MDEx.to_html!(markdown, @options)
 
-      users ->
+      links ->
         markdown
         |> MDEx.parse_document!(@options)
-        |> link_mentions(users)
+        |> link_references(links)
         |> MDEx.to_html!(@options)
+    end
+  end
+
+  @doc """
+  Returns the inline links written in the Markdown, each once, outside code and links.
+  """
+  @spec references(String.t()) :: [inline_link()]
+  def references(markdown) when is_binary(markdown) do
+    if String.contains?(markdown, Map.keys(@sigils)) do
+      markdown
+      |> MDEx.parse_document!(@options)
+      |> texts()
+      |> Enum.flat_map(&Regex.scan(@reference, &1))
+      |> Enum.map(fn [whole] -> reference(whole) end)
+      |> Enum.uniq()
+    else
+      []
     end
   end
 
@@ -63,6 +98,9 @@ defmodule Idejo.Markdown do
     end
   end
 
+  defp reference(<<sigil::binary-size(1), name::binary>>),
+    do: {Map.fetch!(@sigils, sigil), String.downcase(name)}
+
   # Text nodes outside links and images; code has no text nodes.
   defp texts(%MDEx.Text{literal: literal}), do: [literal]
   defp texts(%MDEx.Link{}), do: []
@@ -70,31 +108,33 @@ defmodule Idejo.Markdown do
   defp texts(%{nodes: nodes}), do: Enum.flat_map(nodes, &texts/1)
   defp texts(_node), do: []
 
-  defp link_mentions(%MDEx.Link{} = node, _users), do: node
-  defp link_mentions(%MDEx.Image{} = node, _users), do: node
+  defp link_references(%MDEx.Link{} = node, _links), do: node
+  defp link_references(%MDEx.Image{} = node, _links), do: node
 
-  defp link_mentions(%{nodes: nodes} = node, users),
-    do: %{node | nodes: Enum.flat_map(nodes, &expand(&1, users))}
+  defp link_references(%{nodes: nodes} = node, links),
+    do: %{node | nodes: Enum.flat_map(nodes, &expand(&1, links))}
 
-  defp link_mentions(node, _users), do: node
+  defp link_references(node, _links), do: node
 
-  defp expand(%MDEx.Text{literal: literal}, users) do
-    @mention
+  defp expand(%MDEx.Text{literal: literal}, links) do
+    @reference
     |> Regex.split(literal, include_captures: true, trim: true)
     |> Enum.map(fn part ->
-      case mention_id(part, users) do
-        nil -> %MDEx.Text{literal: part}
-        id -> %MDEx.Link{url: "/u/" <> id, title: "", nodes: [%MDEx.Text{literal: part}]}
+      case link_for(part, links) do
+        nil ->
+          %MDEx.Text{literal: part}
+
+        {path, label} ->
+          %MDEx.Link{url: path, title: "", nodes: [%MDEx.Text{literal: label || part}]}
       end
     end)
   end
 
-  defp expand(node, users), do: [link_mentions(node, users)]
+  defp expand(node, links), do: [link_references(node, links)]
 
-  # A part split out as a whole mention, naming one of the users.
-  defp mention_id("@" <> name = part, users) do
-    if Regex.match?(~r/\A@[A-Za-z0-9_]{3,30}\z/, part), do: Map.get(users, String.downcase(name))
+  # A part split out as a whole inline link, one of those given.
+  defp link_for(part, links) do
+    if Regex.match?(~r/\A(?:#{@reference.source})\z/u, part),
+      do: Map.get(links, reference(part))
   end
-
-  defp mention_id(_part, _users), do: nil
 end

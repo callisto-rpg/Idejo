@@ -91,7 +91,8 @@ that role too); every verified user holds member on top of their other roles
 
 Role editor (RP-02, **Admin → Roles**): custom roles have a name (unique ignoring case, also
 against built-in names) and an optional `#rrggbb` colour, and can be renamed, moved one place
-up or down, and deleted. Built-in roles only change colour. Owner and administrator stay on
+up or down, and deleted. Built-in roles only change colour and, except member and guest, their
+mention settings (TP-10). Owner and administrator stay on
 top and guest stays last (`Access.movable?/1`). Every change is audited (`role.create`,
 `role.update`, `role.reorder`, `role.delete`). Colours are drawn as SVG `fill`, never as
 `style` (SP-05).
@@ -325,12 +326,25 @@ roles or the permission grid. Every later change must keep it true:
   (`NotificationController`, no JavaScript) lists them unread first; `/notifications/{id}`
   marks one read and redirects to `/m/{id}`. The header link shows the unread count, counted
   per page render (not live). Notifications for topics the user can no longer view are hidden.
-- **@mentions** (TP-10, @user only, no autocomplete: steward decision): every body renders
-  through `Idejo.Messages.Body.to_html/1` (messages, previews, versions), never
-  `Idejo.Markdown.to_html/1` directly. `Markdown.mentions/1` finds `@username` outside code and
-  links; each one naming an active user (case-insensitive) is stored as a link to `/u/{id}`
-  (styled by `a[href^="/u/"]`: the sanitiser keeps no classes). `Body.mentioned_users/1` is
-  for notifications. `/u/{id}` (`UserController`, public) shows the user card
+- **Inline links** (TP-10; steward decision, 2026-10-22, replacing "@user only"): every body
+  renders through `Idejo.Messages.Body.to_html/2` with its context (`author:`/`author_id:`,
+  `category_id:`/`topic_id:`, or `Body.context(message)`; messages, previews, versions),
+  never `Idejo.Markdown.to_html/1` directly. `Markdown.references/1` finds, outside code and
+  links, `@username` (→ `/u/{id}`), `+role` (the role's name as a slug, `Access.role_slug/1`,
+  → `/r/{slug}`), `#slug` (a topic → `/t/{id}`: the one the author last wrote in, else the
+  most recently active), `/slug` (a category → `/c/{slug}`) and `$slug` (a tag →
+  `/tags?tags[]=slug`), resolved as the author may view them; unknown ones stay text. Links
+  read the name (`#Garden plans`, `+Moderator`) unless it lives where some readers may not
+  look (only names guests may view, or of the message's own category), then the slug as
+  typed. Highlighted by `a[href^=…]` in `.message-body` (the sanitiser keeps no classes).
+  `+role` works only for roles the author may notify (`Access.mentionable_roles/1`): roles
+  with `mentionable` ("Can be tagged by everyone"), and roles ranked below one of the
+  author's roles with `mentions_below` ("Can tag roles beneath"); owners and administrators
+  any; never member or guest. Both settings are on for owner, administrator and moderator
+  by migration, edited in **Admin → Roles** (audited in `role.update`). Notifications:
+  `Body.mentioned_users/1` and `Body.mentioned_role_members/2` (members who may view get a
+  mention); an @mentioned user who may view the topic also follows it (`auto_follow`, so an
+  explicit unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members. `/u/{id}` (`UserController`, public) shows the user card
   (`UserComponents.user_card/1`: initial until avatars, display name, username, roles); in a
   topic the `Mentions` hook opens it in a `<dialog>` (`UserCard` hook, `"show_user"` /
   `"hide_user"`) instead (steward decision). Add the full-profile link when profiles exist.

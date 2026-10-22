@@ -41,22 +41,23 @@ defmodule Idejo.Messages.Message do
 
   @doc """
   A changeset for a message posted closed, such as a topic's first message (GM-14). The
-  caller sets `id`, `uri`, `topic_id`, `author_id` and the times.
+  caller sets `id`, `uri`, `topic_id`, `author_id` and the times; `context` is how its
+  inline links resolve (`Idejo.Messages.Body.to_html/2`), by default its author in its topic.
   """
-  def closed_changeset(message, attrs) do
+  def closed_changeset(message, attrs, context \\ nil) do
     message
     |> cast(attrs, [:body_md])
     |> validate_required([:body_md], message: "can't be blank")
     |> validate_change(:body_md, fn :body_md, body ->
       if String.trim(body) == "", do: [body_md: "can't be blank"], else: []
     end)
-    |> put_html()
+    |> put_html(context || Body.context(message))
     |> put_change(:state, "closed")
     |> validate_required([:id, :uri, :topic_id, :author_id, :opened_at, :closes_at, :closed_at])
   end
 
-  defp put_html(%Ecto.Changeset{valid?: true, changes: %{body_md: body}} = changeset),
-    do: put_change(changeset, :body_html, Body.to_html(body))
+  defp put_html(%Ecto.Changeset{valid?: true, changes: %{body_md: body}} = changeset, context),
+    do: put_change(changeset, :body_html, Body.to_html(body, context))
 
-  defp put_html(changeset), do: changeset
+  defp put_html(changeset, _context), do: changeset
 end
