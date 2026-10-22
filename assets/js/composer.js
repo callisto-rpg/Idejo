@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10).
-// Enter sends the whole text and keeps it in the box; sent text is drawn in
-// higher contrast than unsent text by a backdrop behind a transparent textarea.
+// Enter sends the whole text and keeps it in the box; a backdrop behind a transparent
+// textarea draws sent text like any message's and highlights unsent text as temporary.
+// Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code.
@@ -94,7 +95,34 @@ export function insertAtCaret(input, text) {
 
 import {Suggest} from "./suggest"
 
+// How long text just sent glows before it reads like the rest (matches .composer-burn).
+const BURN_MS = 2200
+
+// Marks, for each character of `after`, whether it is new since `before`: what a send burns.
+export function burnMarks(before, after) {
+  const marks = []
+  for (const [text, kept] of sentRuns(before, after)) {
+    for (const _ of text) marks.push(!kept)
+  }
+  return marks
+}
+
 const escape = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+const span = (cls, text) => `<span class="${cls}">${escape(text)}</span>`
+
+// The sent text as runs, the characters just sent marked to burn.
+function burnSpans(sent, marks) {
+  let html = "", run = "", burning = null
+  Array.from(sent).forEach((ch, i) => {
+    const b = Boolean(marks[i])
+    if (burning !== null && b !== burning) { html += span(burning ? "composer-sent composer-burn" : "composer-sent", run); run = "" }
+    burning = b
+    run += ch
+  })
+  if (run) html += span(burning ? "composer-sent composer-burn" : "composer-sent", run)
+  return html
+}
 
 export const Composer = {
   mounted() {
@@ -154,6 +182,7 @@ export const Composer = {
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
     this.input.value = body + separator
     this.sent = this.input.value
+    this.burn = {marks: burnMarks(before, this.sent), sent: this.sent, start: performance.now()}
     const position = atEnd ? this.input.value.length : caret
     this.input.setSelectionRange(position, position)
     this.paint()
@@ -180,10 +209,25 @@ export const Composer = {
   },
 
   paint() {
+    const value = this.input.value
+    const elapsed = this.burn ? performance.now() - this.burn.start : Infinity
+    // A burn shows while it lasts and while the sent text is still the start of the box.
+    const burning = elapsed < BURN_MS && this.burn.sent === this.sent && value.startsWith(this.sent)
+
+    const html = burning
+      ? burnSpans(this.sent, this.burn.marks) +
+        (value.length > this.sent.length ? span("composer-unsent", value.slice(this.sent.length)) : "")
+      : sentRuns(this.sent, value).map(([text, sent]) => span(sent ? "composer-sent" : "composer-unsent", text)).join("")
+
     // The extra space keeps a trailing line break visible in the backdrop.
-    this.backdrop.innerHTML = sentRuns(this.sent, this.input.value)
-      .map(([text, sent]) => `<span class="${sent ? "composer-sent" : "composer-unsent"}">${escape(text)}</span>`)
-      .join("") + " "
+    this.backdrop.innerHTML = html + " "
+    // Repaints (every keystroke) keep the animation where it was: a negative delay, set
+    // through the DOM, never a style attribute (SP-05).
+    if (burning) {
+      this.backdrop.querySelectorAll(".composer-burn").forEach(el => { el.style.animationDelay = `-${elapsed}ms` })
+      clearTimeout(this.burnTimer)
+      this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
+    }
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
   },

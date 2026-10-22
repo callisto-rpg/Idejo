@@ -21,8 +21,9 @@ The text box below the topic is where you write. Its placeholder repeats the key
 ## How a message grows
 
 1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
-   in the box**, in stronger contrast than what you have not sent yet. If your sentence had
-   no punctuation, Idejo adds a full stop.
+   where you write**, looking like any message, while what you have not sent yet is
+   highlighted as temporary. Text you just sent glows for a moment, then settles into the
+   message. If your sentence had no punctuation, Idejo adds a full stop.
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
 3. For a short while after your message starts (45 seconds, unless your server changed it),
