@@ -50,6 +50,49 @@ document.addEventListener("keydown", (e) => {
   }
 })
 
+// Touch screens, narrow: swipe right to open the drawer, left to close it (steward decision,
+// 2026-10-23). Only a quick, mostly sideways swipe counts, so scrolling never opens it; not
+// from the screen's left edge (the system's "back" there), nor inside what scrolls sideways
+// or takes text (code, tables, text boxes, the emoji picker).
+const SWIPE_MIN = 60
+const SWIPE_MAX_MS = 600
+const EDGE = 20
+const NO_SWIPE = "pre, table, input, textarea, select, [contenteditable], .emoji-groups, .suggestions"
+
+// "open", "close" or null for a touch from (x0, y0) to (x1, y1) lasting `ms`.
+export function swipe(x0, y0, x1, y1, ms) {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  if (ms > SWIPE_MAX_MS || Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < 2 * Math.abs(dy)) return null
+  if (dx > 0) return x0 < EDGE ? null : "open"
+  return "close"
+}
+
+let touch = null
+
+document.addEventListener("touchstart", e => {
+  touch = null
+  if (wide.matches || e.touches.length !== 1 || e.target.closest(NO_SWIPE)) return
+  const t = e.touches[0]
+  touch = {x: t.clientX, y: t.clientY, at: performance.now()}
+}, {passive: true})
+
+document.addEventListener("touchend", e => {
+  if (!touch || wide.matches) return
+  const t = e.changedTouches[0]
+  const gesture = swipe(touch.x, touch.y, t.clientX, t.clientY, performance.now() - touch.at)
+  touch = null
+  const open = root.dataset.drawer === "open"
+  if (gesture === "open" && !open) {
+    root.dataset.drawer = "open"
+    sync()
+  } else if (gesture === "close" && open) {
+    closeDrawer()
+  }
+}, {passive: true})
+
+document.addEventListener("touchcancel", () => { touch = null }, {passive: true})
+
 wide.addEventListener("change", closeDrawer)
 // LiveView re-renders the header on navigation; keep the button's state right.
 window.addEventListener("phx:page-loading-stop", sync)
