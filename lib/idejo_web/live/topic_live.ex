@@ -942,7 +942,8 @@ defmodule IdejoWeb.TopicLive do
     ~H"""
     <span class="author-line">
       <UserComponents.avatar user={@author} size={:list} />
-      <span class="font-semibold">{@author.display_name}</span>
+      <%!-- TP-10: the name opens the user's card, like an @mention (InlineLinks hook). --%>
+      <a href={~p"/u/#{@author.id}"} class="author-name font-semibold">{@author.display_name}</a>
       <span :if={@role} class="author-role">
         <Admin.swatch colour={@role.colour} />
         {@role.name}

@@ -194,4 +194,12 @@ defmodule IdejoWeb.TagsTest do
     assert lv |> element("#tag-#{tag.id} button", "Delete") |> render_click() =~ "deleted."
     refute Repo.get(Idejo.Forum.Tag, tag.id)
   end
+
+  @tag req: "TP-19"
+  test "TP-19 tag pills read $, the sign of tags; # stays for topics" do
+    css = File.read!("assets/css/app.css")
+    [chip] = Regex.run(~r/\.tag-chip \{.*?\n  \}/s, css)
+    assert chip =~ ~s(content: "$")
+    refute chip =~ ~s(content: "#")
+  end
 end

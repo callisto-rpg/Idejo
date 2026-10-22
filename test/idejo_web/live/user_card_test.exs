@@ -77,4 +77,18 @@ defmodule IdejoWeb.UserCardTest do
     render_hook(lv, "show_card", %{"kind" => "user", "ref" => "nonsense"})
     refute has_element?(lv, "#inline-card")
   end
+
+  @tag req: "TP-10"
+  test "TP-10 the name above a message leads to the user's card, like an @mention", %{
+    ada: ada,
+    topic: topic
+  } do
+    {:ok, _} = Forum.post_message(ada, topic, %{"body" => "Hello"})
+
+    {:ok, lv, _html} =
+      live_isolated(build_conn(), IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+
+    assert has_element?(lv, ~s(a.author-name[href="/u/#{ada.id}"]), "Ada")
+    assert File.read!("assets/js/inline_cards.js") =~ "a.author-name[href]"
+  end
 end

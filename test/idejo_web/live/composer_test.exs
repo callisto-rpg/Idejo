@@ -116,7 +116,7 @@ defmodule IdejoWeb.ComposerTest do
       |> String.replace(~r/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/, "ID")
       |> String.replace(~r/<time.*?<\/time>/s, "TIME")
       |> String.replace(~r/<div[^>]*class="message-body"[^>]*>.*?<\/div>/s, "BODY")
-      |> String.replace(~r/<span class="font-semibold">.*?<\/span>/s, "NAME")
+      |> String.replace(~r/<a [^>]*class="author-name[^"]*">.*?<\/a>/s, "NAME")
       |> String.replace(~r/<span class="sr-only">.*?<\/span>/s, "")
     end
 

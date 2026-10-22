@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // Inline links (TP-10): @user, +role, #topic, /category and $tag are links to their pages,
-// which work without JavaScript. In a topic, the InlineLinks hook opens the link's card in a
+// which work without JavaScript; so is each message's author name. In a topic, the InlineLinks hook opens the link's card in a
 // dialog instead, unless the reader asked for a new tab or window. When the server has no
 // card for the reader (they may not view it), the link is followed after all.
 
@@ -24,7 +24,8 @@ export function cardFor(href) {
 export const InlineLinks = {
   mounted() {
     this.el.addEventListener("click", e => {
-      const link = e.target.closest(".message-body a[href]")
+      // Links in messages, and the author's name above each one.
+      const link = e.target.closest(".message-body a[href], a.author-name[href]")
       if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
       const card = cardFor(link.getAttribute("href"))
       if (!card) return
