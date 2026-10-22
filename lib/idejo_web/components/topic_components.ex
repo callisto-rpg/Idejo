@@ -4,7 +4,7 @@
 defmodule IdejoWeb.TopicComponents do
   @moduledoc """
   How categories and topics are shown in lists: the category's mark (its initial on a tint
-  of its own), a topic row (TP-03), and times as "5 min ago".
+  of its own), a topic row (TP-03), tags (TP-19), and times as "5 min ago".
   """
   use Phoenix.Component
   use Gettext, backend: IdejoWeb.Gettext
@@ -75,6 +75,7 @@ defmodule IdejoWeb.TopicComponents do
           <.icon name="hero-lock-closed-micro" class="size-3" />{gettext("Locked")}
         </span>
       </span>
+      <.tag_list :if={Ecto.assoc_loaded?(@topic.tags)} tags={@topic.tags} class="topic-row-tags" />
       <p class="topic-row-meta">
         <a :if={@lead == :category} href={~p"/c/#{@topic.category.slug}"} class="topic-category">
           {@topic.category.name}
@@ -103,6 +104,26 @@ defmodule IdejoWeb.TopicComponents do
     </li>
     """
   end
+
+  @doc """
+  A topic's tags (TP-19), each a link to "Filter by tag" with that tag chosen. Nothing when
+  there are none. Not a list of `<li>`s, so `li > a` in a topic list still finds titles only.
+  """
+  attr :tags, :list, required: true
+  attr :class, :string, default: nil
+
+  def tag_list(assigns) do
+    ~H"""
+    <p :if={@tags != []} class={["tag-list", @class]}>
+      <span class="sr-only">{gettext("Tags:")}</span>
+      <a :for={tag <- @tags} href={tag_path([tag])} class="tag-chip">{tag.name}</a>
+    </p>
+    """
+  end
+
+  @doc "The \"Filter by tag\" page with these tags chosen."
+  @spec tag_path([map()]) :: String.t()
+  def tag_path(tags), do: ~p"/tags?#{%{"tags" => Enum.map(tags, & &1.slug)}}"
 
   @doc """
   A time as how long ago it was ("5 min ago"), with the exact time in `datetime` and as a

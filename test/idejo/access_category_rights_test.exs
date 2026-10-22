@@ -44,12 +44,13 @@ defmodule Idejo.AccessCategoryRightsTest do
     end
 
     @tag req: "RP-04"
-    test "RP-04 moderators also moderate", %{general: general} do
+    test "RP-04 moderators also moderate and edit tags (TP-19)", %{general: general} do
       assert rights(user_with_role_fixture(:moderator), general) == [
                :view,
                :start,
                :post,
-               :moderate
+               :moderate,
+               :tag
              ]
     end
 

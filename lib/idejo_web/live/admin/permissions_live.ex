@@ -4,7 +4,7 @@
 defmodule IdejoWeb.Admin.PermissionsLive do
   @moduledoc """
   Admin panel: the permission grid (RP-04, RP-05). For the server, or for one category, each
-  role gets allow, deny or unset for the four rights of v0.1. Server-wide a right is only
+  role gets allow, deny or unset for each right. Server-wide a right is only
   allowed or not; on a category, unset follows the role's server-wide setting and deny
   overrides it. Owner and administrator always have every right and take no settings.
   """
@@ -79,6 +79,7 @@ defmodule IdejoWeb.Admin.PermissionsLive do
   defp right_name(:start), do: gettext("Start topics")
   defp right_name(:post), do: gettext("Post")
   defp right_name(:moderate), do: gettext("Moderate")
+  defp right_name(:tag), do: gettext("Edit tags")
 
   defp effect(settings, role, right), do: Map.get(settings, {role.id, right}, :unset)
 

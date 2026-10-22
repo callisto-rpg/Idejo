@@ -105,7 +105,7 @@ The name colour is the colour of the highest-ranked role that has one (`Access.n
 `Access.grant_role/2` (unaudited) is only for setup and test fixtures.
 
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
-`:view`, `:start`, `:post`, `:moderate`. Each role's right on a category is allow, deny or
+`:view`, `:start`, `:post`, `:moderate`, and `:tag` (edit a topic's tags, TP-19). Each role's right on a category is allow, deny or
 unset; unset follows the role's server-wide setting (a `category_permissions` row with no
 `category_id`), and deny overrides it (RP-04/RP-05). Across roles, **allow wins**: a right is
 granted when any of the user's roles allows it, even if a higher-ranked role denies it (RP-06).
@@ -113,7 +113,7 @@ Search and lists filter by `:view` in the query, never after loading: use
 `Idejo.Access.where_allowed(query, user, right)` for lists and `Access.can?/3` for one
 category. Settings change only through `Access.set_permission/5` (audited as
 `permission.update`). Server-wide defaults seeded at install: guest views; member views,
-starts topics and posts; moderator also moderates.
+starts topics and posts; moderator also moderates and edits tags (`:tag`, TP-19).
 The grid is **Admin → Permissions** (RP-05, `IdejoWeb.Admin.PermissionsLive`):
 `/admin/permissions` for the server-wide settings (allow or not allowed, no deny) and
 `/admin/permissions/{slug}` per category (server-wide, allow or deny); owner and administrator
@@ -348,6 +348,24 @@ roles or the permission grid. Every later change must keep it true:
   not undo it (steward decision: followers get notified of new messages, with NO-01). The
   topic page has Follow / Unfollow forms posting to `/t/{id}/follow` (`FollowController`,
   POST / DELETE, no JavaScript needed).
+- **Tags** (TP-19, `Idejo.Forum.Tags`, `Idejo.Forum.Tag`; steward decision, 2026-10-22:
+  built in M5 though the MVP sheet defers tags): administrators make them in **Admin → Tags**
+  (`Admin.TagsLive`), server-wide (`category_id` nil) or for one category (never the Archive),
+  rename and delete them, audited as `tag.create|update|delete`. Names are unique across the
+  server ignoring case; the slug is made at creation and kept. A category offers the
+  server-wide tags and its own (`Tags.available_tags/1`); `Forum.create_topic/4` takes
+  `tag_ids` and needs at least one when the category offers any (`change_new_topic/2`), and
+  the topic's `create` activity carries `tag`. A topic's tags change through
+  `Forum.set_topic_tags/4`, which needs the `:tag` right ("Edit tags" in the grid, allowed
+  server-wide for the built-in moderator by the migration), refuses archived topics, and is
+  logged as `topic.tags` (MO-03) with an `update` activity; the topic page's "Edit tags"
+  form posts to `/t/{id}/tags` (`TopicTagsController`, no JavaScript). Moving a topic drops
+  the old category's own tags (`Tags.drop_foreign_tags/2`); deleting a category deletes its
+  tags. Topic lists preload `tags: Tags.ordered()` and show them with
+  `TopicComponents.tag_list/1` (links in a `<p>`, never `<li>`s, so `#topics li > a` stays
+  the titles), each linking to "Filter by tag": `/tags?tags[]=slug` (`TagController`,
+  public GET form, no JavaScript), topics carrying **all** chosen tags
+  (`Tags.list_tagged_topics/3`), filtered by view right in the query, 30 a page.
 - **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
   Preview, used for every message (the first message now, replies and the composer later).
   Nothing typed is stored or sent before posting; the preview is rendered for the author only.

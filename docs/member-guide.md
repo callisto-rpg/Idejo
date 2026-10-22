@@ -72,8 +72,11 @@ change and keeps no history.
   **N more topics** shows the rest. The **×** next to a topic (shown when you point at it)
   unfollows it. The button at the top left hides the sidebar, and your browser remembers;
   on a phone the same button opens it.
-- **New topic**, on a category's page: a title and a first message, with **Preview**.
-  Nobody sees it before you post it.
+- **New topic**, on a category's page: a title, its **tags** (at least one, when the
+  category has any) and a first message, with **Preview**. Nobody sees it before you post it.
+- **Tags** show under a topic's title and in topic lists. Clicking one opens
+  **Filter by tag** (also in the sidebar): tick one or more tags and **Show topics** lists
+  the topics that carry all of them.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen. A message
   counts once, however much it grows.
 - **Notifications**, the bell at the top, shows your mentions, replies to you and new messages in topics you

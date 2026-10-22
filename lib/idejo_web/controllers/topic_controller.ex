@@ -15,6 +15,7 @@ defmodule IdejoWeb.TopicController do
   use IdejoWeb, :controller
 
   alias Idejo.Forum
+  alias Idejo.Forum.Tags
   alias Idejo.Reading
 
   def show(conn, %{"id" => id} = params) do
@@ -26,22 +27,22 @@ defmodule IdejoWeb.TopicController do
         raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
 
       topic ->
-        can_moderate? = user != nil and Idejo.Access.can?(user, :moderate, topic.category)
-
         if params["slug"] == topic.slug do
           # Opening a topic marks everything in it read (TP-07).
           Reading.mark_read(user, topic)
 
-          render(conn, :show,
-            topic: topic,
-            page_title: topic.title,
-            reply_to_id: params["reply_to"],
-            following?: Reading.following?(user, topic),
-            forked_from: forked_from(user, topic),
-            can_moderate?: can_moderate?,
-            move_targets: if(can_moderate?, do: Forum.list_move_targets(user, topic), else: []),
-            # Without ?reply_to=, which only opens the form.
-            canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
+          render(
+            conn,
+            :show,
+            [
+              topic: topic,
+              page_title: topic.title,
+              reply_to_id: params["reply_to"],
+              following?: Reading.following?(user, topic),
+              forked_from: forked_from(user, topic),
+              # Without ?reply_to=, which only opens the form.
+              canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
+            ] ++ moderator_tools(user, topic)
           )
         else
           conn
@@ -49,6 +50,23 @@ defmodule IdejoWeb.TopicController do
           |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
         end
     end
+  end
+
+  # TP-14, TP-15: the moderator form; TP-19: the "Edit tags" form, its own right
+  # (moderators' by default).
+  defp moderator_tools(nil, _topic),
+    do: [can_moderate?: false, move_targets: [], can_tag?: false, available_tags: []]
+
+  defp moderator_tools(user, topic) do
+    can_moderate? = Idejo.Access.can?(user, :moderate, topic.category)
+    can_tag? = topic.state != "archived" and Idejo.Access.can?(user, :tag, topic.category)
+
+    [
+      can_moderate?: can_moderate?,
+      move_targets: if(can_moderate?, do: Forum.list_move_targets(user, topic), else: []),
+      can_tag?: can_tag?,
+      available_tags: if(can_tag?, do: Tags.available_tags(topic.category), else: [])
+    ]
   end
 
   # TP-09: the message this topic was started from, when the viewer may see it.

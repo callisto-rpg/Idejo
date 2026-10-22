@@ -238,6 +238,11 @@ defmodule IdejoWeb.Layouts do
           <.icon name="hero-squares-2x2" class="size-4" />
           {gettext("All categories")}
         </a>
+        <%!-- TP-19 --%>
+        <a href={~p"/tags"} class="sidebar-link" id="tags-link">
+          <.icon name="hero-tag" class="size-4" />
+          {gettext("Filter by tag")}
+        </a>
       </nav>
       <div :if={!@user} class="sidebar-theme sm:hidden">
         <span>{gettext("Theme")}</span>
@@ -404,7 +409,7 @@ defmodule IdejoWeb.Layouts do
 
   attr :section, :atom,
     required: true,
-    values: [:settings, :email, :users, :invites, :roles, :categories, :permissions]
+    values: [:settings, :email, :users, :invites, :roles, :categories, :tags, :permissions]
 
   slot :inner_block, required: true
 
@@ -439,6 +444,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :categories && "page"}
         >
           {gettext("Categories")}
+        </.link>
+        <.link
+          navigate={~p"/admin/tags"}
+          class={["tab", @section == :tags && "tab-active"]}
+          aria-current={@section == :tags && "page"}
+        >
+          {gettext("Tags")}
         </.link>
         <.link
           navigate={~p"/admin/permissions"}

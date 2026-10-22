@@ -3,7 +3,8 @@
 
 defmodule Idejo.Forum do
   @moduledoc """
-  The forum structure: categories (RP-03) and topics (TP-01).
+  The forum structure: categories (RP-03) and topics (TP-01), with their tags (TP-19,
+  `Idejo.Forum.Tags`).
 
   Administrators create, rename, reorder and delete categories in **Admin → Categories**. Each
   change is audited (SP-06) and recorded as an activity (FD-02) in the same transaction.
@@ -15,7 +16,7 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.{Category, Tags, Topic}
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
@@ -81,7 +82,7 @@ defmodule Idejo.Forum do
         where: t.category_id in subquery(viewable) and t.state != "archived",
         order_by: [desc: t.last_activity_at, desc: t.id],
         limit: ^limit,
-        preload: :category
+        preload: [:category, tags: ^Tags.ordered()]
     )
   end
 
@@ -264,6 +265,7 @@ defmodule Idejo.Forum do
 
     if target && target.id != category.id && !target.archive do
       move_topics(admin, ids, target, %{})
+      # TP-19: the deleted category's own tags go with it; nothing else to drop.
       {:ok, %{"topics" => %{"count" => length(ids), "moved_to" => target.slug}}}
     else
       {:error, :invalid_target}
@@ -445,6 +447,8 @@ defmodule Idejo.Forum do
     with {:ok, _} <-
            Moderation.record(moderator, "topic.move", topic, reason: reason, details: details),
          {:ok, moved} <- topic |> Ecto.Changeset.change(category_id: target.id) |> Repo.update(),
+         # TP-19: the old category's own tags do not follow the topic.
+         _ = Tags.drop_foreign_tags([moved.id], target.id),
          {:ok, _} <- topic_update_activity(moderator, moved) do
       {:ok, %{moved | category: target}}
     end
@@ -464,6 +468,54 @@ defmodule Idejo.Forum do
     |> Repo.all()
   end
 
+  @doc """
+  Sets a topic's tags (TP-19), as someone with the `:tag` right in its category (built-in
+  moderators by default; `{:error, :forbidden}` otherwise): `tag_ids` among the category's
+  available tags (`{:error, :invalid_tags}`), at least one when it has any
+  (`{:error, :tag_required}`). Archived topics keep theirs (`{:error, :archived}`).
+
+  Logged (MO-03) as `topic.tags` with the optional reason and the tags before and after, with
+  an `update` activity, in one transaction. Choosing the same tags does nothing.
+  """
+  @spec set_topic_tags(User.t(), Topic.t(), [String.t()], String.t() | nil) ::
+          {:ok, Topic.t()}
+          | {:error, :forbidden | :archived | :invalid_tags | :tag_required | Ecto.Changeset.t()}
+  def set_topic_tags(%User{} = user, %Topic{} = topic, tag_ids, reason \\ nil) do
+    Repo.transact(fn ->
+      topic =
+        Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+        |> Repo.preload([:category, tags: Tags.ordered()])
+
+      available = Tags.available_tags(topic.category)
+      tag_ids = chosen_ids(tag_ids)
+      chosen = Enum.filter(available, &(&1.id in tag_ids))
+
+      cond do
+        not Access.can?(user, :tag, topic.category) -> {:error, :forbidden}
+        topic.state == "archived" -> {:error, :archived}
+        length(chosen) != length(tag_ids) -> {:error, :invalid_tags}
+        chosen == [] and available != [] -> {:error, :tag_required}
+        Enum.map(chosen, & &1.id) == Enum.map(topic.tags, & &1.id) -> {:ok, topic}
+        true -> save_tags(user, topic, chosen, reason)
+      end
+    end)
+  end
+
+  defp save_tags(user, topic, chosen, reason) do
+    details = %{"from" => tag_names(topic.tags), "to" => tag_names(chosen)}
+
+    with {:ok, updated} <-
+           topic
+           |> Ecto.Changeset.change()
+           |> Ecto.Changeset.put_assoc(:tags, chosen)
+           |> Repo.update(),
+         {:ok, _} <-
+           Moderation.record(user, "topic.tags", updated, reason: reason, details: details),
+         {:ok, _} <- topic_update_activity(user, updated) do
+      {:ok, updated}
+    end
+  end
+
   defp moderation_changes(:lock), do: [state: "locked"]
   defp moderation_changes(:unlock), do: [state: "open"]
   defp moderation_changes(:pin), do: [pinned: true]
@@ -478,29 +530,59 @@ defmodule Idejo.Forum do
         verb: "update",
         object_uri: topic.uri,
         target_uri: category_uri,
-        payload: %{"type" => "Page", "state" => topic.state, "pinned" => topic.pinned}
+        payload:
+          %{"type" => "Page", "state" => topic.state, "pinned" => topic.pinned}
+          |> put_tags(topic)
       })
     )
   end
 
+  defp put_tags(payload, %Topic{tags: tags}) when is_list(tags),
+    do: Map.put(payload, "tag", tag_names(tags))
+
+  defp put_tags(payload, _topic), do: payload
+
   ## Topics (TP-01)
 
   @doc """
-  Returns a changeset for the new-topic form: the title and the first message's Markdown.
+  Returns a changeset for the new-topic form: the title, the first message's Markdown and the
+  tags (`tag_ids`, TP-19), chosen among `available` (`Tags.available_tags/1` of the
+  category): at least one when there are any.
   """
-  def change_new_topic(attrs \\ %{}) do
-    types = %{title: :string, body: :string}
+  def change_new_topic(attrs \\ %{}, available \\ []) do
+    types = %{title: :string, body: :string, tag_ids: {:array, :string}}
 
     {%{}, types}
     |> Ecto.Changeset.cast(attrs, Map.keys(types))
     |> Ecto.Changeset.update_change(:title, &(&1 && String.trim(&1)))
     |> Ecto.Changeset.validate_required([:title, :body])
     |> Ecto.Changeset.validate_length(:title, max: 150)
+    |> validate_tag_choice(available)
   end
+
+  defp validate_tag_choice(changeset, available) do
+    chosen = changeset |> Ecto.Changeset.get_field(:tag_ids) |> List.wrap() |> chosen_ids()
+    known = MapSet.new(available, & &1.id)
+
+    cond do
+      Enum.any?(chosen, &(not MapSet.member?(known, &1))) ->
+        Ecto.Changeset.add_error(changeset, :tag_ids, "are not tags of this category")
+
+      chosen == [] and available != [] ->
+        Ecto.Changeset.add_error(changeset, :tag_ids, "choose at least one tag")
+
+      true ->
+        Ecto.Changeset.put_change(changeset, :tag_ids, chosen)
+    end
+  end
+
+  # Checkbox lists may carry an empty value (so that none checked is still sent).
+  defp chosen_ids(ids), do: ids |> Enum.reject(&(&1 in ["", nil])) |> Enum.uniq()
 
   @doc """
   Starts a topic in `category`, as `user`, with a title and a first message (TP-01).
 
+  The topic takes the chosen `tag_ids` (TP-19): at least one when the category offers tags.
   The user needs the `:start` right there (`{:error, :forbidden}` otherwise). The first
   message is posted closed together with the title (GM-14): it never was open. The topic and
   the message each get a URI (FD-01) and a `create` activity (FD-02), all in one transaction.
@@ -512,7 +594,7 @@ defmodule Idejo.Forum do
   @spec create_topic(User.t(), Category.t(), map(), keyword()) ::
           {:ok, Topic.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
-    form = change_new_topic(attrs)
+    form = change_new_topic(attrs, Tags.available_tags(category))
     source = opts[:forked_from]
 
     result =
@@ -581,7 +663,9 @@ defmodule Idejo.Forum do
   def can_start_topic?(_user, %Category{archive: true}), do: false
   def can_start_topic?(%User{} = user, category), do: Access.can?(user, :start, category)
 
-  defp insert_topic(user, category, %{title: title, body: body}, source) do
+  defp insert_topic(user, category, %{title: title, body: body} = form, source) do
+    tags = Enum.filter(Tags.available_tags(category), &(&1.id in Map.get(form, :tag_ids, [])))
+
     now = DateTime.utc_now()
     topic_id = Federation.generate_id()
     message_id = Federation.generate_id()
@@ -612,11 +696,17 @@ defmodule Idejo.Forum do
       |> Message.closed_changeset(%{body_md: body})
 
     with {:ok, topic} <- Repo.insert(topic),
+         {_, _} <- Repo.insert_all("topic_tags", tag_rows(topic.id, tags)),
          {:ok, message} <- Repo.insert(message),
          {:ok, _} <- Idejo.Reading.auto_follow(user.id, topic.id),
          {:ok, _} <- Idejo.Notifications.notify_new(message, topic),
          {:ok, _} <-
-           insert_activity(user, topic.uri, category.uri, topic_payload(title, source)),
+           insert_activity(
+             user,
+             topic.uri,
+             category.uri,
+             topic_payload(title, source) |> Map.put("tag", tag_names(tags))
+           ),
          {:ok, _} <- insert_activity(user, message.uri, topic.uri, %{"type" => "Note"}) do
       {:ok, topic}
     end
@@ -626,6 +716,13 @@ defmodule Idejo.Forum do
 
   defp topic_payload(title, source),
     do: %{"type" => "Page", "name" => title, "forkedFrom" => source.uri}
+
+  defp tag_rows(topic_id, tags) do
+    {:ok, topic_id} = Ecto.UUID.dump(topic_id)
+    for tag <- tags, do: %{topic_id: topic_id, tag_id: Ecto.UUID.dump!(tag.id)}
+  end
+
+  defp tag_names(tags), do: Enum.map(tags, & &1.name)
 
   defp insert_activity(user, object_uri, target_uri, payload) do
     Repo.insert(
@@ -646,7 +743,8 @@ defmodule Idejo.Forum do
   @spec get_viewable_topic(User.t() | nil, String.t()) :: Topic.t() | nil
   def get_viewable_topic(user, id) when is_binary(id) do
     with {:ok, id} <- Ecto.UUID.cast(id),
-         %Topic{} = topic <- Repo.get(Topic, id) |> Repo.preload(:category),
+         %Topic{} = topic <-
+           Repo.get(Topic, id) |> Repo.preload([:category, tags: Tags.ordered()]),
          true <- Access.can?(user, :view, topic.category) do
       topic
     else
@@ -710,7 +808,7 @@ defmodule Idejo.Forum do
           order_by: [desc: t.pinned, desc: t.last_activity_at, desc: t.id],
           offset: ^((page - 1) * per_page),
           limit: ^(per_page + 1),
-          preload: [:author]
+          preload: [:author, tags: ^Tags.ordered()]
       )
 
     {Enum.take(topics, per_page), length(topics) > per_page}

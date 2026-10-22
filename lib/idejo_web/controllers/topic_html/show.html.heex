@@ -96,6 +96,46 @@
     </.form>
   </details>
 
+  <TopicComponents.tag_list tags={@topic.tags} class="topic-tags" />
+
+  <%!-- TP-19: change the tags, a plain form (no JavaScript needed); logged like moderation. --%>
+  <details :if={@can_tag? and @available_tags != []} id="topic-tags-editor" class="panel-details">
+    <summary>
+      <.icon name="hero-tag" class="size-4" />{gettext("Edit tags")}
+    </summary>
+    <.form
+      for={%{}}
+      action={~p"/t/#{@topic.id}/tags"}
+      method="post"
+      id="topic-tags-form"
+      class="mt-2 space-y-2"
+    >
+      <fieldset>
+        <legend class="label mb-1">{gettext("Tags (at least one)")}</legend>
+        <input type="hidden" name="tag_ids[]" value="" />
+        <div class="tag-choices">
+          <label :for={tag <- @available_tags} class="tag-choice">
+            <input
+              type="checkbox"
+              name="tag_ids[]"
+              value={tag.id}
+              checked={Enum.any?(@topic.tags, &(&1.id == tag.id))}
+              class="checkbox checkbox-xs"
+            />
+            {tag.name}
+          </label>
+        </div>
+      </fieldset>
+      <div class="flex flex-wrap items-end gap-2">
+        <label class="grow">
+          <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+          <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+        </label>
+        <button class="btn btn-sm">{gettext("Save tags")}</button>
+      </div>
+    </.form>
+  </details>
+
   <blockquote :if={@forked_from} id="forked-from" class="message-quote">
     <.link href={~p"/m/#{@forked_from.id}"} class="font-medium">
       {gettext("Continued from %{name} in “%{topic}”",

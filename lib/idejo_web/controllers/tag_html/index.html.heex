@@ -1,0 +1,54 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("Filter by tag")}</h1>
+    <p>{gettext("Choose one or more tags: the topics carrying all of them are listed.")}</p>
+  </header>
+
+  <p :if={@groups == []} id="no-tags" class="empty-state">{gettext("No tags yet.")}</p>
+
+  <form :if={@groups != []} action={~p"/tags"} method="get" id="tag-filter" class="tag-filter">
+    <fieldset :for={{category, tags} <- @groups}>
+      <legend>{if category, do: category.name, else: gettext("All categories")}</legend>
+      <div class="tag-choices">
+        <label :for={tag <- tags} class="tag-choice">
+          <input
+            type="checkbox"
+            name="tags[]"
+            value={tag.slug}
+            checked={tag in @selected}
+            class="checkbox checkbox-xs"
+          />
+          {tag.name}
+        </label>
+      </div>
+    </fieldset>
+    <div>
+      <button class="btn btn-primary btn-sm">{gettext("Show topics")}</button>
+    </div>
+  </form>
+
+  <section :if={@selected != []} aria-labelledby="tagged-heading">
+    <h2 id="tagged-heading" class="section-heading">
+      {ngettext("Topics tagged", "Topics carrying all of these tags", length(@selected))}
+    </h2>
+    <TopicComponents.tag_list tags={@selected} class="mb-3" />
+    <p :if={@topics == [] and @page == 1} id="no-tagged-topics" class="empty-state">
+      {gettext("No topics carry all these tags.")}
+    </p>
+    <ol :if={@topics != []} id="topics" class="topic-list">
+      <TopicComponents.topic_row :for={topic <- @topics} topic={topic} category />
+    </ol>
+    <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="pager mt-4">
+      <.link :if={@page > 1} href={page_path(@selected, @page - 1)} class="btn btn-sm">
+        {gettext("Previous page")}
+      </.link>
+      <.link :if={@more?} href={page_path(@selected, @page + 1)} class="btn btn-sm">
+        {gettext("Next page")}
+      </.link>
+    </nav>
+  </section>
+</Layouts.app>
