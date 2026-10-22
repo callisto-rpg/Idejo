@@ -516,6 +516,259 @@ defmodule Idejo.Forum do
     end
   end
 
+  ## Moving messages (TP-15: split and merge)
+
+  @doc """
+  Moves selected messages of a topic to another topic, as a moderator (TP-15; steward
+  decision, 2026-10-23): `{:new, %{"title" => .., "category_id" => ..}}` starts a topic with
+  them, the earliest one opening it; `{:existing, topic}` adds them to that topic, where they
+  take their place by time (messages older than its opening one come before it). The
+  moderator needs `:moderate` in both categories; the target is
+  never archived nor the Archive (`{:error, :forbidden | :invalid_target}`).
+
+  The source topic's opening message never moves (`{:error, :opening}`); every id must be a
+  message of the topic (`{:error, :not_found}`). Open messages are closed first, logged as
+  moderator closes. Reply links stay, across topics. Both topics' message counts follow; the
+  move is logged once (MO-03, `messages.move`, under the source's category) with an
+  `update` activity per message, in one transaction. Then both topics' viewers get
+  `{:messages_moved, topic_id}` and reload.
+  """
+  @spec move_messages(
+          User.t(),
+          Topic.t(),
+          [String.t()],
+          {:new, map()} | {:existing, Topic.t()},
+          String.t() | nil
+        ) ::
+          {:ok, Topic.t()}
+          | {:error,
+             :forbidden | :invalid_target | :opening | :not_found | :nothing | Ecto.Changeset.t()}
+  def move_messages(%User{} = moderator, %Topic{} = source, ids, target, reason \\ nil) do
+    ids = ids |> Enum.filter(&match?({:ok, _}, Ecto.UUID.cast(&1))) |> Enum.uniq()
+
+    result =
+      Repo.transact(fn ->
+        source =
+          Repo.one!(from t in Topic, where: t.id == ^source.id, lock: "FOR UPDATE")
+          |> Repo.preload(:category)
+
+        with :ok <- check_moderator(moderator, source.category),
+             {:ok, messages} <- messages_to_move(source, ids),
+             {:ok, target} <- move_target(moderator, source, target, messages) do
+          save_message_move(moderator, source, target, messages, reason)
+        end
+      end)
+
+    with {:ok, {target, closed, source_id}} <- result do
+      Messages.announce_closed(closed)
+      Messages.broadcast(source_id, {:messages_moved, source_id})
+      Messages.broadcast(target.id, {:messages_moved, target.id})
+      {:ok, target}
+    end
+  end
+
+  defp check_moderator(moderator, category),
+    do: if(Access.can?(moderator, :moderate, category), do: :ok, else: {:error, :forbidden})
+
+  defp messages_to_move(_source, []), do: {:error, :nothing}
+
+  defp messages_to_move(source, ids) do
+    opening = opening_id(source.id)
+
+    messages =
+      Repo.all(
+        from m in Message,
+          where: m.topic_id == ^source.id and m.id in ^ids,
+          order_by: [asc: m.opened_at, asc: m.id],
+          lock: "FOR UPDATE"
+      )
+
+    cond do
+      opening in ids -> {:error, :opening}
+      length(messages) != length(ids) -> {:error, :not_found}
+      true -> {:ok, messages}
+    end
+  end
+
+  defp opening_id(topic_id) do
+    Repo.one(
+      from m in Message,
+        where: m.topic_id == ^topic_id,
+        order_by: [asc: m.opened_at, asc: m.id],
+        limit: 1,
+        select: m.id
+    )
+  end
+
+  defp move_target(moderator, source, {:existing, %Topic{id: id}}, _messages) do
+    target =
+      Repo.one(from t in Topic, where: t.id == ^id, lock: "FOR UPDATE") |> Repo.preload(:category)
+
+    cond do
+      is_nil(target) or target.id == source.id -> {:error, :invalid_target}
+      target.state == "archived" or target.category.archive -> {:error, :invalid_target}
+      true -> with :ok <- check_moderator(moderator, target.category), do: {:ok, target}
+    end
+  end
+
+  defp move_target(moderator, _source, {:new, attrs}, [first | _]) do
+    form = change_new_topic(Map.take(attrs, ["title"]) |> Map.put("body", "-"))
+
+    with %Category{archive: false} = category <- category_by_id(attrs["category_id"]),
+         :ok <- check_moderator(moderator, category),
+         true <- form.valid? || {:error, Map.put(form, :action, :insert)} do
+      new_topic(moderator, category, form.changes.title, first)
+    else
+      {:error, _} = error -> error
+      _ -> {:error, :invalid_target}
+    end
+  end
+
+  defp category_by_id(id) do
+    with {:ok, id} <- Ecto.UUID.cast(id || ""), do: Repo.get(Category, id)
+  end
+
+  # The split topic: its first moved message opens it, by that message's author.
+  defp new_topic(moderator, category, title, first) do
+    id = Federation.generate_id()
+
+    topic =
+      %Topic{
+        id: id,
+        uri: Federation.uri(:topic, id),
+        category_id: category.id,
+        author_id: first.author_id,
+        slug: slugify(title, "topic"),
+        message_count: 0,
+        last_activity_at: first.opened_at
+      }
+      |> Topic.create_changeset(%{title: title})
+
+    with {:ok, topic} <- Repo.insert(topic),
+         {:ok, _} <-
+           insert_activity(moderator, topic.uri, category.uri, topic_payload(title, nil)) do
+      {:ok, %{topic | category: category}}
+    end
+  end
+
+  defp save_message_move(moderator, source, target, messages, reason) do
+    closed =
+      for %{state: "open"} = message <- messages do
+        {:ok, closed} = Messages.close_logged_in_transaction(moderator, message, reason)
+        closed
+      end
+
+    ids = Enum.map(messages, & &1.id)
+    shown = Enum.count(messages, &is_nil(&1.deleted_at))
+    latest = messages |> Enum.map(& &1.opened_at) |> Enum.max(DateTime)
+
+    {_, _} = Repo.update_all(from(m in Message, where: m.id in ^ids), set: [topic_id: target.id])
+
+    {1, _} =
+      Repo.update_all(from(t in Topic, where: t.id == ^source.id),
+        inc: [message_count: -shown]
+      )
+
+    {1, _} =
+      Repo.update_all(from(t in Topic, where: t.id == ^target.id),
+        inc: [message_count: shown],
+        set: [last_activity_at: Enum.max([target.last_activity_at, latest], DateTime)]
+      )
+
+    details = %{
+      "to" => %{"id" => target.id, "title" => target.title},
+      "count" => length(ids),
+      "message_ids" => ids
+    }
+
+    with {:ok, _} <-
+           Moderation.record(moderator, "messages.move", source, reason: reason, details: details),
+         :ok <- move_activities(moderator, messages, source, target) do
+      {:ok, {target, closed, source.id}}
+    end
+  end
+
+  defp move_activities(moderator, messages, source, target) do
+    Enum.each(messages, fn message ->
+      {:ok, _} =
+        Repo.insert(
+          Federation.activity_changeset(%{
+            actor_uri: moderator.uri,
+            verb: "update",
+            object_uri: message.uri,
+            target_uri: target.uri,
+            payload: %{"type" => "Note", "movedFrom" => source.uri}
+          })
+        )
+    end)
+  end
+
+  @doc """
+  The categories a moderator may move messages into (TP-15): those they moderate and may
+  view, never the Archive, in order.
+  """
+  @spec list_moderated_categories(User.t()) :: [Category.t()]
+  def list_moderated_categories(%User{} = moderator) do
+    from(c in Category, where: not c.archive, order_by: [asc: c.position, asc: c.name])
+    |> Access.where_allowed(moderator, :moderate)
+    |> Repo.all()
+    |> Enum.filter(&Access.can?(moderator, :view, &1))
+  end
+
+  @doc """
+  Topics a moderator may move messages into (TP-15), other than `except`: in categories they
+  moderate, not archived, with a title containing `query` (or the topic a pasted `/t/{id}`
+  link names), the most recently active first, at most 10.
+  """
+  @spec search_move_targets(User.t(), String.t(), Ecto.UUID.t() | nil) :: [Topic.t()]
+  def search_move_targets(%User{} = moderator, query, except \\ nil) do
+    moderated =
+      Category
+      |> where([c], not c.archive)
+      |> Access.where_allowed(moderator, :moderate)
+      |> select([c], c.id)
+
+    base =
+      from t in Topic,
+        where: t.category_id in subquery(moderated) and t.state != "archived",
+        order_by: [desc: t.last_activity_at, desc: t.id],
+        limit: 10,
+        preload: :category
+
+    base = if except, do: from(t in base, where: t.id != ^except), else: base
+
+    query = String.trim(query)
+
+    case Regex.run(~r"/t/([0-9a-f-]{36})", query) do
+      [_, id] ->
+        Repo.all(from t in base, where: t.id == ^id)
+
+      nil ->
+        like = "%" <> String.replace(String.downcase(query), ~w(\\ % _), &("\\" <> &1)) <> "%"
+        Repo.all(from t in base, where: like(fragment("lower(?)", t.title), ^like))
+    end
+  end
+
+  @doc """
+  Of the given messages, the ids of those the visitor (`nil`) or user may view: for reply
+  quotes that lead to another topic after a move (TP-15).
+  """
+  @spec viewable_message_ids(User.t() | nil, [Ecto.UUID.t()]) :: MapSet.t()
+  def viewable_message_ids(_user, []), do: MapSet.new()
+
+  def viewable_message_ids(user, ids) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    from(m in Message,
+      join: t in Topic,
+      on: t.id == m.topic_id,
+      where: m.id in ^ids and t.category_id in subquery(viewable),
+      select: m.id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   defp moderation_changes(:lock), do: [state: "locked"]
   defp moderation_changes(:unlock), do: [state: "open"]
   defp moderation_changes(:pin), do: [pinned: true]

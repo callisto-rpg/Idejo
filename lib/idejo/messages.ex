@@ -406,6 +406,16 @@ defmodule Idejo.Messages do
     end
   end
 
+  @doc """
+  Closes an open message as a moderator inside the caller's transaction, logged like
+  `close_as_moderator/3` (the caller checks the right and locks the row): for moving it to
+  another topic (TP-15). Pass the closed message to `announce_closed/1` after the commit.
+  """
+  @spec close_logged_in_transaction(User.t(), Message.t(), String.t() | nil) ::
+          {:ok, Message.t()} | {:error, term()}
+  def close_logged_in_transaction(moderator, message, reason),
+    do: close_logged(moderator, message, reason)
+
   # A message that closed meanwhile stays as it is, and nothing is logged.
   defp close_logged(_moderator, %Message{state: "closed"} = message, _reason), do: {:ok, message}
 
