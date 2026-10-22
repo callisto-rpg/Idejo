@@ -413,6 +413,10 @@ defmodule IdejoWeb.TopicLive do
     {:noreply, assign(socket, editor_mode: :preview, preview_html: html)}
   end
 
+  # TP-10: suggestions while typing an inline link, the people of this topic first.
+  def handle_event("suggest", params, socket),
+    do: IdejoWeb.Suggestions.reply(socket, params, topic_id: socket.assigns.topic.id)
+
   def handle_event("editor_mode", %{"mode" => "write"}, socket),
     do: {:noreply, assign(socket, :editor_mode, :write)}
 
@@ -926,6 +930,15 @@ defmodule IdejoWeb.TopicLive do
             gettext("Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line")
           }
         ></textarea>
+        <%!-- TP-10: suggestions while typing @, +, #, / or $ (assets/js/suggest.js). --%>
+        <ul
+          id="composer-suggestions"
+          role="listbox"
+          class="suggestions"
+          aria-label={IdejoWeb.Suggestions.list_label()}
+          hidden
+        >
+        </ul>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>

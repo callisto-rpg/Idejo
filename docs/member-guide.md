@@ -58,6 +58,10 @@ change and keeps no history.
     **+moderator**. Which roles you may tag is set by the administrators; others stay text.
   - **#topic**, **/category** and **$tag** link to a topic, a category or a tag. Type its
     web address name (`#garden-plans`, `/help`, `$bug`); once sent it reads its name.
+  - After typing **@**, **+**, **#**, **/** or **$**, a list suggests the people, roles,
+    topics, categories or tags you dealt with lately, narrowing as you type (`@rob` shows
+    robert and Robin). Click one, or use the **arrow keys** and **Enter** (or **Tab**);
+    **Escape** closes the list.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
   for a new topic or an edit, there is also **Add image**.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````

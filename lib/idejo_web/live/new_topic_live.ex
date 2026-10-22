@@ -108,6 +108,9 @@ defmodule IdejoWeb.NewTopicLive do
      )}
   end
 
+  # TP-10: suggestions while typing an inline link.
+  def handle_event("suggest", params, socket), do: IdejoWeb.Suggestions.reply(socket, params)
+
   def handle_event("editor_mode", %{"mode" => "write"}, socket),
     do: {:noreply, assign(socket, :editor_mode, :write)}
 

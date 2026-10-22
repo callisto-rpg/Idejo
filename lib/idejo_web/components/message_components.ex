@@ -123,7 +123,19 @@ defmodule IdejoWeb.MessageComponents do
         phx-hook={@upload && "EditorImages"}
         data-upload={@upload && @upload.name}
       >
-        <.input field={@field} type="textarea" label={@label} rows="10" />
+        <%!-- TP-10: suggestions while typing @, +, #, / or $ (assets/js/suggest.js). --%>
+        <div id={"#{@field.id}-suggest"} class="suggest-anchor" phx-hook="EditorSuggest">
+          <.input field={@field} type="textarea" label={@label} rows="10" />
+          <ul
+            id={"#{@field.id}-suggestions"}
+            role="listbox"
+            class="suggestions"
+            aria-label={IdejoWeb.Suggestions.list_label()}
+            phx-update="ignore"
+            hidden
+          >
+          </ul>
+        </div>
         <label :if={@upload} class="flex items-center gap-2 text-sm mb-2">
           <span>{gettext("Add image")}</span>
           <.live_file_input upload={@upload} class="file-input file-input-sm" />
