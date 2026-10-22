@@ -602,7 +602,14 @@
   }
   .sidebar-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sidebar-when { color: var(--ink-faint); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-  .sidebar-all { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--hairline); border-radius: 0; }
+  /* Links above the categories, a hairline under them. */
+  .sidebar-quicklinks {
+    display: grid;
+    gap: 0.125rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--hairline);
+  }
   .sidebar-theme {
     display: flex;
     align-items: center;
@@ -725,6 +732,31 @@
   }
   .page-intro-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
 
+  /* The home page's separators (steward decision, 2026-10-23): a title, then a thin line
+     across the page. */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-family: var(--font-title);
+    font-optical-sizing: auto;
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    &::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--color-primary) 40%, var(--hairline)),
+        var(--hairline) 60%,
+        transparent
+      );
+    }
+  }
   .section-heading {
     margin-bottom: 0.875rem;
     color: var(--ink-faint);
