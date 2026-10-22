@@ -31,6 +31,8 @@ defmodule IdejoWeb.Router do
     get "/robots.txt", SitemapController, :robots
     # TP-12: uploaded images, public, no session.
     get "/uploads/:name", UploadController, :show
+    # The server's stylesheet, from Admin → Stylesheet (steward decision, 2026-10-23).
+    get "/theme.css", ThemeController, :show
   end
 
   scope "/", IdejoWeb do
@@ -167,6 +169,7 @@ defmodule IdejoWeb.Router do
       live "/tags", TagsLive
       live "/permissions", PermissionsLive
       live "/permissions/:slug", PermissionsLive
+      live "/stylesheet", StylesheetLive
     end
   end
 

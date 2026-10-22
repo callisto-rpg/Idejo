@@ -181,6 +181,13 @@ roles or the permission grid. Every later change must keep it true:
   title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
   `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
   credited in `NOTICE` and `REUSE.toml`). Small uppercase labels stay in Rubik.
+- **Server stylesheet** (steward decision, 2026-10-23): the `custom_css` setting, default
+  `priv/theme/default.css` (`Settings.default/1`), edited in **Admin → Stylesheet**
+  (`Admin.StylesheetLive`: save, reset to default; audited like any setting) and served at
+  `/theme.css` (`ThemeController`, no session, `text/css`, `nosniff`), linked by the root
+  layout after `app.css` with `?v=` and a hash of its text (cached for good; the bare address is
+  revalidated). The default makes `.modal-box` cards 70% opaque with a 3px backdrop blur and
+  the welcome card 80% with 6px, as variables.
 - **No inline `<script>`, `<style>` or `style=""`** — the content security policy refuses them
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
   `assets/css/`; a dependency that needs inline code gets the per-request nonce from
