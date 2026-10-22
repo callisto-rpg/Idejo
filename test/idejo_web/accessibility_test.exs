@@ -107,6 +107,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/search",
       ~p"/search?q=garden",
       ~p"/tags",
+      ~p"/rules",
       ~p"/tags?#{%{"tags" => [idea.slug]}}",
       ~p"/u/#{member.id}",
       # TP-10: the page a +role leads to.
@@ -116,6 +117,12 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/users/reset-password",
       ~p"/setup"
     ])
+  end
+
+  @tag req: "AX-01"
+  test "AX-01 the welcome card a new member sees on their first visit", %{conn: conn} do
+    conn = log_in_user(conn, user_fixture(%{welcome: true}))
+    assert_all_accessible(conn, [~p"/", ~p"/rules"])
   end
 
   @tag req: "AX-01"

@@ -95,6 +95,7 @@ defmodule IdejoWeb do
       alias IdejoWeb.Layouts
       alias IdejoWeb.MessageComponents
       alias IdejoWeb.TopicComponents
+      alias IdejoWeb.WelcomeComponents
       alias Phoenix.LiveView.JS
 
       # Routes generation with the ~p sigil

@@ -23,6 +23,8 @@ defmodule Idejo.Accounts.User do
     field :status, :string, default: "active"
     field :origin, :string, default: "local"
     field :confirmed_at, :utc_datetime
+    # The welcome card (roles, Rules, About) shows until this is set.
+    field :welcomed_at, :utc_datetime
     # AC-04: the avatar, an upload stored as `<avatar_id>.webp` (Idejo.Uploads.avatar_url/1).
     field :avatar_id, :binary_id
     # MO-02: banned since, and until (nil: for good); see Idejo.Accounts.banned?/1.

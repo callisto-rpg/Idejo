@@ -105,6 +105,18 @@ an administrator, their sessions' LiveViews are disconnected so open admin pages
 The name colour is the colour of the highest-ranked role that has one (`Access.name_colour/1`).
 `Access.grant_role/2` (unaudited) is only for setup and test fixtures.
 
+Self-select roles (steward decision, 2026-10-23): owners and administrators mark custom roles
+"Members can choose it" (`roles.self_select`, never on built-in roles; any rights the grid
+gives such a role go to whoever picks it, which the role editor warns about). Members set
+theirs with `Access.set_self_roles/2`, which only adds or removes self-select roles (audited
+as `role.self_grant` / `role.self_revoke`, by the member). A new member sees the welcome
+card once (`Layouts.app`, while `users.welcomed_at` is nil; existing members, the setup
+wizard's owner and test fixtures are marked welcomed; `user_fixture(%{welcome: true})` is
+not): About and Rules (`server_about`, `server_rules` settings, Markdown, through
+`MessageComponents.body/1`) and the roles, a plain form to `POST /welcome`
+(`WelcomeController`, which also marks the card seen). `/rules` ("Rules & Roles" in the
+sidebar) shows the same at any time (`IdejoWeb.WelcomeComponents`).
+
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
 `:view`, `:start`, `:post`, `:moderate`, and `:tag` (edit a topic's tags, TP-19). Each role's right on a category is allow, deny or
 unset; unset follows the role's server-wide setting (a `category_permissions` row with no

@@ -96,6 +96,8 @@ change and keeps no history.
 - **Tags** show under a topic's title and in topic lists. Clicking one opens
   **Filter by tag** (also in the sidebar): tick one or more tags and **Show topics** lists
   the topics that carry all of them.
+- **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
+  may give yourself. You see them once when you join; change your roles there at any time.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen. A message
   counts once, however much it grows.
 - **Notifications**, the bell at the top, shows your mentions, replies to you and new messages in topics you

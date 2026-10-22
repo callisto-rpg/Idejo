@@ -47,6 +47,8 @@ defmodule IdejoWeb.Router do
     get "/search", SearchController, :index
     # TP-19: "Filter by tag", public.
     get "/tags", TagController, :index
+    # "Rules & Roles": About, Rules and the self-select roles (steward decision, 2026-10-23).
+    get "/rules", WelcomeController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
     # TP-10: a role's page, which a +role mention links to.
@@ -137,6 +139,8 @@ defmodule IdejoWeb.Router do
     post "/t/:id/moderate", TopicModerationController, :create
     # TP-19: change a topic's tags (the :tag right), a plain form.
     post "/t/:id/tags", TopicTagsController, :update
+    # The welcome card's and "Rules & Roles"' form: self-select roles, card seen.
+    post "/welcome", WelcomeController, :update
     post "/t/:id/follow", FollowController, :create
     delete "/t/:id/follow", FollowController, :delete
 

@@ -14,7 +14,8 @@ defmodule Idejo.Settings do
   a form keeps the saved value.
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
-  email (AD-08), and the growing-message window (GM-15, AD-04).
+  email (AD-08), the growing-message window (GM-15, AD-04), the image size limit (TP-12), and
+  the About and Rules texts of the welcome card (Markdown).
   """
 
   import Ecto.Changeset
@@ -50,7 +51,10 @@ defmodule Idejo.Settings do
     gm_window_seconds: %{type: :integer, default: 45, required: true, range: 10..600},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
-    upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20}
+    upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
+    # The welcome card and "Rules & Roles" (steward decision, 2026-10-23): Markdown.
+    server_about: %{type: :string, default: "", max: 20_000},
+    server_rules: %{type: :string, default: "", max: 20_000}
   }
 
   @type key ::
@@ -64,6 +68,8 @@ defmodule Idejo.Settings do
           | :smtp_password
           | :gm_window_seconds
           | :upload_max_mb
+          | :server_about
+          | :server_rules
 
   @doc """
   The allowed values of `:registration_mode`: open, or invite-only (AC-02).

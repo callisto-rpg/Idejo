@@ -449,7 +449,58 @@ defmodule Idejo.Access do
   end
 
   defp role_snapshot(role),
-    do: Audit.snapshot(role, [:name, :colour, :position, :mentionable, :mentions_below])
+    do:
+      Audit.snapshot(role, [
+        :name,
+        :colour,
+        :position,
+        :mentionable,
+        :mentions_below,
+        :self_select
+      ])
+
+  ## Self-select roles (steward decision, 2026-10-23)
+
+  @doc "The roles members may give themselves, highest rank first."
+  @spec self_select_roles() :: [Role.t()]
+  def self_select_roles do
+    Repo.all(from r in Role, where: r.self_select and not r.built_in, order_by: [asc: r.position])
+  end
+
+  @doc """
+  Sets which self-select roles the user holds: `role_ids` among `self_select_roles/0` are
+  given, the other self-select roles taken away; their other roles never change. Each change
+  is audited (`role.self_grant` / `role.self_revoke`, by the user).
+  """
+  @spec set_self_roles(User.t(), [String.t()]) :: {:ok, [Role.t()]}
+  def set_self_roles(%User{} = user, role_ids) do
+    Repo.transact(fn ->
+      lock_roles()
+      choices = self_select_roles()
+
+      held =
+        MapSet.new(
+          Repo.all(from ur in UserRole, where: ur.user_id == ^user.id, select: ur.role_id)
+        )
+
+      for role <- choices,
+          do: set_self_role(user, role, role.id in role_ids, MapSet.member?(held, role.id))
+
+      {:ok, Enum.filter(choices, &(&1.id in role_ids))}
+    end)
+  end
+
+  defp set_self_role(user, role, true = _wanted, false = _held) do
+    Repo.insert_all(UserRole, [%{user_id: user.id, role_id: role.id}], on_conflict: :nothing)
+    {:ok, _} = Audit.record(user, "role.self_grant", nil, assignment(user, role))
+  end
+
+  defp set_self_role(user, role, false = _wanted, true = _held) do
+    Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id and ur.role_id == ^role.id)
+    {:ok, _} = Audit.record(user, "role.self_revoke", assignment(user, role), nil)
+  end
+
+  defp set_self_role(_user, _role, _wanted, _held), do: :ok
 
   ## Role mentions (TP-10, +role)
 

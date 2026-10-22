@@ -81,6 +81,7 @@ defmodule Idejo.Accounts do
 
     * `:confirmed` - creates the account with its email already verified.
     * `:skip_invite` - signs up without an invite even when registration is invite-only.
+    * `:welcomed` - shows no welcome card (the owner, who wrote what it says).
 
   Only the first-run wizard uses these options, for the owner (AD-01).
   """
@@ -93,6 +94,7 @@ defmodule Idejo.Accounts do
       %User{id: id, uri: uri}
       |> User.registration_changeset(attrs)
       |> then(&if(opts[:confirmed], do: User.confirm_changeset(&1), else: &1))
+      |> then(&if(opts[:welcomed], do: mark_welcomed_changeset(&1), else: &1))
 
     Repo.transact(fn ->
       {invite, changeset} = check_invite(changeset, opts)
@@ -112,6 +114,19 @@ defmodule Idejo.Accounts do
       end
     end)
   end
+
+  defp mark_welcomed_changeset(changeset),
+    do: Ecto.Changeset.put_change(changeset, :welcomed_at, DateTime.utc_now(:second))
+
+  @doc """
+  Records that the user has seen the welcome card (steward decision, 2026-10-23): it shows on
+  a new member's first visit until then.
+  """
+  @spec mark_welcomed(User.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def mark_welcomed(%User{welcomed_at: nil} = user),
+    do: user |> Ecto.Changeset.change() |> mark_welcomed_changeset() |> Repo.update()
+
+  def mark_welcomed(%User{} = user), do: {:ok, user}
 
   # Locks the invite so two sign-ups cannot use it at once. An invalid invite is added to the
   # changeset's errors, so the form shows it together with any other error.

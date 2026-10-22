@@ -1,0 +1,28 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("Rules & Roles")}</h1>
+  </header>
+  <div class="welcome-page">
+    <p
+      :if={@data.about == "" and @data.rules == "" and @data.roles == []}
+      id="nothing-yet"
+      class="empty-state"
+    >
+      {gettext("Nothing here yet.")}
+    </p>
+    <WelcomeComponents.welcome_content
+      id="rules"
+      data={@data}
+      return_to={~p"/rules"}
+      submit={gettext("Save my roles")}
+    />
+    <p :if={!@data.signed_in? and @data.roles != []} class="welcome-hint">
+      <.link href={~p"/users/sign-in"} class="link">{gettext("Sign in")}</.link>
+      {gettext("to choose your roles.")}
+    </p>
+  </div>
+</Layouts.app>
