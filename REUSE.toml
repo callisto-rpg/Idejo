@@ -24,3 +24,22 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Mariano Pictet and contributors"
 SPDX-License-Identifier = "AGPL-3.0-only"
+
+# TP-17: emoji. Later annotations override the general ones above.
+[[annotations]]
+path = "priv/static/emoji/**"
+precedence = "override"
+SPDX-FileCopyrightText = ["2014-2021 Twitter, Inc and other contributors", "2022-present Jason Sofonia & Justine De Caires"]
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "priv/static/reactions/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Mariano Pictet"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "priv/emoji/emoji.json"
+precedence = "override"
+SPDX-FileCopyrightText = ["2014 Titus Wormer", "2026 Mariano Pictet and contributors"]
+SPDX-License-Identifier = "MIT"

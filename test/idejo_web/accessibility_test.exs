@@ -52,6 +52,10 @@ defmodule IdejoWeb.AccessibilityTest do
           do: DynamicSupervisor.terminate_child(Idejo.Messages.OpenMessageSupervisor, pid)
     end)
 
+    # TP-17: reactions under a message, and the reader's notification about them.
+    {:ok, _} = Idejo.Reactions.toggle(member, reply, "agree")
+    {:ok, _} = Idejo.Reactions.toggle(admin, reply, "agree")
+
     {:ok, _open} = Messages.commit(reader, topic, "Still typing")
 
     %{

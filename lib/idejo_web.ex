@@ -21,7 +21,7 @@ defmodule IdejoWeb do
   """
 
   # robots.txt is served by IdejoWeb.SitemapController, with this server's sitemap address.
-  def static_paths, do: ~w(assets fonts images favicon.ico)
+  def static_paths, do: ~w(assets fonts images emoji reactions favicon.ico)
 
   def router do
     quote do

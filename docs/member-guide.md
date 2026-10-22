@@ -64,6 +64,13 @@ change and keeps no history.
     **Escape** closes the list.
   - **Click** any of these links to see a small card: a preview, a button to open it, and
     **Follow** for a topic or **New topic** for a category.
+- **Emoji**: write `:name:`, such as `:joy:`, `:tada:` or `:+1:`, or type an emoji; it shows
+  as a picture. This server also has its own: `:agree:`, `:disagree:`, `:this:`, `:same:`,
+  `:yes:`, `:no:`, `:bruh:`, `:nice:`, `:oof:`, `:thank-you:`, `:true:`.
+- **Reactions**: point at a message and click **🙂** for eight quick choices, or **+** for
+  every emoji (with a search box). Your reactions show under the message, with a count when
+  several people chose the same one; click one to add yours or take it back. You may add
+  several. The author is told once per message how many reactions it has.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
   for a new topic or an edit, there is also **Add image**.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````

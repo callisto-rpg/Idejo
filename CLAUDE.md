@@ -406,6 +406,24 @@ roles or the permission grid. Every later change must keep it true:
   made on first use by `Forum.archive_category/1` with a `:view` deny for every role; admins
   show it to roles in the grid. The Archive is never deleted and takes no new topics
   (`Forum.can_start_topic?/2`).
+- **Emoji** (TP-17; steward decision, 2026-10-22): `Idejo.Emoji` knows the GitHub/Slack names
+  (gemoji, MIT, `priv/emoji/emoji.json`) and draws them with Twemoji SVGs vendored in
+  `priv/static/emoji/` (CC-BY 4.0, credited in `NOTICE` and `REUSE.toml`; never a CDN:
+  SP-04), plus the server's own reactions in `priv/static/reactions/` (`:agree:`, `:bruh:`…,
+  the steward's, CC-BY 4.0). How to update them: `priv/emoji/README.md`. `Markdown.to_html`
+  turns `:name:` and typed emoji into `<img>` outside code (alt: the emoji, or `:name:`);
+  `Forum.excerpt/2` reads them back as their alt.
+- **Reactions** (TP-17, `Idejo.Reactions`): `reactions` rows (message, user, emoji name),
+  several emoji per user. `toggle/3` adds or takes back; any signed-in, verified reader who
+  may view the topic reacts (not to deleted messages, not in locked or archived topics);
+  rate-limited (`:react`). The author gets one `"reaction"` notification per message
+  ("Your message in … has N reactions", count from `Reactions.counts/1`), unread again on
+  each new reaction by someone else, deleted when none is left. After each change
+  `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
+  `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
+  several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions
+  (`add_reaction/1`: the eight defaults and +) and the + dialog (`emoji_picker/1`, search,
+  reusing the `InlineCard` hook with `data-close-event`).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
   one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP

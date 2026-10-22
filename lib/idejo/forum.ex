@@ -973,6 +973,8 @@ defmodule Idejo.Forum do
   def excerpt(%Message{body_html: html}, length \\ 140) do
     text =
       html
+      # TP-17: an emoji image reads as its emoji (its alt text).
+      |> String.replace(~r{<img [^>]*\balt="([^"]*)"[^>]*>}, "\\1")
       # Blocks and line breaks part words; inline tags such as <strong> do not.
       |> String.replace(
         ~r{</?(p|li|ul|ol|h[1-6]|blockquote|pre|br|hr|tr|td|th|table)\b[^>]*>},

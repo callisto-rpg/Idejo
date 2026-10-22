@@ -10,6 +10,16 @@ defmodule IdejoWeb.NotificationHTML do
   embed_templates "notification_html/*"
 
   @doc "What happened, in words: who did what, in which topic."
+  # TP-17: one notification per message, with the count of its reactions now.
+  def headline(%{kind: "reaction", reactions: count, message: %{topic: topic}}) do
+    ngettext(
+      "Your message in “%{topic}” has 1 reaction",
+      "Your message in “%{topic}” has %{count} reactions",
+      count,
+      topic: topic.title
+    )
+  end
+
   def headline(%{kind: kind, message: %{author: author, topic: topic}}) do
     name = author.display_name
 

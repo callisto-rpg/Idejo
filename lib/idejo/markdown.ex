@@ -18,6 +18,10 @@ defmodule Idejo.Markdown do
 
   `to_html/2` with `links:` turns the ones it is given into links, keeping what the author
   typed unless it is given a label.
+
+  Emoji (TP-17): `:name:` (GitHub/Slack names, or the server's own reactions such as
+  `:agree:`) and emoji typed as such are drawn as images (`Idejo.Emoji`), outside code; the
+  image's `alt` keeps the emoji, or `:name:` for the server's own.
   """
 
   @options [
@@ -37,6 +41,9 @@ defmodule Idejo.Markdown do
   # /category is no part of a path ("/usr/bin", "a/b").
   @reference ~r"(?<![\w@])@[A-Za-z0-9_]{3,30}(?!\w)|(?<![\w+])\+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w#&])\#[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w/.:~-])/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\w/])|(?<![\w$])\$[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)"u
 
+  # A :name: that is not part of a word or of a time such as 12:30:45.
+  @shortcode ~r/(?<![\w:]):([a-z0-9_+\-]+):(?![\w:])/
+
   @sigils %{"@" => :user, "+" => :role, "#" => :topic, "/" => :category, "$" => :tag}
 
   @typedoc "What an inline link names: its kind and its lowercased username or slug."
@@ -51,16 +58,73 @@ defmodule Idejo.Markdown do
   def to_html(markdown, opts \\ [])
 
   def to_html(markdown, opts) when is_binary(markdown) do
-    case Keyword.get(opts, :links, %{}) do
-      links when links == %{} ->
-        MDEx.to_html!(markdown, @options)
+    links = Keyword.get(opts, :links, %{})
 
-      links ->
-        markdown
-        |> MDEx.parse_document!(@options)
-        |> link_references(links)
-        |> MDEx.to_html!(@options)
+    if links == %{} and not emoji?(markdown) do
+      MDEx.to_html!(markdown, @options)
+    else
+      markdown
+      |> MDEx.parse_document!(@options)
+      |> link_references(links)
+      |> emojify()
+      |> MDEx.to_html!(@options)
     end
+  end
+
+  # Only text with a colon or a character beyond ASCII may hold an emoji.
+  defp emoji?(markdown), do: String.contains?(markdown, ":") or not ascii?(markdown)
+  defp ascii?(text), do: text == "" or String.match?(text, ~r/\A[\x00-\x7F]*\z/)
+
+  # Emoji in every text node outside code (which has none), also inside links; never inside
+  # an image's description.
+  defp emojify(%MDEx.Image{} = node), do: node
+
+  defp emojify(%{nodes: nodes} = node),
+    do: %{node | nodes: Enum.flat_map(nodes, &emojify_node/1)}
+
+  defp emojify(node), do: node
+
+  defp emojify_node(%MDEx.Text{literal: literal}) do
+    @shortcode
+    |> Regex.split(literal, include_captures: true, trim: true)
+    |> Enum.flat_map(fn part ->
+      case Regex.run(~r/\A:([a-z0-9_+\-]+):\z/, part) do
+        [_, name] -> shortcode(part, Idejo.Emoji.lookup(name))
+        nil -> typed_emoji(part)
+      end
+    end)
+  end
+
+  defp emojify_node(node), do: [emojify(node)]
+
+  defp shortcode(part, nil), do: [%MDEx.Text{literal: part}]
+  defp shortcode(part, emoji), do: [emoji_image(emoji, part)]
+
+  # Emoji typed as such: one grapheme each, so families and flags stay whole.
+  defp typed_emoji(text) do
+    if ascii?(text) do
+      [%MDEx.Text{literal: text}]
+    else
+      text
+      |> String.graphemes()
+      |> Enum.chunk_by(&(Idejo.Emoji.by_char(&1) != nil))
+      |> Enum.flat_map(&emoji_run/1)
+    end
+  end
+
+  # A run of emoji becomes images, one each; a run of other text stays text.
+  defp emoji_run([first | _] = run) do
+    if Idejo.Emoji.by_char(first),
+      do: Enum.map(run, &emoji_image(Idejo.Emoji.by_char(&1), &1)),
+      else: [%MDEx.Text{literal: Enum.join(run)}]
+  end
+
+  defp emoji_image(emoji, written) do
+    %MDEx.Image{
+      url: emoji.src,
+      title: ":" <> emoji.name <> ":",
+      nodes: [%MDEx.Text{literal: emoji.char || written}]
+    }
   end
 
   @doc """
