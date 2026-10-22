@@ -251,7 +251,12 @@ roles or the permission grid. Every later change must keep it true:
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no countdown,
-  button or status. The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
+  button or status, and no box (steward decision, 2026-10-23): sent text is drawn like a
+  message's, unsent text highlighted with box-shadow only (the backdrop must keep every
+  character under the transparent textarea), and text just sent "burns" in
+  (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
+  `animationDelay` set through the DOM, never a style attribute). A faint ring shows the
+  focus (AX-01). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect. No Ctrl+Enter on touch screens for now (steward decision).

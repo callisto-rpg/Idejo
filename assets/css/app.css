@@ -1087,26 +1087,27 @@
 .suggestion-label { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggestion-detail { color: var(--ink-faint); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* The composer (GM-02, GM-08) is the author's open message in place: no box. Sent text looks
+   like any message's text; what is typed, edited or appended and not sent yet stands out as
+   temporary, highlighted with a line and a glow around it (box-shadow only, so the backdrop
+   keeps every character exactly under the transparent text box). Text just sent "burns" in:
+   bright with a glow, fading into the message in about two seconds (assets/js/composer.js). */
 .composer {
   position: relative;
-  border: 1px solid var(--color-base-300);
-  border-radius: var(--radius-box);
-  background: var(--color-base-100);
-  box-shadow: inset 0 1px 2px oklch(0% 0 0 / 0.04);
-  transition: border-color 120ms, box-shadow 120ms;
+  border-radius: 0.5rem;
 }
 /* AX-01: the composer's text box draws no outline of its own (it is transparent over the
-   backdrop), so the box around it shows the focus. */
+   backdrop), so a faint ring around it shows the focus. */
 .composer:focus-within {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 30%, transparent);
+  outline-offset: 0.375rem;
 }
 .composer-backdrop,
 .composer-input {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.125rem 0;
   font: inherit;
   line-height: 1.5;
   letter-spacing: inherit;
@@ -1118,7 +1119,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
 }
 .composer-input {
   position: relative;
@@ -1126,11 +1127,11 @@
   overflow: hidden;
   background: transparent;
   color: transparent;
-  caret-color: var(--color-base-content);
+  caret-color: var(--color-primary);
   outline: none;
 }
 .composer-input::placeholder {
-  color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+  color: color-mix(in oklab, var(--color-base-content) 38%, transparent);
 }
 .composer-input::selection {
   background: color-mix(in oklab, var(--color-primary) 30%, transparent);
@@ -1139,7 +1140,37 @@
   color: var(--color-base-content);
 }
 .composer-unsent {
-  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  color: var(--color-base-content);
+  background: color-mix(in oklab, var(--color-primary) 11%, transparent);
+  border-radius: 0.25rem;
+  box-shadow:
+    0 0 0 0.125rem color-mix(in oklab, var(--color-primary) 11%, transparent),
+    0 0 0 calc(0.125rem + 0.5px) color-mix(in oklab, var(--color-primary) 45%, transparent),
+    0 0 14px 1px color-mix(in oklab, var(--color-primary) 30%, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.composer-burn {
+  animation: composer-burn 2.2s ease-out both;
+}
+@keyframes composer-burn {
+  0% {
+    color: color-mix(in oklab, var(--color-primary) 75%, white);
+    text-shadow:
+      0 0 0.5em color-mix(in oklab, var(--color-primary) 85%, transparent),
+      0 0 0.12em color-mix(in oklab, var(--color-primary) 70%, white);
+  }
+  35% {
+    color: color-mix(in oklab, var(--color-primary) 55%, var(--color-base-content));
+    text-shadow: 0 0 0.35em color-mix(in oklab, var(--color-primary) 50%, transparent);
+  }
+  100% {
+    color: var(--color-base-content);
+    text-shadow: 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer-burn { animation: none; }
 }
 
 /* Message bodies: the HTML rendered from Markdown (FD-03, Idejo.Markdown). */

@@ -180,4 +180,20 @@ defmodule IdejoWeb.ComposerTest do
     assert_reply(lv, %{error: true})
     refute has_element?(lv, "#composer")
   end
+
+  @tag req: "GM-07"
+  test "GM-07 the composer has no box: sent text reads as a message, unsent text is highlighted, text just sent burns in" do
+    css = File.read!("assets/css/app.css")
+    [composer] = Regex.run(~r/^\.composer \{.*?^\}/ms, css)
+    refute composer =~ ~r/border:|background:/
+    assert css =~ ~r/\.composer-unsent \{[^}]*box-shadow/s
+    assert css =~ "@keyframes composer-burn"
+    assert css =~ ~r/prefers-reduced-motion: reduce\) \{\s*\.composer-burn \{ animation: none; \}/
+
+    js = File.read!("assets/js/composer.js")
+    assert js =~ "composer-burn"
+    assert js =~ "export function burnMarks"
+    # Repaints keep the burn's place through the DOM, never a style attribute (SP-05).
+    assert js =~ "style.animationDelay"
+  end
 end
