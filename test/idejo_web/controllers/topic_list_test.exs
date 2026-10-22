@@ -105,4 +105,14 @@ defmodule IdejoWeb.TopicListTest do
     assert conn |> get(~p"/c/general") |> html_response(200) =~ "No topics yet."
     refute Repo.exists?(Topic)
   end
+
+  test "clicking anywhere on a topic row opens the topic; its other links stay links" do
+    css = File.read!("assets/css/app.css")
+
+    [title] = Regex.run(~r/  \.topic-row-title \{.*?\n  \}/s, css)
+    assert title =~ ~s(&::after { content: ""; position: absolute; inset: 0;)
+
+    assert css =~
+             ".topic-row :is(a, button, summary):not(.topic-row-title) { position: relative; z-index: 1; }"
+  end
 end
