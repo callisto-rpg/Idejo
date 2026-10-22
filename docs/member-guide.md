@@ -67,9 +67,11 @@ change and keeps no history.
 
 - The **home page** shows the categories as cards, with their number of topics and last
   activity, and below them the **active topics**: the most recently active ones everywhere.
-- The **sidebar** on the left lists the categories, the most recently active first. The
-  button at the top left hides it, and your browser remembers; on a phone the same button
-  opens it.
+- The **sidebar** on the left lists the categories, the most recently active first, and
+  under each one the topics you follow there, in the order you joined them. Past four,
+  **N more topics** shows the rest. The **×** next to a topic (shown when you point at it)
+  unfollows it. The button at the top left hides the sidebar, and your browser remembers;
+  on a phone the same button opens it.
 - **New topic**, on a category's page: a title and a first message, with **Preview**.
   Nobody sees it before you post it.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen. A message

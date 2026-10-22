@@ -88,6 +88,25 @@ defmodule Idejo.Reading do
     )
   end
 
+  @doc """
+  The topics the user follows in categories they may view, in the order they started
+  following them (oldest first, so the sidebar list stays put). Visitors follow nothing.
+  """
+  @spec list_followed_topics(User.t() | nil) :: [Topic.t()]
+  def list_followed_topics(nil), do: []
+
+  def list_followed_topics(%User{id: user_id} = user) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    Repo.all(
+      from t in Topic,
+        join: f in Follow,
+        on: f.topic_id == t.id and f.user_id == ^user_id and f.following,
+        where: t.category_id in subquery(viewable),
+        order_by: [asc: f.created_at, asc: t.id]
+    )
+  end
+
   defp set_following(user_id, topic_id, following) do
     Repo.insert!(%Follow{user_id: user_id, topic_id: topic_id, following: following},
       on_conflict: {:replace, [:following, :updated_at]},

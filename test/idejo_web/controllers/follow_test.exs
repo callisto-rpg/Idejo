@@ -121,4 +121,83 @@ defmodule IdejoWeb.FollowTest do
 
     assert redirected_to(post(build_conn(), ~p"/t/#{hidden.id}/follow")) == ~p"/users/sign-in"
   end
+
+  defp sidebar_titles(html, selector) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query(selector)
+    |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+  end
+
+  @tag req: "TP-13"
+  test "TP-13 the sidebar lists followed topics under their category, oldest followed first", %{
+    conn: conn,
+    general: general,
+    member: member,
+    topic: topic
+  } do
+    titles = for n <- 1..6, do: "Topic #{n}"
+
+    for title <- titles,
+        do: {:ok, _} = Forum.create_topic(member, general, %{"title" => title, "body" => "Hi"})
+
+    # Following an older topic later puts it last; activity does not reorder the list.
+    :ok = Reading.follow(member, topic)
+    {:ok, _} = Forum.post_message(member, topic, %{"body" => "Bump"})
+
+    html = conn |> get(~p"/c/#{general.slug}") |> html_response(200)
+
+    assert sidebar_titles(
+             html,
+             "#sidebar .sidebar-nav > ul > li > .sidebar-topics > .sidebar-topic > a"
+           ) ==
+             ["Topic 1", "Topic 2", "Topic 3", "Topic 4"]
+
+    assert sidebar_titles(html, "#sidebar details.sidebar-more .sidebar-topic > a") ==
+             ["Topic 5", "Topic 6", "Picnic"]
+
+    assert html =~ "3 more topics"
+  end
+
+  @tag req: "TP-13"
+  test "TP-13 the sidebar's unfollow leads back to the page it came from", %{
+    conn: conn,
+    general: general,
+    member: member,
+    topic: topic
+  } do
+    :ok = Reading.follow(member, topic)
+    html = conn |> get(~p"/c/#{general.slug}") |> html_response(200)
+    assert sidebar_titles(html, "#sidebar .sidebar-topic > a") == ["Picnic"]
+
+    assert html
+           |> LazyHTML.from_document()
+           |> LazyHTML.query(
+             ~s(#sidebar form[action="/t/#{topic.id}/follow"] button[aria-label="Unfollow Picnic"])
+           )
+           |> Enum.count() == 1
+
+    conn =
+      build_conn()
+      |> log_in_user(member)
+      |> put_req_header("referer", "http://www.example.com/c/#{general.slug}?page=2")
+      |> delete(~p"/t/#{topic.id}/follow", %{"return" => "back"})
+
+    assert redirected_to(conn) == "/c/#{general.slug}?page=2"
+    refute Reading.following?(member, topic)
+
+    html = conn |> recycle() |> get(~p"/c/#{general.slug}") |> html_response(200)
+    assert sidebar_titles(html, "#sidebar .sidebar-topic > a") == []
+
+    # Another server's page, or none, leads to the topic.
+    for referer <- ["http://evil.example/c/x", "http://www.example.com//evil.example"] do
+      conn =
+        build_conn()
+        |> log_in_user(member)
+        |> put_req_header("referer", referer)
+        |> delete(~p"/t/#{topic.id}/follow", %{"return" => "back"})
+
+      assert redirected_to(conn) == ~p"/t/#{topic.id}/#{topic.slug}"
+    end
+  end
 end

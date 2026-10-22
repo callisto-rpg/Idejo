@@ -199,15 +199,19 @@ defmodule IdejoWeb.Layouts do
   attr :user, :any, required: true
   attr :current, :any, required: true
 
-  # The categories the visitor may view, the most recently active first. Hidden and shown by
-  # the header's button (assets/js/sidebar.js), which the browser remembers.
+  # The categories the visitor may view, the most recently active first, each with the topics
+  # the user follows in it (TP-13), oldest followed first. Hidden and shown by the header's
+  # button (assets/js/sidebar.js), which the browser remembers.
   defp sidebar(assigns) do
     summaries =
       assigns.user
       |> Idejo.Forum.list_category_summaries()
       |> Enum.sort_by(&(&1.last_activity_at || ~U[1970-01-01 00:00:00Z]), {:desc, DateTime})
 
-    assigns = assign(assigns, :summaries, summaries)
+    followed =
+      assigns.user |> Idejo.Reading.list_followed_topics() |> Enum.group_by(& &1.category_id)
+
+    assigns = assign(assigns, summaries: summaries, followed: followed)
 
     ~H"""
     <aside id="sidebar" class="app-sidebar">
@@ -226,6 +230,7 @@ defmodule IdejoWeb.Layouts do
                 <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
               </span>
             </a>
+            <.followed_topics topics={Map.get(@followed, category.id, [])} />
           </li>
         </ul>
         <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
@@ -239,6 +244,65 @@ defmodule IdejoWeb.Layouts do
         <.theme_toggle />
       </div>
     </aside>
+    """
+  end
+
+  attr :topics, :list, required: true
+
+  @followed_shown 4
+
+  # The topics followed in one category: the first four, then the rest behind a "more topics"
+  # disclosure (a <details>, so it opens without JavaScript).
+  defp followed_topics(assigns) do
+    {shown, more} = Enum.split(assigns.topics, @followed_shown)
+    assigns = assign(assigns, shown: shown, more: more)
+
+    ~H"""
+    <ul :if={@topics != []} class="sidebar-topics">
+      <.followed_topic :for={topic <- @shown} topic={topic} />
+      <li :if={@more != []}>
+        <details class="sidebar-more">
+          <summary>
+            <span class="sidebar-more-closed">
+              {ngettext("1 more topic", "%{count} more topics", length(@more))}
+            </span>
+            <span class="sidebar-more-open">{gettext("Fewer topics")}</span>
+          </summary>
+          <ul class="sidebar-topics">
+            <.followed_topic :for={topic <- @more} topic={topic} />
+          </ul>
+        </details>
+      </li>
+    </ul>
+    """
+  end
+
+  attr :topic, :map, required: true
+
+  # One followed topic, with an unfollow button shown on hover or focus (TP-13). A plain form
+  # post: FollowController leads back to the page it came from.
+  defp followed_topic(assigns) do
+    ~H"""
+    <li class="sidebar-topic">
+      <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="sidebar-topic-link">
+        {@topic.title}
+      </a>
+      <.form
+        for={%{}}
+        action={~p"/t/#{@topic.id}/follow"}
+        method="delete"
+        class="sidebar-unfollow"
+      >
+        <input type="hidden" name="return" value="back" />
+        <button
+          type="submit"
+          aria-label={gettext("Unfollow %{title}", title: @topic.title)}
+          title={gettext("Unfollow")}
+        >
+          <.icon name="hero-x-mark-micro" class="size-3.5" />
+        </button>
+      </.form>
+    </li>
     """
   end
 

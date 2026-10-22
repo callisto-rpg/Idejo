@@ -377,7 +377,11 @@ roles or the permission grid. Every later change must keep it true:
 - **Page frame and look**: `Layouts.app` draws the header bar (server name, search box,
   Unread, Moderation, the notifications bell, and the account menu: a `<details>` holding
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
-  categories sidebar and the content column (`width={:narrow}` for reading, `:wide` for the
+  categories sidebar (each category with the topics the user follows there,
+  `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
+  "N more topics" `<details>`; each with an unfollow × shown on hover or focus, a form to
+  `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to the
+  same-host `Referer`) and the content column (`width={:narrow}` for reading, `:wide` for the
   home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
   lists `Forum.list_category_summaries/1` (view right, in the query) most recently active
   first; `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
