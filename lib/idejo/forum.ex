@@ -16,7 +16,7 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.{Category, Tags, Topic}
+  alias Idejo.Forum.{Category, CategoryGroup, Tags, Topic}
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
@@ -94,6 +94,139 @@ defmodule Idejo.Forum do
     from(c in Category, where: c.slug == ^slug)
     |> Access.where_allowed(user, :view)
     |> Repo.one()
+  end
+
+  ## Category groups (RP-03; steward decision, 2026-10-23)
+
+  @doc "The category groups, in their order."
+  @spec list_groups() :: [CategoryGroup.t()]
+  def list_groups, do: Repo.all(from g in CategoryGroup, order_by: [asc: g.position, asc: g.name])
+
+  @doc "Returns a changeset for a group's form."
+  def change_group(group \\ %CategoryGroup{}, attrs \\ %{}),
+    do: CategoryGroup.changeset(group, attrs)
+
+  @doc "Creates a group at the end of the order, as `admin`. Audited as `category_group.create`."
+  @spec create_group(User.t(), map()) :: {:ok, CategoryGroup.t()} | {:error, Ecto.Changeset.t()}
+  def create_group(%User{} = admin, attrs) do
+    Repo.transact(fn ->
+      lock_groups()
+      position = Repo.aggregate(CategoryGroup, :count)
+
+      with {:ok, group} <-
+             Repo.insert(CategoryGroup.changeset(%CategoryGroup{position: position}, attrs)),
+           {:ok, _} <- Audit.record(admin, "category_group.create", nil, group_snapshot(group)) do
+        {:ok, group}
+      end
+    end)
+  end
+
+  @doc "Renames a group, as `admin`. Audited as `category_group.update`."
+  @spec update_group(User.t(), CategoryGroup.t(), map()) ::
+          {:ok, CategoryGroup.t()} | {:error, Ecto.Changeset.t()}
+  def update_group(%User{} = admin, %CategoryGroup{} = group, attrs) do
+    Repo.transact(fn ->
+      lock_groups()
+
+      with {:ok, updated} <- Repo.update(CategoryGroup.changeset(group, attrs)),
+           {:ok, _} <-
+             Audit.record(
+               admin,
+               "category_group.update",
+               group_snapshot(group),
+               group_snapshot(updated)
+             ) do
+        {:ok, updated}
+      end
+    end)
+  end
+
+  @doc """
+  Moves a group one place up or down, as `admin`. Audited as `category_group.reorder`;
+  `{:error, :at_edge}` at the top or bottom.
+  """
+  @spec move_group(User.t(), CategoryGroup.t(), :up | :down) ::
+          {:ok, [CategoryGroup.t()]} | {:error, :at_edge}
+  def move_group(%User{} = admin, %CategoryGroup{} = group, direction)
+      when direction in [:up, :down] do
+    Repo.transact(fn ->
+      lock_groups()
+      groups = list_groups()
+
+      case group_neighbours(groups, group, direction) do
+        {a, b} -> swap_groups(admin, groups, a, b)
+        nil -> {:error, :at_edge}
+      end
+    end)
+  end
+
+  # The group and the one it swaps with, or nil at the edge (or when it is gone).
+  defp group_neighbours(groups, group, direction) do
+    with index when is_integer(index) <- Enum.find_index(groups, &(&1.id == group.id)),
+         target = if(direction == :up, do: index - 1, else: index + 1),
+         true <- target >= 0 and target < length(groups) do
+      {Enum.at(groups, index), Enum.at(groups, target)}
+    else
+      _ -> nil
+    end
+  end
+
+  defp swap_groups(admin, before, a, b) do
+    {:ok, _} = Repo.update(Ecto.Changeset.change(a, position: b.position))
+    {:ok, _} = Repo.update(Ecto.Changeset.change(b, position: a.position))
+    after_ = list_groups()
+    names = &Enum.map(&1, fn g -> g.name end)
+
+    {:ok, _} =
+      Audit.record(admin, "category_group.reorder", %{"order" => names.(before)}, %{
+        "order" => names.(after_)
+      })
+
+    {:ok, after_}
+  end
+
+  @doc """
+  Deletes a group, as `admin`; its categories stay, ungrouped. Audited as
+  `category_group.delete`.
+  """
+  @spec delete_group(User.t(), CategoryGroup.t()) :: {:ok, CategoryGroup.t()} | {:error, term()}
+  def delete_group(%User{} = admin, %CategoryGroup{} = group) do
+    Repo.transact(fn ->
+      lock_groups()
+
+      with {:ok, deleted} <- Repo.delete(group),
+           {_, _} <-
+             Repo.update_all(from(g in CategoryGroup, where: g.position > ^group.position),
+               inc: [position: -1]
+             ),
+           {:ok, _} <- Audit.record(admin, "category_group.delete", group_snapshot(group), nil) do
+        {:ok, deleted}
+      end
+    end)
+  end
+
+  @doc """
+  Splits items that carry a category (categories, or the maps of `list_category_summaries/1`),
+  already in order, into sections for the home page and the sidebar: `[{group, items}]`, the
+  groups in their order, then the ungrouped items under `nil`. Empty groups are left out.
+  """
+  @spec sections([map()], [CategoryGroup.t()]) :: [{CategoryGroup.t() | nil, [map()]}]
+  def sections(items, groups) do
+    by_group = Enum.group_by(items, &category_of(&1).group_id)
+
+    for(group <- groups, by_group[group.id], do: {group, by_group[group.id]}) ++
+      if(by_group[nil], do: [{nil, by_group[nil]}], else: [])
+  end
+
+  defp category_of(%Category{} = category), do: category
+  defp category_of(%{category: %Category{} = category}), do: category
+
+  defp group_snapshot(group), do: Audit.snapshot(group, [:name, :position])
+
+  # Categories first, as every change to categories does, then groups: always in this order.
+  defp lock_groups do
+    lock_categories()
+    Repo.query!("LOCK TABLE category_groups IN SHARE ROW EXCLUSIVE MODE")
   end
 
   @doc """
@@ -1281,7 +1414,8 @@ defmodule Idejo.Forum do
   defp snapshot(nil), do: nil
 
   defp snapshot(category),
-    do: Audit.snapshot(category, [:name, :slug, :description, :position, :icon, :colour])
+    do:
+      Audit.snapshot(category, [:name, :slug, :description, :position, :icon, :colour, :group_id])
 
   # A blank slug field means "make one from the name".
   defp put_default_slug(attrs) do

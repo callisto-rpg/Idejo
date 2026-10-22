@@ -87,7 +87,7 @@ defmodule IdejoWeb.PageControllerTest do
       refute LazyHTML.text(row) =~ "Sam Starter"
     end
 
-    test "the sidebar lists the categories, the most recently active first", %{conn: conn} do
+    test "the sidebar lists the categories in the home page's order", %{conn: conn} do
       names =
         conn
         |> get(~p"/c/general")
@@ -96,7 +96,8 @@ defmodule IdejoWeb.PageControllerTest do
         |> LazyHTML.query("#sidebar li a .sidebar-name")
         |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
-      assert names == ["Help", "General"]
+      # By position, as on the home page, not by activity (Help was active more recently).
+      assert names == ["General", "Help"]
     end
 
     @tag req: "AC-05"

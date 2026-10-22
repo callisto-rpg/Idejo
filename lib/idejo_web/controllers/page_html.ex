@@ -10,4 +10,12 @@ defmodule IdejoWeb.PageHTML do
   use IdejoWeb, :html
 
   embed_templates "page_html/*"
+
+  @doc """
+  The heading of a section of categories (RP-03): "Categories" when there is only one, else
+  the group's name, or "Other" for the ungrouped ones.
+  """
+  def section_title(_group, 1), do: gettext("Categories")
+  def section_title(nil, _count), do: gettext("Other")
+  def section_title(group, _count), do: group.name
 end

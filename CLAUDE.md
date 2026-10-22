@@ -234,6 +234,11 @@ roles or the permission grid. Every later change must keep it true:
   unused), ordered by `position`, at `/c/{slug}`. The slug is made from the name at creation
   (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
   (`category.create|update|reorder|delete`) and an activity in the same transaction.
+  Category groups (steward decision, 2026-10-23; `Idejo.Forum.CategoryGroup`,
+  `categories.group_id`): named, ordered, managed in the same page (`category_group.*`
+  audited; group changes take the categories lock, then the groups lock). The home page and
+  the sidebar show `Forum.sections/2`: one "Categories" section, or with two or more sections
+  each group's name over its categories and the ungrouped last as "Other".
   `visibility` is stored for RP-04, which turns it into view rights.
 - **Topics** (TP-01, `Idejo.Forum`): `Forum.create_topic/3` needs the `:start` right and
   writes the topic and its first message, closed (GM-14), with URIs and `create` activities in
@@ -473,8 +478,8 @@ roles or the permission grid. Every later change must keep it true:
   `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to the
   same-host `Referer`) and the content column (`width={:narrow}` for reading, `:wide` for the
   home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
-  lists `Forum.list_category_summaries/1` (view right, in the query) most recently active
-  first; `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
+  lists `Forum.list_category_summaries/1` (view right, in the query) in the home page's
+  order and sections (`Forum.sections/2`; groups fold away as `<details>`); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
   before paint by `theme.js`) and opens it as a drawer on narrow ones. The home page is a
   category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.
   Styles live in `assets/css/app.css` as named components inside `@layer components`, on the

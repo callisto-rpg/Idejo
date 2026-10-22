@@ -23,7 +23,9 @@ defmodule IdejoWeb.AccessibilityTest do
         "colour" => "#0fa05c"
       })
 
-    {:ok, _other} = Forum.create_category(admin, %{"name" => "Other"})
+    # RP-03: a group, so pages show grouped sections and the sidebar's foldable groups.
+    {:ok, group} = Forum.create_group(admin, %{"name" => "Off topic"})
+    {:ok, _other} = Forum.create_category(admin, %{"name" => "Other", "group_id" => group.id})
     member = user_fixture(%{display_name: "Ada"})
     reader = user_fixture(%{display_name: "Bea"})
 
