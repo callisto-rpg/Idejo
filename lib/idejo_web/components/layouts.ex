@@ -247,6 +247,23 @@ defmodule IdejoWeb.Layouts do
     ~H"""
     <aside id="sidebar" class="app-sidebar">
       <nav aria-label={gettext("Categories")} class="sidebar-nav">
+        <%!-- These links first, above the categories (steward decision, 2026-10-23). --%>
+        <div class="sidebar-quicklinks">
+          <a href={~p"/"} class="sidebar-link">
+            <.icon name="hero-squares-2x2" class="size-4" />
+            {gettext("All categories")}
+          </a>
+          <%!-- TP-19 --%>
+          <a href={~p"/tags"} class="sidebar-link" id="tags-link">
+            <.icon name="hero-tag" class="size-4" />
+            {gettext("Filter by tag")}
+          </a>
+          <%!-- The server's About, Rules and self-select roles (steward decision, 2026-10-23). --%>
+          <a href={~p"/rules"} class="sidebar-link" id="rules-link">
+            <.icon name="hero-book-open" class="size-4" />
+            {gettext("Rules & Roles")}
+          </a>
+        </div>
         <%= case @sections do %>
           <% [{_group, only}] -> %>
             <p class="sidebar-heading">{gettext("Categories")}</p>
@@ -261,20 +278,6 @@ defmodule IdejoWeb.Layouts do
             </details>
         <% end %>
         <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
-        <a href={~p"/"} class="sidebar-link sidebar-all">
-          <.icon name="hero-squares-2x2" class="size-4" />
-          {gettext("All categories")}
-        </a>
-        <%!-- TP-19 --%>
-        <a href={~p"/tags"} class="sidebar-link" id="tags-link">
-          <.icon name="hero-tag" class="size-4" />
-          {gettext("Filter by tag")}
-        </a>
-        <%!-- The server's About, Rules and self-select roles (steward decision, 2026-10-23). --%>
-        <a href={~p"/rules"} class="sidebar-link" id="rules-link">
-          <.icon name="hero-book-open" class="size-4" />
-          {gettext("Rules & Roles")}
-        </a>
       </nav>
       <div :if={!@user} class="sidebar-theme sm:hidden">
         <span>{gettext("Theme")}</span>

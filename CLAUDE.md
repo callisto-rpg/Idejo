@@ -487,7 +487,10 @@ roles or the permission grid. Every later change must keep it true:
   home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
   lists `Forum.list_category_summaries/1` (view right, in the query) in the home page's
   order and sections (`Forum.sections/2`; groups fold away as `<details>`); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
-  before paint by `theme.js`) and opens it as a drawer on narrow ones. The home page is a
+  before paint by `theme.js`) and opens it as a drawer on narrow ones; All categories, Filter
+  by tag and Rules & Roles sit above its categories. The home page shows no title (its `<h1>`
+  is `sr-only`: the header names the server) and its sections open with `.section-divider`
+  titles (Fraunces, a line across the page). The home page is a
   category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.
   Styles live in `assets/css/app.css` as named components inside `@layer components`, on the
   daisyUI theme tokens (light and dark). Every category mark comes from

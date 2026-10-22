@@ -3,9 +3,9 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide}>
-  <header class="page-intro">
-    <h1>{Layouts.server_name()}</h1>
-  </header>
+  <%!-- The header already shows the server's name; the page keeps its one h1 (AX-01) for
+       screen readers only. --%>
+  <h1 class="sr-only">{Layouts.server_name()}</h1>
 
   <p :if={@categories == []} id="no-categories" class="empty-state">
     {gettext("Nothing to read here yet.")}
@@ -17,7 +17,7 @@
       :for={{{group, summaries}, index} <- Enum.with_index(@sections)}
       aria-labelledby={"categories-heading-#{index}"}
     >
-      <h2 id={"categories-heading-#{index}"} class="section-heading">
+      <h2 id={"categories-heading-#{index}"} class="section-divider">
         {section_title(group, length(@sections))}
       </h2>
       <ul id={if index == 0, do: "categories", else: "categories-#{index}"} class="category-grid">
@@ -51,7 +51,7 @@
   </div>
 
   <section :if={@active_topics != []} aria-labelledby="active-heading">
-    <h2 id="active-heading" class="section-heading">{gettext("Active topics")}</h2>
+    <h2 id="active-heading" class="section-divider">{gettext("Active topics")}</h2>
     <ol id="active-topics" class="topic-list">
       <TopicComponents.topic_row :for={topic <- @active_topics} topic={topic} lead={:category} />
     </ol>

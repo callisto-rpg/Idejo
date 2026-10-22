@@ -28,7 +28,7 @@ defmodule IdejoWeb.CategoryGroupsTest do
   @tag req: "RP-03"
   test "RP-03 without groups: one Categories section, on the home page and in the sidebar" do
     html = build_conn() |> get(~p"/") |> html_response(200)
-    assert texts(html, "main .section-heading") |> hd() == "Categories"
+    assert texts(html, "main .section-divider") |> hd() == "Categories"
     assert texts(html, "#sidebar .sidebar-heading") == ["Categories"]
     assert texts(html, "#sidebar .sidebar-name") == ["General", "Garden", "Games"]
   end
@@ -47,7 +47,7 @@ defmodule IdejoWeb.CategoryGroupsTest do
 
     html = build_conn() |> get(~p"/") |> html_response(200)
 
-    assert texts(html, "main section > .section-heading") |> Enum.take(3) == [
+    assert texts(html, "main section > .section-divider") |> Enum.take(3) == [
              "Hobbies",
              "Outside",
              "Other"
