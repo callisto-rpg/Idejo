@@ -354,10 +354,17 @@ roles or the permission grid. Every later change must keep it true:
   the topics the user last read; the topics, categories and tags of those topics; roles the
   user may tag, by rank), then the rest matching by name or slug, at most 8, filtered by view
   right in the query. Click, or arrows and Enter/Tab, inserts the username or slug and a
-  space; Escape closes. `/u/{id}` (`UserController`, public) shows the user card
-  (`UserComponents.user_card/1`: initial until avatars, display name, username, roles); in a
-  topic the `Mentions` hook opens it in a `<dialog>` (`UserCard` hook, `"show_user"` /
-  `"hide_user"`) instead (steward decision). Add the full-profile link when profiles exist.
+  space; Escape closes.
+  `/u/{id}` (`UserController`, public) shows the user card (`UserComponents.user_card/1`:
+  avatar, display name, username, roles).
+  **Cards**: in a topic, the `InlineLinks` hook (`assets/js/inline_cards.js`) turns a click on
+  a link in a message body that names a user, role, topic, category or tag into
+  `"show_card"` (`kind`, `ref`); `IdejoWeb.InlineCards.load/4` builds the card for the
+  reader and `TopicLive` shows it in one `<dialog id="inline-card">` (`InlineCard` hook,
+  `"hide_card"`; `IdejoWeb.CardComponents.inline_card/1`, heading `#inline-card-name`): a
+  preview, a link to open it, and an action (user actions for server moderators, Follow /
+  Unfollow on a topic via `"card_follow"` / `"card_unfollow"`, New topic in a category). A
+  reader who may not view it gets `%{shown: false}` and the browser follows the link.
 - **New topic from this** (TP-09): every message has a "New topic from this" link for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
   `NewTopicLive` at `/m/{id}/new-topic` (`:fork`): the source's excerpt and a category choice.

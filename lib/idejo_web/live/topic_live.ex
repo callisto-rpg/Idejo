@@ -30,9 +30,10 @@ defmodule IdejoWeb.TopicLive do
   appends; open messages read "still being written"; and the composer is described by the
   time left in the author's window, updated every second while it runs.
 
-  **@mentions** (TP-10) link to `/u/{id}`. With JavaScript, the `Mentions` hook turns a click
-  on one into `"show_user"`, and the user card opens here in a `<dialog>` (`UserCard` hook)
-  instead of leaving the topic; without it, the link opens the card's page.
+  **Inline links** (TP-10): `@user`, `+role`, `#topic`, `/category` and `$tag` link to their
+  pages. With JavaScript, the `InlineLinks` hook turns a click on one into `"show_card"`, and
+  its card (`IdejoWeb.InlineCards`) opens here in a `<dialog>` (`InlineCard` hook) instead of
+  leaving the topic; without it, or when the reader may not view it, the link is followed.
   """
   use IdejoWeb, :live_view
 
@@ -68,7 +69,7 @@ defmodule IdejoWeb.TopicLive do
            tick: nil,
            forks: %{},
            can_fork?: false,
-           user_card: nil,
+           card: nil,
            image_error: nil
          )}
 
@@ -84,7 +85,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
-         |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, user_card: nil)
+         |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> put_forks()
@@ -332,20 +333,37 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  # TP-10: a click on an @mention opens that user's card in a dialog.
-  def handle_event("show_user", %{"id" => id}, socket) do
-    with {:ok, id} <- Ecto.UUID.cast(id),
-         %{} = user <- Idejo.Accounts.get_user(id) do
-      topic = socket.assigns.topic
-      return_to = topic && ~p"/t/#{topic.id}/#{topic.slug}"
-      card = UserComponents.card_data(user, user(socket), return_to: return_to)
-      {:noreply, assign(socket, :user_card, card)}
+  # TP-10: a click on an inline link opens its card in a dialog. The reply says whether it
+  # did; when not (the reader may not view it), the browser follows the link.
+  def handle_event("show_card", %{"kind" => kind, "ref" => ref}, socket)
+      when is_binary(kind) and is_binary(ref) do
+    topic = socket.assigns.topic
+    return_to = topic && ~p"/t/#{topic.id}/#{topic.slug}"
+
+    case IdejoWeb.InlineCards.load(kind, ref, user(socket), return_to: return_to) do
+      nil -> {:reply, %{shown: false}, socket}
+      card -> {:reply, %{shown: true}, assign(socket, :card, card)}
+    end
+  end
+
+  def handle_event("hide_card", _params, socket), do: {:noreply, assign(socket, :card, nil)}
+
+  # A topic's card: Follow / Unfollow (TP-13), then the card again.
+  def handle_event("card_" <> action, %{"id" => id}, socket) when action in ~w(follow unfollow) do
+    user = user(socket)
+
+    with %{} <- user,
+         %{} = topic <- Forum.get_viewable_topic(user, id) do
+      :ok =
+        if action == "follow",
+          do: Reading.follow(user, topic),
+          else: Reading.unfollow(user, topic)
+
+      {:noreply, assign(socket, :card, IdejoWeb.InlineCards.load("topic", id, user))}
     else
       _ -> {:noreply, socket}
     end
   end
-
-  def handle_event("hide_user", _params, socket), do: {:noreply, assign(socket, :user_card, nil)}
 
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
@@ -476,18 +494,18 @@ defmodule IdejoWeb.TopicLive do
       )
 
     ~H"""
-    <div id="topic-live" phx-hook="Mentions">
+    <div id="topic-live" phx-hook="InlineLinks">
       <dialog
-        :if={@user_card}
-        id="user-card"
+        :if={@card}
+        id="inline-card"
         class="modal"
-        phx-hook="UserCard"
-        aria-labelledby="user-card-name"
+        phx-hook="InlineCard"
+        aria-labelledby="inline-card-name"
       >
-        <div class="modal-box">
-          <UserComponents.user_card card={@user_card} />
+        <div class="modal-box inline-card">
+          <IdejoWeb.CardComponents.inline_card card={@card} />
           <div class="modal-action">
-            <button type="button" class="btn btn-sm" phx-click="hide_user">
+            <button type="button" class="btn btn-sm btn-ghost" phx-click="hide_card">
               {gettext("Close")}
             </button>
           </div>

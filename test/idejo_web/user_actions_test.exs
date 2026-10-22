@@ -102,14 +102,14 @@ defmodule IdejoWeb.UserActionsTest do
         session: %{"topic_id" => topic.id}
       )
 
-    render_hook(reader, "show_user", %{"id" => member.id})
+    render_hook(reader, "show_card", %{"kind" => "user", "ref" => member.id})
     refute has_element?(reader, "#user-actions")
 
     {:ok, lv, _html} =
       live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
 
-    render_hook(lv, "show_user", %{"id" => member.id})
-    assert has_element?(lv, "dialog#user-card #user-actions summary", "User actions")
+    render_hook(lv, "show_card", %{"kind" => "user", "ref" => member.id})
+    assert has_element?(lv, "dialog#inline-card #user-actions summary", "User actions")
     assert has_element?(lv, "#ban-form input[name=return_to][value='#{topic_path}']")
 
     conn = post(conn, ~p"/u/#{member.id}/ban", %{"days" => "1", "return_to" => topic_path})

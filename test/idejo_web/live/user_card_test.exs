@@ -56,19 +56,25 @@ defmodule IdejoWeb.UserCardTest do
     {:ok, lv, _html} =
       live_isolated(build_conn(), IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
 
-    assert has_element?(lv, "#topic-live[phx-hook=Mentions]")
-    refute has_element?(lv, "#user-card")
+    assert has_element?(lv, "#topic-live[phx-hook=InlineLinks]")
+    refute has_element?(lv, "#inline-card")
 
-    render_hook(lv, "show_user", %{"id" => ada.id})
-    assert has_element?(lv, "dialog#user-card[phx-hook=UserCard][aria-labelledby=user-card-name]")
-    assert has_element?(lv, "#user-card-name", "Ada")
-    assert has_element?(lv, "#user-card", "@#{ada.username}")
-    assert has_element?(lv, "#user-card li", "Team")
+    render_hook(lv, "show_card", %{"kind" => "user", "ref" => ada.id})
 
-    lv |> element("#user-card button", "Close") |> render_click()
-    refute has_element?(lv, "#user-card")
+    assert has_element?(
+             lv,
+             "dialog#inline-card[phx-hook=InlineCard][aria-labelledby=inline-card-name]"
+           )
 
-    render_hook(lv, "show_user", %{"id" => "nonsense"})
-    refute has_element?(lv, "#user-card")
+    assert has_element?(lv, "#inline-card-name", "Ada")
+    assert has_element?(lv, "#inline-card", "@#{ada.username}")
+    assert has_element?(lv, "#inline-card li", "Team")
+    assert has_element?(lv, ~s(#inline-card a[href="/u/#{ada.id}"]), "Open profile")
+
+    lv |> element("#inline-card button", "Close") |> render_click()
+    refute has_element?(lv, "#inline-card")
+
+    render_hook(lv, "show_card", %{"kind" => "user", "ref" => "nonsense"})
+    refute has_element?(lv, "#inline-card")
   end
 end
