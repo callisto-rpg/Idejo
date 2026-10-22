@@ -1472,6 +1472,16 @@
 .message-body a[href^="/c/"] { --link: var(--color-info); }
 .message-body a[href^="/tags?"] { --link: var(--color-success); }
 
+/* Cards over the page (a user's card, moderation, the emoji picker, moving messages): lined
+   and lifted like the app's other boxes (steward request, 2026-10-23). */
+.modal-box {
+  border: 1px solid color-mix(in oklab, var(--color-primary) 28%, var(--hairline));
+  border-radius: var(--radius-box);
+  box-shadow:
+    var(--shadow-lift),
+    0 0 36px -14px color-mix(in oklab, var(--color-primary) 45%, transparent);
+}
+
 /* TP-10: the card an inline link opens in a topic (IdejoWeb.CardComponents): small. */
 .inline-card { max-width: 24rem; display: grid; gap: 0.5rem; }
 .inline-card .modal-action { margin-top: 0.25rem; }
