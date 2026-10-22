@@ -10,6 +10,9 @@ defmodule IdejoWeb.NewTopicLive do
   else sees it while it is typed: nothing is stored or sent anywhere before "Post topic", and
   the preview is rendered for the author alone. It is then posted closed, with the title.
 
+  The topic takes one or more tags (TP-19) among those its category offers (server-wide and
+  its own), when there are any; in a topic from a message they follow the chosen category.
+
   At `/m/{id}/new-topic` it starts a topic from that message (TP-09, "New topic from this"):
   any message the user may view, shown as a linked excerpt, into any category where they may
   start topics (chosen in the form; the source's category first when allowed).
@@ -17,6 +20,7 @@ defmodule IdejoWeb.NewTopicLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Forum
+  alias Idejo.Forum.Tags
   alias Idejo.Messages.Body
   alias IdejoWeb.ImageUploads
 
@@ -47,6 +51,7 @@ defmodule IdejoWeb.NewTopicLive do
              socket
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
+             |> assign(:tags, Tags.available_tags(default))
              |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
              |> assign(editor_mode: :write, preview_html: "")
              |> ImageUploads.allow(:editor_image)}
@@ -67,6 +72,7 @@ defmodule IdejoWeb.NewTopicLive do
            socket
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
            |> assign(source: nil, categories: [], category: category)
+           |> assign(:tags, Tags.available_tags(category))
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
            |> assign(editor_mode: :write, preview_html: "")
            |> ImageUploads.allow(:editor_image)}
@@ -81,7 +87,8 @@ defmodule IdejoWeb.NewTopicLive do
 
   @impl true
   def handle_event("validate", %{"topic" => params}, socket) do
-    form = params |> Forum.change_new_topic() |> Map.put(:action, :validate)
+    socket = choose_category(socket, params)
+    form = params |> Forum.change_new_topic(socket.assigns.tags) |> Map.put(:action, :validate)
 
     {:noreply,
      socket |> assign(:form, to_form(form, as: :topic)) |> ImageUploads.check(:editor_image)}
@@ -124,6 +131,17 @@ defmodule IdejoWeb.NewTopicLive do
     end
   end
 
+  # From a message, the tags on offer follow the category chosen in the form.
+  defp choose_category(%{assigns: %{source: nil}} = socket, _params), do: socket
+
+  defp choose_category(socket, params) do
+    {category, _opts} = target(socket, params)
+
+    if category.id == socket.assigns.category.id,
+      do: socket,
+      else: assign(socket, category: category, tags: Tags.available_tags(category))
+  end
+
   # A topic from a message goes to the chosen category, one the user may start topics in.
   defp target(%{assigns: %{source: nil, category: category}}, _params), do: {category, []}
 
@@ -133,6 +151,12 @@ defmodule IdejoWeb.NewTopicLive do
 
     {category, forked_from: source}
   end
+
+  # Shown once "Post topic" was pressed, not while the form is being filled in.
+  defp tag_errors(%{source: %{action: :insert}} = form),
+    do: Enum.map(form[:tag_ids].errors, &translate_error/1)
+
+  defp tag_errors(_form), do: []
 
   @impl true
   def render(assigns) do
@@ -166,6 +190,29 @@ defmodule IdejoWeb.NewTopicLive do
           value={@form.params["category_id"] || @category.id}
         />
         <.input field={@form[:title]} type="text" label={gettext("Title")} maxlength="150" required />
+        <fieldset :if={@tags != []} id="topic-tags">
+          <legend class="label mb-1">{gettext("Tags (choose at least one)")}</legend>
+          <input type="hidden" name="topic[tag_ids][]" value="" />
+          <div class="tag-choices">
+            <label :for={tag <- @tags} class="tag-choice">
+              <input
+                type="checkbox"
+                name="topic[tag_ids][]"
+                value={tag.id}
+                checked={tag.id in List.wrap(@form.params["tag_ids"])}
+                class="checkbox checkbox-xs"
+              />
+              {tag.name}
+            </label>
+          </div>
+          <p
+            :for={error <- tag_errors(@form)}
+            id="topic-tags-error"
+            class="mt-1.5 flex gap-2 items-center text-sm text-error"
+          >
+            <.icon name="hero-exclamation-circle" class="size-5" />{error}
+          </p>
+        </fieldset>
         <MessageComponents.editor
           field={@form[:body]}
           label={gettext("First message (Markdown)")}

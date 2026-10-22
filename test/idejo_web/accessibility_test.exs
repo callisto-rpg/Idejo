@@ -37,6 +37,14 @@ defmodule IdejoWeb.AccessibilityTest do
     {:ok, _} = Messages.delete_as_moderator(admin, gone, "Spam")
     {:ok, _} = Moderation.report_message(reader, edited, %{"reason" => "Rude"})
     {:ok, _} = Accounts.create_invite(admin)
+    # TP-19: a tag for every category and one of General's, on the topic.
+    n = System.unique_integer([:positive])
+    {:ok, idea} = Forum.Tags.create_tag(admin, %{"name" => "Idea #{n}"})
+
+    {:ok, _} =
+      Forum.Tags.create_tag(admin, %{"name" => "Seeds #{n}", "category_id" => general.id})
+
+    {:ok, _} = Forum.set_topic_tags(admin, topic, [idea.id])
 
     on_exit(fn ->
       for {_, pid, _, _} <-
@@ -53,7 +61,8 @@ defmodule IdejoWeb.AccessibilityTest do
       general: general,
       topic: topic,
       first: first,
-      reply: reply
+      reply: reply,
+      idea: idea
     }
   end
 
@@ -76,7 +85,8 @@ defmodule IdejoWeb.AccessibilityTest do
     general: general,
     topic: topic,
     member: member,
-    reply: reply
+    reply: reply,
+    idea: idea
   } do
     assert_all_accessible(conn, [
       ~p"/",
@@ -85,6 +95,8 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/t/#{topic.id}/#{topic.slug}?reply_to=#{reply.id}",
       ~p"/search",
       ~p"/search?q=garden",
+      ~p"/tags",
+      ~p"/tags?#{%{"tags" => [idea.slug]}}",
       ~p"/u/#{member.id}",
       ~p"/users/sign-in",
       ~p"/users/sign-up",
@@ -119,11 +131,14 @@ defmodule IdejoWeb.AccessibilityTest do
     conn: conn,
     admin: admin,
     general: general,
-    member: member
+    member: member,
+    topic: topic
   } do
     conn = log_in_user(conn, admin)
 
     assert_all_accessible(conn, [
+      # The topic page with "Moderate this topic" and "Edit tags" (TP-19).
+      ~p"/t/#{topic.id}/#{topic.slug}",
       # The user card with its "User actions" (MO-02).
       ~p"/u/#{member.id}",
       ~p"/moderation",
@@ -135,6 +150,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/admin/invites",
       ~p"/admin/roles",
       ~p"/admin/categories",
+      ~p"/admin/tags",
       ~p"/admin/permissions",
       ~p"/admin/permissions/#{general.slug}"
     ])

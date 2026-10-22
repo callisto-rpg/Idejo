@@ -27,6 +27,8 @@ defmodule Idejo.Forum.Topic do
     # TP-09: the message this topic was started from, if any.
     belongs_to :forked_from, Idejo.Messages.Message, foreign_key: :forked_from_message_id
     has_many :messages, Idejo.Messages.Message
+    # TP-19: one or more tags, server-wide or of the topic's category.
+    many_to_many :tags, Idejo.Forum.Tag, join_through: "topic_tags", on_replace: :delete
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end

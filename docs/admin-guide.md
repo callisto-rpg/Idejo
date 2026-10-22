@@ -36,9 +36,9 @@ Everyone has at least one role:
 You can add your own roles, such as *Team* or *Help desk*, and give several roles to one
 person.
 
-There are four **rights**, per category: **View**, **Start topics**, **Post** and
-**Moderate**. Out of the box, guests view; members view, start topics and post; moderators
-also moderate.
+There are five **rights**, per category: **View**, **Start topics**, **Post**,
+**Moderate** and **Edit tags**. Out of the box, guests view; members view, start topics and
+post; moderators also moderate and edit tags.
 
 When someone has several roles, **allow wins**: a right is granted if any of their roles
 allows it, even if another of their roles is denied it. Owners and administrators always
@@ -87,6 +87,17 @@ The highest role that has a colour colours the person's name in topics.
   hidden from everyone until you show it to some roles in its permissions.
 
 The usual start: *Announcements*, *General*, *Help*.
+
+### Tags
+
+- **New tag**: a name, and **For**: **All categories**, or one category. Names are unique
+  across the server. Where a tag belongs never changes.
+- When a category has tags (its own or those for all categories), starting a topic there
+  takes **at least one**. A category with none takes topics without tags.
+- **Rename** keeps the tag on its topics and its links. **Delete** takes it off every topic.
+- A topic moved to another category keeps the tags for all categories and loses the old
+  category's own; deleting a category deletes its own tags.
+- Who may change a topic's tags is the **Edit tags** right in **Permissions**.
 
 ### Permissions
 
@@ -141,6 +152,9 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
 - **Lock** / **Unlock**: a locked topic is read only; open messages in it close.
 - **Pin** / **Unpin**: pinned topics stay first in their category.
 - **Move to** another category you moderate. Links keep working.
+
+**Edit tags** (under the title, with the **Edit tags** right): tick the topic's tags, at
+least one, and **Save tags**. Logged like the rest, with the tags before and after.
 
 **On a message:** **Moderate** (under the message):
 

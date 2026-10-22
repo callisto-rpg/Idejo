@@ -455,8 +455,11 @@ defmodule Idejo.Access do
 
   ## Category rights (RP-04)
 
+  @rights [:view, :start, :post, :moderate, :tag]
+
   @doc """
-  The rights of v0.1: `:view`, `:start` (topics), `:post` and `:moderate`.
+  The rights: `:view`, `:start` (topics), `:post`, `:moderate`, and `:tag` (edit a topic's
+  tags, TP-19; allowed server-wide for the built-in moderator by default).
   """
   @spec rights() :: [atom()]
   def rights, do: CategoryPermission.rights()
@@ -471,7 +474,7 @@ defmodule Idejo.Access do
   """
   @spec can?(User.t() | nil, atom(), Category.t()) :: boolean()
   def can?(user, right, %Category{id: category_id})
-      when right in [:view, :start, :post, :moderate] do
+      when right in @rights do
     from(c in Category, where: c.id == ^category_id)
     |> where_allowed(user, right)
     |> Repo.exists?()
@@ -482,7 +485,7 @@ defmodule Idejo.Access do
   database: lists and search filter this way, never after loading. Same rule as `can?/3`.
   """
   @spec where_allowed(Ecto.Queryable.t(), User.t() | nil, atom()) :: Ecto.Query.t()
-  def where_allowed(query, user, right) when right in [:view, :start, :post, :moderate] do
+  def where_allowed(query, user, right) when right in @rights do
     query = from(c in query, as: :category)
 
     if administrator?(user) do
@@ -549,7 +552,7 @@ defmodule Idejo.Access do
   def set_permission(%User{}, %Role{}, :server, _right, :deny), do: {:error, :no_server_deny}
 
   def set_permission(%User{} = admin, %Role{} = role, scope, right, effect)
-      when right in [:view, :start, :post, :moderate] and effect in [:allow, :deny, :unset] do
+      when right in @rights and effect in [:allow, :deny, :unset] do
     result =
       Repo.transact(fn ->
         existing =

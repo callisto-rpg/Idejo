@@ -24,7 +24,7 @@ defmodule Idejo.Reading do
 
   alias Idejo.Access
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.{Category, Tags, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Reading.{Follow, ReadPosition}
   alias Idejo.Repo
@@ -160,7 +160,7 @@ defmodule Idejo.Reading do
           order_by: [desc: t.last_activity_at, desc: t.id],
           offset: ^((page - 1) * per_page),
           limit: ^(per_page + 1),
-          preload: [:author, :category],
+          preload: [:author, :category, tags: ^Tags.ordered()],
           select: {t, c.count}
       )
 

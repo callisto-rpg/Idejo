@@ -45,6 +45,8 @@ defmodule IdejoWeb.Router do
     get "/m/:id", MessageController, :show
     # SE-01: the Search screen (MVP §5), public.
     get "/search", SearchController, :index
+    # TP-19: "Filter by tag", public.
+    get "/tags", TagController, :index
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
 
@@ -131,6 +133,8 @@ defmodule IdejoWeb.Router do
     # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
     # TP-14: moderators lock, unlock, pin or unpin a topic (a plain form).
     post "/t/:id/moderate", TopicModerationController, :create
+    # TP-19: change a topic's tags (the :tag right), a plain form.
+    post "/t/:id/tags", TopicTagsController, :update
     post "/t/:id/follow", FollowController, :create
     delete "/t/:id/follow", FollowController, :delete
 
@@ -154,6 +158,7 @@ defmodule IdejoWeb.Router do
       live "/roles", RolesLive
       live "/users/:id", UserLive
       live "/categories", CategoriesLive
+      live "/tags", TagsLive
       live "/permissions", PermissionsLive
       live "/permissions/:slug", PermissionsLive
     end

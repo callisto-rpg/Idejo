@@ -10,7 +10,7 @@ defmodule Idejo.Access.CategoryPermission do
 
   @type t :: %__MODULE__{}
 
-  @rights ~w(view start post moderate)a
+  @rights ~w(view start post moderate tag)a
 
   @primary_key {:id, Ecto.UUID, autogenerate: [version: 7]}
   @foreign_key_type :binary_id
@@ -23,7 +23,7 @@ defmodule Idejo.Access.CategoryPermission do
     timestamps(type: :utc_datetime)
   end
 
-  @doc "The rights of v0.1: view, start topics, post, moderate."
+  @doc "The rights: view, start topics, post, moderate, and edit tags (TP-19)."
   @spec rights() :: [atom()]
   def rights, do: @rights
 end
