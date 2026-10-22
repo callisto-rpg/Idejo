@@ -12,6 +12,10 @@
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <IdejoWeb.Layouts.category_colours
+      nonce={assigns[:style_csp_nonce]}
+      user={assigns[:current_scope] && @current_scope.user}
+    />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
     <script phx-track-static type="text/javascript" src={~p"/assets/js/theme.js"}>

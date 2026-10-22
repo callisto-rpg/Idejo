@@ -795,7 +795,7 @@ defmodule IdejoWeb.TopicLive do
         {gettext("You can no longer view this topic.")}
       </p>
 
-      <ol id="messages" class="message-list">
+      <ol id="messages" class={["message-list", @topic && "cat-#{@topic.category_id}"]}>
         <li
           :for={message <- @before}
           :key={message.id}

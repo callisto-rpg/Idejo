@@ -466,7 +466,14 @@ roles or the permission grid. Every later change must keep it true:
   in `Idejo.Forum.CategoryIcons`, parsed into shapes at compile time and drawn as SVG elements
   (`TopicComponents.icon_shapes/1`), never raw HTML; shapes take white or near-black,
   whichever contrasts better (`contrast/1`); names via `IdejoWeb.CategoryIconNames`. Colours
-  are SVG `fill` attributes or classes, never `style`. Times in lists read "5 min
+  are SVG `fill` attributes or classes, never `style`. Elements that belong to a category
+  (cards, topic rows, the message list, sidebar links, the category header) carry
+  `cat-{id}`; the root layout's `Layouts.category_colours/1` sets `--cat` for each category
+  the reader may view in one `<style>` with the request's nonce (never a `style` attribute;
+  AC-05: no other ids), and the "Colour, lines and glow" section of `app.css` draws their
+  line and hover glow from it. Inline links in messages have a hue per kind (theme colours),
+  a hairline and a hover glow; the dark theme turns `--shadow-soft` / `--shadow-lift` into
+  faint glows. Times in lists read "5 min
   ago" (`TopicComponents.time_ago/1`), with the exact time in `datetime` and `title`.
 - **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
