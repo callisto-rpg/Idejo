@@ -828,6 +828,20 @@ defmodule Idejo.Forum do
     )
   end
 
+  @doc """
+  A topic's opening message, for a preview of the topic (TP-10 cards), or nil when a
+  moderator deleted it (MO-02).
+  """
+  @spec opening_message(Topic.t()) :: Message.t() | nil
+  def opening_message(%Topic{id: id}) do
+    Repo.one(
+      from m in Message,
+        where: m.topic_id == ^id and is_nil(m.deleted_at),
+        order_by: [asc: m.opened_at, asc: m.id],
+        limit: 1
+    )
+  end
+
   ## Messages in a topic (TP-08)
 
   @doc """

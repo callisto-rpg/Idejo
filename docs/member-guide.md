@@ -53,7 +53,7 @@ change and keeps no history.
   reply** to undo it). Your next new message is shown as a reply to theirs.
 - **Inline links**, highlighted in the message:
   - **@username** mentions someone: they get a notification and follow the topic (unless
-    they unfollowed it). Click a mention to see their card.
+    they unfollowed it).
   - **+role** notifies everyone with that role who can read the topic, such as
     **+moderator**. Which roles you may tag is set by the administrators; others stay text.
   - **#topic**, **/category** and **$tag** link to a topic, a category or a tag. Type its
@@ -62,6 +62,8 @@ change and keeps no history.
     topics, categories or tags you dealt with lately, narrowing as you type (`@rob` shows
     robert and Robin). Click one, or use the **arrow keys** and **Enter** (or **Tab**);
     **Escape** closes the list.
+  - **Click** any of these links to see a small card: a preview, a button to open it, and
+    **Follow** for a topic or **New topic** for a category.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
   for a new topic or an edit, there is also **Add image**.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
