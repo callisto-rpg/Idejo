@@ -1026,7 +1026,9 @@ defmodule Idejo.Forum do
   end
 
   defp snapshot(nil), do: nil
-  defp snapshot(category), do: Audit.snapshot(category, [:name, :slug, :description, :position])
+
+  defp snapshot(category),
+    do: Audit.snapshot(category, [:name, :slug, :description, :position, :icon, :colour])
 
   # A blank slug field means "make one from the name".
   defp put_default_slug(attrs) do

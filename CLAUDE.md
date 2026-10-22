@@ -456,8 +456,16 @@ roles or the permission grid. Every later change must keep it true:
   before paint by `theme.js`) and opens it as a drawer on narrow ones. The home page is a
   category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.
   Styles live in `assets/css/app.css` as named components inside `@layer components`, on the
-  daisyUI theme tokens (light and dark); categories get one of eight tints from their id
-  (`TopicComponents.category_mark/1`, classes, never `style`). Times in lists read "5 min
+  daisyUI theme tokens (light and dark). Every category mark comes from
+  `TopicComponents.category_mark/1`: a category's icon on a tile of its colour (RP-03; steward
+  decision, 2026-10-23: `categories.icon` and `colour` `#rrggbb`, set in **Admin →
+  Categories** with an icon picker, a hex field filled by a colour picker, and a preview;
+  audited), its initial on its colour, or its initial on one of eight tints from its id
+  (`CategoryIcons.tint/1` when only an icon is set). The 63 icons (the steward's, AGPL) live
+  in `Idejo.Forum.CategoryIcons`, parsed into shapes at compile time and drawn as SVG elements
+  (`TopicComponents.icon_shapes/1`), never raw HTML; shapes take white or near-black,
+  whichever contrasts better (`contrast/1`); names via `IdejoWeb.CategoryIconNames`. Colours
+  are SVG `fill` attributes or classes, never `style`. Times in lists read "5 min
   ago" (`TopicComponents.time_ago/1`), with the exact time in `datetime` and `title`.
 - **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
