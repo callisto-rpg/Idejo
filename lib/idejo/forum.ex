@@ -48,6 +48,44 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Lists, in their order, the categories the visitor (`nil`) or user may view, each with its
+  topic count and last activity (`nil` without topics), as the home page shows them (MVP §5).
+  """
+  @spec list_category_summaries(User.t() | nil) :: [
+          %{category: Category.t(), topics: non_neg_integer(), last_activity_at: DateTime.t()}
+        ]
+  def list_category_summaries(user) do
+    stats =
+      from t in Topic,
+        group_by: t.category_id,
+        select: %{category_id: t.category_id, topics: count(), last: max(t.last_activity_at)}
+
+    from(c in Category, order_by: [asc: c.position, asc: c.name])
+    |> Access.where_allowed(user, :view)
+    |> join(:left, [category: c], s in subquery(stats), on: s.category_id == c.id)
+    |> select([category: c], %{category: c})
+    |> select_merge([_c, s], %{topics: coalesce(s.topics, 0), last_activity_at: s.last})
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists the most recently active topics the visitor (`nil`) or user may view, across
+  categories, with their author and category: at most `limit`. Archived topics are left out.
+  """
+  @spec list_active_topics(User.t() | nil, pos_integer()) :: [Topic.t()]
+  def list_active_topics(user, limit \\ 10) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    Repo.all(
+      from t in Topic,
+        where: t.category_id in subquery(viewable) and t.state != "archived",
+        order_by: [desc: t.last_activity_at, desc: t.id],
+        limit: ^limit,
+        preload: [:author, :category]
+    )
+  end
+
+  @doc """
   Gets a category by slug if the visitor (`nil`) or user may view it, or `nil` (AC-05).
   """
   @spec get_viewable_category(User.t() | nil, String.t()) :: Category.t() | nil

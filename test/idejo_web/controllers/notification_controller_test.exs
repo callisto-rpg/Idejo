@@ -45,7 +45,7 @@ defmodule IdejoWeb.NotificationControllerTest do
 
     assert home
            |> LazyHTML.from_document()
-           |> LazyHTML.query("#notifications-link .badge")
+           |> LazyHTML.query("#notifications-link .header-badge")
            |> LazyHTML.text() =~ "2"
 
     page = conn |> get(~p"/notifications") |> html_response(200)

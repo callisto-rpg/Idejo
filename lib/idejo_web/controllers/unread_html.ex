@@ -7,7 +7,5 @@ defmodule IdejoWeb.UnreadHTML do
   """
   use IdejoWeb, :html
 
-  import IdejoWeb.CategoryHTML, only: [unread_marker: 1]
-
   embed_templates "unread_html/*"
 end

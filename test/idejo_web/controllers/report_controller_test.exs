@@ -77,7 +77,7 @@ defmodule IdejoWeb.ReportControllerTest do
 
     assert home
            |> LazyHTML.from_document()
-           |> LazyHTML.query("#moderation-link .badge")
+           |> LazyHTML.query("#moderation-link .header-badge")
            |> LazyHTML.text() =~ "1"
 
     queue = moderator |> get(~p"/moderation") |> html_response(200)

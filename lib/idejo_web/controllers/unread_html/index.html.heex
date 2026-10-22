@@ -3,36 +3,28 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <Layouts.app flash={@flash} current_scope={@current_scope}>
-  <.header>{gettext("Unread")}</.header>
+  <header class="page-intro">
+    <h1>{gettext("Unread")}</h1>
+  </header>
 
-  <p :if={@rows == [] and @page == 1} id="nothing-unread">
+  <p :if={@rows == [] and @page == 1} id="nothing-unread" class="empty-state">
     {gettext("Nothing new since your last visit.")}
   </p>
 
-  <ol :if={@rows != []} id="topics" class="divide-y divide-base-300">
-    <li :for={{topic, count} <- @rows} id={"topic-#{topic.id}"} class="py-3">
-      <.link href={~p"/t/#{topic.id}/#{topic.slug}"} class="link font-semibold">
-        {topic.title}
-      </.link>
-      <.unread_marker count={count} />
-      <p class="text-sm opacity-70">
-        <.link href={~p"/c/#{topic.category.slug}"} class="link topic-category">
-          {topic.category.name}
-        </.link>
-        · <span class="topic-starter">{topic.author.display_name}</span>
-        · {gettext("last activity")}
-        <time datetime={DateTime.to_iso8601(topic.last_activity_at)}>
-          {Calendar.strftime(topic.last_activity_at, "%Y-%m-%d %H:%M UTC")}
-        </time>
-      </p>
-    </li>
+  <ol :if={@rows != []} id="topics" class="topic-list">
+    <TopicComponents.topic_row
+      :for={{topic, count} <- @rows}
+      topic={topic}
+      unread={count}
+      category
+    />
   </ol>
 
-  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="flex gap-4 mt-4">
-    <.link :if={@page > 1} href={~p"/unread?page=#{@page - 1}"} class="link">
+  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="pager">
+    <.link :if={@page > 1} href={~p"/unread?page=#{@page - 1}"} class="btn btn-sm">
       {gettext("Previous page")}
     </.link>
-    <.link :if={@more?} href={~p"/unread?page=#{@page + 1}"} class="link">
+    <.link :if={@more?} href={~p"/unread?page=#{@page + 1}"} class="btn btn-sm">
       {gettext("Next page")}
     </.link>
   </nav>

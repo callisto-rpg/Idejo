@@ -325,12 +325,15 @@ defmodule IdejoWeb.CoreComponents do
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-4"]}>
+    <header class={[
+      "page-intro",
+      @actions != [] && "flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
+    ]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8">
+        <h1>
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="text-sm text-base-content/70">
+        <p :if={@subtitle != []}>
           {render_slot(@subtitle)}
         </p>
       </div>

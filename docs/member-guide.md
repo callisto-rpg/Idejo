@@ -65,18 +65,24 @@ change and keeps no history.
 
 ## Finding your way
 
+- The **home page** shows the categories as cards, with their number of topics and last
+  activity, and below them the **active topics**: the most recently active ones everywhere.
+- The **sidebar** on the left lists the categories, the most recently active first. The
+  button at the top left hides it, and your browser remembers; on a phone the same button
+  opens it.
 - **New topic**, on a category's page: a title and a first message, with **Preview**.
   Nobody sees it before you post it.
-- **Unread** (top of the page) lists topics with messages you have not seen. A message
+- **Unread** (in the bar at the top) lists topics with messages you have not seen. A message
   counts once, however much it grows.
-- **Notifications** shows your mentions, replies to you and new messages in topics you
+- **Notifications**, the bell at the top, shows your mentions, replies to you and new messages in topics you
   follow.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
   unfollow them.
-- **Search** finds words in messages and titles.
+- **Search**, the box at the top, finds words in messages and titles.
 
 ## Your account
 
-Click your name in the top right corner (**Profile and account**) to change your display
-name, add a picture, change your password, or delete your account. Your messages stay after
+Click your name in the top right corner, then **Profile and account**, to change your
+display name, add a picture, change your password, or delete your account. The same menu
+has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Applies the light/dark theme before first paint. Loaded as a blocking
+// Applies the light/dark theme, and the hidden sidebar (sidebar.js), before first paint. Loaded as a blocking
 // <script> in the root layout; kept out of the HTML so the content security
 // policy can refuse inline scripts (SP-05).
 (() => {
@@ -18,6 +18,16 @@
       document.documentElement.setAttribute("data-theme-source", "user");
     }
   };
+  // Tells the stylesheet that scripts run, so the sidebar button can be shown.
+  document.documentElement.dataset.js = ""
+  try {
+    if (localStorage.getItem("idejo:sidebar") === "hidden") {
+      document.documentElement.dataset.sidebar = "hidden"
+    }
+  } catch (_e) {
+    // Storage refused (private window): the sidebar shows.
+  }
+
   if (!document.documentElement.hasAttribute("data-theme")) {
     setTheme(localStorage.getItem("phx:theme") || "system");
   }

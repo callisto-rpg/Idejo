@@ -62,8 +62,10 @@ defmodule IdejoWeb.PublicPagesTest do
     assert page(conn, ~p"/search?q=tomatoes") =~ "Garden plans"
     assert page(conn, ~p"/u/#{member.id}") =~ "Ada"
 
-    # The search box is a plain form: it works without scripts.
-    assert attributes(page(conn, ~p"/search"), "form[action='/search']", "method") == ["get"]
+    # The search boxes, the page's and the header's, are plain forms: they work without
+    # scripts.
+    assert attributes(page(conn, ~p"/search"), "form[action='/search']", "method") ==
+             ["get", "get"]
   end
 
   @tag req: "CL-02"

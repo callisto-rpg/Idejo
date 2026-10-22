@@ -2,17 +2,50 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <.header>{Layouts.server_name()}</.header>
+<Layouts.app flash={@flash} current_scope={@current_scope} width={:wide}>
+  <header class="page-intro">
+    <h1>{Layouts.server_name()}</h1>
+  </header>
 
-  <p :if={@categories == []} id="no-categories">{gettext("Nothing to read here yet.")}</p>
+  <p :if={@categories == []} id="no-categories" class="empty-state">
+    {gettext("Nothing to read here yet.")}
+  </p>
 
-  <ul :if={@categories != []} id="categories" class="space-y-3">
-    <li :for={category <- @categories} id={"category-#{category.id}"}>
-      <.link href={~p"/c/#{category.slug}"} class="link font-semibold text-lg">
-        {category.name}
-      </.link>
-      <p :if={category.description != ""} class="text-sm">{category.description}</p>
-    </li>
-  </ul>
+  <section :if={@categories != []} aria-labelledby="categories-heading">
+    <h2 id="categories-heading" class="section-heading">{gettext("Categories")}</h2>
+    <ul id="categories" class="category-grid">
+      <li
+        :for={%{category: category} = summary <- @categories}
+        id={"category-#{category.id}"}
+        class="category-card"
+      >
+        <div class="category-card-head">
+          <TopicComponents.category_mark category={category} size={:large} />
+          <h3>
+            <a href={~p"/c/#{category.slug}"} class="category-card-link">{category.name}</a>
+          </h3>
+        </div>
+        <p :if={category.description != ""} class="category-card-description">
+          {category.description}
+        </p>
+        <p class="category-card-stats">
+          <span>
+            <.icon name="hero-chat-bubble-left-right" class="size-4" />
+            {ngettext("1 topic", "%{count} topics", summary.topics)}
+          </span>
+          <span :if={summary.last_activity_at}>
+            <.icon name="hero-clock" class="size-4" />
+            <TopicComponents.time_ago at={summary.last_activity_at} />
+          </span>
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section :if={@active_topics != []} aria-labelledby="active-heading">
+    <h2 id="active-heading" class="section-heading">{gettext("Active topics")}</h2>
+    <ol id="active-topics" class="topic-list">
+      <TopicComponents.topic_row :for={topic <- @active_topics} topic={topic} category />
+    </ol>
+  </section>
 </Layouts.app>

@@ -494,7 +494,7 @@ defmodule IdejoWeb.TopicLive do
         {gettext("You can no longer view this topic.")}
       </p>
 
-      <ol id="messages" class="space-y-6">
+      <ol id="messages" class="message-list">
         <li
           :for={message <- @before}
           :key={message.id}
@@ -625,10 +625,10 @@ defmodule IdejoWeb.TopicLive do
     assigns = assign(assigns, :role, Map.get(assigns.roles, assigns.author.id))
 
     ~H"""
-    <span class="text-sm inline-flex items-center gap-2">
-      <UserComponents.avatar user={@author} />
+    <span class="author-line">
+      <UserComponents.avatar user={@author} size={:list} />
       <span class="font-semibold">{@author.display_name}</span>
-      <span :if={@role} class="opacity-70 inline-flex items-center gap-1">
+      <span :if={@role} class="author-role">
         <Admin.swatch colour={@role.colour} />
         {@role.name}
       </span>
@@ -667,15 +667,16 @@ defmodule IdejoWeb.TopicLive do
     <p
       :if={@message.deleted_at && !@can_moderate? && match?({:first, _}, @deleted_run)}
       id={"message-#{@message.id}-deleted"}
-      class="text-sm italic opacity-70"
+      class="message-deleted"
     >
       {deleted_text(@deleted_run)}
     </p>
     <article
       :if={is_nil(@message.deleted_at) or @can_moderate?}
       aria-labelledby={"message-#{@message.id}-author"}
+      class="message"
     >
-      <p id={"message-#{@message.id}-author"} class="flex items-center gap-2">
+      <p id={"message-#{@message.id}-author"} class="message-head">
         <.author_line author={@message.author} roles={@roles} />
         <%!-- GM-07, AX-03: the open state has no visible sign, only this text. --%>
         <span :if={@message.state == "open"} class="sr-only">
@@ -683,12 +684,10 @@ defmodule IdejoWeb.TopicLive do
         </span>
         <.link
           href={~p"/m/#{@message.id}"}
-          class="text-sm opacity-70 link link-hover"
+          class="message-time"
           title={gettext("Permalink to this message")}
         >
-          <time datetime={DateTime.to_iso8601(@message.opened_at)}>
-            {Calendar.strftime(@message.opened_at, "%Y-%m-%d %H:%M UTC")}
-          </time>
+          <TopicComponents.time_ago at={@message.opened_at} />
         </.link>
         <span
           :if={@message.deleted_at}
@@ -701,9 +700,9 @@ defmodule IdejoWeb.TopicLive do
       <blockquote
         :if={@message.reply_to}
         id={"message-#{@message.id}-reply-to"}
-        class="border-l-2 border-base-300 pl-3 my-1 text-sm"
+        class="message-quote"
       >
-        <.link href={~p"/m/#{@message.reply_to.id}"} class="link">
+        <.link href={~p"/m/#{@message.reply_to.id}"} class="font-medium">
           {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
         </.link>
         <span :if={is_nil(@message.reply_to.deleted_at)} class="opacity-70">
@@ -754,86 +753,92 @@ defmodule IdejoWeb.TopicLive do
       />
       <.versions :if={@message.edited} message={@message} />
       <%!-- TP-09: a discreet link to each topic started from this message. --%>
-      <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="text-xs opacity-70 mt-1">
+      <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
         {gettext("Continued in")}
         <%= for {fork, i} <- Enum.with_index(@forks) do %>
           <span :if={i > 0}>, </span><.link href={~p"/t/#{fork.id}/#{fork.slug}"} class="link">{fork.title}</.link>
         <% end %>
       </p>
-      <%!-- GM-16, MO-02: moderator actions, each with an optional reason for the log (MO-03). --%>
-      <details
-        :if={@can_moderate? and is_nil(@message.deleted_at) and @viewer.id != @message.author_id}
-        id={"message-#{@message.id}-moderate"}
-        class="text-sm mt-1"
-      >
-        <summary class="cursor-pointer opacity-70">{gettext("Moderate")}</summary>
-        <form
-          phx-submit="moderate_message"
-          id={"message-#{@message.id}-moderate-form"}
-          class="mt-2 flex flex-wrap items-end gap-2"
+      <div class="message-actions">
+        <button
+          :if={(@own_closed? or @mod_edit?) and !@edit_form}
+          id={"message-#{@message.id}-edit"}
+          type="button"
+          class="message-action"
+          phx-mounted={@refocus == @message.id && JS.focus()}
+          phx-click="edit"
+          phx-value-id={@message.id}
         >
-          <input type="hidden" name="message_id" value={@message.id} />
-          <label class="grow">
-            <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
-            <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
-          </label>
-          <button
-            :if={@message.state == "open"}
-            name="do"
-            value="close"
-            class="btn btn-sm"
-            data-confirm={gettext("Close this message? Its author will start a new one.")}
+          <.icon name="hero-pencil-square-micro" class="size-4" />{gettext("Edit")}
+        </button>
+        <%!-- MO-01: anyone signed in may report someone else's message. --%>
+        <.link
+          :if={@viewer && @viewer.id != @message.author_id && is_nil(@message.deleted_at)}
+          href={~p"/m/#{@message.id}/report"}
+          class="message-action"
+          id={"message-#{@message.id}-report"}
+        >
+          <.icon name="hero-flag-micro" class="size-4" />{gettext("Report")}
+        </.link>
+        <.link
+          :if={@can_fork? and is_nil(@message.deleted_at)}
+          href={~p"/m/#{@message.id}/new-topic"}
+          class="message-action"
+          id={"message-#{@message.id}-fork"}
+        >
+          <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />{gettext(
+            "New topic from this"
+          )}
+        </.link>
+        <.link
+          :if={@can_post? and is_nil(@message.deleted_at)}
+          href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
+          class="message-action"
+          aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
+        >
+          <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
+        </.link>
+        <%!-- GM-16, MO-02: moderator actions, each with an optional reason for the log (MO-03). --%>
+        <details
+          :if={@can_moderate? and is_nil(@message.deleted_at) and @viewer.id != @message.author_id}
+          id={"message-#{@message.id}-moderate"}
+          class="message-moderate"
+        >
+          <summary class="message-action">
+            <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
+          </summary>
+          <form
+            phx-submit="moderate_message"
+            id={"message-#{@message.id}-moderate-form"}
+            class="mt-2 flex flex-wrap items-end gap-2"
           >
-            {gettext("Close message")}
-          </button>
-          <button
-            name="do"
-            value="delete"
-            class="btn btn-sm btn-error"
-            data-confirm={
-              gettext("Delete this message? Readers will see that a moderator deleted it.")
-            }
-          >
-            {gettext("Delete message")}
-          </button>
-        </form>
-      </details>
-      <button
-        :if={(@own_closed? or @mod_edit?) and !@edit_form}
-        id={"message-#{@message.id}-edit"}
-        type="button"
-        class="link text-sm mr-3"
-        phx-mounted={@refocus == @message.id && JS.focus()}
-        phx-click="edit"
-        phx-value-id={@message.id}
-      >
-        {gettext("Edit")}
-      </button>
-      <%!-- MO-01: anyone signed in may report someone else's message. --%>
-      <.link
-        :if={@viewer && @viewer.id != @message.author_id && is_nil(@message.deleted_at)}
-        href={~p"/m/#{@message.id}/report"}
-        class="link text-sm mr-3"
-        id={"message-#{@message.id}-report"}
-      >
-        {gettext("Report")}
-      </.link>
-      <.link
-        :if={@can_fork? and is_nil(@message.deleted_at)}
-        href={~p"/m/#{@message.id}/new-topic"}
-        class="link text-sm mr-3"
-        id={"message-#{@message.id}-fork"}
-      >
-        {gettext("New topic from this")}
-      </.link>
-      <.link
-        :if={@can_post? and is_nil(@message.deleted_at)}
-        href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
-        class="link text-sm"
-        aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
-      >
-        {gettext("Reply")}
-      </.link>
+            <input type="hidden" name="message_id" value={@message.id} />
+            <label class="grow">
+              <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+              <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+            </label>
+            <button
+              :if={@message.state == "open"}
+              name="do"
+              value="close"
+              class="btn btn-sm"
+              data-confirm={gettext("Close this message? Its author will start a new one.")}
+            >
+              {gettext("Close message")}
+            </button>
+            <button
+              name="do"
+              value="delete"
+              class="btn btn-sm btn-error"
+              data-confirm={
+                gettext("Delete this message? Readers will see that a moderator deleted it.")
+              }
+            >
+              {gettext("Delete message")}
+            </button>
+          </form>
+        </details>
+      </div>
     </article>
     """
   end
@@ -850,8 +855,8 @@ defmodule IdejoWeb.TopicLive do
     assigns = assign(assigns, :spans, spans)
 
     ~H"""
-    <details id={"message-#{@message.id}-versions"} class="text-xs opacity-70 mt-1">
-      <summary class="cursor-pointer">{gettext("view earlier version")}</summary>
+    <details id={"message-#{@message.id}-versions"} class="message-versions">
+      <summary>{gettext("view earlier version")}</summary>
       <ol class="mt-2 space-y-3">
         <li :for={{version, from} <- @spans} class="border-l-2 border-base-300 pl-3">
           <p>
@@ -886,9 +891,9 @@ defmodule IdejoWeb.TopicLive do
       assign(assigns, :left, assigns.mine && DateTime.diff(assigns.mine.closes_at, assigns.now))
 
     ~H"""
-    <section aria-label={gettext("Your message")}>
-      <p :if={@mine}><.author_line author={@author} roles={@roles} /></p>
-      <div :if={@reply_to} id="replying-to" class="border-l-2 border-base-300 pl-3 mb-2 text-sm">
+    <section aria-label={gettext("Your message")} class="message message-mine">
+      <p :if={@mine} class="message-head"><.author_line author={@author} roles={@roles} /></p>
+      <div :if={@reply_to} id="replying-to" class="message-quote">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
           <button type="button" class="link ml-2" phx-click="cancel_reply">

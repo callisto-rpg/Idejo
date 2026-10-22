@@ -168,7 +168,7 @@ defmodule IdejoWeb.UserComponents do
   the name is always shown next to it, so it has no text of its own for screen readers.
   """
   attr :user, :map, required: true
-  attr :size, :atom, values: [:small, :medium, :large], default: :small
+  attr :size, :atom, values: [:small, :list, :medium, :large], default: :small
 
   def avatar(assigns) do
     assigns = assign(assigns, url: Uploads.avatar_url(assigns.user), box: box(assigns.size))
@@ -186,6 +186,7 @@ defmodule IdejoWeb.UserComponents do
   end
 
   defp box(:small), do: "w-6 text-xs"
+  defp box(:list), do: "w-9 text-sm"
   defp box(:medium), do: "w-12 text-lg"
   defp box(:large), do: "w-14 text-xl"
 

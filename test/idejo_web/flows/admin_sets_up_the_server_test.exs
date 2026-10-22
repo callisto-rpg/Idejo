@@ -98,7 +98,7 @@ defmodule IdejoWeb.Flows.AdminSetsUpTheServerTest do
     set(lv, team, :moderate, "allow")
 
     # Help: members only; visitors cannot read it, the custom Members role can.
-    lv |> element("nav a", "Help") |> render_click()
+    lv |> element(~s(nav[aria-label="Where the settings apply"] a), "Help") |> render_click()
     set(lv, guest, :view, "deny")
     set(lv, members, :view, "allow")
 
