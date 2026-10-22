@@ -168,13 +168,20 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
 **Edit tags** (under the title, with the **Edit tags** right): tick the topic's tags, at
 least one, and **Save tags**. Logged like the rest, with the tags before and after.
 
-**On a message:** **Moderate** (under the message):
+**On a message:** **Moderate** (under the message) opens a card:
 
 - **Close message**: ends someone's open message, as if they had pressed Ctrl+Enter.
 - **Delete message**: readers see "Message deleted by a moderator"; moderators still see the
   text and its history. Its open reports are resolved.
 - **Edit**: correct someone's message, for example to remove personal data. Earlier
   versions are kept, and moderators see every version of any edited message.
+- **Select to be moved**: every message of the thread gets a checkbox (except its first
+  message, which stays), and a banner at the top reads **Move all selected messages to**:
+  - **New thread**: give it a title and a category; the earliest selected message opens it.
+  - **Existing thread**: find it by title, or paste its link.
+  Messages still being written are closed first. Moved messages keep their time, so in an
+  existing thread they sit where their time puts them. Replies keep their links, and old
+  links to the messages lead to their new thread. Logged, with the reason you give.
 
 **Bans.** Server moderators (owners, administrators, and roles allowed to moderate
 server-wide) see **User actions** on a person's card: click an @mention of them in a topic,

@@ -231,7 +231,8 @@ roles or the permission grid. Every later change must keep it true:
 - **Posting and inline replies** (TP-08): members post with the composer (`Messages.commit/4`);
   `Forum.post_message/3` still posts one closed message (tests use it). Both need
   `Forum.can_post?/2` (the `:post` right and an open topic; locked and archived take nothing).
-  A reply's `reply_to_id` must be a message of the same topic, set when the reply opens;
+  A reply's `reply_to_id` must be a message of the same topic, set when the reply opens
+  (only moving messages, TP-15, leaves replies across topics);
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
   links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
 - **Live updates stay cheap** (NF-01): `Messages.broadcast/2` sends `{:message, m}` with
@@ -498,6 +499,20 @@ roles or the permission grid. Every later change must keep it true:
   messages stay open and links keep working. Logged under the old category with `from`/`to`
   in `details`, plus an `update` activity; `{:topic_changed, id}` makes viewers who may not
   view the new category lose the topic. A "Move to" choice in the topic page's moderator form.
+- **Move messages** (TP-15 split and merge; steward decision, 2026-10-23):
+  `Forum.move_messages(moderator, topic, ids, {:new, %{"title", "category_id"}} |
+  {:existing, topic}, reason)` needs `:moderate` in both categories, never the Archive or an
+  archived topic; the source's opening message never moves. Open messages close first
+  (`Messages.close_logged_in_transaction/3`, logged); the new topic is opened by the
+  earliest moved message's author; in an existing topic messages sort by time (older ones
+  come before its opening message). Counts follow, one `messages.move` log entry under the
+  source's category, an `update` activity per message, then `{:messages_moved, id}` to both
+  topics (viewers reload). Reply links stay across topics; `TopicLive` shows a quote leading
+  elsewhere only to readers who may view it (`Forum.viewable_message_ids/2`). In
+  `TopicLive`, a message's "Moderate" opens `MessageModerationComponents.moderate_card/1` (a
+  dialog: close, delete, "Select to be moved"); selecting shows checkboxes and
+  `move_banner/1` ("Move all selected messages to": New thread / Existing thread), and
+  `move_dialog/1` takes a title and category or searches `Forum.search_move_targets/3`.
 - **Reports** (MO-01, `Idejo.Moderation`): signed-in users report others' messages they may
   view, with a reason (`/m/{id}/report`, `ReportController`, no JavaScript; one open report
   per reporter and message). `/moderation` (`ModerationController.index`) shows the open

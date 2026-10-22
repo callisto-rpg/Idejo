@@ -960,6 +960,41 @@
   .emoji-group-title { margin-bottom: 0.25rem; color: var(--ink-faint); font-size: 0.75rem; font-weight: 600; }
   .emoji-grid { display: flex; flex-wrap: wrap; gap: 0.125rem; }
 
+  /* TP-15: choosing messages to move. The banner stays under the header while scrolling. */
+  .move-banner {
+    position: sticky;
+    top: calc(var(--header-h) + 0.5rem);
+    z-index: 25;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid color-mix(in oklab, var(--color-primary) 40%, transparent);
+    border-radius: var(--radius-box);
+    background: var(--color-base-100);
+    box-shadow: var(--shadow-lift);
+  }
+  .move-banner-title { font-weight: 600; }
+  .move-banner-count { color: var(--ink-faint); font-size: 0.875rem; }
+  .move-banner-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; }
+  .move-select { display: inline-flex; align-items: center; margin-right: 0.25rem; & input { width: 1.125rem; height: 1.125rem; cursor: pointer; } }
+  .moderate-card-move { display: grid; gap: 0.375rem; padding-top: 0.75rem; border-top: 1px solid var(--hairline); }
+  .move-dialog { max-width: 28rem; }
+  .move-results { display: grid; gap: 0.125rem; max-height: 16rem; overflow-y: auto; }
+  .move-result {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--radius-field);
+    cursor: pointer;
+    & input { grid-row: span 2; align-self: center; }
+    &:has(input:checked) { background: color-mix(in oklab, var(--color-primary) 10%, transparent); }
+  }
+  .move-result-title { font-weight: 500; font-size: 0.875rem; }
+
   .message-moderate {
     font-size: 0.875rem;
     &[open] { flex-basis: 100%; }

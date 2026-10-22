@@ -51,7 +51,10 @@ defmodule IdejoWeb.ModeratorDeleteEditLiveTest do
     {:ok, mod_view, _html} = watch(log_in_user(build_conn(), moderator), topic)
     assert has_element?(mod_view, "#message-#{a.id}", "Secret one")
     assert has_element?(mod_view, "#message-#{a.id}-deleted.badge", "Deleted by a moderator")
-    refute has_element?(mod_view, "#message-#{a.id}-moderate")
+    # A deleted message offers no close or delete, only moving (TP-15).
+    mod_view |> element("#message-#{a.id}-moderate") |> render_click()
+    assert has_element?(mod_view, "#moderate-card")
+    refute has_element?(mod_view, "#message-#{a.id}-moderate-form")
   end
 
   @tag req: "MO-06"
@@ -93,6 +96,8 @@ defmodule IdejoWeb.ModeratorDeleteEditLiveTest do
     {:ok, lv, _html} = watch(log_in_user(build_conn(), moderator), topic)
 
     refute has_element?(reader, "#message-#{rude.id}-moderate")
+
+    lv |> element("#message-#{rude.id}-moderate") |> render_click()
 
     lv
     |> form("#message-#{rude.id}-moderate-form", %{"reason" => "Insults"})

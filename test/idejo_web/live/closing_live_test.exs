@@ -64,6 +64,9 @@ defmodule IdejoWeb.ClosingLiveTest do
     refute has_element?(member_view, "#message-#{open.id} button", "Close message")
 
     {:ok, lv, _html} = watch(log_in_user(build_conn(), moderator), topic)
+    # "Moderate" opens a card over the page (steward decision, 2026-10-23).
+    lv |> element("#message-#{open.id}-moderate") |> render_click()
+    assert has_element?(lv, "dialog#moderate-card[aria-labelledby=moderate-card-title]")
     assert has_element?(lv, "#message-#{open.id}-moderate-form button", "Close message")
 
     # With an optional reason for the moderation log (MO-03).

@@ -44,6 +44,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Repo
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
+  alias IdejoWeb.MessageModerationComponents
   alias IdejoWeb.ReactionComponents
   alias IdejoWeb.UserComponents
 
@@ -74,7 +75,14 @@ defmodule IdejoWeb.TopicLive do
            image_error: nil,
            reactions: %{},
            can_react?: false,
-           picker: nil
+           picker: nil,
+           viewable_replies: MapSet.new(),
+           moderating: nil,
+           selected: nil,
+           move_to: nil,
+           move_query: "",
+           move_results: [],
+           move_error: nil
          )}
 
       topic ->
@@ -94,6 +102,14 @@ defmodule IdejoWeb.TopicLive do
          |> put_messages(Forum.list_messages(topic))
          |> put_forks()
          |> assign(can_react?: can_react?(user, topic), picker: nil)
+         |> assign(
+           moderating: nil,
+           selected: nil,
+           move_to: nil,
+           move_query: "",
+           move_results: [],
+           move_error: nil
+         )
          |> put_reactions()
          |> ImageUploads.allow(:composer_image, can_post?)
          |> ImageUploads.allow(:edit_image, can_post?)
@@ -133,6 +149,20 @@ defmodule IdejoWeb.TopicLive do
     socket
     |> assign(:messages, messages)
     |> add_roles(messages)
+    |> put_viewable_replies(messages)
+  end
+
+  # TP-15: a reply may lead to another topic after a move; its quote shows only to readers who
+  # may view that topic. Messages of this topic need no query (NF-01).
+  defp put_viewable_replies(socket, messages) do
+    topic_id = socket.assigns.topic.id
+
+    foreign =
+      for %{reply_to: %Messages.Message{topic_id: other} = reply} <- messages,
+          other != topic_id,
+          do: reply.id
+
+    assign(socket, :viewable_replies, Forum.viewable_message_ids(user(socket), foreign))
   end
 
   # The role above each author's name (GM-07): their highest-ranked one, with the name colour.
@@ -236,6 +266,30 @@ defmodule IdejoWeb.TopicLive do
     do:
       {:noreply,
        assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))}
+
+  # TP-15: messages moved into or out of this topic: read it again.
+  def handle_info({:messages_moved, _topic_id}, %{assigns: %{topic: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_info({:messages_moved, topic_id}, socket) do
+    case Forum.get_viewable_topic(user(socket), topic_id) do
+      nil ->
+        {:noreply, socket}
+
+      topic ->
+        messages = Forum.list_messages(topic)
+        ids = MapSet.new(messages, & &1.id)
+        selected = socket.assigns.selected && MapSet.intersection(socket.assigns.selected, ids)
+
+        {:noreply,
+         socket
+         |> assign(topic: topic, selected: selected)
+         |> put_messages(messages)
+         |> put_forks()
+         |> put_reactions()
+         |> sync_composer()}
+    end
+  end
 
   # Someone started a topic from one of these messages (TP-09).
   def handle_info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
@@ -457,10 +511,111 @@ defmodule IdejoWeb.TopicLive do
       end
 
     case result do
-      {:ok, _} -> {:noreply, socket}
+      {:ok, _} -> {:noreply, assign(socket, :moderating, nil)}
       _ -> {:noreply, put_flash(socket, :error, gettext("This could not be done."))}
     end
   end
+
+  # A message's "Moderate", as a card over the page (steward decision, 2026-10-23).
+  def handle_event("open_moderate", %{"id" => id}, socket) when is_binary(id) do
+    if socket.assigns.can_moderate? and Enum.any?(socket.assigns.messages, &(&1.id == id)),
+      do: {:noreply, assign(socket, :moderating, id)},
+      else: {:noreply, socket}
+  end
+
+  def handle_event("close_moderate", _params, socket),
+    do: {:noreply, assign(socket, :moderating, nil)}
+
+  # TP-15: choose messages to move. The opening message never moves.
+  def handle_event("start_selecting", %{"id" => id}, %{assigns: %{can_moderate?: true}} = socket) do
+    selected = if id == opening_id(socket), do: MapSet.new(), else: MapSet.new([id])
+    {:noreply, assign(socket, moderating: nil, selected: selected)}
+  end
+
+  def handle_event(
+        "toggle_select",
+        %{"id" => id},
+        %{assigns: %{selected: %MapSet{} = selected}} = socket
+      ) do
+    selected =
+      cond do
+        id == opening_id(socket) -> selected
+        MapSet.member?(selected, id) -> MapSet.delete(selected, id)
+        true -> MapSet.put(selected, id)
+      end
+
+    {:noreply, assign(socket, :selected, selected)}
+  end
+
+  def handle_event("cancel_selecting", _params, socket),
+    do: {:noreply, assign(socket, selected: nil, move_to: nil, move_error: nil)}
+
+  def handle_event("move_to", %{"to" => to}, %{assigns: %{selected: %MapSet{}}} = socket)
+      when to in ~w(new existing) do
+    socket = assign(socket, move_to: String.to_existing_atom(to), move_error: nil, move_query: "")
+
+    if to == "existing",
+      do: {:noreply, search_targets(socket, "")},
+      else: {:noreply, socket}
+  end
+
+  def handle_event("search_targets", %{"q" => query}, socket) when is_binary(query),
+    do: {:noreply, search_targets(socket, String.slice(query, 0, 200))}
+
+  def handle_event("close_move", _params, socket),
+    do: {:noreply, assign(socket, move_to: nil, move_error: nil)}
+
+  def handle_event(
+        "move_selected",
+        params,
+        %{assigns: %{selected: %MapSet{} = selected}} = socket
+      ) do
+    target =
+      case params do
+        %{"to" => "new"} ->
+          {:new, Map.take(params, ["title", "category_id"])}
+
+        %{"to" => "existing", "topic_id" => id} ->
+          case Forum.get_viewable_topic(user(socket), id) do
+            nil -> nil
+            topic -> {:existing, topic}
+          end
+
+        _ ->
+          nil
+      end
+
+    result =
+      target &&
+        Forum.move_messages(
+          user(socket),
+          socket.assigns.topic,
+          MapSet.to_list(selected),
+          target,
+          params["reason"]
+        )
+
+    case result do
+      {:ok, topic} ->
+        {:noreply,
+         socket
+         |> assign(selected: nil, move_to: nil, move_error: nil)
+         |> put_flash(
+           :info,
+           ngettext(
+             "1 message moved to “%{title}”.",
+             "%{count} messages moved to “%{title}”.",
+             MapSet.size(selected),
+             title: topic.title
+           )
+         )}
+
+      error ->
+        {:noreply, assign(socket, :move_error, move_error(error))}
+    end
+  end
+
+  def handle_event("move_selected", _params, socket), do: {:noreply, socket}
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
@@ -550,6 +705,26 @@ defmodule IdejoWeb.TopicLive do
 
   defp close_editor(socket), do: assign(socket, :editing, nil)
 
+  defp opening_id(socket) do
+    case socket.assigns.messages do
+      [first | _] -> first.id
+      [] -> nil
+    end
+  end
+
+  defp search_targets(socket, query) do
+    results = Forum.search_move_targets(user(socket), query, socket.assigns.topic.id)
+    assign(socket, move_query: query, move_results: results)
+  end
+
+  defp move_error({:error, %Ecto.Changeset{}}), do: gettext("The new thread needs a title.")
+  defp move_error({:error, :opening}), do: gettext("The opening message cannot be moved.")
+
+  defp move_error({:error, :forbidden}),
+    do: gettext("You do not moderate the category of that thread.")
+
+  defp move_error(_error), do: gettext("Choose a thread to move the messages to.")
+
   @impl true
   def render(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
@@ -559,6 +734,8 @@ defmodule IdejoWeb.TopicLive do
 
     assigns =
       assign(assigns,
+        moderated:
+          assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
         before: before,
         mine: mine,
         later: after_,
@@ -586,6 +763,28 @@ defmodule IdejoWeb.TopicLive do
         </div>
       </dialog>
       <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
+      <MessageModerationComponents.moderate_card
+        :if={@can_moderate? && @moderated}
+        message={@moderated}
+        own?={@moderated.author_id == @current_scope.user.id}
+        movable?={@moderated.id != List.first(@messages).id}
+      />
+      <MessageModerationComponents.move_banner
+        :if={@can_moderate? && @selected}
+        count={MapSet.size(@selected)}
+      />
+      <MessageModerationComponents.move_dialog
+        :if={@can_moderate? && @selected && @move_to}
+        to={@move_to}
+        count={MapSet.size(@selected)}
+        categories={
+          if @move_to == :new, do: Forum.list_moderated_categories(@current_scope.user), else: []
+        }
+        current_category_id={@topic.category_id}
+        query={@move_query}
+        results={@move_results}
+        error={@move_error}
+      />
       <%!-- AX-02: read out when a message opens or closes; the list itself is not live. --%>
       <div id="topic-announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
         <span :if={@announcement} id={"announcement-#{elem(@announcement, 0)}"}>
@@ -621,6 +820,9 @@ defmodule IdejoWeb.TopicLive do
             image_error={@image_error}
             reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
+            selected={@selected && MapSet.member?(@selected, message.id)}
+            opening?={message.id == List.first(@messages).id}
+            viewable_replies={@viewable_replies}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -658,11 +860,18 @@ defmodule IdejoWeb.TopicLive do
             image_error={@image_error}
             reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
+            selected={@selected && MapSet.member?(@selected, message.id)}
+            opening?={message.id == List.first(@messages).id}
+            viewable_replies={@viewable_replies}
           />
         </li>
       </ol>
 
       <p :if={@flash["error"]} role="alert" class="alert alert-error mt-4">{@flash["error"]}</p>
+      <%!-- TP-15: what a move did, for the moderator who did it. --%>
+      <p :if={@flash["info"]} id="topic-info" role="status" class="alert alert-info mt-4">
+        {@flash["info"]}
+      </p>
 
       <div :if={@topic && !@can_post?} class="mt-8">
         <%= cond do %>
@@ -759,6 +968,9 @@ defmodule IdejoWeb.TopicLive do
   attr :image_error, :string, default: nil
   attr :reactions, :list, default: []
   attr :can_react?, :boolean, default: false
+  attr :selected, :any, default: nil, doc: "nil outside choosing messages to move (TP-15)"
+  attr :opening?, :boolean, default: false
+  attr :viewable_replies, :any, default: MapSet.new()
 
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
@@ -785,6 +997,19 @@ defmodule IdejoWeb.TopicLive do
       class="message"
     >
       <p id={"message-#{@message.id}-author"} class="message-head">
+        <%!-- TP-15: choosing messages to move; the opening message stays. --%>
+        <label :if={@selected != nil and !@opening?} class="move-select">
+          <input
+            type="checkbox"
+            id={"select-#{@message.id}"}
+            checked={@selected}
+            phx-click="toggle_select"
+            phx-value-id={@message.id}
+          />
+          <span class="sr-only">
+            {gettext("Select the message by %{name}", name: @message.author.display_name)}
+          </span>
+        </label>
         <.author_line author={@message.author} roles={@roles} />
         <%!-- GM-07, AX-03: the open state has no visible sign, only this text. --%>
         <span :if={@message.state == "open"} class="sr-only">
@@ -810,12 +1035,18 @@ defmodule IdejoWeb.TopicLive do
         id={"message-#{@message.id}-reply-to"}
         class="message-quote"
       >
-        <.link href={~p"/m/#{@message.reply_to.id}"} class="font-medium">
-          {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
-        </.link>
-        <span :if={is_nil(@message.reply_to.deleted_at)} class="opacity-70">
-          {Forum.excerpt(@message.reply_to)}
-        </span>
+        <%= if @message.reply_to.topic_id == @topic.id or
+                 MapSet.member?(@viewable_replies, @message.reply_to.id) do %>
+          <.link href={~p"/m/#{@message.reply_to.id}"} class="font-medium">
+            {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
+          </.link>
+          <span :if={is_nil(@message.reply_to.deleted_at)} class="opacity-70">
+            {Forum.excerpt(@message.reply_to)}
+          </span>
+        <% else %>
+          <%!-- TP-15: moved away, to a topic this reader may not view. --%>
+          <span class="opacity-70">{gettext("In reply to a message in another thread")}</span>
+        <% end %>
         <span :if={@message.reply_to.deleted_at} class="italic opacity-70">
           {gettext("Message deleted by a moderator")}
         </span>
@@ -917,46 +1148,17 @@ defmodule IdejoWeb.TopicLive do
         >
           <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
         </.link>
-        <%!-- GM-16, MO-02: moderator actions, each with an optional reason for the log (MO-03). --%>
-        <details
-          :if={@can_moderate? and is_nil(@message.deleted_at) and @viewer.id != @message.author_id}
+        <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
+        <button
+          :if={@can_moderate?}
+          type="button"
           id={"message-#{@message.id}-moderate"}
-          class="message-moderate"
+          class="message-action"
+          phx-click="open_moderate"
+          phx-value-id={@message.id}
         >
-          <summary class="message-action">
-            <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
-          </summary>
-          <form
-            phx-submit="moderate_message"
-            id={"message-#{@message.id}-moderate-form"}
-            class="mt-2 flex flex-wrap items-end gap-2"
-          >
-            <input type="hidden" name="message_id" value={@message.id} />
-            <label class="grow">
-              <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
-              <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
-            </label>
-            <button
-              :if={@message.state == "open"}
-              name="do"
-              value="close"
-              class="btn btn-sm"
-              data-confirm={gettext("Close this message? Its author will start a new one.")}
-            >
-              {gettext("Close message")}
-            </button>
-            <button
-              name="do"
-              value="delete"
-              class="btn btn-sm btn-error"
-              data-confirm={
-                gettext("Delete this message? Readers will see that a moderator deleted it.")
-              }
-            >
-              {gettext("Delete message")}
-            </button>
-          </form>
-        </details>
+          <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
+        </button>
       </div>
     </article>
     """
