@@ -30,9 +30,9 @@
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: oklch(21.5% 0.012 275);
+  --color-base-100: oklch(23.5% 0.013 275);
   --color-base-200: oklch(18% 0.011 275);
-  --color-base-300: oklch(28.5% 0.014 275);
+  --color-base-300: oklch(31% 0.015 275);
   --color-base-content: oklch(93% 0.01 275);
   --color-primary: oklch(71% 0.15 278);
   --color-primary-content: oklch(18% 0.04 278);
@@ -66,7 +66,7 @@
   prefersdark: false;
   color-scheme: "light";
   --color-base-100: oklch(100% 0 0);
-  --color-base-200: oklch(97.8% 0.004 275);
+  --color-base-200: oklch(96.7% 0.005 275);
   --color-base-300: oklch(91.5% 0.008 275);
   --color-base-content: oklch(24% 0.02 275);
   --color-primary: oklch(52% 0.2 278);
@@ -1282,6 +1282,7 @@
   :root { --cat: var(--color-primary); }
 
   [data-theme="dark"] {
+    --hairline: color-mix(in oklab, var(--color-base-content) 12%, transparent);
     --shadow-soft:
       0 0 0 1px oklch(100% 0 0 / 0.035),
       0 0 22px -10px color-mix(in oklab, var(--color-primary) 32%, transparent);
@@ -1291,12 +1292,26 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) {
+      --hairline: color-mix(in oklab, var(--color-base-content) 12%, transparent);
       --shadow-soft:
         0 0 0 1px oklch(100% 0 0 / 0.035),
         0 0 22px -10px color-mix(in oklab, var(--color-primary) 32%, transparent);
       --shadow-lift:
         0 0 0 1px oklch(100% 0 0 / 0.06),
         0 0 32px -8px color-mix(in oklab, var(--color-primary) 42%, transparent);
+    }
+  }
+
+  /* Dark theme, wide screens: the sidebar a faint surface of its own, between the page and
+     the boxes (on narrow screens it is an opaque drawer). */
+  @media (min-width: 1024px) {
+    [data-theme="dark"] .app-sidebar {
+      background: color-mix(in oklab, var(--color-base-100) 55%, transparent);
+    }
+  }
+  @media (min-width: 1024px) and (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .app-sidebar {
+      background: color-mix(in oklab, var(--color-base-100) 55%, transparent);
     }
   }
 
