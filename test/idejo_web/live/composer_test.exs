@@ -188,6 +188,9 @@ defmodule IdejoWeb.ComposerTest do
     refute composer =~ ~r/border:|background:/
     assert css =~ ~r/\.composer-unsent \{[^}]*box-shadow/s
     assert css =~ "@keyframes composer-burn"
+    # White in a golden glow on the light theme, bright orange on the dark one.
+    assert css =~ ~r/\.composer-burn \{\s*--burn-ink: #ffffff;\s*--burn-gold:/
+    assert css =~ ~r/\[data-theme="dark"\] \.composer-burn \{ --burn-ink: oklch/
     assert css =~ ~r/prefers-reduced-motion: reduce\) \{\s*\.composer-burn \{ animation: none; \}/
 
     js = File.read!("assets/js/composer.js")

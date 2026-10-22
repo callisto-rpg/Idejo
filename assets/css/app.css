@@ -1150,23 +1150,42 @@
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+/* The burn (steward decision, 2026-10-23): light theme, white text in a golden glow fading to
+   the normal dark text; dark theme, bright orange in a golden glow fading to the normal light
+   text. */
 .composer-burn {
+  --burn-ink: #ffffff;
+  --burn-gold: oklch(84% 0.17 85);
   animation: composer-burn 2.2s ease-out both;
+}
+[data-theme="dark"] .composer-burn { --burn-ink: oklch(78% 0.19 55); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .composer-burn { --burn-ink: oklch(78% 0.19 55); }
 }
 @keyframes composer-burn {
   0% {
-    color: color-mix(in oklab, var(--color-primary) 75%, white);
+    color: var(--burn-ink);
     text-shadow:
-      0 0 0.5em color-mix(in oklab, var(--color-primary) 85%, transparent),
-      0 0 0.12em color-mix(in oklab, var(--color-primary) 70%, white);
+      0 0 0.08em var(--burn-gold),
+      0 0 0.3em var(--burn-gold),
+      0 0 0.8em color-mix(in oklab, var(--burn-gold) 75%, transparent),
+      0 0 1.4em color-mix(in oklab, var(--burn-gold) 45%, transparent);
   }
-  35% {
-    color: color-mix(in oklab, var(--color-primary) 55%, var(--color-base-content));
-    text-shadow: 0 0 0.35em color-mix(in oklab, var(--color-primary) 50%, transparent);
+  30% {
+    color: var(--burn-ink);
+    text-shadow:
+      0 0 0.06em var(--burn-gold),
+      0 0 0.25em var(--burn-gold),
+      0 0 0.7em color-mix(in oklab, var(--burn-gold) 55%, transparent),
+      0 0 1.2em color-mix(in oklab, var(--burn-gold) 30%, transparent);
   }
   100% {
     color: var(--color-base-content);
-    text-shadow: 0 0 0 transparent;
+    text-shadow:
+      0 0 0 transparent,
+      0 0 0 transparent,
+      0 0 0 transparent,
+      0 0 0 transparent;
   }
 }
 @media (prefers-reduced-motion: reduce) {
