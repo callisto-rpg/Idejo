@@ -177,6 +177,10 @@ roles or the permission grid. Every later change must keep it true:
   real pages in order with ConnTest and LiveViewTest (no browser), tagged
   `@tag flow: "admin-sets-up-the-server"` etc.
 - **No third-party scripts, fonts or analytics** (SP-04). Assets are served from the app.
+  Fonts (steward decision, 2026-10-23): Fraunces for titles (`--font-title`: headings and
+  title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
+  `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
+  credited in `NOTICE` and `REUSE.toml`). Small uppercase labels stay in Rubik.
 - **No inline `<script>`, `<style>` or `style=""`** — the content security policy refuses them
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
   `assets/css/`; a dependency that needs inline code gets the per-request nonce from
