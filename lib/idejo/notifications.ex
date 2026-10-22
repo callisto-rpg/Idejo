@@ -12,6 +12,8 @@ defmodule Idejo.Notifications do
   the first kind in that order. An @mentioned user who may view the topic also follows it,
   unless they unfollowed it before (steward decision, 2026-10-22).
 
+  Reactions (TP-17) notify the message's author once per message (`Idejo.Reactions`).
+
   A growing message notifies once, when it opens (NO-02, GM-13): an append, or an edit,
   notifies only someone newly mentioned. Their earlier reply or follow notification for that
   message becomes a mention and unread again, so it stays one item.
@@ -163,6 +165,7 @@ defmodule Idejo.Notifications do
       |> limit(^(per_page + 1))
       |> preload(message: [:author, :topic])
       |> Repo.all()
+      |> put_reaction_counts()
 
     {Enum.take(rows, per_page), length(rows) > per_page}
   end
@@ -182,6 +185,17 @@ defmodule Idejo.Notifications do
     else
       _ -> nil
     end
+  end
+
+  # TP-17: a reaction notification says how many reactions the message has now.
+  defp put_reaction_counts(rows) do
+    counts =
+      rows
+      |> Enum.filter(&(&1.kind == "reaction"))
+      |> Enum.map(& &1.message_id)
+      |> Idejo.Reactions.counts()
+
+    Enum.map(rows, &%{&1 | reactions: Map.get(counts, &1.message_id, 0)})
   end
 
   @doc "Marks all the user's notifications read."

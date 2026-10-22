@@ -17,6 +17,9 @@ defmodule Idejo.Notifications.Notification do
     field :read_at, :utc_datetime_usec
     belongs_to :user, Idejo.Accounts.User
     belongs_to :message, Idejo.Messages.Message
+    # TP-17: for a "reaction" notification, how many reactions the message has, set by
+    # `Idejo.Notifications.list/2`.
+    field :reactions, :integer, virtual: true
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end

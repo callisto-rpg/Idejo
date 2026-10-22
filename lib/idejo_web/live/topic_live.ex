@@ -44,6 +44,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Repo
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
+  alias IdejoWeb.ReactionComponents
   alias IdejoWeb.UserComponents
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
@@ -70,7 +71,10 @@ defmodule IdejoWeb.TopicLive do
            forks: %{},
            can_fork?: false,
            card: nil,
-           image_error: nil
+           image_error: nil,
+           reactions: %{},
+           can_react?: false,
+           picker: nil
          )}
 
       topic ->
@@ -89,6 +93,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> put_forks()
+         |> assign(can_react?: can_react?(user, topic), picker: nil)
+         |> put_reactions()
          |> ImageUploads.allow(:composer_image, can_post?)
          |> ImageUploads.allow(:edit_image, can_post?)
          |> sync_composer()
@@ -105,6 +111,16 @@ defmodule IdejoWeb.TopicLive do
     if user, do: Messages.Authors.present(topic.id, user.id)
     # Whatever came between the page and the connection is seen now (TP-07).
     Reading.mark_read(user, topic)
+  end
+
+  # TP-17: any signed-in, verified reader reacts, while the topic takes changes.
+  defp can_react?(nil, _topic), do: false
+  defp can_react?(user, topic), do: Idejo.Accounts.confirmed?(user) and topic.state == "open"
+
+  # TP-17: the reactions of every message shown, in one query; later changes come as events.
+  defp put_reactions(socket) do
+    ids = Enum.map(socket.assigns.messages, & &1.id)
+    assign(socket, :reactions, Idejo.Reactions.summaries(ids))
   end
 
   # TP-09: each message's "continued in" topics that the viewer may see.
@@ -195,12 +211,31 @@ defmodule IdejoWeb.TopicLive do
     case Forum.get_viewable_topic(user(socket), topic_id) do
       nil ->
         Messages.unsubscribe(topic_id)
-        {:noreply, assign(socket, topic: nil, can_post?: false, lost_access?: true, messages: [])}
+
+        {:noreply,
+         assign(socket,
+           topic: nil,
+           can_post?: false,
+           can_react?: false,
+           lost_access?: true,
+           messages: []
+         )}
 
       topic ->
-        {:noreply, assign(socket, topic: topic, can_post?: Forum.can_post?(user(socket), topic))}
+        {:noreply,
+         assign(socket,
+           topic: topic,
+           can_post?: Forum.can_post?(user(socket), topic),
+           can_react?: can_react?(user(socket), topic)
+         )}
     end
   end
+
+  # TP-17: someone reacted; the summary was worked out once, by them (NF-01).
+  def handle_info({:reactions, message_id, summary}, socket),
+    do:
+      {:noreply,
+       assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))}
 
   # Someone started a topic from one of these messages (TP-09).
   def handle_info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
@@ -216,7 +251,14 @@ defmodule IdejoWeb.TopicLive do
       nil ->
         Messages.unsubscribe(socket.assigns.topic.id)
 
-        {:noreply, assign(socket, topic: nil, can_post?: false, lost_access?: true, messages: [])}
+        {:noreply,
+         assign(socket,
+           topic: nil,
+           can_post?: false,
+           can_react?: false,
+           lost_access?: true,
+           messages: []
+         )}
 
       topic ->
         {:noreply,
@@ -347,6 +389,38 @@ defmodule IdejoWeb.TopicLive do
   end
 
   def handle_event("hide_card", _params, socket), do: {:noreply, assign(socket, :card, nil)}
+
+  # TP-17: add a reaction, or take it back. The new summary reaches every viewer as an event.
+  def handle_event("react", %{"id" => id, "emoji" => emoji}, socket)
+      when is_binary(id) and is_binary(emoji) do
+    with true <- socket.assigns.can_react?,
+         %Messages.Message{} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
+         {:ok, _summary} <- Idejo.Reactions.toggle(user(socket), message, emoji) do
+      {:noreply, assign(socket, :picker, nil)}
+    else
+      {:error, :rate_limited} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("You have reacted a lot lately. Please wait a little.")
+         )}
+
+      _ ->
+        {:noreply, assign(socket, :picker, nil)}
+    end
+  end
+
+  def handle_event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, assign(socket, :picker, %{message_id: id, query: ""})}
+
+  def handle_event("emoji_search", %{"q" => query}, %{assigns: %{picker: %{} = picker}} = socket)
+      when is_binary(query),
+      do: {:noreply, assign(socket, :picker, %{picker | query: String.slice(query, 0, 40)})}
+
+  def handle_event("emoji_search", _params, socket), do: {:noreply, socket}
+
+  def handle_event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
 
   # A topic's card: Follow / Unfollow (TP-13), then the card again.
   def handle_event("card_" <> action, %{"id" => id}, socket) when action in ~w(follow unfollow) do
@@ -511,6 +585,7 @@ defmodule IdejoWeb.TopicLive do
           </div>
         </div>
       </dialog>
+      <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
       <%!-- AX-02: read out when a message opens or closes; the list itself is not live. --%>
       <div id="topic-announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
         <span :if={@announcement} id={"announcement-#{elem(@announcement, 0)}"}>
@@ -544,6 +619,8 @@ defmodule IdejoWeb.TopicLive do
             preview_html={@preview_html}
             edit_upload={@edit_upload}
             image_error={@image_error}
+            reactions={Map.get(@reactions, message.id, [])}
+            can_react?={@can_react?}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -579,6 +656,8 @@ defmodule IdejoWeb.TopicLive do
             preview_html={@preview_html}
             edit_upload={@edit_upload}
             image_error={@image_error}
+            reactions={Map.get(@reactions, message.id, [])}
+            can_react?={@can_react?}
           />
         </li>
       </ol>
@@ -678,6 +757,8 @@ defmodule IdejoWeb.TopicLive do
   attr :preview_html, :string, required: true
   attr :edit_upload, :any, default: nil
   attr :image_error, :string, default: nil
+  attr :reactions, :list, default: []
+  attr :can_react?, :boolean, default: false
 
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
@@ -779,6 +860,13 @@ defmodule IdejoWeb.TopicLive do
         html={@message.body_html}
       />
       <.versions :if={@message.edited} message={@message} />
+      <%!-- TP-17: reactions under the message. --%>
+      <ReactionComponents.reaction_bar
+        message_id={@message.id}
+        summary={@reactions}
+        viewer={@viewer}
+        can_react?={@can_react? and is_nil(@message.deleted_at)}
+      />
       <%!-- TP-09: a discreet link to each topic started from this message. --%>
       <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
         {gettext("Continued in")}
@@ -787,6 +875,10 @@ defmodule IdejoWeb.TopicLive do
         <% end %>
       </p>
       <div class="message-actions">
+        <ReactionComponents.add_reaction
+          :if={@can_react? and is_nil(@message.deleted_at)}
+          message_id={@message.id}
+        />
         <button
           :if={(@own_closed? or @mod_edit?) and !@edit_form}
           id={"message-#{@message.id}-edit"}

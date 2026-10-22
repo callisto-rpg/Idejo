@@ -18,3 +18,16 @@ runs, including local modifications.
 
 Copyright steward: Mariano Pictet, until an organisation is formed, to which
 the rights will then transfer.
+
+Third-party works shipped with Idejo:
+
+  Twemoji graphics (priv/static/emoji/), © 2014-2021 Twitter, Inc and other
+  contributors, © 2022-present Jason Sofonia & Justine De Caires, licensed under
+  CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/); see
+  LICENSES/CC-BY-4.0.txt. https://github.com/jdecked/twemoji
+
+  Emoji names from gemoji (priv/emoji/emoji.json), © 2014 Titus Wormer,
+  MIT licence; see LICENSES/MIT.txt. https://github.com/wooorm/gemoji
+
+  Reaction images (priv/static/reactions/), © Mariano Pictet, licensed under
+  CC-BY 4.0; see LICENSES/CC-BY-4.0.txt.

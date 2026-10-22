@@ -37,13 +37,15 @@ export const InlineLinks = {
   },
 }
 
-// The card's <dialog>, rendered while the server holds a card: shown as a modal (focus moves
+// The card's <dialog> (and the emoji picker's), rendered while the server holds one: shown as a modal (focus moves
 // into it, Escape closes it), and on closing the focus goes back to the link.
 export const InlineCard = {
   opener: null,
 
   mounted() {
-    this.el.addEventListener("close", () => this.pushEvent("hide_card", {}))
+    // The emoji picker (TP-17) reuses this dialog behaviour with its own close event.
+    const closeEvent = this.el.dataset.closeEvent || "hide_card"
+    this.el.addEventListener("close", () => this.pushEvent(closeEvent, {}))
     this.el.addEventListener("click", e => { if (e.target === this.el) this.el.close() })
     this.el.showModal()
   },
