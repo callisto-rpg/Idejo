@@ -43,3 +43,16 @@ path = "priv/emoji/emoji.json"
 precedence = "override"
 SPDX-FileCopyrightText = ["2014 Titus Wormer", "2026 Mariano Pictet and contributors"]
 SPDX-License-Identifier = "MIT"
+
+# Fonts (steward decision, 2026-10-23), from Fontsource 5.3.0 (Google Fonts builds).
+[[annotations]]
+path = "priv/static/fonts/fraunces-*"
+precedence = "override"
+SPDX-FileCopyrightText = "2020 The Fraunces Project Authors (github.com/undercasetype/Fraunces)"
+SPDX-License-Identifier = "OFL-1.1"
+
+[[annotations]]
+path = "priv/static/fonts/rubik-*"
+precedence = "override"
+SPDX-FileCopyrightText = "2015 The Rubik Project Authors (github.com/googlefonts/rubik)"
+SPDX-License-Identifier = "OFL-1.1"
