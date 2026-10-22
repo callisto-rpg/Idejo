@@ -2,52 +2,38 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <.header>
-    {@category.name}
-    <:subtitle :if={@category.description != ""}>{@category.description}</:subtitle>
-    <:actions :if={@can_start?}>
-      <.link href={~p"/c/#{@category.slug}/new"} id="new-topic" class="btn btn-primary">
-        {gettext("New topic")}
-      </.link>
-    </:actions>
-  </.header>
+<Layouts.app flash={@flash} current_scope={@current_scope} category={@category}>
+  <header class="page-intro page-intro-row">
+    <TopicComponents.category_mark category={@category} size={:large} />
+    <div class="grow">
+      <h1>{@category.name}</h1>
+      <p :if={@category.description != ""}>{@category.description}</p>
+    </div>
+    <.link
+      :if={@can_start?}
+      href={~p"/c/#{@category.slug}/new"}
+      id="new-topic"
+      class="btn btn-primary"
+    >
+      <.icon name="hero-plus" class="size-4" />
+      {gettext("New topic")}
+    </.link>
+  </header>
 
-  <p :if={@topics == [] and @page == 1} id="no-topics">{gettext("No topics yet.")}</p>
+  <p :if={@topics == [] and @page == 1} id="no-topics" class="empty-state">
+    {gettext("No topics yet.")}
+  </p>
 
-  <ol :if={@topics != []} id="topics" class="divide-y divide-base-300">
-    <li :for={topic <- @topics} id={"topic-#{topic.id}"} class="py-3">
-      <.link href={~p"/t/#{topic.id}/#{topic.slug}"} class="link font-semibold">
-        {topic.title}
-      </.link>
-      <.unread_marker count={@unread[topic.id]} />
-      <span :if={topic.pinned} class="badge badge-sm ml-1">{gettext("Pinned")}</span>
-      <span :if={topic.state == "archived"} class="badge badge-sm ml-1">{gettext("Archived")}</span>
-      <span :if={topic.state == "locked"} class="badge badge-sm ml-1">{gettext("Locked")}</span>
-      <p class="text-sm opacity-70">
-        <span class="topic-starter">{topic.author.display_name}</span>
-        ·
-        <span class="topic-messages">{ngettext(
-          "1 message",
-          "%{count} messages",
-          topic.message_count
-        )}</span>
-        · {gettext("last activity")}
-        <time datetime={DateTime.to_iso8601(topic.last_activity_at)}>
-          {Calendar.strftime(topic.last_activity_at, "%Y-%m-%d %H:%M UTC")}
-        </time>
-      </p>
-    </li>
+  <ol :if={@topics != []} id="topics" class="topic-list">
+    <TopicComponents.topic_row :for={topic <- @topics} topic={topic} unread={@unread[topic.id]} />
   </ol>
 
-  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="flex gap-4 mt-4">
-    <.link :if={@page > 1} href={~p"/c/#{@category.slug}?page=#{@page - 1}"} class="link">
+  <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="pager">
+    <.link :if={@page > 1} href={~p"/c/#{@category.slug}?page=#{@page - 1}"} class="btn btn-sm">
       {gettext("Previous page")}
     </.link>
-    <.link :if={@more?} href={~p"/c/#{@category.slug}?page=#{@page + 1}"} class="link">
+    <.link :if={@more?} href={~p"/c/#{@category.slug}?page=#{@page + 1}"} class="btn btn-sm">
       {gettext("Next page")}
     </.link>
   </nav>
-
-  <.link href={~p"/"} class="link">{gettext("All categories")}</.link>
 </Layouts.app>

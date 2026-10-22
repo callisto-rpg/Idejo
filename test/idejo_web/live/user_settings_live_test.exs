@@ -47,7 +47,7 @@ defmodule IdejoWeb.UserSettingsLiveTest do
 
     # The header shows the new name after the page reloads.
     html = conn |> get(~p"/users/settings") |> html_response(200)
-    assert html =~ ~s(href="/users/settings">Ada King)
+    assert html =~ ~s(class="account-name">Ada King)
   end
 
   @tag req: "AC-04"

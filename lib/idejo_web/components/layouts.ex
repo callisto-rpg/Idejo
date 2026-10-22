@@ -34,41 +34,211 @@ defmodule IdejoWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
 
+  attr :width, :atom,
+    values: [:narrow, :wide],
+    default: :narrow,
+    doc: "the content column: narrow for reading, wide for grids and tables"
+
+  attr :category, :any, default: nil, doc: "the category shown, marked in the sidebar"
+
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns = assign(assigns, :user, assigns.current_scope && assigns.current_scope.user)
+
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <a href={~p"/"} class="text-lg font-semibold">{server_name()}</a>
-      </div>
-      <nav aria-label={gettext("Site")} class="flex-none flex items-center gap-4">
-        <a href={~p"/search"} id="search-link" class="link">{gettext("Search")}</a>
-        <%!-- TP-07: topics with something new, across categories. --%>
+    <header class="app-header">
+      <%!-- Shown and wired by assets/js/sidebar.js: without JavaScript the sidebar stays
+           open on wide screens, and the home page lists the categories anyway. --%>
+      <button
+        type="button"
+        id="sidebar-toggle"
+        class="sidebar-toggle btn btn-ghost btn-sm btn-square"
+        aria-controls="sidebar"
+        aria-expanded="true"
+        aria-label={gettext("Show or hide the categories")}
+      >
+        <.icon name="hero-bars-3" class="size-5" />
+      </button>
+
+      <a href={~p"/"} class="brand" id="brand">
+        <span class="brand-mark" aria-hidden="true">{brand_initial()}</span>
+        <span class="brand-name">{server_name()}</span>
+      </a>
+
+      <form action={~p"/search"} method="get" role="search" class="header-search">
+        <label for="header-search-q" class="sr-only">{gettext("Search")}</label>
+        <.icon name="hero-magnifying-glass" class="size-4 header-search-icon" />
+        <input
+          type="search"
+          name="q"
+          id="header-search-q"
+          placeholder={gettext("Search")}
+          class="header-search-input"
+        />
+      </form>
+
+      <nav aria-label={gettext("Site")} class="header-nav">
         <a
-          :if={@current_scope && @current_scope.user}
-          href={~p"/unread"}
-          id="unread-link"
-          class="link"
+          href={~p"/search"}
+          id="search-link"
+          class="header-icon md:hidden"
+          aria-label={gettext("Search")}
         >
-          {gettext("Unread")}
+          <.icon name="hero-magnifying-glass" class="size-5" />
         </a>
-        <.notifications_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
-        <.moderation_link :if={@current_scope && @current_scope.user} user={@current_scope.user} />
-        <.theme_toggle />
+        <%!-- TP-07: topics with something new, across categories. --%>
+        <a :if={@user} href={~p"/unread"} id="unread-link" class="header-link">
+          <.icon name="hero-inbox-stack" class="size-5" />
+          <span class="header-link-text">{gettext("Unread")}</span>
+        </a>
+        <.moderation_link :if={@user} user={@user} />
+        <.notifications_link :if={@user} user={@user} />
       </nav>
+
+      <.account_menu current_scope={@current_scope} />
     </header>
 
-    <%!-- AX-01: the skip link's target; tabindex lets it take the focus in every browser. --%>
-    <main id="main" tabindex="-1" class="px-4 py-20 sm:px-6 lg:px-8 focus:outline-none">
-      <div class="mx-auto max-w-2xl space-y-4">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
+    <div class="app-body">
+      <.sidebar user={@user} current={@category} />
 
-    <.site_footer />
+      <div class="app-column">
+        <div
+          :if={@user && !Idejo.Accounts.confirmed?(@user)}
+          role="status"
+          class="verify-banner"
+        >
+          <.icon name="hero-envelope" class="size-5 shrink-0" />
+          <p class="grow">
+            {gettext("Please verify your email address to take part. Check your inbox for the link.")}
+          </p>
+          <.form for={%{}} action={~p"/users/confirm"}>
+            <button class="btn btn-sm">{gettext("Send the link again")}</button>
+          </.form>
+        </div>
+
+        <%!-- AX-01: the skip link's target; tabindex lets it take the focus in every browser. --%>
+        <main id="main" tabindex="-1" class="app-main focus:outline-none">
+          <div class={["mx-auto space-y-6", width_class(@width)]}>
+            {render_slot(@inner_block)}
+          </div>
+        </main>
+
+        <.site_footer />
+      </div>
+    </div>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  defp width_class(:narrow), do: "max-w-3xl"
+  defp width_class(:wide), do: "max-w-5xl"
+
+  defp brand_initial, do: server_name() |> String.first() |> String.upcase()
+
+  attr :current_scope, :map, required: true
+
+  # The account menu: a <details> disclosure, so it opens without JavaScript.
+  defp account_menu(assigns) do
+    ~H"""
+    <nav aria-label={gettext("Account")} class="account-nav">
+      <%= if @current_scope && @current_scope.user do %>
+        <details class="account-menu" id="account-menu">
+          <summary class="account-summary">
+            <IdejoWeb.UserComponents.avatar user={@current_scope.user} size={:small} />
+            <span class="account-name">{@current_scope.user.display_name}</span>
+            <.icon name="hero-chevron-down-micro" class="size-4 opacity-60" />
+          </summary>
+          <div class="account-panel">
+            <p class="account-panel-who">
+              <span class="font-medium">{@current_scope.user.display_name}</span>
+              <span class="opacity-60">@{@current_scope.user.username}</span>
+            </p>
+            <ul>
+              <li>
+                <.link href={~p"/users/settings"} id="settings-link">
+                  <.icon name="hero-user-circle" class="size-4" />
+                  {gettext("Profile and account")}
+                </.link>
+              </li>
+              <li :if={@current_scope.administrator?}>
+                <.link href={~p"/admin"} id="admin-link">
+                  <.icon name="hero-cog-6-tooth" class="size-4" />
+                  {gettext("Admin")}
+                </.link>
+              </li>
+              <li class="account-panel-theme">
+                <span>{gettext("Theme")}</span>
+                <.theme_toggle />
+              </li>
+              <li>
+                <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
+                <.form for={%{}} action={~p"/users/sign-out"} method="delete">
+                  <button>
+                    <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
+                    {gettext("Sign out")}
+                  </button>
+                </.form>
+              </li>
+            </ul>
+          </div>
+        </details>
+      <% else %>
+        <%!-- On phones, the sidebar holds it: the header has no room. --%>
+        <.theme_toggle class="max-sm:hidden" />
+        <.link href={~p"/users/sign-in"} class="btn btn-ghost btn-sm">{gettext("Sign in")}</.link>
+        <.link href={~p"/users/sign-up"} class="btn btn-primary btn-sm">
+          {gettext("Sign up")}
+        </.link>
+      <% end %>
+    </nav>
+    """
+  end
+
+  attr :user, :any, required: true
+  attr :current, :any, required: true
+
+  # The categories the visitor may view, the most recently active first. Hidden and shown by
+  # the header's button (assets/js/sidebar.js), which the browser remembers.
+  defp sidebar(assigns) do
+    summaries =
+      assigns.user
+      |> Idejo.Forum.list_category_summaries()
+      |> Enum.sort_by(&(&1.last_activity_at || ~U[1970-01-01 00:00:00Z]), {:desc, DateTime})
+
+    assigns = assign(assigns, :summaries, summaries)
+
+    ~H"""
+    <aside id="sidebar" class="app-sidebar">
+      <nav aria-label={gettext("Categories")} class="sidebar-nav">
+        <p class="sidebar-heading">{gettext("Active categories")}</p>
+        <ul :if={@summaries != []}>
+          <li :for={%{category: category} = summary <- @summaries}>
+            <a
+              href={~p"/c/#{category.slug}"}
+              class={["sidebar-link", @current && @current.id == category.id && "is-current"]}
+              aria-current={@current && @current.id == category.id && "page"}
+            >
+              <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
+              <span class="sidebar-name">{category.name}</span>
+              <span :if={summary.last_activity_at} class="sidebar-when">
+                <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
+              </span>
+            </a>
+          </li>
+        </ul>
+        <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
+        <a href={~p"/"} class="sidebar-link sidebar-all">
+          <.icon name="hero-squares-2x2" class="size-4" />
+          {gettext("All categories")}
+        </a>
+      </nav>
+      <div :if={!@user} class="sidebar-theme sm:hidden">
+        <span>{gettext("Theme")}</span>
+        <.theme_toggle />
+      </div>
+    </aside>
     """
   end
 
@@ -80,9 +250,10 @@ defmodule IdejoWeb.Layouts do
     assigns = assign(assigns, :count, Idejo.Notifications.unread_count(assigns.user))
 
     ~H"""
-    <a href={~p"/notifications"} id="notifications-link" class="link">
-      {gettext("Notifications")}
-      <span :if={@count > 0} class="badge badge-sm badge-primary">
+    <a href={~p"/notifications"} id="notifications-link" class="header-icon">
+      <.icon name="hero-bell" class="size-5" />
+      <span class="sr-only">{gettext("Notifications")}</span>
+      <span :if={@count > 0} class="header-badge">
         {@count}<span class="sr-only">{gettext(" unread")}</span>
       </span>
     </a>
@@ -101,10 +272,11 @@ defmodule IdejoWeb.Layouts do
       :if={Idejo.Moderation.moderator?(@user)}
       href={~p"/moderation"}
       id="moderation-link"
-      class="link"
+      class="header-link"
     >
-      {gettext("Moderation")}
-      <span :if={@reports > 0} class="badge badge-sm badge-warning">
+      <.icon name="hero-shield-check" class="size-5" />
+      <span class="header-link-text">{gettext("Moderation")}</span>
+      <span :if={@reports > 0} class="header-badge header-badge-warning">
         {@reports}<span class="sr-only">{gettext(" open reports")}</span>
       </span>
     </a>
@@ -120,13 +292,11 @@ defmodule IdejoWeb.Layouts do
   """
   def site_footer(assigns) do
     ~H"""
-    <footer class="px-4 py-6 sm:px-6 lg:px-8 text-sm opacity-80">
-      <p class="mx-auto max-w-2xl flex flex-wrap gap-x-4 gap-y-1">
-        <a href="https://idejo.org" class="link" id="attribution">
-          Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
-        </a>
-        <a href={Idejo.Source.url()} class="link" id="source-code">{gettext("Source code")}</a>
-      </p>
+    <footer class="site-footer">
+      <a href="https://idejo.org" id="attribution">
+        Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
+      </a>
+      <a href={Idejo.Source.url()} id="source-code">{gettext("Source code")}</a>
     </footer>
     """
   end
@@ -176,8 +346,8 @@ defmodule IdejoWeb.Layouts do
 
   def admin(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
-      <nav aria-label={gettext("Admin")} class="tabs tabs-border mb-6">
+    <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide}>
+      <nav aria-label={gettext("Admin")} class="tabs tabs-border mb-6 overflow-x-auto">
         <.link
           navigate={~p"/admin"}
           class={["tab", @section == :settings && "tab-active"]}
@@ -287,40 +457,34 @@ defmodule IdejoWeb.Layouts do
 
   See <head> in root.html.heex which applies the theme before page load.
   """
+  attr :class, :any, default: nil
+
   def theme_toggle(assigns) do
     ~H"""
-    <div
-      role="group"
-      aria-label={gettext("Theme")}
-      class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full"
-    >
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0 transition-[left]" />
-
+    <div role="group" aria-label={gettext("Theme")} class={["theme-toggle", @class]}>
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        type="button"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
         aria-label={gettext("Use the system's theme")}
       >
-        <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-computer-desktop-micro" class="size-4" />
       </button>
-
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        type="button"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
         aria-label={gettext("Use the light theme")}
       >
-        <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-sun-micro" class="size-4" />
       </button>
-
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        type="button"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
         aria-label={gettext("Use the dark theme")}
       >
-        <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
+        <.icon name="hero-moon-micro" class="size-4" />
       </button>
     </div>
     """

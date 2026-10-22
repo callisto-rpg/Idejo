@@ -32,6 +32,7 @@ import {ShowAll} from "./show_all"
 import {Mentions, UserCard} from "./user_card"
 import {EditorImages} from "./editor_images"
 import {EditorTabs} from "./editor_tabs"
+import "./sidebar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

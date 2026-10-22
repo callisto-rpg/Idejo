@@ -282,7 +282,9 @@ roles or the permission grid. Every later change must keep it true:
   one-hour grace and pass `grace_ms:` when they need one.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count, last activity and,
-  for signed-in users, the unread marker (`CategoryHTML.unread_marker/1`, "N new").
+  for signed-in users, the unread marker ("N new"). Every topic list (category, home,
+  `/unread`) renders rows with `TopicComponents.topic_row/1`; the title link stays a direct
+  child of the `<li>` (tests read `#topics li > a`).
 - **Unread** (TP-07, `Idejo.Reading`): one `read_positions` row per user and topic, holding
   the last message seen. Opening a topic (`TopicController`, and `TopicLive` on connect)
   marks it read with `Reading.mark_read/2`, and so does every new message arriving while it
@@ -372,6 +374,19 @@ roles or the permission grid. Every later change must keep it true:
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
   `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
+- **Page frame and look**: `Layouts.app` draws the header bar (server name, search box,
+  Unread, Moderation, the notifications bell, and the account menu: a `<details>` holding
+  Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
+  categories sidebar and the content column (`width={:narrow}` for reading, `:wide` for the
+  home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
+  lists `Forum.list_category_summaries/1` (view right, in the query) most recently active
+  first; `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
+  before paint by `theme.js`) and opens it as a drawer on narrow ones. The home page is a
+  category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.
+  Styles live in `assets/css/app.css` as named components inside `@layer components`, on the
+  daisyUI theme tokens (light and dark); categories get one of eight tints from their id
+  (`TopicComponents.category_mark/1`, classes, never `style`). Times in lists read "5 min
+  ago" (`TopicComponents.time_ago/1`), with the exact time in `datetime` and `title`.
 - **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or

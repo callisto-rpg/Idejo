@@ -2,11 +2,14 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<Layouts.app flash={@flash} current_scope={@current_scope}>
+<Layouts.app flash={@flash} current_scope={@current_scope} category={@topic.category}>
   <.header>
     {@topic.title}
     <:subtitle>
-      <.link href={~p"/c/#{@topic.category.slug}"} class="link">{@topic.category.name}</.link>
+      <.link href={~p"/c/#{@topic.category.slug}"} class="topic-category">
+        <TopicComponents.category_mark category={@topic.category} />
+        {@topic.category.name}
+      </.link>
       <span :if={@topic.state == "archived"} id="topic-archived" class="badge badge-sm ml-2">
         {gettext("Archived: read only")}
       </span>
@@ -43,8 +46,10 @@
   </.header>
 
   <%!-- TP-14: moderator tools, a plain form (no JavaScript needed); each action is logged. --%>
-  <details :if={@can_moderate?} id="topic-moderation" class="text-sm">
-    <summary class="cursor-pointer">{gettext("Moderate this topic")}</summary>
+  <details :if={@can_moderate?} id="topic-moderation" class="panel-details">
+    <summary>
+      <.icon name="hero-shield-check" class="size-4" />{gettext("Moderate this topic")}
+    </summary>
     <.form
       for={%{}}
       action={~p"/t/#{@topic.id}/moderate"}
@@ -91,8 +96,8 @@
     </.form>
   </details>
 
-  <blockquote :if={@forked_from} id="forked-from" class="border-l-2 border-base-300 pl-3 text-sm">
-    <.link href={~p"/m/#{@forked_from.id}"} class="link">
+  <blockquote :if={@forked_from} id="forked-from" class="message-quote">
+    <.link href={~p"/m/#{@forked_from.id}"} class="font-medium">
       {gettext("Continued from %{name} in “%{topic}”",
         name: @forked_from.author.display_name,
         topic: @forked_from.topic.title

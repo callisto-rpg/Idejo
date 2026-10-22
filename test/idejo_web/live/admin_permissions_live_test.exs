@@ -151,7 +151,7 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
 
     assert has_element?(lv, "#role-#{team.id}", "Team")
 
-    lv |> element("nav a", "Help") |> render_click()
+    lv |> element(~s(nav[aria-label="Where the settings apply"] a), "Help") |> render_click()
     assert_patch(lv, ~p"/admin/permissions/#{help.slug}")
 
     set(lv, team, :view, "allow")

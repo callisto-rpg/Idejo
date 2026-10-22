@@ -17,43 +17,15 @@
     <script phx-track-static type="text/javascript" src={~p"/assets/js/theme.js"}>
     </script>
   </head>
-  <body>
+  <body class="app-shell">
     <%!-- AX-01: the first stop of the keyboard skips the navigation. --%>
     <a
       href="#main"
       id="skip-link"
-      class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:p-2 focus:bg-base-100"
+      class="skip-link"
     >
       {gettext("Skip to content")}
     </a>
-    <nav
-      aria-label={gettext("Account")}
-      class="w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end"
-    >
-      <%= if @current_scope do %>
-        <.link :if={@current_scope.administrator?} href={~p"/admin"}>{gettext("Admin")}</.link>
-        <.link href={~p"/users/settings"}>{@current_scope.user.display_name}</.link>
-        <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
-        <.form for={%{}} action={~p"/users/sign-out"} method="delete">
-          <button class="link">{gettext("Sign out")}</button>
-        </.form>
-      <% else %>
-        <.link href={~p"/users/sign-up"}>{gettext("Sign up")}</.link>
-        <.link href={~p"/users/sign-in"}>{gettext("Sign in")}</.link>
-      <% end %>
-    </nav>
-    <div
-      :if={@current_scope && !Idejo.Accounts.confirmed?(@current_scope.user)}
-      role="status"
-      class="alert alert-warning mx-4 sm:mx-6 lg:mx-8"
-    >
-      <p>
-        {gettext("Please verify your email address to take part. Check your inbox for the link.")}
-      </p>
-      <.form for={%{}} action={~p"/users/confirm"}>
-        <button class="btn btn-sm">{gettext("Send the link again")}</button>
-      </.form>
-    </div>
     {@inner_content}
   </body>
 </html>

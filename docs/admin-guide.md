@@ -46,7 +46,8 @@ have every right, whatever the settings say.
 
 ## The admin panel
 
-Owners and administrators see **Admin** in the top right corner. It has seven tabs.
+Owners and administrators find **Admin** in the menu under their name, in the top right
+corner. It has seven tabs.
 
 ### Settings
 
