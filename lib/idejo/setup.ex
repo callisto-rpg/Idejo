@@ -155,7 +155,7 @@ defmodule Idejo.Setup do
   defp ensure_needed, do: if(needed?(), do: :ok, else: {:error, :already_set_up})
 
   defp register_owner(owner_attrs) do
-    case Accounts.register_user(owner_attrs, confirmed: true, skip_invite: true) do
+    case Accounts.register_user(owner_attrs, confirmed: true, skip_invite: true, welcomed: true) do
       {:ok, owner} -> {:ok, owner}
       {:error, changeset} -> {:error, {:owner, changeset}}
     end

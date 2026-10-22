@@ -34,8 +34,9 @@ defmodule Idejo.AccountsFixtures do
     {:ok, user} =
       attrs
       |> valid_user_attributes()
-      # Fixtures are existing accounts: no invite needed, whatever the registration mode.
-      |> Accounts.register_user(skip_invite: true)
+      # Fixtures are existing accounts: no invite needed, whatever the registration mode, and
+      # no welcome card unless a test asks for one (`welcome: true`).
+      |> Accounts.register_user(skip_invite: true, welcomed: !Map.get(Map.new(attrs), :welcome))
 
     user
   end

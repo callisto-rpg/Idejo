@@ -133,6 +133,28 @@ defmodule IdejoWeb.Admin.RolesLive do
     """
   end
 
+  attr :form, :any, required: true
+
+  # Members give themselves the role (steward decision, 2026-10-23): with its rights.
+  defp self_select(assigns) do
+    ~H"""
+    <div>
+      <.input
+        field={@form[:self_select]}
+        type="select"
+        label={gettext("Members can choose it")}
+        options={[{gettext("No"), "false"}, {gettext("Yes"), "true"}]}
+        aria-describedby={"#{@form.id}-self-select-help"}
+      />
+      <p id={"#{@form.id}-self-select-help"} class="text-xs opacity-70 -mt-1 max-w-xs">
+        {gettext(
+          "Members who choose it get every right it has in Permissions: give it no moderation rights."
+        )}
+      </p>
+    </div>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -176,6 +198,7 @@ defmodule IdejoWeb.Admin.RolesLive do
                   spellcheck="false"
                 />
                 <.mention_settings :if={mentionable_kind?(role)} form={form} />
+                <.self_select :if={!role.built_in} form={form} />
                 <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                 <button type="button" class="btn btn-sm" phx-click="cancel_edit">
                   {gettext("Cancel")}
@@ -192,6 +215,9 @@ defmodule IdejoWeb.Admin.RolesLive do
                 <code>+{Access.role_slug(role)}</code>
                 <span :if={role.mentionable}>· {gettext("can be tagged by everyone")}</span>
                 <span :if={role.mentions_below}>· {gettext("can tag roles beneath")}</span>
+              </span>
+              <span :if={role.self_select} class="badge badge-sm badge-primary badge-soft">
+                {gettext("members can choose it")}
               </span>
               <span class="flex-1"></span>
               <button
@@ -259,6 +285,7 @@ defmodule IdejoWeb.Admin.RolesLive do
             spellcheck="false"
           />
           <.mention_settings form={@new_form} />
+          <.self_select form={@new_form} />
           <.button class="btn btn-primary">{gettext("Create role")}</.button>
         </.form>
       </section>

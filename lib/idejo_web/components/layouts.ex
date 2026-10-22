@@ -131,6 +131,36 @@ defmodule IdejoWeb.Layouts do
     </div>
 
     <.flash_group flash={@flash} />
+    <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
+    """
+  end
+
+  attr :user, :map, required: true
+
+  # The welcome card (steward decision, 2026-10-23): over the page on a new member's first
+  # visit, until they continue (`POST /welcome`). Shown without JavaScript too.
+  defp welcome_card(assigns) do
+    assigns = assign(assigns, :data, IdejoWeb.WelcomeComponents.welcome_data(assigns.user))
+
+    ~H"""
+    <div
+      id="welcome-card"
+      class="welcome-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-title"
+    >
+      <div class="welcome-card">
+        <h2 id="welcome-title" class="welcome-title">
+          {gettext("Welcome to %{server}", server: server_name())}
+        </h2>
+        <IdejoWeb.WelcomeComponents.welcome_content
+          data={@data}
+          heading="h3"
+          submit={gettext("Continue")}
+        />
+      </div>
+    </div>
     """
   end
 
@@ -248,6 +278,11 @@ defmodule IdejoWeb.Layouts do
         <a href={~p"/tags"} class="sidebar-link" id="tags-link">
           <.icon name="hero-tag" class="size-4" />
           {gettext("Filter by tag")}
+        </a>
+        <%!-- The server's About, Rules and self-select roles (steward decision, 2026-10-23). --%>
+        <a href={~p"/rules"} class="sidebar-link" id="rules-link">
+          <.icon name="hero-book-open" class="size-4" />
+          {gettext("Rules & Roles")}
         </a>
       </nav>
       <div :if={!@user} class="sidebar-theme sm:hidden">

@@ -26,6 +26,8 @@ defmodule Idejo.Access.Role do
     field :built_in, :boolean, default: false
     field :mentionable, :boolean, default: false
     field :mentions_below, :boolean, default: false
+    # Members may give themselves this role (custom roles only; steward decision, 2026-10-23).
+    field :self_select, :boolean, default: false
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -46,7 +48,7 @@ defmodule Idejo.Access.Role do
       cond do
         role.built_in and role.name in ~w(member guest) -> [:colour]
         role.built_in -> [:colour, :mentionable, :mentions_below]
-        true -> [:name, :colour, :mentionable, :mentions_below]
+        true -> [:name, :colour, :mentionable, :mentions_below, :self_select]
       end
 
     role

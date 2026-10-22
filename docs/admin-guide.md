@@ -56,6 +56,8 @@ corner. It has seven tabs.
 - **Growing-message window (seconds)**: from 10 to 600, 45 by default. It applies to messages
   started after you change it.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
+- **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
+  the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
 
 ### Email
 
@@ -147,6 +149,9 @@ which links are unused, used (and by whom) or expired.
   not tagged by everyone. Out of the box: owner, administrator and moderator. Member and
   guest can never be tagged.
 - Each role has a page at `/r/…` listing its members, which a **+role** links to.
+- **Members can choose it** (custom roles only): members give themselves this role, or drop
+  it, in the welcome card and under **Rules & Roles**. Whoever picks it gets every right the
+  role has in **Permissions**, so give such roles no moderation rights.
 
 ## Moderation
 

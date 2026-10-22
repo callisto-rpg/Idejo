@@ -74,7 +74,8 @@ defmodule Idejo.AccessRolesEditorTest do
                "colour" => "#3366ff",
                "position" => 4,
                "mentionable" => false,
-               "mentions_below" => false
+               "mentions_below" => false,
+               "self_select" => false
              }
     end
   end

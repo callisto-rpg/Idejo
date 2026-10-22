@@ -79,6 +79,26 @@ defmodule IdejoWeb.Admin.SettingsLive do
           step="1"
           required
         />
+        <%!-- The welcome card and "Rules & Roles" (steward decision, 2026-10-23). --%>
+        <.input
+          field={@form[:server_about]}
+          type="textarea"
+          label={gettext("About (Markdown)")}
+          rows="5"
+          aria-describedby="welcome-texts-help"
+        />
+        <.input
+          field={@form[:server_rules]}
+          type="textarea"
+          label={gettext("Rules (Markdown)")}
+          rows="8"
+          aria-describedby="welcome-texts-help"
+        />
+        <p id="welcome-texts-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "Shown to new members on their first visit, with the roles they may choose, and at any time under Rules & Roles."
+          )}
+        </p>
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>
