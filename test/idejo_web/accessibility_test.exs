@@ -107,6 +107,8 @@ defmodule IdejoWeb.AccessibilityTest do
       # Expanded topic cards (steward decision, 2026-10-23).
       ~p"/?view=expanded",
       ~p"/c/#{general.slug}?view=expanded",
+      # The email summary's unsubscribe page (NO-04; steward decision, 2026-10-23).
+      ~p"/email/unsubscribe/any-token",
       ~p"/t/#{topic.id}/#{topic.slug}",
       ~p"/t/#{topic.id}/#{topic.slug}?reply_to=#{reply.id}",
       ~p"/search",

@@ -467,6 +467,20 @@ roles or the permission grid. Every later change must keep it true:
   sidebar's dots on followed topics (`Reading.activity/2`) and as live bubbles: there is no
   notifications page or bell (steward decision, 2026-10-23, departing from MVP §5's
   Notifications screen), and `read_at` is no longer set.
+- **Email summary** (steward decision, 2026-10-23, with NO-04 of the v1 sheet:
+  `Idejo.Notifications.Digest`, `email_preferences`, `Idejo.Notifications.DigestWorker`,
+  Oban cron hourly, queue `maintenance`): the profile's "Email notifications" section
+  (`UserSettingsLive`, `Digest.update_preferences/2`; no row means the defaults: mentions
+  and replies and own topics on, once a week on). `users.last_seen_at` is kept by
+  `Accounts.seen/1` from `UserAuth.fetch_current_scope_for_user/2`, writing at most every
+  five minutes. After 24 hours away a member gets one email counting, for each chosen
+  option, what happened since they were seen or since the last summary: closed messages
+  only (NO-04), not deleted, by others, viewable, not in muted topics; nothing to count
+  sends nothing. Once a week: no second one for seven days while away (the email says so);
+  else one a day. Every email carries `List-Unsubscribe` (+ `-Post`, RFC 8058) to
+  `/email/unsubscribe/{token}` (`EmailUnsubscribeController`: GET page in `:browser`, POST
+  outside it, no session or CSRF: the random token is the authority), which turns every
+  option off.
 - **Live notifications** (steward decision, 2026-10-23): what `notify_new/2` and
   `notify_mentions/2` insert waits in the writing process (process dictionary) until
   `Notifications.announce/1` after commit: `Messages.broadcast/2` calls it for every

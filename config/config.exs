@@ -45,7 +45,12 @@ config :idejo, Oban,
   plugins: [
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
-     crontab: [{"0 3 * * *", Idejo.Backup.Worker}, {"0 4 * * *", Idejo.Uploads.CleanupWorker}]}
+     crontab: [
+       {"0 3 * * *", Idejo.Backup.Worker},
+       {"0 4 * * *", Idejo.Uploads.CleanupWorker},
+       # The email summaries (steward decision, 2026-10-23).
+       {"0 * * * *", Idejo.Notifications.DigestWorker}
+     ]}
   ]
 
 # SP-02: passwords are hashed with Argon2id at a pinned cost (3 passes, 2^16 KiB = 64 MiB,

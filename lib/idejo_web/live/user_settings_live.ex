@@ -14,6 +14,7 @@ defmodule IdejoWeb.UserSettingsLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts
+  alias Idejo.Notifications.Digest
   alias Idejo.Uploads
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.UserAuth
@@ -30,6 +31,7 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
+     |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
      |> assign(:image_error, nil)
      |> allow_avatar(:avatar)
      |> allow_avatar(:dark_avatar)}
@@ -133,6 +135,22 @@ defmodule IdejoWeb.UserSettingsLive do
 
     {:noreply,
      socket |> put_flash(:info, gettext("Avatar removed.")) |> redirect(to: ~p"/users/settings")}
+  end
+
+  # Email notifications (steward decision, 2026-10-23): the summary sent after a day away.
+  def handle_event("save_email", %{"email" => params}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Digest.update_preferences(user, params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Email notifications saved."))
+         |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :email_form, to_form(changeset, as: :email))}
+    end
   end
 
   def handle_event("validate_password", %{"password" => params}, socket) do
@@ -274,6 +292,61 @@ defmodule IdejoWeb.UserSettingsLive do
             </button>
           </div>
         </details>
+      </section>
+
+      <section class="mt-10" aria-labelledby="email-notifications-heading">
+        <h2 id="email-notifications-heading" class="font-semibold mb-2">
+          {gettext("Email notifications")}
+        </h2>
+        <.form for={@email_form} id="email-notifications-form" phx-submit="save_email">
+          <fieldset class="mb-2">
+            <legend class="mb-2">
+              {gettext(
+                "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
+              )}
+            </legend>
+            <.input
+              field={@email_form[:mentions]}
+              type="checkbox"
+              label={
+                gettext("@%{username} mentions and replies to my posts",
+                  username: @current_scope.user.username
+                )
+              }
+            />
+            <.input
+              field={@email_form[:role_mentions]}
+              type="checkbox"
+              label={gettext("+role mentions")}
+            />
+            <.input
+              field={@email_form[:own_topics]}
+              type="checkbox"
+              label={gettext("New messages in a thread I created")}
+            />
+            <.input
+              field={@email_form[:followed_topics]}
+              type="checkbox"
+              label={gettext("New messages in a thread I follow")}
+            />
+            <.input
+              field={@email_form[:new_topics]}
+              type="checkbox"
+              label={gettext("New topics created")}
+            />
+            <.input
+              field={@email_form[:all_activity]}
+              type="checkbox"
+              label={gettext("Any activity in the forum")}
+            />
+          </fieldset>
+          <.input
+            field={@email_form[:once_a_week]}
+            type="checkbox"
+            label={gettext("Don't send me a second message in the same week if I don't log in.")}
+          />
+          <.button class="btn btn-primary">{gettext("Save email notifications")}</.button>
+        </.form>
       </section>
 
       <section class="mt-10" aria-labelledby="password-heading">

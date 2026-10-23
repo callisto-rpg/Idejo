@@ -470,6 +470,23 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
+  Records that the user is here (steward decision, 2026-10-23), for the email summary of what
+  they missed: `last_seen_at` moves to now, at most every five minutes, so a page load
+  rarely writes. Called for each signed-in request by `IdejoWeb.UserAuth`.
+  """
+  @spec seen(User.t()) :: User.t()
+  def seen(%User{last_seen_at: last} = user) do
+    now = DateTime.utc_now()
+
+    if last && DateTime.diff(now, last) < 300 do
+      user
+    else
+      Repo.update_all(from(u in User, where: u.id == ^user.id), set: [last_seen_at: now])
+      %{user | last_seen_at: now}
+    end
+  end
+
+  @doc """
   Bans an account, as a server moderator (`Access.server_moderator?/1`), for good (`until`
   nil) or until a time to come, with an optional reason (MO-02, steward decision). The
   account can no longer sign in; its sessions are deleted, and their socket ids returned for

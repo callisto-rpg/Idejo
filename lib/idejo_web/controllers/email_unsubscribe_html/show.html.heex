@@ -1,0 +1,26 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>{gettext("Email notifications")}</.header>
+
+  <p :if={@done?} id="unsubscribed" role="status">
+    {gettext(
+      "Done: you will get no more summaries by email. You can turn them on again in your profile, under Email notifications."
+    )}
+  </p>
+
+  <%!-- A plain form (no session needed: the address is the authority). --%>
+  <form
+    :if={!@done?}
+    action={~p"/email/unsubscribe/#{@token}"}
+    method="post"
+    id="unsubscribe-form"
+  >
+    <p class="mb-4">
+      {gettext("Stop the summaries of what you missed, sent by email when you are away?")}
+    </p>
+    <button class="btn btn-primary">{gettext("Stop these emails")}</button>
+  </form>
+</Layouts.app>

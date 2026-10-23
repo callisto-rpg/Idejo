@@ -362,6 +362,10 @@ defmodule Idejo.Reading do
 
   defp followed_ids(user), do: from(t in followed(user), select: t.id)
 
+  @doc "The ids of the topics the user follows (TP-13), as a query (for `in subquery(...)`)."
+  @spec followed_topic_ids(User.t()) :: Ecto.Query.t()
+  def followed_topic_ids(%User{} = user), do: followed_ids(user)
+
   @doc """
   What is waiting for the user personally, for the badge on the header's Unread link
   (steward decision, 2026-10-23): how many unread messages reply to them, @mention them or
