@@ -11,6 +11,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Access.UserRole
   alias Idejo.Federation
   alias Idejo.Moderation
+  alias Idejo.Push
   alias Idejo.Repo
   alias Idejo.Uploads
 
@@ -324,6 +325,7 @@ defmodule Idejo.Accounts do
         others = from(t in UserToken, where: t.user_id == ^user.id and t.token != ^kept_token)
         socket_ids = Enum.reject(session_socket_ids(user), &(&1 == kept_socket_id))
         Repo.delete_all(others)
+        :ok = Push.delete_for_sessions(socket_ids)
         {:ok, {user, socket_ids}}
       end
     end)
@@ -345,6 +347,7 @@ defmodule Idejo.Accounts do
 
         socket_ids = session_socket_ids(user)
         Repo.delete_all(tokens)
+        :ok = Push.delete_for_user(user)
         {:ok, {user, socket_ids}}
       end
     end)
@@ -519,6 +522,7 @@ defmodule Idejo.Accounts do
            Repo.delete_all(
              from t in UserToken, where: t.user_id == ^user.id and t.context == "session"
            ),
+         :ok <- Push.delete_for_user(user),
          {:ok, _} <-
            Moderation.record(moderator, "user.ban", banned,
              reason: reason,
@@ -575,6 +579,7 @@ defmodule Idejo.Accounts do
       socket_ids = session_socket_ids(user)
       Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
       Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id)
+      :ok = Push.delete_for_user(user)
 
       # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.
       deleted =
@@ -655,10 +660,12 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
-  Deletes the signed token with the given context.
+  Deletes the signed token with the given context (sign-out), and the browser push
+  subscriptions made in its session (PN-13).
   """
   def delete_user_session_token(token) do
+    socket_id = session_socket_id(token)
     Repo.delete_all(from(UserToken, where: [token: ^token, context: "session"]))
-    :ok
+    :ok = Push.delete_for_sessions(List.wrap(socket_id))
   end
 end

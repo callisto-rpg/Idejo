@@ -159,6 +159,9 @@ defmodule IdejoWeb.Router do
     # The topic menu (steward decision, 2026-10-23): unfollow & mute, mark unread.
     post "/t/:id/mute", FollowController, :mute
     post "/t/:id/unread", FollowController, :unread
+    # PN-13, PN-16: the browser saves or removes its push subscription (JSON, from push.js).
+    post "/push/subscriptions", PushSubscriptionController, :create
+    delete "/push/subscriptions", PushSubscriptionController, :delete
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive

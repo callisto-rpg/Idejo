@@ -49,6 +49,7 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 | MO | `lib/idejo/moderation/` | Reports, mod actions, bans |
 | SE | `lib/idejo/search/` | Postgres full-text, permission-aware |
 | NO | `lib/idejo/notifications/` | In-app only in v0.1 |
+| PN | `lib/idejo/push/` | Web push (refines NO-05) |
 | FD | `lib/idejo/federation/` | URIs, activities outbox |
 | AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard, backup, CLI recovery |
 | SP | `lib/idejo/audit/`, `lib/idejo_web/plugs/` | Audit log, CSP, rate limits |
@@ -495,6 +496,18 @@ roles or the permission grid. Every later change must keep it true:
   `/email/unsubscribe/{token}` (`EmailUnsubscribeController`: GET page in `:browser`, POST
   outside it, no session or CSRF: the random token is the authority), which turns every
   option off.
+- **Web push** (NO-05, PN-01 to PN-24 in the v1 sheet; steward decision, 2026-10-24, built
+  ahead of the MVP): standard Web Push with our own RFC 8291/8292 code on OTP `:crypto` (no Hex
+  library qualified: the maintained one encrypts with the old `aesgcm`). Driven by the rows
+  `notify_new/2` and `notify_mentions/2` write, so their kind order is PN-05's precedence and
+  NO-02 holds; a `follow` row only feeds the debounced PN-04. "Unread" counts come from read
+  positions (as `Reading.for_you/1`), never `read_at`; "several mentions" and PN-04 open
+  `/unread`. Until NO-03 and NO-06 exist, `Idejo.Push.allowed?/3` treats a muted topic as
+  "none" and every other as "all"; there are no category follows. `+role`, not `@role`, in
+  PN-03. Subscriptions end wherever their session's tokens are deleted (AC-08 is not built).
+  Built in the order: manifest (CL-01), `/privacy`, VAPID keys and switch, crypto,
+  subscriptions, sending, service worker, dispatch, PN-04, banner, settings; each PR adds
+  its own details here.
 - **Live notifications** (steward decision, 2026-10-23): what `notify_new/2` and
   `notify_mentions/2` insert waits in the writing process (process dictionary) until
   `Notifications.announce/1` after commit: `Messages.broadcast/2` calls it for every
@@ -832,10 +845,16 @@ roles or the permission grid. Every later change must keep it true:
   JavaScript) shows moderators the entries of the categories they moderate, and owners and
   administrators all of them; `Moderation.moderator?/1` gates it and the header link. Add a
   label for each new action in `ModerationHTML.action_label/1`.
+- **Push encryption** (PN-15; steward decision, 2026-10-24; extra review: DV-06):
+  `Idejo.Push.Crypto` on OTP `:crypto` alone, no Hex library (the maintained one encrypts
+  with the draft `aesgcm`): `encrypt/4` (RFC 8291 with RFC 8188 `aes128gcm`, one record, a
+  fresh sender key and salt per message), `vapid_authorization/4` (RFC 8292, ES256 JWT for
+  the endpoint's origin, 12 h) and `decrypt/4` for tests. Its tests check RFC 8291's
+  example byte for byte.
 - **Rate limits** (SP-05, `Idejo.RateLimit`, Hammer/ETS; extra review: DV-06): per IP in
   plugs (`IdejoWeb.Plugs.RateLimit`: `:request` on every request in the endpoint, `:sign_in`,
   `:sign_up`, `:reset_password` in their controllers; 429 with `Retry-After`), per user in the
-  contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload` →
+  contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload`, `:push_subscribe` →
   `{:error, :rate_limited}`, which every caller must handle). Limits are in
   `Idejo.RateLimit`. `IdejoWeb.Plugs.ClientIp` takes the visitor's address from the rightmost
   `X-Forwarded-For` only when the peer is on a private network (Caddy); `:behind_proxy` turns
@@ -843,7 +862,7 @@ roles or the permission grid. Every later change must keep it true:
   turns them on (not async) and uses addresses and accounts of its own.
 - **Command-line recovery** (AD-09, `Idejo.Release`; extra review: DV-06):
   `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `backup`,
-  `restore FILE [--yes]`, `health`) runs
+  `restore FILE [--yes]`, `health`, `push-key`, `rotate-push-keys [--yes]`) runs
   `Idejo.Release` functions with `bin/idejo rpc` when the server is running, else
   `bin/idejo eval` (which starts only the repo, through `Ecto.Migrator.with_repo`). They print
   on standard output (under rpc standard error goes to the server's log) and fail with
@@ -852,6 +871,46 @@ roles or the permission grid. Every later change must keep it true:
   endpoint runs: the one web call `Release` makes) and is audited as `user.password_reset`
   with no admin. `restore` runs only with the server stopped (eval), after a typed
   confirmation. Usage: `docs/deploying.md`.
+- **Push keys and switch** (PN-14, PN-19; steward decision, 2026-10-24; extra review:
+  DV-06): web push lives in `Idejo.Push` (`lib/idejo/push/`). `Push.enabled?/0` is the "Push
+  notifications" setting (`push_enabled`, `"on"`/`"off"`, **Admin → Settings**): off means
+  no banner, no subscribing, no sending. The VAPID keys (`Idejo.Push.Vapid`) are two
+  `settings` rows outside `Settings`'s definitions (no form changes them), the private one
+  encrypted by `Settings.Secret`; a migration makes them on every install (it runs before
+  the setup wizard, so new installs too). `Release.push_key/0` and `rotate_push_keys/0`
+  (audited `push.rotate_keys`, no admin) are `idejo-admin push-key` and `rotate-push-keys`;
+  `health` checks the keys can be read.
+- **Push subscriptions** (PN-13, PN-16; extra review: DV-06): `push_subscriptions` rows
+  (`Idejo.Push.Subscription`: endpoint, unique; `p256dh` and `auth`, URL-safe Base64 without
+  padding, checked to be a P-256 point and 16 bytes; user agent; `session_id`, the sign-in's
+  `user_tokens.socket_id`; `last_success_at`, `failure_count`). `Push.subscribe/4` (refused
+  while push is off, rate-limited `:push_subscribe`) upserts on the endpoint, then keeps the
+  user's 10 newest (`Push.max_per_user/0`). They end with their session:
+  `Accounts.delete_user_session_token/1` (sign-out) and `update_user_password/3` (other
+  sessions) call `Push.delete_for_sessions/1`; `reset_user_password/2`, bans and
+  `delete_user/2` call `Push.delete_for_user/1`, inside their transactions; a new way of
+  ending sessions (AC-08) must do the same. Rotating the VAPID keys calls
+  `Push.delete_all/0`. `Idejo.Push.Endpoint.check/1` (PN-16) is asked before saving and
+  must be asked before every send: `https`, no userinfo, the host in the `push_services`
+  setting (one per line, `*.` for any name under a domain; **Admin → Settings**), and every
+  address it resolves to public (`public?/1`: no loopback, private, link-local, CGNAT, ULA,
+  multicast, reserved or documentation range; mapped and NAT64 IPv6 checked as their IPv4).
+  It returns the addresses so the sender connects to one of them (no DNS rebinding). Tests
+  resolve with `Idejo.FakeDNS` (`config :idejo, :push_resolver`), never the network. The
+  browser posts `PushSubscription.toJSON()` to `POST /push/subscriptions` and removes it with
+  `DELETE` (`PushSubscriptionController`, signed in, CSRF header; 204, or 422/429/404 with
+  `{"error": reason}`).
+- **Push sending** (PN-15; extra review: DV-06): `Push.deliver(user, payload, urgency:)`
+  queues one `Idejo.Push.Worker` job per browser (queue `push`, TTL 24 h), refusing payloads
+  over `Push.max_payload/0` (3 KB encrypted, PN-12). The worker re-checks the switch, the
+  subscription and the endpoint; `Idejo.Push.Sender` encrypts, signs (`sub`:
+  `Push.contact/0`, the first owner's email) and posts to the checked address with the host
+  name in `connect_options: [hostname:]` and `Host`, no redirects. 2xx resets
+  `failure_count`; 404/410 delete; 429, 5xx and no answer snooze (`Retry-After`, seconds or
+  date, else 30 s doubling to an hour: `Worker.delay/2`); other statuses cancel; 5 failures
+  in a row delete the subscription. Tests use `Idejo.FakePushService` (Bandit on a free
+  port, set as `config :idejo, :push_target`; Bypass needs ranch 1, the lock has ranch 2)
+  and read payloads with `Crypto.decrypt/4`.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),
@@ -866,7 +925,7 @@ roles or the permission grid. Every later change must keep it true:
   needing them are tagged `pg_tools` (skipped with a note when missing, never on CI); the
   restore test uses a database of its own through a dynamic repo, outside the sandbox.
 - **Background jobs**: Oban (`config :idejo, Oban`, `oban_jobs` migration pinned to
-  version 14; queues `maintenance` and `messages`), `testing: :manual` in tests (use
+  version 14; queues `maintenance`, `messages` and `push`), `testing: :manual` in tests (use
   `Oban.Testing`).
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
