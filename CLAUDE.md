@@ -344,7 +344,11 @@ roles or the permission grid. Every later change must keep it true:
   unread messages across viewable categories: on the first page, "Following" holds every
   followed one (`Reading.list_unread_followed_topics/1`, `#followed-topics`; steward
   decision, 2026-10-23), then "Other topics", 30 a page (`Reading.list_unread_topics/2` with
-  `following: false`, `#topics`).
+  `following: false`, `#topics`). The header's Unread link (`Layouts.unread_link/1`) carries
+  a dot counting unread messages that reply to the user or @/+ mention them
+  (`Reading.for_you/1`, view right in the query; steward decision, 2026-10-23), coloured
+  like the sidebar's dots (`.unread-badge.is-{level}`); `/sidebar` serves the link too, so
+  the `Notifier` hook keeps the count current.
 - **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
   decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
   re-encoded in the same format without metadata (SP-05), animated frames kept, JPEGs turned

@@ -89,11 +89,7 @@ defmodule IdejoWeb.Layouts do
         >
           <.icon name="hero-magnifying-glass" class="size-5" />
         </a>
-        <%!-- TP-07: topics with something new, across categories. --%>
-        <a :if={@user} href={~p"/unread"} id="unread-link" class="header-link">
-          <.icon name="hero-inbox-stack" class="size-5" />
-          <span class="header-link-text">{gettext("Unread")}</span>
-        </a>
+        <.unread_link :if={@user} user={@user} />
         <.moderation_link :if={@user} user={@user} />
       </nav>
 
@@ -467,6 +463,39 @@ defmodule IdejoWeb.Layouts do
     <style :if={@nonce && @rules != ""} nonce={@nonce}>
       <%= @rules %>
     </style>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  @doc """
+  The header's Unread link (TP-07: topics with something new, across categories), with a
+  dot counting the unread messages that reply to the user or mention them or their roles,
+  coloured like the sidebar's dots (`Idejo.Reading.for_you/1`; steward decision,
+  2026-10-23). Also served in `/sidebar`, so the `Notifier` hook keeps it current.
+  """
+  def unread_link(assigns) do
+    assigns = assign(assigns, :for_you, Idejo.Reading.for_you(assigns.user))
+
+    ~H"""
+    <a href={~p"/unread"} id="unread-link" class="header-link">
+      <.icon name="hero-inbox-stack" class="size-5" />
+      <span class="header-link-text">{gettext("Unread")}</span>
+      <span
+        :if={@for_you.count > 0}
+        class={[
+          "header-badge",
+          "unread-badge",
+          "is-#{String.replace(to_string(@for_you.level), "_", "-")}"
+        ]}
+      >
+        {@for_you.count}<span class="sr-only">{ngettext(
+          " reply or mention for you",
+          " replies and mentions for you",
+          @for_you.count
+        )}</span>
+      </span>
+    </a>
     """
   end
 

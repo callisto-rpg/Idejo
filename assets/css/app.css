@@ -445,6 +445,13 @@
   }
   .header-link .header-badge { position: static; box-shadow: none; }
   .header-badge-warning { background: var(--color-warning); color: var(--color-warning-content); }
+  /* Replies and mentions waiting, in the sidebar dots' colours, darkened for legible digits
+     (steward decision, 2026-10-23). */
+  .unread-badge {
+    &.is-mention { background: var(--color-error); color: var(--color-error-content); }
+    &.is-reply { background: oklch(72% 0.18 55); color: oklch(22% 0.03 55); }
+    &.is-role-mention { background: oklch(52% 0.17 250); color: oklch(98% 0 0); }
+  }
 
   /* Account menu: a <details>, so it works without JavaScript. */
   .account-nav { display: flex; align-items: center; gap: 0.5rem; }
