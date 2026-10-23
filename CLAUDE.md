@@ -532,7 +532,7 @@ roles or the permission grid. Every later change must keep it true:
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
   categories sidebar (each category with the topics the user follows there,
   `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
-  "N more topics" `<details>`; each with an unfollow ×, faint until pointed at or focused, a
+  "N more topics" `<details>`; each with an unfollow ×, shown on hover, focus or the topic on screen, a
   form to `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to
   the same-host `Referer`; long names end in "…", the lists' grid columns being
   `minmax(0, 1fr)`) and the content column (`width={:narrow}` for reading, `:wide` for the

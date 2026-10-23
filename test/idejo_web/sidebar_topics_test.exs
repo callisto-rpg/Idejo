@@ -155,6 +155,9 @@ defmodule IdejoWeb.SidebarTopicsTest do
     assert css =~ "animation: sidebar-burn 2.2s ease-out both;"
     assert css =~ "color: color-mix(in oklab, var(--burn-ink) 50%, currentColor);"
     assert css =~ ".sidebar-topic.is-current {"
+    [action] = Regex.run(~r/^  \.sidebar-topic-action \{.*?^  \}/ms, css)
+    assert action =~ "opacity: 0;"
+    assert css =~ ".sidebar-topic.is-current .sidebar-topic-action { opacity: 1; }"
 
     js = File.read!("assets/js/notifier.js")
     assert js =~ ~s(window.addEventListener("phx:topic_activity")
