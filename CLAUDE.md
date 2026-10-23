@@ -832,6 +832,12 @@ roles or the permission grid. Every later change must keep it true:
   JavaScript) shows moderators the entries of the categories they moderate, and owners and
   administrators all of them; `Moderation.moderator?/1` gates it and the header link. Add a
   label for each new action in `ModerationHTML.action_label/1`.
+- **Push encryption** (PN-15; steward decision, 2026-10-24; extra review: DV-06):
+  `Idejo.Push.Crypto` on OTP `:crypto` alone, no Hex library (the maintained one encrypts
+  with the draft `aesgcm`): `encrypt/4` (RFC 8291 with RFC 8188 `aes128gcm`, one record, a
+  fresh sender key and salt per message), `vapid_authorization/4` (RFC 8292, ES256 JWT for
+  the endpoint's origin, 12 h) and `decrypt/4` for tests. Its tests check RFC 8291's
+  example byte for byte.
 - **Rate limits** (SP-05, `Idejo.RateLimit`, Hammer/ETS; extra review: DV-06): per IP in
   plugs (`IdejoWeb.Plugs.RateLimit`: `:request` on every request in the endpoint, `:sign_in`,
   `:sign_up`, `:reset_password` in their controllers; 429 with `Retry-After`), per user in the
