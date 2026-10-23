@@ -84,7 +84,9 @@ defmodule IdejoWeb.TopicLive do
            move_to: nil,
            move_query: "",
            move_results: [],
-           move_error: nil
+           move_error: nil,
+           first_unread: nil,
+           unread_line?: false
          )}
 
       topic ->
@@ -102,6 +104,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
+         |> put_first_unread(session["first_unread"])
          |> put_forks()
          |> assign(can_react?: can_react?(user, topic), picker: nil)
          |> assign(
@@ -123,6 +126,18 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  # Where the reader left off (TP-07; steward decision, 2026-10-23): the oldest message unread
+  # when the page was asked for, which the controller found before marking the topic read.
+  # The "N unread messages" line shows above it until the `UnreadLine` hook says it faded.
+  defp put_first_unread(socket, %{id: id, count: count}) do
+    if Enum.any?(socket.assigns.messages, &(&1.id == id)),
+      do: assign(socket, first_unread: %{id: id, count: count}, unread_line?: true),
+      else: put_first_unread(socket, nil)
+  end
+
+  defp put_first_unread(socket, _none),
+    do: assign(socket, first_unread: nil, unread_line?: false)
 
   defp subscribe(topic, user) do
     Messages.subscribe(topic.id)
@@ -453,6 +468,10 @@ defmodule IdejoWeb.TopicLive do
   end
 
   def handle_event("hide_card", _params, socket), do: {:noreply, assign(socket, :card, nil)}
+
+  # The "N unread messages" line has faded (`UnreadLine` hook): it goes for good.
+  def handle_event("unread_line_done", _params, socket),
+    do: {:noreply, assign(socket, :unread_line?, false)}
 
   # TP-17: add a reaction, or take it back. The new summary reaches every viewer as an event.
   def handle_event("react", %{"id" => id, "emoji" => emoji}, socket)
@@ -877,6 +896,13 @@ defmodule IdejoWeb.TopicLive do
           {elem(@announcement, 1)}
         </span>
       </div>
+      <.topic_nav
+        :if={@topic && @messages != []}
+        title={@topic.title}
+        messages={@messages}
+        first_unread={@first_unread}
+        viewer={@current_scope && @current_scope.user}
+      />
       <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
         {gettext("You can no longer view this topic.")}
       </p>
@@ -888,6 +914,11 @@ defmodule IdejoWeb.TopicLive do
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
         >
+          <.unread_line
+            :if={@unread_line? and @first_unread.id == message.id}
+            message_id={message.id}
+            count={@first_unread.count}
+          />
           <.message
             message={message}
             topic={@topic}
@@ -928,6 +959,11 @@ defmodule IdejoWeb.TopicLive do
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
         >
+          <.unread_line
+            :if={@unread_line? and @first_unread.id == message.id}
+            message_id={message.id}
+            count={@first_unread.count}
+          />
           <.message
             message={message}
             topic={@topic}
@@ -974,6 +1010,94 @@ defmodule IdejoWeb.TopicLive do
           <% true -> %>
         <% end %>
       </div>
+    </div>
+    """
+  end
+
+  attr :title, :string, required: true
+  attr :messages, :list, required: true
+  attr :first_unread, :map, default: nil
+  attr :viewer, :any, required: true
+
+  # The topic navigator (steward decision, 2026-10-23): once the title has scrolled away, a
+  # card at the right with the title and links to the first message, the first unread, the
+  # last message and the reader's own last one; where the right has no room for it (phones),
+  # a small pill at the top right that opens it. Plain links to the messages' anchors
+  # (TP-06); the `TopicNav` hook shows it, picks card or pill and scrolls. Without
+  # JavaScript it stays hidden (the page reads the same without it, AX-04).
+  defp topic_nav(assigns) do
+    viewer_id = assigns.viewer && assigns.viewer.id
+
+    assigns =
+      assign(assigns,
+        first: List.first(assigns.messages),
+        last: List.last(assigns.messages),
+        mine:
+          viewer_id &&
+            assigns.messages
+            |> Enum.reverse()
+            |> Enum.find(&(&1.author_id == viewer_id and is_nil(&1.deleted_at)))
+      )
+
+    ~H"""
+    <nav
+      id="topic-nav"
+      class="topic-nav"
+      aria-label={gettext("Topic navigation")}
+      phx-hook="TopicNav"
+      phx-mounted={JS.ignore_attributes(["data-shown", "data-mode", "data-open"])}
+    >
+      <button
+        type="button"
+        class="topic-nav-pill"
+        aria-expanded="false"
+        aria-controls="topic-nav-panel"
+        phx-mounted={JS.ignore_attributes(["aria-expanded"])}
+      >
+        <.icon name="hero-queue-list" class="size-4" />
+        <span class="sr-only">{gettext("Jump to a message")}</span>
+      </button>
+      <div id="topic-nav-panel" class="topic-nav-panel">
+        <p class="topic-nav-title">{@title}</p>
+        <ul class="topic-nav-links">
+          <li>
+            <a href={"#message-#{@first.id}"} id="topic-nav-first">
+              <.icon name="hero-chevron-double-up" class="size-4" />{gettext("First message")}
+            </a>
+          </li>
+          <li :if={@first_unread}>
+            <a href={"#message-#{@first_unread.id}"} id="topic-nav-unread">
+              <.icon name="hero-sparkles" class="size-4" />{gettext("First unread")}
+            </a>
+          </li>
+          <li>
+            <a href={"#message-#{@last.id}"} id="topic-nav-last">
+              <.icon name="hero-chevron-double-down" class="size-4" />{gettext("Last message")}
+            </a>
+          </li>
+          <li :if={@mine}>
+            <a href={"#message-#{@mine.id}"} id="topic-nav-mine">
+              <.icon name="hero-user" class="size-4" />{gettext("My last message")}
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    """
+  end
+
+  attr :message_id, :string, required: true, doc: "the message it stands above"
+  attr :count, :integer, required: true
+
+  # Where the reader left off (TP-07): a red line above the oldest message unread when they
+  # opened the topic; the page opens centred on it (`UnreadLine` hook). It stays 4 s, then
+  # fades (CSS) and goes.
+  defp unread_line(assigns) do
+    ~H"""
+    <div id="unread-line" class="unread-line" phx-hook="UnreadLine" data-message-id={@message_id}>
+      <span>
+        {ngettext("1 unread message", "%{count} unread messages", @count)}
+      </span>
     </div>
     """
   end

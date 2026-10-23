@@ -117,6 +117,12 @@ change and keeps no history.
   however much it grows. The number on it counts the unread messages that reply to you or
   mention you or one of your roles; its colour is that of the strongest, as for the
   sidebar's dots. It updates by itself.
+- **Back in a topic** you opened before, the page opens on the oldest message you have not
+  seen, under a red **N unread messages** line that fades after a few seconds.
+- **Jump to a message**: once you scroll past a topic's title, a card at the right shows the
+  title with **First message**, **First unread**, **Last message** and **My last message**.
+  Where there is no room beside the conversation (on a phone), it is a small round button at
+  the top right that opens the same list.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
   unfollow them, and the topics marked **Followed by everyone**, unless you unfollow them.
 - **Search**, the box at the top, finds words in messages and titles.
