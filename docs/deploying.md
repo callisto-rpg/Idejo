@@ -299,6 +299,10 @@ Every night at 03:00 UTC Idejo backs up the database and the uploaded images int
 container). The newest 7 are kept; older ones are deleted. `idejo exec app bin/idejo-admin
 health` shows when the last one was made; a failed backup is written to the app log.
 
+At 04:00 UTC Idejo deletes uploaded images that nothing uses any more: pictures pasted into
+a message and removed before sending, older than a day. Images in messages (deleted ones
+and earlier versions included), in the About and Rules texts and avatars are kept.
+
 **Make one now**, e.g. before an update:
 
 ```sh
