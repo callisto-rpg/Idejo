@@ -403,8 +403,9 @@ roles or the permission grid. Every later change must keep it true:
   `lead={:category}`: the category's mark and name instead of the starter's avatar and name.
   Its tags sit at the right, above the message count (steward decision, 2026-10-23).
   **View** (steward decision, 2026-10-23): the home page (beside its first section title)
-  and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`, two links
-  (`?view=compact`, the default, and `?view=expanded`) remembered in the session
+  and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`: a "View" label, then
+  two links drawn as joined buttons (`btn join-item`, the chosen one `btn-primary`; steward
+  decision, 2026-10-24) (`?view=compact`, the default, and `?view=expanded`) remembered in the session
   (`IdejoWeb.TopicView`). Expanded rows get `preview=` from `Forum.topic_previews/1` (a few
   queries per page, whatever its length): the opening message's excerpt and, at the right in
   at most 30% of the card, the topic's uploaded images (`images`, the opening message's first;

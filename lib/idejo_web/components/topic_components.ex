@@ -280,23 +280,26 @@ defmodule IdejoWeb.TopicComponents do
 
   @doc """
   The "View" toggle of the home and category pages (steward decision, 2026-10-23): Compact
-  (the default) or Expanded topic cards. Two links, so it works without JavaScript;
-  `IdejoWeb.TopicView` remembers the choice.
+  (the default) or Expanded topic cards. A "View" label, then two links drawn as joined
+  buttons, the chosen one primary (steward decision, 2026-10-24); links, so it works without
+  JavaScript. `IdejoWeb.TopicView` remembers the choice.
   """
   def view_toggle(assigns) do
     ~H"""
-    <nav aria-label={gettext("View")} class="view-toggle" id="view-toggle">
-      <span class="view-toggle-label" aria-hidden="true">{gettext("View")}</span>
-      <a
-        :for={{view, label} <- [compact: gettext("Compact"), expanded: gettext("Expanded")]}
-        href={with_view(@path, view)}
-        id={"view-#{view}"}
-        aria-current={@view == view && "true"}
-        class={@view == view && "is-active"}
-      >
-        {label}
-      </a>
-    </nav>
+    <div class="view-toggle" id="view-toggle">
+      <span class="view-toggle-label" id="view-toggle-label">{gettext("View")}</span>
+      <nav aria-labelledby="view-toggle-label" class="join">
+        <a
+          :for={{view, label} <- [compact: gettext("Compact"), expanded: gettext("Expanded")]}
+          href={with_view(@path, view)}
+          id={"view-#{view}"}
+          aria-current={@view == view && "true"}
+          class={["btn btn-sm join-item", @view == view && "btn-primary"]}
+        >
+          {label}
+        </a>
+      </nav>
+    </div>
     """
   end
 
