@@ -22,6 +22,8 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("topic.move"), do: gettext("Moved a topic")
   def action_label("topic.tags"), do: gettext("Changed the tags of a topic")
   def action_label("topic.rename"), do: gettext("Renamed a topic")
+  def action_label("topic.archive"), do: gettext("Archived a topic")
+  def action_label("topic.delete"), do: gettext("Deleted a topic for good")
   def action_label("messages.move"), do: gettext("Moved messages to another thread")
   def action_label("report.resolve"), do: gettext("Resolved reports about a message")
   def action_label("report.dismiss"), do: gettext("Dismissed reports about a message")

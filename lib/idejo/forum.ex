@@ -625,6 +625,122 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Archives a topic, as a moderator of its category (steward decision, 2026-10-23;
+  `{:error, :forbidden}` otherwise): like a category deleted with `topics: :archive`
+  (TP-14), it goes read only to the Archive (made on first use, `archive_category/1`), its
+  open messages close (GM-12) and its category's own tags drop. Already archived:
+  `{:error, :archived}`.
+
+  Logged (MO-03) as `topic.archive` under the category it left, with an `update` activity,
+  in one transaction; then `{:topic_changed, topic_id}`, so viewers who may not view the
+  Archive lose it.
+  """
+  @spec archive_topic(User.t(), Topic.t(), String.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | :archived | term()}
+  def archive_topic(%User{} = moderator, %Topic{} = topic, reason \\ nil) do
+    topic = Repo.preload(topic, :category)
+
+    # Checked before the Archive may be made; again under the lock.
+    with true <- Access.can?(moderator, :moderate, topic.category) || {:error, :forbidden},
+         {:ok, archive} <- archive_category(moderator),
+         {:ok, {topic, closed}} <-
+           Repo.transact(fn -> archive_locked(moderator, topic, archive, reason) end) do
+      Messages.announce_closed(closed)
+      Messages.broadcast(topic.id, {:topic_changed, topic.id})
+      {:ok, topic}
+    end
+  end
+
+  defp archive_locked(moderator, topic, archive, reason) do
+    topic =
+      Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+      |> Repo.preload(:category)
+
+    cond do
+      not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+      topic.state == "archived" -> {:error, :archived}
+      true -> save_archive(moderator, topic, archive, reason)
+    end
+  end
+
+  defp save_archive(moderator, topic, archive, reason) do
+    details = %{"from" => %{"id" => topic.category.id, "name" => topic.category.name}}
+    closed = Messages.close_open_in_topics([topic.id])
+
+    with {:ok, _} <-
+           Moderation.record(moderator, "topic.archive", topic, reason: reason, details: details),
+         {:ok, archived} <-
+           topic
+           |> Ecto.Changeset.change(category_id: archive.id, state: "archived")
+           |> Repo.update(),
+         _ = Tags.drop_foreign_tags([archived.id], archive.id),
+         {:ok, _} <- topic_update_activity(moderator, archived) do
+      {:ok, {%{archived | category: archive}, closed}}
+    end
+  end
+
+  @doc """
+  Deletes a topic for good, as a moderator of its category (steward decision, 2026-10-23;
+  `{:error, :forbidden}` otherwise): the topic and everything in it (messages and their
+  versions, reactions, polls, reports, notifications, follows, read positions, tags,
+  scheduled messages) go; topics started from its messages (TP-09) and replies moved
+  elsewhere (TP-15) stay, without the link. Uploads only it used are deleted by the nightly
+  cleanup (`Idejo.Uploads.CleanupWorker`).
+
+  Logged (MO-03) as `topic.delete` with its title and category (the log keeps plain ids),
+  with a `delete` activity (FD-02), in one transaction; then its open messages' timers stop
+  and its viewers get `{:topic_changed, topic_id}`, which finds nothing.
+  """
+  @spec delete_topic(User.t(), Topic.t(), String.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | term()}
+  def delete_topic(%User{} = moderator, %Topic{} = topic, reason \\ nil) do
+    result =
+      Repo.transact(fn ->
+        topic =
+          Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+          |> Repo.preload(:category)
+
+        if Access.can?(moderator, :moderate, topic.category),
+          do: save_delete(moderator, topic, reason),
+          else: {:error, :forbidden}
+      end)
+
+    with {:ok, {topic, open_ids}} <- result do
+      Enum.each(open_ids, &Messages.OpenMessage.stop/1)
+      Messages.broadcast(topic.id, {:topic_changed, topic.id})
+      {:ok, topic}
+    end
+  end
+
+  defp save_delete(moderator, topic, reason) do
+    details = %{
+      "title" => topic.title,
+      "category" => %{"id" => topic.category.id, "name" => topic.category.name}
+    }
+
+    open_ids =
+      Repo.all(
+        from m in Message, where: m.topic_id == ^topic.id and m.state == "open", select: m.id
+      )
+
+    with {:ok, _} <-
+           Moderation.record(moderator, "topic.delete", topic, reason: reason, details: details),
+         {:ok, _} <-
+           Repo.insert(
+             Federation.activity_changeset(%{
+               actor_uri: moderator.uri,
+               verb: "delete",
+               object_uri: topic.uri,
+               target_uri: topic.category.uri,
+               payload: %{"type" => "Page", "name" => topic.title}
+             })
+           ),
+         {:ok, deleted} <- Repo.delete(topic) do
+      {:ok, {deleted, open_ids}}
+    end
+  end
+
+  @doc """
   The categories a moderator may move the topic to (TP-15): those they moderate, other than
   its own and the Archive, in order.
   """
