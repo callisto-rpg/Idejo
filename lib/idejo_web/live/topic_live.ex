@@ -1912,7 +1912,7 @@ defmodule IdejoWeb.TopicLive do
           aria-label={gettext("Message")}
           aria-describedby="composer-window"
           placeholder={
-            gettext("Enter · send | Shift+Enter · new line | Ctrl+Enter or Enter ×3 · new message")
+            gettext("Enter: send · Shift+Enter: new line · Ctrl+Enter / Enter×3: New message")
           }
         ></textarea>
         <%!-- TP-10: suggestions while typing @, +, #, / or $, and the commands after !
