@@ -128,8 +128,8 @@ not): About and Rules (`server_about`, `server_rules` settings, Markdown, throug
 `MessageComponents.body/1`) and the roles, a plain form to `POST /welcome`
 (`WelcomeController`, which also marks the card seen). `/rules` ("Rules & Roles" in the
 sidebar) shows the same at any time (`IdejoWeb.WelcomeComponents`), About and Rules there as
-`h2.heading-h1`, styled like the page's `<h1>` (steward decision, 2026-10-24). Every `<h1>`
-sits in `.page-intro` and shares one size with `.heading-h1` (1.5rem).
+`h2.section-divider`, a title then a line, like the home page's sections (steward decision,
+2026-10-24). Every `<h1>` sits in `.page-intro` (1.5rem).
 
 Every read and write goes through `Idejo.Access.can?(user, right, category)`. Rights in v0.1:
 `:view`, `:start`, `:post`, `:moderate`, and `:tag` (edit a topic's tags, TP-19). Each role's right on a category is allow, deny or

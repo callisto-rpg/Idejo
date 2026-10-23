@@ -38,7 +38,7 @@ defmodule IdejoWeb.WelcomeComponents do
 
   attr :heading_class, :string,
     default: "welcome-heading",
-    doc: "About's and Rules' look: small labels in the card, `heading-h1` on the page"
+    doc: "About's and Rules' look: small labels in the card, `section-divider` on the page"
 
   attr :return_to, :string, default: nil
   attr :submit, :string, required: true
