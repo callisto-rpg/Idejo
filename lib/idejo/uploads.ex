@@ -17,13 +17,19 @@ defmodule Idejo.Uploads do
   Avatars (AC-04) pass the same checks, then become a 256 px square cropped from the centre,
   always WebP, so a user's avatar is at `/uploads/<avatar_id>.webp` (`avatar_url/1`) without
   loading its upload.
+
+  Uploads nothing uses are deleted each night (`delete_unused/1`, by
+  `Idejo.Uploads.CleanupWorker`): images pasted or picked, then removed before sending, and
+  avatars never set. One day old at least, so text being written keeps its images.
   """
   import Ecto.Query, warn: false
 
   alias Idejo.Accounts.User
+  alias Idejo.Messages.{Message, Version}
   alias Idejo.RateLimit
   alias Idejo.Repo
   alias Idejo.Settings
+  alias Idejo.Settings.Setting
   alias Idejo.Uploads.Upload
   alias Vix.Vips.Image, as: VipsImage
 
@@ -114,6 +120,51 @@ defmodule Idejo.Uploads do
         Repo.delete!(upload)
         remove_file(upload.path)
     end
+  end
+
+  @unused_after_hours 24
+
+  # An upload's file name where Markdown names it: `/uploads/<id>.<ext>`.
+  @named ~S"/uploads/([0-9a-f-]{36}\.(?:jpg|png|gif|webp))"
+
+  @doc """
+  Deletes the uploads, and their files, that nothing uses and that are older than `before`
+  (default: #{@unused_after_hours} hours ago). Used means: a user's avatar (light or dark),
+  or named in the Markdown of a message, deleted ones included (moderators still read them,
+  MO-02), of an earlier version of one (GM-11) or of a setting (About, Rules, the
+  stylesheet). Returns the file names deleted.
+  """
+  @spec delete_unused(DateTime.t()) :: [String.t()]
+  def delete_unused(before \\ DateTime.add(DateTime.utc_now(), -@unused_after_hours, :hour)) do
+    named =
+      Message
+      |> named_in(:body_md)
+      |> union_all(^named_in(Version, :body_md))
+      |> union_all(^named_in(Setting, :value))
+
+    avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
+    dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)
+
+    {_count, names} =
+      Repo.delete_all(
+        from(u in Upload,
+          as: :upload,
+          where: u.created_at < ^before,
+          where: not exists(avatars) and not exists(dark_avatars),
+          where: u.path not in subquery(named),
+          select: u.path
+        )
+      )
+
+    Enum.each(names, &remove_file/1)
+    names
+  end
+
+  # Every upload file name the column's texts name, one row per mention.
+  defp named_in(schema, field) do
+    from r in schema,
+      where: like(field(r, ^field), "%/uploads/%"),
+      select: fragment("(regexp_matches(?, ?, 'g'))[1]", field(r, ^field), ^@named)
   end
 
   # The name is one this module made (`<uuid>.<ext>`), read back from the database.

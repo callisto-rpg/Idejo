@@ -366,6 +366,11 @@ roles or the permission grid. Every later change must keep it true:
   the composer (`composer_image`, hidden input, no button: GM-07) or the editor
   (`EditorImages` hook), plus the editor's "Add image" picker; `"image_uploaded"` brings the
   Markdown back to the caret, unsent. Tests make images with `Idejo.ImageFixtures`.
+  Uploads nothing uses (inserted, then removed before sending; avatars never set) are deleted
+  with their files at 04:00 UTC (`Idejo.Uploads.CleanupWorker`, queue `maintenance`) once a
+  day old: `Uploads.delete_unused/1` keeps avatars and every `/uploads/<name>` named in
+  `body_md` of messages (deleted ones too) and `message_versions`, or in a setting. A new
+  place that can name an upload must join its query.
 - **Search** (SE-01 to SE-03, `Idejo.Search`): PostgreSQL full text with the `'simple'`
   configuration (steward decision). `messages.search_vector` is a generated column over
   `body_md` with `<` and `>` read as spaces (else the parser drops words inside `<script>`),
@@ -764,9 +769,7 @@ M4 exit check (MVP §7): search finds a message by a word added in its last comm
 (`test/idejo/search_test.exs`, SE-03); a growing message produces one notification
 (`test/idejo/notifications_test.exs`, NO-02).
 Not implemented in M4, left for later:
-- live delivery of the notification count (moot since the bell was removed, 2026-10-23);
-- removing uploads that no message or avatar uses (images inserted, then deleted before
-  sending).
+- live delivery of the notification count (moot since the bell was removed, 2026-10-23).
 
 M3 exit check (MVP §7): all GM tests pass; the "live conversation" flow passes as an
 end-to-end test (`test/idejo_web/flows/live_conversation_test.exs`, steps 1-4; steward
