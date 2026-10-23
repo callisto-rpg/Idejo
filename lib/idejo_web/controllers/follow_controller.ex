@@ -7,6 +7,10 @@ defmodule IdejoWeb.FollowController do
   so they work without JavaScript. Only a topic the user may view can be followed; any other
   is not found. The topic page leads back to the topic; the sidebar's "×" and "+"
   (`return=back`) to the page they were sent from, when the browser says which one.
+
+  The topic menu (steward decision, 2026-10-23; right click or long press on a topic) posts
+  here too, with `return=back`: unfollow, "Unfollow & mute" (`mute`) and "Mark unread"
+  (`unread`).
   """
   use IdejoWeb, :controller
 
@@ -24,6 +28,20 @@ defmodule IdejoWeb.FollowController do
     with_topic(conn, id, params, fn user, topic ->
       :ok = Reading.unfollow(user, topic)
       {topic, gettext("You no longer follow this topic.")}
+    end)
+  end
+
+  def mute(conn, %{"id" => id} = params) do
+    with_topic(conn, id, params, fn user, topic ->
+      :ok = Reading.mute(user, topic)
+      {topic, gettext("You no longer follow this topic, and it is muted.")}
+    end)
+  end
+
+  def unread(conn, %{"id" => id} = params) do
+    with_topic(conn, id, params, fn user, topic ->
+      :ok = Reading.mark_unread(user, topic)
+      {topic, gettext("Marked unread.")}
     end)
   end
 

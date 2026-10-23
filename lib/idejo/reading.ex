@@ -85,9 +85,88 @@ defmodule Idejo.Reading do
     end
   end
 
-  @doc "Follows the topic (TP-13), also after an earlier unfollow."
+  @doc "Follows the topic (TP-13), also after an earlier unfollow; it is no longer muted."
   @spec follow(User.t(), Topic.t()) :: :ok
-  def follow(%User{} = user, %Topic{} = topic), do: set_following(user.id, topic.id, true)
+  def follow(%User{} = user, %Topic{} = topic) do
+    Repo.insert!(%Follow{user_id: user.id, topic_id: topic.id, following: true, muted: false},
+      on_conflict: {:replace, [:following, :muted, :updated_at]},
+      conflict_target: [:user_id, :topic_id]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Unfollows and mutes the topic ("Unfollow & mute", steward decision, 2026-10-23): it sends
+  the user no notification of any kind, @ and + mentions and replies included
+  (`Idejo.Notifications`), stays off the Unread page and the header's count, and is not
+  followed again by posting or being mentioned, until the user follows it again
+  (`follow/2`).
+  """
+  @spec mute(User.t(), Topic.t()) :: :ok
+  def mute(%User{} = user, %Topic{} = topic) do
+    Repo.insert!(%Follow{user_id: user.id, topic_id: topic.id, following: false, muted: true},
+      on_conflict: {:replace, [:following, :muted, :updated_at]},
+      conflict_target: [:user_id, :topic_id]
+    )
+
+    :ok
+  end
+
+  @doc "The ids of the topics the user muted, as a query (for `not in subquery(...)`)."
+  @spec muted_topic_ids(Ecto.UUID.t()) :: Ecto.Query.t()
+  def muted_topic_ids(user_id),
+    do: from(f in Follow, where: f.user_id == ^user_id and f.muted, select: f.topic_id)
+
+  @doc """
+  Marks the topic unread again from its latest message by someone else ("Mark unread",
+  steward decision, 2026-10-23): the read position goes back to the message before it, so
+  that message and any later ones by others count as new. Nothing changes when nobody else
+  wrote in it.
+  """
+  @spec mark_unread(User.t(), Topic.t()) :: :ok
+  def mark_unread(%User{id: user_id}, %Topic{id: topic_id}) do
+    last_other =
+      Repo.one(
+        from m in Message,
+          where: m.topic_id == ^topic_id and m.author_id != ^user_id and is_nil(m.deleted_at),
+          order_by: [desc: m.opened_at, desc: m.id],
+          limit: 1
+      )
+
+    if last_other, do: read_up_to_before(user_id, topic_id, last_other)
+    :ok
+  end
+
+  defp read_up_to_before(user_id, topic_id, message) do
+    before =
+      Repo.one(
+        from m in Message,
+          where:
+            m.topic_id == ^topic_id and
+              (m.opened_at < ^message.opened_at or
+                 (m.opened_at == ^message.opened_at and m.id < ^message.id)),
+          order_by: [desc: m.opened_at, desc: m.id],
+          limit: 1,
+          select: m.id
+      )
+
+    # With nothing before it (it opened the topic), the position holds no message and its
+    # time, which unread counts fall back on, goes just before it.
+    Repo.insert_all(
+      ReadPosition,
+      [
+        %{
+          user_id: user_id,
+          topic_id: topic_id,
+          last_read_message_id: before,
+          updated_at: DateTime.add(message.opened_at, -1, :microsecond)
+        }
+      ],
+      on_conflict: {:replace, [:last_read_message_id, :updated_at]},
+      conflict_target: [:user_id, :topic_id]
+    )
+  end
 
   @doc "Stops following the topic (TP-13); posting there later does not follow it again."
   @spec unfollow(User.t(), Topic.t()) :: :ok
@@ -234,10 +313,13 @@ defmodule Idejo.Reading do
     per_page = Keyword.get(opts, :per_page, 30)
     page = max(Keyword.get(opts, :page, 1), 1)
 
+    # Muted topics (steward decision, 2026-10-23) never show here.
+    unread = from t in unread_topics(user), where: t.id not in subquery(muted_topic_ids(user.id))
+
     query =
       if Keyword.get(opts, :following, true),
-        do: unread_topics(user),
-        else: from(t in unread_topics(user), where: t.id not in subquery(followed_ids(user)))
+        do: unread,
+        else: from(t in unread, where: t.id not in subquery(followed_ids(user)))
 
     rows =
       Repo.all(
@@ -297,6 +379,7 @@ defmodule Idejo.Reading do
       |> unread_messages()
       |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
       |> where([topic: t], t.category_id in subquery(viewable))
+      |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
       |> join(:inner, [m], n in Idejo.Notifications.Notification,
         as: :notification,
         on:

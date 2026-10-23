@@ -168,10 +168,14 @@ defmodule Idejo.Notifications do
   # The users, among those ids, who may view the topic's category and still have an account.
   defp may_view([], _topic), do: []
 
+  # Never those who muted the topic (steward decision, 2026-10-23).
   defp may_view(user_ids, topic) do
     category = Repo.get!(Category, topic.category_id)
 
-    from(u in User, where: u.id in ^user_ids and u.status == "active")
+    from(u in User,
+      where: u.id in ^user_ids and u.status == "active",
+      where: u.id not in subquery(muted_by(topic.id))
+    )
     |> Repo.all()
     |> Enum.filter(&Access.can?(&1, :view, category))
     |> Enum.map(& &1.id)
@@ -246,9 +250,16 @@ defmodule Idejo.Notifications do
   def announce_reaction(%User{id: id}, %Message{author_id: id}, _emoji), do: :ok
 
   def announce_reaction(%User{} = user, %Message{} = message, emoji) do
-    live = live(message, %{src: emoji.src, alt: emoji.char || ":#{emoji.name}:"})
-    send_live(message.author_id, %{live | kind: "reaction", author_name: user.display_name})
+    if Repo.exists?(where(muted_by(message.topic_id), [f], f.user_id == ^message.author_id)) do
+      :ok
+    else
+      live = live(message, %{src: emoji.src, alt: emoji.char || ":#{emoji.name}:"})
+      send_live(message.author_id, %{live | kind: "reaction", author_name: user.display_name})
+    end
   end
+
+  defp muted_by(topic_id),
+    do: from(f in Follow, where: f.topic_id == ^topic_id and f.muted, select: f.user_id)
 
   defp live(message, emoji) do
     message = Repo.preload(message, [:author, :topic])

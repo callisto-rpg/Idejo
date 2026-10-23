@@ -523,6 +523,20 @@ roles or the permission grid. Every later change must keep it true:
   "Continued from …"; the source message shows a "Continue topic" button per topic
   (`Forum.list_forks/2`; its title in the name; steward decision, 2026-10-23). Both only when
   the viewer may view the other topic.
+- **Topic menu** (steward decision, 2026-10-23): right click, the menu key or a long press
+  on a topic row (`TopicComponents.topic_row/1`) or a sidebar topic (`data-topic-menu`,
+  `data-topic-path`; the sidebar's `data-following` tells Follow from Unfollow) opens
+  `Layouts.topic_menu/1` (`#topic-menu`, `role="menu"`, `phx-update="ignore"`, signed-in
+  users only) at the pointer (`assets/js/topic_menu.js`: arrows, Escape, focus back). Its
+  items are plain forms with `return=back`: unfollow, follow, `POST /t/{id}/mute`
+  (`Reading.mute/2`) and `POST /t/{id}/unread` (`Reading.mark_unread/2`: the position goes
+  back before the latest message by someone else), and Copy link. **Muted** (`follows.muted`,
+  with `following: false`): `Notifications` never notifies a muted user (`may_view/2`, and no
+  reaction bubble), `Reading.for_you/1` and `list_unread_topics/2` leave it out, and only
+  `Reading.follow/2` lifts it. **Every menu is a `.popup-menu`** (the account panel too): one
+  surface in `app.css`, see-through and blurred by `--menu-opacity` / `--menu-blur` (70%,
+  4px) from the server stylesheet (`priv/theme/default.css`); a new menu takes the class.
+  The header's glass is its `::before`, so menus in it blur the page under them.
 - **Follow** (TP-13, `Idejo.Reading`): `follows` rows (user, topic, `following`). Starting a
   topic or posting in it follows it (`Reading.auto_follow/2` inside the transaction that
   writes the message); an explicit unfollow stays as `following: false`, so posting again does

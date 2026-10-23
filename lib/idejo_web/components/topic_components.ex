@@ -111,6 +111,8 @@ defmodule IdejoWeb.TopicComponents do
   * `lead` - `:category` puts the category's mark and name in place of the starter's avatar
     and name (the home page's active topics; needs the category loaded).
   * `unread` - the "N new" marker (TP-07), or nil.
+
+  Right click or long press opens the topic menu (`data-topic-menu`, `Layouts.topic_menu/1`).
   """
   attr :topic, :map, required: true
   attr :category, :boolean, default: false
@@ -119,7 +121,12 @@ defmodule IdejoWeb.TopicComponents do
 
   def topic_row(assigns) do
     ~H"""
-    <li id={"topic-#{@topic.id}"} class={["topic-row", "cat-#{@topic.category_id}"]}>
+    <li
+      id={"topic-#{@topic.id}"}
+      class={["topic-row", "cat-#{@topic.category_id}"]}
+      data-topic-menu={@topic.id}
+      data-topic-path={~p"/t/#{@topic.id}/#{@topic.slug}"}
+    >
       <span class="topic-row-avatar">
         <.category_mark :if={@lead == :category} category={@topic.category} />
         <UserComponents.avatar :if={@lead == :author} user={@topic.author} size={:list} />
