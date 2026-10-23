@@ -663,7 +663,8 @@ roles or the permission grid. Every later change must keep it true:
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - **Page frame and look**: `Layouts.app` draws the header bar (server name, search box,
   Unread, Moderation, and the account menu: a `<details>` holding
-  Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
+  Profile and account, Admin, Theme and Sign out, so it opens without JavaScript; with it, a
+  click outside or Escape closes it, `assets/js/account_menu.js`), the
   categories sidebar (each category with the topics the user follows there,
   `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
   "N more topics" `<details>`; each with an unfollow ×, shown on hover, focus or the topic on screen, a
