@@ -50,12 +50,18 @@ defmodule IdejoWeb.TopicViewTest do
       assert Enum.empty?(query(doc, ".topic-preview"))
     end
 
-    # On the category page, beside its title; on the home page, beside the first section's.
+    # On the category page, beside its title; on the home page, beside "Active topics"
+    # (steward decision, 2026-10-24).
     assert Enum.count(
              query(doc(build_conn(), ~p"/c/general"), "header.category-intro #view-toggle")
            ) == 1
 
-    assert Enum.count(query(doc(build_conn(), ~p"/"), "section.has-view-toggle > #view-toggle")) ==
+    assert Enum.count(
+             query(
+               doc(build_conn(), ~p"/"),
+               "section.has-view-toggle:has(> #active-heading) > #view-toggle"
+             )
+           ) ==
              1
   end
 

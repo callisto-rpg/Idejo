@@ -16,18 +16,10 @@
     <section
       :for={{{group, summaries}, index} <- Enum.with_index(@sections)}
       aria-labelledby={"categories-heading-#{index}"}
-      class={index == 0 && @active_topics != [] && "has-view-toggle"}
     >
       <h2 id={"categories-heading-#{index}"} class="section-divider">
         {section_title(group, length(@sections))}
       </h2>
-      <%!-- The view toggle sits at the top, beside the first title (steward decision,
-           2026-10-23); it changes the active topics' cards below. --%>
-      <TopicComponents.view_toggle
-        :if={index == 0 && @active_topics != []}
-        view={@view}
-        path={~p"/"}
-      />
       <ul id={if index == 0, do: "categories", else: "categories-#{index}"} class="category-grid">
         <li
           :for={%{category: category} = summary <- summaries}
@@ -58,8 +50,10 @@
     </section>
   </div>
 
-  <section :if={@active_topics != []} aria-labelledby="active-heading">
+  <section :if={@active_topics != []} aria-labelledby="active-heading" class="has-view-toggle">
     <h2 id="active-heading" class="section-divider">{gettext("Active topics")}</h2>
+    <%!-- Beside the title of the cards it changes (steward decision, 2026-10-24). --%>
+    <TopicComponents.view_toggle view={@view} path={~p"/"} />
     <ol id="active-topics" class="topic-list">
       <TopicComponents.topic_row
         :for={topic <- @active_topics}

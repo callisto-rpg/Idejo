@@ -120,9 +120,9 @@ change and keeps no history.
 
 - The **home page** shows the categories as cards, with their number of topics and last
   activity, and below them the **active topics**: the most recently active ones everywhere.
-- **View** (at the top right of the home page and of each category page): **Compact**, the
-  usual one-line topics, or **Expanded**, where each topic also shows the start of its first
-  message, the pictures posted in the topic at the right (four, then "+N images"), its three
+- **View** (beside the home page's "Active topics" and at the top right of each category
+  page): **Compact**, the usual one-line topics, or **Expanded**, where each topic also shows
+  the start of its first message, the pictures posted in the topic at the right (four, then "+N images"), its three
   **latest messages** (two lines each; a picture in them shows as a small "image:" pill),
   and the pictures of who wrote there (five, then "+N more"). Your choice stays for the next
   pages. A topic's tags sit at the right, above its number of messages.
