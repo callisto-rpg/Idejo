@@ -743,7 +743,10 @@ roles or the permission grid. Every later change must keep it true:
   `/favicon.ico` and the `rel="icon"`) before the server name in the header; the full one
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
   sign-in, sign-up and setup pages, inverted by the dark theme. Pages set `page_title`; the title reads "Page · Server name". No
-  framework branding in the interface.
+  framework branding in the interface. The square logo, rendered at 180, 192 and 512 px
+  (`/images/icon-*.png`), is the app icon: the web app manifest (CL-01,
+  `/manifest.webmanifest`, `ManifestController`, no session: the server name, `standalone`)
+  and the `apple-touch-icon`, both linked by the root layout.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Lock and pin** (TP-14): `Forum.moderate_topic(moderator, topic, :lock | :unlock | :pin |
