@@ -300,6 +300,26 @@ roles or the permission grid. Every later change must keep it true:
   or reconnect. Three Enters in a row, nothing typed between and each within 1 s of the last,
   work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
   screens too, which have no Ctrl.
+- **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the
+  `Suggest` list shows the composer's commands (`data-commands` from `TopicLive.commands/2`:
+  only those the author may use; no server question; Enter picks one only once a letter
+  follows the `!` or an arrow chose it). Picking one removes what was typed and runs it:
+  `!image` clicks the composer's file input and the image's Markdown goes at the end
+  (`appendLine/2`); `!new-topic` sends with `then: "new_topic"` (or pushes `"new_topic"` with
+  nothing new: the open message), and `TopicLive` redirects to
+  `/m/{reply_to_id || message id}/new-topic?from={message id}`, where `NewTopicLive` fills the
+  first message with the author's own message (TP-09); `!schedule` pushes `"open_schedule"`
+  with the text not sent yet (never sent text: nothing when sent text was changed), and the
+  dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours.
+- **Scheduled messages** (steward decision, 2026-10-23; `Idejo.Messages.Scheduling`,
+  `scheduled_messages`): up to 168 hours, decimals allowed (`parse_hours/1`, at least a
+  minute), with the post right now. One Oban job each (`Idejo.Messages.ScheduledWorker`, queue
+  `messages`, `scheduled_at`). Only the author sees them, under the composer
+  (`#scheduled-messages`, Cancel: `cancel/2`). At its time `post/1` posts it with
+  `Forum.post_message/4` (`scheduled: true`, closed: it never grows), as the author, rights
+  checked again; a refused one (locked, no right, banned or deleted account) is dropped,
+  `:rate_limited` snoozes. Each change broadcasts `{:scheduled, author_id}`; readers see
+  "scheduled message" (`messages.scheduled`) next to "view earlier version" (`.message-meta`).
 - **Assistive text** (AX-02, AX-03, GM-07): the open state is never visible, only text.
   `TopicLive` has one hidden live region (`#topic-announcer`, `role="status"`) that announces
   a message when it opens and when it closes (or once, when posted closed), never at appends
@@ -468,8 +488,9 @@ roles or the permission grid. Every later change must keep it true:
   `Forum.create_topic/4` with `forked_from: message` sets `topics.forked_from_message_id`
   (needs view of the source and `:start` in the target), adds `forkedFrom` to the activity and
   broadcasts `{:forked, message_id}` to the source topic. The new topic's page shows
-  "Continued from …"; the source message shows "Continued in …" (`Forum.list_forks/2`). Both
-  only when the viewer may view the other topic.
+  "Continued from …"; the source message shows a "Continue topic" button per topic
+  (`Forum.list_forks/2`; its title in the name; steward decision, 2026-10-23). Both only when
+  the viewer may view the other topic.
 - **Follow** (TP-13, `Idejo.Reading`): `follows` rows (user, topic, `following`). Starting a
   topic or posting in it follows it (`Reading.auto_follow/2` inside the transaction that
   writes the message); an explicit unfollow stays as `following: false`, so posting again does
@@ -725,7 +746,8 @@ roles or the permission grid. Every later change must keep it true:
   needing them are tagged `pg_tools` (skipped with a note when missing, never on CI); the
   restore test uses a database of its own through a dynamic repo, outside the sandbox.
 - **Background jobs**: Oban (`config :idejo, Oban`, `oban_jobs` migration pinned to
-  version 14), `testing: :manual` in tests (use `Oban.Testing`).
+  version 14; queues `maintenance` and `messages`), `testing: :manual` in tests (use
+  `Oban.Testing`).
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and

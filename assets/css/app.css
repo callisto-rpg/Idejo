@@ -1136,6 +1136,28 @@
     & summary:hover, & a:hover { color: var(--color-base-content); }
     & a { text-decoration: underline; }
   }
+  /* TP-09: "Continue topic" buttons (steward decision, 2026-10-23). */
+  .message-forks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    & a.btn { text-decoration: none; color: var(--color-base-content); }
+  }
+  /* The "scheduled message" label sits with "view earlier version" (steward decision,
+     2026-10-23); the details open below both. */
+  .message-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.75rem;
+    & .message-versions { flex-basis: auto; }
+    & .message-versions[open] { flex-basis: 100%; order: 1; }
+  }
+  .message-scheduled {
+    margin-top: 0.375rem;
+    color: var(--ink-faint);
+    font-size: 0.75rem;
+  }
 
   /* The actions under a message: quiet until the message is hovered or focused, always
      shown on touch screens. */
@@ -1355,6 +1377,34 @@
 }
 .suggestion-label { font-size: 0.875rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggestion-detail { color: var(--ink-faint); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* !schedule (steward decision, 2026-10-23): the author's messages waiting to be posted, under
+   the composer, and the dialog that asks for the delay. */
+.scheduled-messages {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--hairline);
+  font-size: 0.8125rem;
+  & ul { display: grid; gap: 0.25rem; }
+}
+.scheduled-messages-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.25rem;
+}
+.scheduled-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.scheduled-when { flex: none; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.scheduled-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schedule-card { max-width: 24rem; display: grid; gap: 0.75rem; }
+.schedule-excerpt { color: var(--ink-soft); font-size: 0.875rem; }
 
 /* The composer (GM-02, GM-08) is the author's open message in place: no box. Sent text looks
    like any message's text; what is typed, edited or appended and not sent yet stands out as

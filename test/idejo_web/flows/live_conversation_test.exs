@@ -218,8 +218,8 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
 
     assert has_element?(
              visitor,
-             ~s(#message-#{message.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"]),
-             "Snacks"
+             ~s(#message-#{message.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"][aria-label="Continue topic: Snacks"]),
+             "Continue topic"
            )
   end
 end

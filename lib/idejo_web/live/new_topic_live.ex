@@ -15,7 +15,8 @@ defmodule IdejoWeb.NewTopicLive do
 
   At `/m/{id}/new-topic` it starts a topic from that message (TP-09, "New topic from this"):
   any message the user may view, shown as a linked excerpt, into any category where they may
-  start topics (chosen in the form; the source's category first when allowed).
+  start topics (chosen in the form; the source's category first when allowed). The composer's
+  `!new-topic` comes here with `?from=` its message, whose text fills the first message.
   """
   use IdejoWeb, :live_view
 
@@ -25,7 +26,7 @@ defmodule IdejoWeb.NewTopicLive do
   alias IdejoWeb.ImageUploads
 
   @impl true
-  def mount(%{"id" => id}, _session, %{assigns: %{live_action: :fork}} = socket) do
+  def mount(%{"id" => id} = params, _session, %{assigns: %{live_action: :fork}} = socket) do
     user = socket.assigns.current_scope.user
 
     case Forum.get_viewable_message(user, id) do
@@ -52,7 +53,7 @@ defmodule IdejoWeb.NewTopicLive do
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
              |> assign(:tags, Tags.available_tags(default))
-             |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
+             |> assign(:form, to_form(Forum.change_new_topic(sent(user, params)), as: :topic))
              |> assign(editor_mode: :write, preview_html: "")
              |> ImageUploads.allow(:editor_image)}
         end
@@ -84,6 +85,20 @@ defmodule IdejoWeb.NewTopicLive do
         end
     end
   end
+
+  # `!new-topic` (steward decision, 2026-10-23): `?from=` names the author's message just sent,
+  # whose text becomes the first message, still theirs to change. Only their own.
+  defp sent(user, %{"from" => from}) when is_binary(from) do
+    case Forum.get_viewable_message(user, from) do
+      %{author_id: author_id, deleted_at: nil, body_md: body} when author_id == user.id ->
+        %{"body" => body}
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp sent(_user, _params), do: %{}
 
   @impl true
   def handle_event("validate", %{"topic" => params}, socket) do

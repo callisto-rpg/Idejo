@@ -5,6 +5,11 @@
 // Enter sends the whole text and keeps it in the box; a backdrop behind a transparent
 // textarea draws sent text like any message's and highlights unsent text as temporary.
 // Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
+//
+// Commands (steward decision, 2026-10-23), listed after ! by `Suggest`: !image picks an image
+// that lands at the end of the message; !new-topic sends, then goes to "New topic from this"
+// with the message's text; !schedule asks the server's dialog for a delay and, once
+// scheduled, takes the text not sent yet out of the box.
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code.
@@ -80,6 +85,14 @@ export function onImages(el, send) {
   })
 }
 
+// Adds `text` at the end of a text box, on a line of its own, and puts the caret after it.
+// What is there stays as it is, so the sent text is still where the box starts.
+export function appendLine(input, text) {
+  const before = input.value
+  input.value = before + (before === "" || before.endsWith("\n") ? "" : "\n") + text
+  input.setSelectionRange(input.value.length, input.value.length)
+}
+
 // Inserts `text` at the caret of a text box, on a line of its own, and puts the caret after it.
 export function insertAtCaret(input, text) {
   const start = input.selectionStart ?? input.value.length
@@ -94,6 +107,7 @@ export function insertAtCaret(input, text) {
 }
 
 import {Suggest} from "./suggest"
+import {InlineCard} from "./inline_cards"
 
 // How long text just sent glows before it reads like the rest (matches .composer-burn).
 const BURN_MS = 2200
@@ -143,7 +157,8 @@ export const Composer = {
     })
     // TP-10: suggestions while typing an inline link; added first, so its Enter picks.
     this.suggest = new Suggest(this.input, this.el.querySelector("[role=listbox]"),
-      (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply))
+      (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply),
+      {commands: JSON.parse(this.el.dataset.commands || "[]"), onCommand: name => this.command(name)})
     this.input.addEventListener("keydown", e => {
       if (e.key !== "Enter" || e.isComposing || e.shiftKey) return
       e.preventDefault()
@@ -156,10 +171,39 @@ export const Composer = {
     onImages(this.input, files => this.upload("composer_image", files))
     this.handleEvent("image_uploaded", ({upload, markdown}) => {
       if (upload !== "composer_image") return
-      insertAtCaret(this.input, markdown)
+      if (this.imageAtEnd) appendLine(this.input, markdown)
+      else insertAtCaret(this.input, markdown)
+      this.imageAtEnd = false
+      this.paint()
+    })
+    // !schedule: the text it took is in a scheduled message now.
+    this.handleEvent("composer_scheduled", () => {
+      this.input.value = this.sent
+      this.input.setSelectionRange(this.sent.length, this.sent.length)
       this.paint()
     })
     this.paint()
+  },
+
+  command(name) {
+    if (name === "image") {
+      this.imageAtEnd = true
+      document.querySelector("#composer-image-form input[type=file]")?.click()
+    } else if (name === "new-topic") {
+      if (this.unsent().trim() !== "") this.send(false, "new_topic")
+      else this.pushEvent("new_topic", {})
+    } else if (name === "schedule") {
+      // The dialog gives the focus back to the box when it closes.
+      InlineCard.opener = this.input
+      this.pushEvent("open_schedule", {body: this.unsent().trim()})
+    }
+  },
+
+  // What follows the sent text; nothing when sent text was changed (only an edit, not
+  // something new to post).
+  unsent() {
+    const value = this.input.value
+    return value.startsWith(this.sent) ? value.slice(this.sent.length) : ""
   },
 
   // Takes `body` as the sent text, keeping anything typed after it. An empty `body` means
@@ -187,7 +231,8 @@ export const Composer = {
     return true
   },
 
-  send(isBreak) {
+  // `then`: what the server does once it is stored ("new_topic" for !new-topic).
+  send(isBreak, then) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value)
     if (body === "") return
@@ -204,7 +249,7 @@ export const Composer = {
     this.input.setSelectionRange(position, position)
     this.paint()
 
-    this.pushEvent("commit", {body, break: isBreak}, reply => {
+    this.pushEvent("commit", then ? {body, break: isBreak, then} : {body, break: isBreak}, reply => {
       const typed = this.input.value.startsWith(this.sent) ? this.input.value.slice(this.sent.length) : ""
 
       if (reply.error) {

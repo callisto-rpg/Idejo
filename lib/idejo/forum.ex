@@ -1301,10 +1301,12 @@ defmodule Idejo.Forum do
   topic's viewers (TP-04).
 
   Refused with `{:error, :forbidden}` without the right or in a locked or archived topic.
+
+  `scheduled: true` marks it as posted by `!schedule` (`Idejo.Messages.Scheduling`).
   """
-  @spec post_message(User.t(), Topic.t(), map()) ::
+  @spec post_message(User.t(), Topic.t(), map(), keyword()) ::
           {:ok, Message.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
-  def post_message(%User{} = user, %Topic{} = topic, attrs) do
+  def post_message(%User{} = user, %Topic{} = topic, attrs, opts \\ []) do
     form = change_new_message(attrs)
 
     result =
@@ -1316,7 +1318,7 @@ defmodule Idejo.Forum do
           not can_post?(user, topic) -> {:error, :forbidden}
           not form.valid? -> {:error, Map.put(form, :action, :insert)}
           RateLimit.check(:new_message, user.id) != :ok -> {:error, :rate_limited}
-          true -> insert_message(user, topic, form, attrs["reply_to_id"])
+          true -> insert_message(user, topic, form, attrs["reply_to_id"], opts)
         end
       end)
 
@@ -1325,7 +1327,7 @@ defmodule Idejo.Forum do
     result
   end
 
-  defp insert_message(user, topic, form, reply_to_id) do
+  defp insert_message(user, topic, form, reply_to_id, opts) do
     now = DateTime.utc_now()
     id = Federation.generate_id()
 
@@ -1337,6 +1339,7 @@ defmodule Idejo.Forum do
              topic_id: topic.id,
              author_id: user.id,
              reply_to_id: reply_to && reply_to.id,
+             scheduled: Keyword.get(opts, :scheduled, false),
              opened_at: now,
              closes_at: now,
              closed_at: now
