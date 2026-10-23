@@ -88,8 +88,8 @@ defmodule IdejoWeb.ForkTest do
     for view <- [source_view, visitor_view] do
       assert has_element?(
                view,
-               ~s(#message-#{source.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"]),
-               "Bread recipes"
+               ~s(#message-#{source.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"][aria-label="Continue topic: Bread recipes"]),
+               "Continue topic"
              )
     end
 

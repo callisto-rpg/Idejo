@@ -41,7 +41,7 @@ config :idejo, :backup_dir, Path.expand("../tmp/backups", __DIR__)
 
 config :idejo, Oban,
   repo: Idejo.Repo,
-  queues: [maintenance: 1],
+  queues: [maintenance: 1, messages: 5],
   plugins: [
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,

@@ -41,6 +41,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
+  alias Idejo.Messages.Scheduling
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
@@ -87,7 +88,9 @@ defmodule IdejoWeb.TopicLive do
            move_results: [],
            move_error: nil,
            first_unread: nil,
-           unread_line?: false
+           unread_line?: false,
+           pending: [],
+           schedule: nil
          )}
 
       topic ->
@@ -119,6 +122,8 @@ defmodule IdejoWeb.TopicLive do
            move_error: nil
          )
          |> put_reactions()
+         |> assign(schedule: nil, schedule_error: nil)
+         |> put_pending()
          |> ImageUploads.allow(:composer_image, can_post?)
          |> ImageUploads.allow(:edit_image, can_post?)
          |> sync_composer()
@@ -127,6 +132,13 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  # `!schedule` (steward decision, 2026-10-23): the viewer's messages waiting to be posted
+  # here, which only they see.
+  defp put_pending(%{assigns: %{can_post?: true}} = socket),
+    do: assign(socket, :pending, Scheduling.list_pending(user(socket), socket.assigns.topic))
+
+  defp put_pending(socket), do: assign(socket, :pending, [])
 
   # Where the reader left off (TP-07; steward decision, 2026-10-23): the oldest message unread
   # when the page was asked for, which the controller found before marking the topic read.
@@ -320,6 +332,13 @@ defmodule IdejoWeb.TopicLive do
   # Someone started a topic from one of these messages (TP-09).
   def handle_info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
 
+  # A scheduled message was added, cancelled or posted: only its author's views reload.
+  def handle_info({:scheduled, author_id}, socket) do
+    if mine?(socket, %{author_id: author_id}),
+      do: {:noreply, put_pending(socket)},
+      else: {:noreply, socket}
+  end
+
   # The grid changed: the viewer may have lost the view or post right since mount.
   def handle_info(:permissions_changed, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
@@ -394,6 +413,13 @@ defmodule IdejoWeb.TopicLive do
       else: gettext("New message from %{name}.", name: message.author.display_name)
   end
 
+  # `!new-topic` (steward decision, 2026-10-23): "New topic from this" (TP-09) from the
+  # message it replied to, else from the message itself; its text becomes the first message.
+  defp new_topic_from(socket, message) do
+    source_id = message.reply_to_id || message.id
+    redirect(socket, to: ~p"/m/#{source_id}/new-topic?from=#{message.id}")
+  end
+
   defp mine?(socket, message) do
     user = user(socket)
     user != nil and user.id == message.author_id
@@ -425,10 +451,16 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
     opts = [break: params["break"] == true, reply_to_id: reply_to && reply_to.id]
+    then = params["then"]
 
     case Messages.commit(user(socket), topic, body, opts) do
       {:ok, nil} ->
         {:reply, %{closed: false, body: ""}, socket}
+
+      # `!new-topic`: sent, then on to the new topic (steward decision, 2026-10-23).
+      {:ok, message} when then == "new_topic" ->
+        {:reply, %{closed: message.state == "closed", body: message.body_md},
+         new_topic_from(socket, message)}
 
       # The message itself arrives like everyone else's, as an event.
       {:ok, message} ->
@@ -453,6 +485,83 @@ defmodule IdejoWeb.TopicLive do
       {:error, _changeset} ->
         {:reply, %{error: true}, socket}
     end
+  end
+
+  # `!new-topic` with nothing new to send: the topic starts from the open message.
+  def handle_event("new_topic", _params, socket) do
+    case open_message(socket.assigns.messages, user(socket)) do
+      nil ->
+        {:noreply,
+         put_flash(socket, :error, gettext("Write your message first, then choose !new-topic."))}
+
+      message ->
+        {:noreply, new_topic_from(socket, message)}
+    end
+  end
+
+  # `!schedule`: the text not sent yet, asked for its delay in a dialog.
+  def handle_event("open_schedule", %{"body" => body}, socket) when is_binary(body) do
+    if String.trim(body) == "",
+      do:
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext(
+             "Only text not sent yet can be scheduled: write it first, then choose !schedule."
+           )
+         )},
+      else: {:noreply, assign(socket, schedule: %{body: body}, schedule_error: nil)}
+  end
+
+  def handle_event("hide_schedule", _params, socket),
+    do: {:noreply, assign(socket, schedule: nil, schedule_error: nil)}
+
+  def handle_event(
+        "schedule",
+        %{"hours" => hours},
+        %{assigns: %{schedule: %{body: body}}} = socket
+      ) do
+    %{topic: topic, reply_to: reply_to} = socket.assigns
+
+    with {:ok, seconds} <- Scheduling.parse_hours(hours),
+         {:ok, _scheduled} <-
+           Scheduling.schedule(user(socket), topic, body, seconds,
+             reply_to_id: reply_to && reply_to.id
+           ) do
+      {:noreply,
+       socket
+       |> assign(schedule: nil, schedule_error: nil, reply_to: nil)
+       |> push_event("composer_scheduled", %{body: body})}
+    else
+      :error ->
+        {:noreply,
+         assign(socket,
+           schedule_error:
+             gettext("Enter a number of hours above 0, at most %{max}.",
+               max: Scheduling.max_hours()
+             )
+         )}
+
+      {:error, :rate_limited} ->
+        {:noreply,
+         assign(socket,
+           schedule_error: gettext("You are sending very fast. Wait a moment, then try again.")
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> assign(schedule: nil, schedule_error: nil)
+         |> put_flash(:error, gettext("You cannot post in this topic."))}
+    end
+  end
+
+  def handle_event("schedule", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel_scheduled", %{"id" => id}, socket) when is_binary(id) do
+    if user(socket), do: Scheduling.cancel(user(socket), id)
+    {:noreply, put_pending(socket)}
   end
 
   # TP-10: a click on an inline link opens its card in a dialog. The reply says whether it
@@ -865,6 +974,7 @@ defmodule IdejoWeb.TopicLive do
       </dialog>
       <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
       <.delete_own_dialog :if={@confirm_delete} />
+      <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -946,6 +1056,8 @@ defmodule IdejoWeb.TopicLive do
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
           <.composer
             mine={@mine}
+            pending={@pending}
+            commands={commands(@composer_upload, @can_fork?)}
             reply_to={@reply_to}
             roles={@roles}
             author={@current_scope.user}
@@ -1341,7 +1453,16 @@ defmodule IdejoWeb.TopicLive do
         id={"message-#{@message.id}-body"}
         html={@message.body_html}
       />
-      <.versions :if={@message.edited} message={@message} />
+      <div :if={@message.edited or @message.scheduled} class="message-meta">
+        <span
+          :if={@message.scheduled}
+          id={"message-#{@message.id}-scheduled"}
+          class="message-scheduled"
+        >
+          {gettext("scheduled message")}
+        </span>
+        <.versions :if={@message.edited} message={@message} />
+      </div>
       <%!-- TP-17: reactions under the message. --%>
       <ReactionComponents.reaction_bar
         message_id={@message.id}
@@ -1349,12 +1470,18 @@ defmodule IdejoWeb.TopicLive do
         viewer={@viewer}
         can_react?={@can_react? and is_nil(@message.deleted_at)}
       />
-      <%!-- TP-09: a discreet link to each topic started from this message. --%>
+      <%!-- TP-09: a "Continue topic" button to each topic started from this message (steward
+           decision, 2026-10-23); its title is in the name, and on hover. --%>
       <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
-        {gettext("Continued in")}
-        <%= for {fork, i} <- Enum.with_index(@forks) do %>
-          <span :if={i > 0}>, </span><.link href={~p"/t/#{fork.id}/#{fork.slug}"} class="link">{fork.title}</.link>
-        <% end %>
+        <.link
+          :for={fork <- @forks}
+          href={~p"/t/#{fork.id}/#{fork.slug}"}
+          class="btn btn-xs"
+          title={fork.title}
+          aria-label={gettext("Continue topic: %{title}", title: fork.title)}
+        >
+          <.icon name="hero-arrow-turn-down-right-micro" class="size-4" />{gettext("Continue topic")}
+        </.link>
       </p>
       <div class="message-actions">
         <ReactionComponents.add_reaction
@@ -1449,7 +1576,81 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # The composer's `!` commands (steward decision, 2026-10-23), as the `Suggest` list shows
+  # them: those this author may use here.
+  defp commands(upload, can_fork?) do
+    [
+      upload && %{name: "image", detail: gettext("Add an image at the end of your message")},
+      can_fork? &&
+        %{name: "new-topic", detail: gettext("Send, then start a new topic from it")},
+      %{name: "schedule", detail: gettext("Post what you have not sent yet, later")}
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.map(&Map.put(&1, :label, "!" <> &1.name))
+  end
+
+  # The start of a text not posted yet, as typed (its Markdown), on one line.
+  defp short(body) do
+    text = body |> String.split() |> Enum.join(" ")
+    if String.length(text) > 140, do: String.slice(text, 0, 140) <> "…", else: text
+  end
+
+  attr :schedule, :map, required: true
+  attr :error, :string, default: nil
+
+  # `!schedule`: how many hours until the text not sent yet is posted (decimals allowed).
+  # The InlineCard hook opens it as a modal dialog and reports its closing.
+  defp schedule_dialog(assigns) do
+    assigns = assign(assigns, :max, Scheduling.max_hours())
+
+    ~H"""
+    <dialog
+      id="schedule-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="hide_schedule"
+      aria-labelledby="schedule-dialog-title"
+    >
+      <div class="modal-box schedule-card">
+        <h2 id="schedule-dialog-title" class="inline-card-title">
+          {gettext("Schedule this message")}
+        </h2>
+        <p class="schedule-excerpt">{short(@schedule.body)}</p>
+        <.form for={%{}} id="schedule-form" phx-submit="schedule">
+          <label for="schedule-hours" class="label mb-1">
+            {gettext("Post it in how many hours? (at most %{max})", max: @max)}
+          </label>
+          <input
+            id="schedule-hours"
+            name="hours"
+            type="number"
+            inputmode="decimal"
+            min="0.01"
+            max={@max}
+            step="any"
+            required
+            class="input input-sm w-full"
+            aria-describedby={@error && "schedule-error"}
+            phx-mounted={JS.focus()}
+          />
+          <p :if={@error} id="schedule-error" role="alert" class="text-sm text-error mt-1">
+            {@error}
+          </p>
+          <div class="modal-action">
+            <button class="btn btn-sm btn-primary">{gettext("Schedule")}</button>
+            <button type="button" class="btn btn-sm btn-ghost" phx-click="hide_schedule">
+              {gettext("Cancel")}
+            </button>
+          </div>
+        </.form>
+      </div>
+    </dialog>
+    """
+  end
+
   attr :mine, :any, required: true
+  attr :pending, :list, default: [], doc: "the author's scheduled messages here"
+  attr :commands, :list, default: [], doc: "the `!` commands, for the Composer hook"
   attr :reply_to, :any, required: true
   attr :roles, :map, required: true
   attr :author, :map, required: true
@@ -1482,6 +1683,7 @@ defmodule IdejoWeb.TopicLive do
         phx-hook="Composer"
         phx-update="ignore"
         data-sent={@mine && @mine.body_md}
+        data-commands={Jason.encode!(@commands)}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
@@ -1493,7 +1695,8 @@ defmodule IdejoWeb.TopicLive do
             gettext("Enter · send | Shift+Enter · new line | Ctrl+Enter or Enter ×3 · new message")
           }
         ></textarea>
-        <%!-- TP-10: suggestions while typing @, +, #, / or $ (assets/js/suggest.js). --%>
+        <%!-- TP-10: suggestions while typing @, +, #, / or $, and the commands after !
+             (assets/js/suggest.js). --%>
         <ul
           id="composer-suggestions"
           role="listbox"
@@ -1525,6 +1728,40 @@ defmodule IdejoWeb.TopicLive do
         <.live_file_input upload={@upload} />
       </form>
       <p :if={@image_error} role="alert" class="text-sm text-error mt-1">{@image_error}</p>
+      <%!-- `!schedule`: what waits to be posted here; only its author sees it. --%>
+      <section
+        :if={@pending != []}
+        id="scheduled-messages"
+        aria-labelledby="scheduled-messages-title"
+        class="scheduled-messages"
+      >
+        <h2 id="scheduled-messages-title" class="scheduled-messages-title">
+          {gettext("Scheduled")}
+        </h2>
+        <ul>
+          <li :for={scheduled <- @pending} id={"scheduled-#{scheduled.id}"} class="scheduled-item">
+            <span class="scheduled-when">
+              <time datetime={DateTime.to_iso8601(scheduled.post_at)}>
+                {Calendar.strftime(scheduled.post_at, "%Y-%m-%d %H:%M UTC")}
+              </time>
+            </span>
+            <span class="scheduled-text">{short(scheduled.body_md)}</span>
+            <button
+              type="button"
+              class="message-action"
+              phx-click="cancel_scheduled"
+              phx-value-id={scheduled.id}
+              aria-label={
+                gettext("Cancel the message scheduled for %{time}",
+                  time: Calendar.strftime(scheduled.post_at, "%Y-%m-%d %H:%M UTC")
+                )
+              }
+            >
+              {gettext("Cancel")}
+            </button>
+          </li>
+        </ul>
+      </section>
     </section>
     """
   end

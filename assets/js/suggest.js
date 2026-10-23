@@ -6,12 +6,16 @@
 // tags, recent ones first, narrowed as the name is typed ("@rob" → robert, Robin). Picked with
 // a click, or the arrow keys and Enter or Tab; Escape closes the list.
 //
+// After ! the composer lists its commands instead (steward decision, 2026-10-23): no server
+// question, and picking one removes what was typed and runs it (`onCommand`). Enter picks one
+// only once something follows the ! or an arrow chose it, so "Great !" and Enter still sends.
+//
 // The text box keeps the focus (ARIA combobox: aria-controls, aria-expanded,
 // aria-activedescendant on it, a role="listbox" list beside it). Its keydown listener is
 // added before the composer's, so Enter picks a suggestion instead of sending.
 
 // A sign at the start of the text or after a space or "(", then what follows it.
-export const TRIGGER = /(?:^|[\s(])([@+#/$])([A-Za-z0-9_-]{0,40})$/
+export const TRIGGER = /(?:^|[\s(])([@+#/$!])([A-Za-z0-9_-]{0,40})$/
 
 // What is being typed at the caret: {sign, query, start} (start: where the sign is), or null.
 export function tokenAt(value, caret) {
@@ -31,11 +35,14 @@ export function applyPick(value, caret, token, insert) {
 const escape = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 export class Suggest {
-  // `push(sign, query, reply)` asks the server; `reply` gets the items.
-  constructor(input, list, push) {
+  // `push(sign, query, reply)` asks the server; `reply` gets the items. `commands` ({name,
+  // label, detail}) are offered after !, and `onCommand(name)` runs the one picked.
+  constructor(input, list, push, {commands = null, onCommand = null} = {}) {
     this.input = input
     this.list = list
     this.push = push
+    this.commands = commands
+    this.onCommand = onCommand
     this.items = []
     this.active = -1
     this.token = null
@@ -61,6 +68,7 @@ export class Suggest {
   update() {
     const token = tokenAt(this.input.value, this.input.selectionStart)
     if (!token) return this.close()
+    if (token.sign === "!") return this.showCommands(token)
     this.token = token
     clearTimeout(this.timer)
     this.timer = setTimeout(() => {
@@ -72,8 +80,20 @@ export class Suggest {
     }, 120)
   }
 
+  showCommands(token) {
+    if (!this.commands) return this.close()
+    const query = token.query.toLowerCase()
+    const items = this.commands
+      .filter(c => c.name.startsWith(query))
+      .map(c => ({label: c.label, detail: c.detail, insert: c.name, command: true}))
+    this.close()
+    this.token = token
+    this.show(items)
+  }
+
   show(items) {
     this.items = items
+    this.moved = false
     if (items.length === 0) return this.close()
     this.active = 0
     this.list.innerHTML = items.map((item, i) =>
@@ -112,9 +132,15 @@ export class Suggest {
     if (!this.isOpen() || e.isComposing) return
     const move = step => {
       this.active = (this.active + step + this.items.length) % this.items.length
+      this.moved = true
       this.highlight()
     }
     const plainEnter = e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey
+    // A lone "!" then Enter: the list goes and the Enter is the composer's.
+    if (plainEnter && this.token?.sign === "!" && this.token.query === "" && !this.moved) {
+      this.close()
+      return
+    }
     if (e.key === "ArrowDown") move(1)
     else if (e.key === "ArrowUp") move(-1)
     else if (plainEnter || e.key === "Tab") this.pick(this.active)
@@ -127,12 +153,26 @@ export class Suggest {
   pick(index) {
     const item = this.items[index]
     if (!item || !this.token) return
+    if (item.command) return this.runCommand(item.insert)
     const {value, caret} = applyPick(this.input.value, this.input.selectionStart, this.token, item.insert)
     this.close()
     this.input.value = value
     this.input.setSelectionRange(caret, caret)
     // The composer repaints and the editor's form sees the change.
     this.input.dispatchEvent(new Event("input", {bubbles: true}))
+  }
+
+  // What was typed for a command leaves the text; then the command runs.
+  runCommand(name) {
+    const value = this.input.value
+    const caret = this.input.selectionStart
+    const before = value.slice(0, this.token.start)
+    const after = value.slice(caret).replace(/^ /, "")
+    this.close()
+    this.input.value = before + after
+    this.input.setSelectionRange(before.length, before.length)
+    this.input.dispatchEvent(new Event("input", {bubbles: true}))
+    if (this.onCommand) this.onCommand(name)
   }
 }
 

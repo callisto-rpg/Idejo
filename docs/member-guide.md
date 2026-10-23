@@ -76,12 +76,25 @@ change and keeps no history.
   every emoji (with a search box). Your reactions show under the message, with a count when
   several people chose the same one; click one to add yours or take it back. You may add
   several. The author is told once per message how many reactions it has.
-- **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box. In the editor
-  for a new topic or an edit, there is also **Add image**.
+- **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box, or use
+  **!image** (below). In the editor for a new topic or an edit, there is also **Add image**.
+- **Commands**: type **!** at the start of a word in the box for a list of commands. Pick one
+  with a click, or type its name or use the arrow keys, then **Enter** (or **Tab**):
+  - **!image** opens your files; the picture goes at the end of your message.
+  - **!new-topic** sends what you wrote, then opens **New topic** with your message as its
+    first message: give it a title (and a category, and tags if it has any). When you were
+    replying, the new topic continues from the message you replied to. Your message stays
+    where it is too, and the message the topic continues from gets a **Continue topic**
+    button.
+  - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
+    work, such as `0.5` for half an hour; at most 168, a week). Only you see it until then,
+    under the box, where **Cancel** takes it back. It is posted as one finished message,
+    with a small **scheduled message** label. Text you already sent cannot be scheduled.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
   lines, `> quotes`, lists and links. Messages have no length limit; a long one shows a
   **Show all** button.
-- **New topic from this** turns a side question into its own topic, linked both ways.
+- **New topic from this** turns a side question into its own topic, linked both ways: the
+  new topic says where it continues from, and the message gets a **Continue topic** button.
 - **Report** sends a message to the moderators, with a reason. Only they see that you
   reported it.
 - Each message's time is its **permanent link**.

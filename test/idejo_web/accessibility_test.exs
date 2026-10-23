@@ -267,6 +267,13 @@ defmodule IdejoWeb.AccessibilityTest do
     assert_fragment_accessible(render(view), "#{path}, editor preview")
     assert has_element?(view, "[role=tab][aria-selected=true][tabindex='0']", "Preview")
     assert has_element?(view, "[role=tabpanel][aria-labelledby$=preview-tab]")
+
+    # !schedule: the dialog asking for hours, then the list of what waits.
+    render_hook(view, "open_schedule", %{"body" => "Later, maybe"})
+    assert_fragment_accessible(render(view), "#{path}, scheduling")
+    view |> form("#schedule-form", %{hours: "2"}) |> render_submit()
+    assert has_element?(view, "#scheduled-messages")
+    assert_fragment_accessible(render(view), "#{path}, scheduled messages")
   end
 
   @tag req: "AX-01"
