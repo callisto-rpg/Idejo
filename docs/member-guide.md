@@ -105,8 +105,9 @@ change and keeps no history.
   the topics that carry all of them.
 - **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
   may give yourself. You see them once when you join; change your roles there at any time.
-- **Unread** (in the bar at the top) lists topics with messages you have not seen. A message
-  counts once, however much it grows.
+- **Unread** (in the bar at the top) lists topics with messages you have not seen: first,
+  under **Following**, every topic you follow, then the other topics. A message counts once,
+  however much it grows.
 - **Notifications**, the bell at the top, shows your mentions, replies to you and new messages in topics you
   follow.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
