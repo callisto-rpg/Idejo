@@ -392,6 +392,15 @@ roles or the permission grid. Every later change must keep it true:
   `/unread`) renders rows with `TopicComponents.topic_row/1`; the title link stays a direct
   child of the `<li>` (tests read `#topics li > a`). The home page's active topics pass
   `lead={:category}`: the category's mark and name instead of the starter's avatar and name.
+  Its tags sit at the right, above the message count (steward decision, 2026-10-23).
+  **View** (steward decision, 2026-10-23): the home page (beside its first section title)
+  and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`, two links
+  (`?view=compact`, the default, and `?view=expanded`) remembered in the session
+  (`IdejoWeb.TopicView`). Expanded rows get `preview=` from `Forum.topic_previews/1` (a few
+  queries per page, whatever its length): the opening message's excerpt (`Forum.excerpt/2`,
+  so spoilers stay hidden) and its first `/uploads/` image at the right, "Latest messages"
+  (not a heading: AX-01) over a line with the three latest other messages, and the writers'
+  avatars, five and "+N more" past six. Deleted messages are left out.
 - **Unread** (TP-07, `Idejo.Reading`): one `read_positions` row per user and topic, holding
   the last message seen. Opening a topic (`TopicController`, and `TopicLive` on connect)
   marks it read with `Reading.mark_read/2`, and so does every new message arriving while it
