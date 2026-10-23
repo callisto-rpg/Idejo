@@ -61,6 +61,9 @@ corner. It has seven tabs.
   times) only once the message is this old; until then it adds a line to the same message,
   so someone writing alone keeps one message. It applies at once, to open messages too.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
+- **Push notifications**: **On** (the default) or **Off**. On, members can turn on
+  browser notifications for replies, mentions and topics they follow. Off, they are not
+  offered and none are sent.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
 

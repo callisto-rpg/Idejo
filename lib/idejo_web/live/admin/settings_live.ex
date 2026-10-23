@@ -95,6 +95,16 @@ defmodule IdejoWeb.Admin.SettingsLive do
           step="1"
           required
         />
+        <%!-- PN-19 --%>
+        <.input
+          field={@form[:push_enabled]}
+          type="select"
+          label={gettext("Push notifications")}
+          options={[{gettext("On"), "on"}, {gettext("Off"), "off"}]}
+        />
+        <p class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext("When off, members are not offered browser notifications and none are sent.")}
+        </p>
         <%!-- The welcome card and "Rules & Roles" (steward decision, 2026-10-23). --%>
         <.input
           field={@form[:server_about]}

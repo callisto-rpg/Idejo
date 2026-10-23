@@ -307,6 +307,8 @@ and earlier versions included), in the About and Rules texts and avatars are kep
 
 ```sh
 idejo exec app bin/idejo-admin backup
+idejo exec app bin/idejo-admin push-key
+idejo exec app bin/idejo-admin rotate-push-keys
 ```
 
 **Keep copies off the server.** A backup on the same disk does not survive the loss of the
@@ -317,9 +319,12 @@ idejo cp app:/data/backups/. ~/idejo-backups               # on the server
 scp -r idejo@203.0.113.10:idejo-backups ./               # on your computer
 ```
 
-Keep a copy of `deploy/.env` with them, in your password manager: the SMTP password stored
-in the backup can only be read with the same `SECRET_KEY_BASE`. With another key, everything
-works except email until you enter the SMTP password again in **Admin → Email**.
+Keep a copy of `deploy/.env` with them, in your password manager: the SMTP password and the
+push keys stored in the backup can only be read with the same `SECRET_KEY_BASE`. With
+another key, everything works except email and push notifications until you enter the SMTP
+password again in **Admin → Email** and run `bin/idejo-admin rotate-push-keys` (`health`
+reports the push keys as unreadable until then; members' browsers subscribe again by
+themselves).
 
 ### Restore a backup
 
@@ -383,7 +388,7 @@ If the app container is not running (it keeps restarting, or you stopped it), us
 `idejo run --rm app bin/idejo-admin …` instead of `idejo exec app bin/idejo-admin …`.
 
 **`health`** checks that the server is running, the database answers, every migration has
-run, an owner exists, the uploads directory can be written and the last backup is less
+run, an owner exists, the push keys can be read, the uploads directory can be written and the last backup is less
 than a day old, one line each. It ends with
 exit status 1 when a check failed, so it can drive a monitoring script.
 
@@ -394,6 +399,14 @@ then change it in your profile. The reset is recorded in the audit log.
 
 Nothing else is needed: the command works without email and whether or not you remember the
 owner's address.
+
+**`push-key`** prints the server's public push key (VAPID), the one members' browsers
+subscribe with. Every install makes its key pair when it first starts; backups carry it.
+
+**`rotate-push-keys [--yes]`** makes a new key pair, after you type `rotate` (or with
+`--yes`). Do it if the keys may have leaked, or when `health` says they cannot be read. Every
+browser's push subscription ends; each subscribes again the next time its member opens a
+page. The rotation is recorded in the audit log.
 
 ## Troubleshooting
 
