@@ -459,7 +459,10 @@ roles or the permission grid. Every later change must keep it true:
   SP-04), plus the server's own reactions in `priv/static/reactions/` (`:agree:`, `:bruh:`…,
   the steward's, CC-BY 4.0). How to update them: `priv/emoji/README.md`. `Markdown.to_html`
   turns `:name:` and typed emoji into `<img>` outside code (alt: the emoji, or `:name:`);
-  `Forum.excerpt/2` reads them back as their alt.
+  `Forum.excerpt/2` reads them back as their alt. Image addresses carry `?vsn=` with a
+  hash of every image (`Emoji.version/0`, worked out at compile time), so `Plug.Static`
+  caches them for a year (stored message HTML keeps the version it was written with; the
+  files stay, so old addresses keep working).
 - **Reactions** (TP-17, `Idejo.Reactions`): `reactions` rows (message, user, emoji name),
   several emoji per user. `toggle/3` adds or takes back; any signed-in, verified reader who
   may view the topic reacts (not to deleted messages, not in locked or archived topics);

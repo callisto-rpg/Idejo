@@ -10,10 +10,21 @@ defmodule Idejo.Emoji do
 
   An emoji is a map: `name` (the key, as written between colons), `char` (the Unicode emoji,
   nil for the server's own), `src` (its image) and `category`.
+
+  Image addresses carry `?vsn=` and a hash of every image, so `Plug.Static` lets browsers keep
+  them for a year without asking again (`cache_control_for_vsn_requests`); new images give a
+  new hash, so an update still reaches everyone.
   """
 
   @data Path.expand("../../priv/emoji/emoji.json", __DIR__)
   @external_resource @data
+
+  @images Path.wildcard(Path.expand("../../priv/static/{emoji,reactions}/*.{svg,png}", __DIR__))
+  for image <- @images, do: @external_resource(image)
+
+  @version :crypto.hash(:sha256, Enum.map(@images, &[Path.basename(&1), File.read!(&1)]))
+           |> Base.url_encode64(padding: false)
+           |> binary_part(0, 12)
 
   # The server's own reactions, in reactions/ (steward's work, CC-BY-4.0).
   @own ~w(agree disagree this same yes no bruh nice oof thank-you true)
@@ -28,14 +39,19 @@ defmodule Idejo.Emoji do
                  name: hd(entry["names"]),
                  names: entry["names"],
                  char: entry["emoji"],
-                 src: "/emoji/#{entry["file"]}.svg",
+                 src: "/emoji/#{entry["file"]}.svg?vsn=#{@version}",
                  category: entry["category"]
                }
              end)
 
   @own_entries Enum.map(
                  @own,
-                 &%{name: &1, char: nil, src: "/reactions/#{&1}.png", category: "Server"}
+                 &%{
+                   name: &1,
+                   char: nil,
+                   src: "/reactions/#{&1}.png?vsn=#{@version}",
+                   category: "Server"
+                 }
                )
 
   # Every name, also the extra ones ("+1", "thumbsup"), to its emoji.
@@ -53,6 +69,10 @@ defmodule Idejo.Emoji do
            )
 
   @categories ["Server" | @standard |> Enum.map(& &1.category) |> Enum.uniq()]
+
+  @doc "The images' version, a hash of every image: the `vsn` of their addresses."
+  @spec version() :: String.t()
+  def version, do: @version
 
   @doc ~S|The emoji a name stands for ("joy", "+1", "agree"), or nil.|
   @spec lookup(String.t()) :: t() | nil
