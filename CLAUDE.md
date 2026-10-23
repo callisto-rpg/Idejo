@@ -590,7 +590,11 @@ roles or the permission grid. Every later change must keep it true:
   put in a form, audited as "[changed]". Tests can use `Idejo.SMTPCapture` for a real SMTP
   server.
 - **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
-  falling back to "Idejo". Pages set `page_title`; the title reads "Page · Server name". No
+  falling back to "Idejo". The Idejo logos (steward decision, 2026-10-23; © Mariano Pictet,
+  CC-BY-4.0, in NOTICE and REUSE.toml): the small one (`/images/logo-small.png`, also
+  `/favicon.ico` and the `rel="icon"`) before the server name in the header; the full one
+  (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
+  sign-in, sign-up and setup pages, inverted by the dark theme. Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.

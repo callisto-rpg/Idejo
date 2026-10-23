@@ -68,7 +68,8 @@ defmodule IdejoWeb.Layouts do
       </button>
 
       <a href={~p"/"} class="brand" id="brand">
-        <span class="brand-mark" aria-hidden="true">{brand_initial()}</span>
+        <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23). --%>
+        <img src={~p"/images/logo-small.png"} alt="" class="brand-mark" width="32" height="32" />
         <span class="brand-name">{server_name()}</span>
       </a>
 
@@ -165,8 +166,6 @@ defmodule IdejoWeb.Layouts do
 
   defp width_class(:narrow), do: "max-w-3xl"
   defp width_class(:wide), do: "max-w-5xl"
-
-  defp brand_initial, do: server_name() |> String.first() |> String.upcase()
 
   attr :current_scope, :map, required: true
 
@@ -628,9 +627,19 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
+  The full Idejo logo (steward decision, 2026-10-23), above the sign-in, sign-up and setup
+  pages. Black, turned white by the dark theme's stylesheet (`.full-logo`). CC-BY-4.0, ©
+  Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
+  """
+  def full_logo(assigns) do
+    ~H"""
+    <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo" width="199" height="105" />
+    """
+  end
+
+  @doc """
   The name shown in the header and page titles: the server name set by an administrator
-  (AD-02), or "Idejo" when none is set. When branding exists (AD-11), the Idejo logo will be
-  the fallback in the same way.
+  (AD-02), or "Idejo" when none is set. The header shows it after the small Idejo logo.
   """
   @spec server_name() :: String.t()
   def server_name, do: Idejo.Settings.get(:server_name)

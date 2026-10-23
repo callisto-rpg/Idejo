@@ -339,21 +339,24 @@
     font-weight: 650;
     letter-spacing: -0.01em;
   }
+  /* The small Idejo logo (steward decision, 2026-10-23): rounded already. */
   .brand-mark {
-    display: grid;
-    place-items: center;
     flex: none;
     width: 2rem;
     height: 2rem;
-    border-radius: 0.625rem;
-    color: var(--color-primary-content);
-    background: linear-gradient(
-      135deg,
-      var(--color-primary),
-      color-mix(in oklab, var(--color-primary) 55%, var(--color-accent))
-    );
-    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.25), var(--shadow-soft);
-    font-size: 0.95rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-soft);
+  }
+  /* The full logo on the sign-in, sign-up and setup pages: black, white in the dark theme. */
+  .full-logo {
+    display: inline-block;
+    width: 10rem;
+    height: auto;
+    margin-bottom: 1.5rem;
+  }
+  [data-theme="dark"] .full-logo { filter: invert(1); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .full-logo { filter: invert(1); }
   }
   .brand-name {
     display: none;
