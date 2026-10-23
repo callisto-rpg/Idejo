@@ -60,7 +60,7 @@ change and keeps no history.
   - **@username** mentions someone: they get a notification and follow the topic (unless
     they unfollowed it).
   - **+role** notifies everyone with that role who can read the topic, such as
-    **+moderator**. Which roles you may tag is set by the administrators; others stay text.
+    **+moderator**, and they follow the topic (unless they unfollowed it). Which roles you may tag is set by the administrators; others stay text.
   - **#topic**, **/category** and **$tag** link to a topic, a category or a tag. Type its
     web address name (`#garden-plans`, `/help`, `$bug`); once sent it reads its name.
   - After typing **@**, **+**, **#**, **/** or **$**, a list suggests the people, roles,

@@ -395,8 +395,9 @@ roles or the permission grid. Every later change must keep it true:
   any; never member or guest. Both settings are on for owner, administrator and moderator
   by migration, edited in **Admin → Roles** (audited in `role.update`). Notifications:
   `Body.mentioned_users/1` and `Body.mentioned_role_members/2` (members who may view get a
-  `role_mention`); an @mentioned user who may view the topic also follows it (`auto_follow`, so an
-  explicit unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members.
+  `role_mention`); an @mentioned user, or a member of a +mentioned role (steward decision,
+  2026-10-23), who may view the topic also follows it (`auto_follow`, so an explicit
+  unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members.
   **Suggestions while typing**: after `@`, `+`, `#`, `/` or `$` at the start of a word, the
   composer and the message editor show a list (`assets/js/suggest.js`: the `Suggest` class,
   used by the `Composer` hook before its own Enter handler, and the `EditorSuggest` hook; an
