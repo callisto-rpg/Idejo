@@ -38,6 +38,13 @@ precedence = "override"
 SPDX-FileCopyrightText = "Mariano Pictet"
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# The Idejo logos (steward decision, 2026-10-23).
+[[annotations]]
+path = ["priv/static/images/logo*", "priv/static/favicon.ico"]
+precedence = "override"
+SPDX-FileCopyrightText = "Mariano Pictet"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 [[annotations]]
 path = "priv/emoji/emoji.json"
 precedence = "override"

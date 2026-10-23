@@ -11,6 +11,8 @@
     <IdejoWeb.Layouts.page_title page_title={assigns[:page_title]} />
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
+    <%!-- The small Idejo logo (steward decision, 2026-10-23). --%>
+    <link rel="icon" type="image/png" href={~p"/images/logo-small.png"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!-- The server's own stylesheet, after Idejo's: Admin → Stylesheet. --%>
     <link
