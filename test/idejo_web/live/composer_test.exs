@@ -53,7 +53,7 @@ defmodule IdejoWeb.ComposerTest do
     composer = lv |> element("#composer") |> render()
 
     assert composer =~
-             "Enter · send | Shift+Enter · new line | Ctrl+Enter or Enter ×3 · new message"
+             "Enter: send · Shift+Enter: new line · Ctrl+Enter / Enter×3: New message"
 
     assert composer =~ "<textarea"
     refute composer =~ "<button"
