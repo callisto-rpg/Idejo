@@ -22,8 +22,11 @@ Commands:
   restore FILE [--yes]              replace the database and uploads with a backup's
                                     (server stopped; FILE alone is looked for in the
                                     backup directory)
-  health                            check the server, database, migrations, uploads
-                                    and last backup
+  health                            check the server, database, migrations, push keys,
+                                    uploads and last backup
+  push-key                          print the public key browsers subscribe with
+  rotate-push-keys [--yes]          make new push keys; every browser's push
+                                    subscription ends
 USAGE
 }
 
@@ -77,6 +80,21 @@ case "${1:-}" in
   health)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi
     run "Idejo.Release.health()"
+    ;;
+  push-key)
+    if [ $# -gt 1 ]; then usage >&2; exit 64; fi
+    run "Idejo.Release.push_key()"
+    ;;
+  rotate-push-keys)
+    if [ $# -gt 2 ] || { [ $# -eq 2 ] && [ "$2" != "--yes" ]; }; then usage >&2; exit 64; fi
+    if [ $# -eq 1 ]; then
+      echo "This makes new push keys. Every browser's push subscription ends; each"
+      echo "subscribes again the next time its member opens a page."
+      printf 'Type "rotate" to go on: '
+      read -r answer || answer=
+      if [ "$answer" != "rotate" ]; then echo "Nothing changed."; exit 1; fi
+    fi
+    run "Idejo.Release.rotate_push_keys()"
     ;;
   -h | --help | help)
     usage

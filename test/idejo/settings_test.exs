@@ -46,9 +46,11 @@ defmodule Idejo.SettingsTest do
 
   @tag req: "AD-02"
   test "AD-02 saving unchanged values writes nothing", %{admin: admin} do
+    # The push keys (PN-14) are rows of their own, made by a migration.
+    stored = Repo.aggregate(Idejo.Settings.Setting, :count)
     assert {:ok, _} = Settings.update_settings(admin, %{"server_name" => "Idejo"})
     assert Audit.list_entries() == []
-    assert Repo.aggregate(Idejo.Settings.Setting, :count) == 0
+    assert Repo.aggregate(Idejo.Settings.Setting, :count) == stored
   end
 
   @tag req: "AD-02"
