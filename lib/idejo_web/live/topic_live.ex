@@ -1911,6 +1911,7 @@ defmodule IdejoWeb.TopicLive do
         <textarea
           class="composer-input"
           rows="1"
+          autocomplete="off"
           aria-label={gettext("Message")}
           aria-describedby="composer-window"
           placeholder={
