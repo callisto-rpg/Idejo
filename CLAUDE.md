@@ -726,7 +726,9 @@ roles or the permission grid. Every later change must keep it true:
 - **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
-  `IDEJO_SOURCE_URL`). New pages must use `Layouts.app` so the footer is never missing.
+  `IDEJO_SOURCE_URL`). It also links the privacy notice (AD-02): `/privacy`
+  (`PrivacyController`, public, no JavaScript), the `privacy_notice` setting, Markdown written
+  in **Admin → Settings**. New pages must use `Layouts.app` so the footer is never missing.
 - **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
   to `/setup`. The wizard needs the setup code written to the app log at boot
   (`Idejo.Setup.token/0`, in memory, new at each restart) and creates the owner, verified, in
