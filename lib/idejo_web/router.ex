@@ -35,6 +35,9 @@ defmodule IdejoWeb.Router do
     get "/theme.css", ThemeController, :show
     # TP-17: the + reaction picker's emoji, drawn by the browser.
     get "/emoji-index.json", EmojiController, :index
+    # NO-04: the email summary's one-click unsubscribe (RFC 8058). The token in the address
+    # is the authority: mail programs post it with no session or CSRF token.
+    post "/email/unsubscribe/:token", EmailUnsubscribeController, :create
   end
 
   scope "/", IdejoWeb do
@@ -55,6 +58,8 @@ defmodule IdejoWeb.Router do
     get "/rules", WelcomeController, :show
     # Help: the keys, the signs and the ! commands (steward decision, 2026-10-23).
     get "/help", HelpController, :show
+    # NO-04: the email summary's unsubscribe link, with no need to sign in.
+    get "/email/unsubscribe/:token", EmailUnsubscribeController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
     # TP-10: a role's page, which a +role mention links to.

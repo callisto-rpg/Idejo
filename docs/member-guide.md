@@ -174,3 +174,12 @@ display name, add a picture (and, under **Dark mode picture**, another one for p
 using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".
+
+**Email notifications**, on the same page: when you have not been on the server for 24
+hours, you get one email counting what you missed, for what you tick: **@you mentions and
+replies to your posts** and **new messages in a thread you created** (both on at first),
+**+role mentions**, **new messages in a thread you follow**, **new topics** and **any
+activity**. Only finished messages count, never muted topics. With **Don't send me a
+second message in the same week if I don't log in** (on at first) you get at most one a
+week while you stay away; without it, one a day. Nothing new, no email. Each email has a
+link that stops them all in one click.

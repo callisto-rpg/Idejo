@@ -32,6 +32,9 @@ defmodule Idejo.Accounts.User do
     # MO-02: banned since, and until (nil: for good); see Idejo.Accounts.banned?/1.
     field :banned_at, :utc_datetime_usec
     field :banned_until, :utc_datetime_usec
+    # When the user was last seen signed in (steward decision, 2026-10-23): for the email
+    # summary of what they missed (Idejo.Notifications.Digest). Kept by Accounts.seen/1.
+    field :last_seen_at, :utc_datetime_usec
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 
