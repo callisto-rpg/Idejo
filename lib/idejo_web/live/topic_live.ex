@@ -78,6 +78,7 @@ defmodule IdejoWeb.TopicLive do
            picker: nil,
            viewable_replies: MapSet.new(),
            moderating: nil,
+           confirm_delete: nil,
            selected: nil,
            select_for: nil,
            move_to: nil,
@@ -105,6 +106,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(can_react?: can_react?(user, topic), picker: nil)
          |> assign(
            moderating: nil,
+           confirm_delete: nil,
            selected: nil,
            select_for: nil,
            move_to: nil,
@@ -718,6 +720,16 @@ defmodule IdejoWeb.TopicLive do
       {:ok, _message} ->
         {:noreply, close_editor(socket)}
 
+      # Steward decision, 2026-10-23: the author emptied their message, so ask whether to
+      # delete it; the editor stays open behind the question. Not the opening message.
+      {:error, :blank}
+      when message.author_id == user.id and message.id != hd(socket.assigns.messages).id ->
+        {:noreply,
+         assign(socket,
+           editing: {id, to_form(%{"body" => body}, as: :edit)},
+           confirm_delete: id
+         )}
+
       {:error, :blank} ->
         form =
           %{"body" => body}
@@ -732,6 +744,31 @@ defmodule IdejoWeb.TopicLive do
          |> put_flash(:error, gettext("This message cannot be edited."))}
     end
   end
+
+  def handle_event("delete_own", _params, %{assigns: %{confirm_delete: id}} = socket)
+      when is_binary(id) do
+    message = Enum.find(socket.assigns.messages, &(&1.id == id))
+    socket = assign(socket, :confirm_delete, nil)
+
+    # The deleted message arrives as an event, like everyone else's view of it.
+    case message && Messages.delete_own(user(socket), message) do
+      # AX-01: the focus moves to the placeholder that replaces the editor.
+      {:ok, _message} ->
+        {:noreply, assign(socket, editing: nil, refocus: id)}
+
+      _error ->
+        {:noreply,
+         socket
+         |> close_editor()
+         |> put_flash(:error, gettext("This message cannot be deleted."))}
+    end
+  end
+
+  def handle_event("delete_own", _params, socket), do: {:noreply, socket}
+
+  # "No", Escape or a click outside: back to the editor, the text still empty.
+  def handle_event("cancel_delete_own", _params, socket),
+    do: {:noreply, assign(socket, :confirm_delete, nil)}
 
   # AX-01: the keyboard focus goes back to the message's Edit button, which the editor
   # replaced (it takes the focus when it is mounted again).
@@ -805,6 +842,7 @@ defmodule IdejoWeb.TopicLive do
         </div>
       </dialog>
       <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
+      <.delete_own_dialog :if={@confirm_delete} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -950,25 +988,61 @@ defmodule IdejoWeb.TopicLive do
     ]
   end
 
-  # MO-02: for readers, a run of deleted messages shows as one line. Maps each deleted
-  # message's id to `{:first, count}` for the first of its run, `:rest` for the others.
+  # MO-02: for readers, a run of deleted messages shows as one line, one run per kind (by a
+  # moderator, or by their authors). Maps each deleted message's id to `{:first, count,
+  # kind}` for the first of its run, `:rest` for the others.
   defp deleted_runs(messages) do
     messages
-    |> Enum.chunk_by(&(&1.deleted_at != nil))
+    |> Enum.chunk_by(&deleted_kind/1)
     |> Enum.filter(fn [first | _] -> first.deleted_at != nil end)
     |> Enum.flat_map(fn [first | rest] = run ->
-      [{first.id, {:first, length(run)}} | Enum.map(rest, &{&1.id, :rest})]
+      [{first.id, {:first, length(run), deleted_kind(first)}} | Enum.map(rest, &{&1.id, :rest})]
     end)
     |> Map.new()
   end
 
-  defp deleted_text({:first, count}),
+  defp deleted_kind(%{deleted_at: nil}), do: nil
+
+  defp deleted_kind(message),
+    do: if(Messages.deleted_by_author?(message), do: :author, else: :moderator)
+
+  defp deleted_text({:first, count, :moderator}),
     do:
       ngettext(
         "Message deleted by a moderator",
         "%{count} messages deleted by a moderator",
         count
       )
+
+  defp deleted_text({:first, count, :author}),
+    do: ngettext("Message deleted by user", "%{count} messages deleted by user", count)
+
+  # Steward decision, 2026-10-23: asked when the author saves their message with no text.
+  # "No" closes the dialog natively (a `method="dialog"` form), so the focus goes back to the
+  # editor; the dialog's close event tells the server.
+  defp delete_own_dialog(assigns) do
+    ~H"""
+    <dialog
+      id="delete-own-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="cancel_delete_own"
+      aria-labelledby="delete-own-title"
+    >
+      <div class="modal-box inline-card">
+        <h2 id="delete-own-title" class="inline-card-title">
+          {gettext("Are you sure you want to delete your own message?")}
+        </h2>
+        <form method="dialog" class="modal-action">
+          <button type="button" class="btn btn-sm btn-error" phx-click="delete_own">
+            {gettext("Yes")}
+          </button>
+          <button class="btn btn-sm" autofocus>{gettext("No")}</button>
+        </form>
+      </div>
+    </dialog>
+    """
+  end
 
   # The messages before the author's open message and the ones after it; with none open,
   # everything comes before and the composer goes to the end.
@@ -1029,9 +1103,11 @@ defmodule IdejoWeb.TopicLive do
     ~H"""
     <%!-- MO-02: readers see a placeholder for a deleted message, one line for a run of them. --%>
     <p
-      :if={@message.deleted_at && !@can_moderate? && match?({:first, _}, @deleted_run)}
+      :if={@message.deleted_at && !@can_moderate? && match?({:first, _, _}, @deleted_run)}
       id={"message-#{@message.id}-deleted"}
       class="message-deleted"
+      tabindex="-1"
+      phx-mounted={@refocus == @message.id && JS.focus()}
     >
       {deleted_text(@deleted_run)}
     </p>
@@ -1071,7 +1147,9 @@ defmodule IdejoWeb.TopicLive do
           id={"message-#{@message.id}-deleted"}
           class="badge badge-sm badge-warning"
         >
-          {gettext("Deleted by a moderator")}
+          {if Messages.deleted_by_author?(@message),
+            do: gettext("Deleted by user"),
+            else: gettext("Deleted by a moderator")}
         </span>
       </p>
       <blockquote
@@ -1092,7 +1170,9 @@ defmodule IdejoWeb.TopicLive do
           <span class="opacity-70">{gettext("In reply to a message in another thread")}</span>
         <% end %>
         <span :if={@message.reply_to.deleted_at} class="italic opacity-70">
-          {gettext("Message deleted by a moderator")}
+          {if Messages.deleted_by_author?(@message.reply_to),
+            do: gettext("Message deleted by user"),
+            else: gettext("Message deleted by a moderator")}
         </span>
       </blockquote>
       <.form

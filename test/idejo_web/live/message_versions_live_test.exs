@@ -55,7 +55,7 @@ defmodule IdejoWeb.MessageVersionsLiveTest do
   end
 
   @tag req: "GM-10"
-  test "GM-10 an empty edit is refused, and editing can be cancelled", %{
+  test "GM-10 an empty edit asks to delete the message; No and Cancel keep it", %{
     conn: conn,
     topic: topic,
     closed: closed
@@ -63,8 +63,18 @@ defmodule IdejoWeb.MessageVersionsLiveTest do
     {:ok, lv, _html} = watch(conn, topic)
     lv |> element("#message-#{closed.id} button", "Edit") |> render_click()
 
-    assert lv |> form("#edit-message-#{closed.id}", edit: %{body: " "}) |> render_submit() =~
-             "can&#39;t be blank"
+    lv |> form("#edit-message-#{closed.id}", edit: %{body: " "}) |> render_submit()
+
+    assert has_element?(
+             lv,
+             "dialog#delete-own-dialog",
+             "Are you sure you want to delete your own message?"
+           )
+
+    # "No" closes the dialog natively, which sends its close event.
+    lv |> element("#delete-own-dialog") |> render_hook("cancel_delete_own", %{})
+    refute has_element?(lv, "#delete-own-dialog")
+    assert has_element?(lv, "#edit-message-#{closed.id}")
 
     lv |> element("#edit-message-#{closed.id} button", "Cancel") |> render_click()
     refute has_element?(lv, "#edit-message-#{closed.id}")

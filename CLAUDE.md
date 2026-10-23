@@ -313,6 +313,13 @@ roles or the permission grid. Every later change must keep it true:
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
   needed) listing each version newest first with the span it was current. `list_messages/1`
   preloads `:versions`.
+- **Deleting one's own message** (steward decision, 2026-10-23): saving an edit with no text
+  asks "Are you sure you want to delete your own message?" (`TopicLive`, `confirm_delete`;
+  "No" is a `method="dialog"` form, so the focus returns to the editor), and "Yes" calls
+  `Messages.delete_own/2`: like a moderator's delete (MO-02: `deleted_at`, the topic counts
+  one less, kept for moderators) but `deleted_by_id` is the author, nothing is logged, and
+  the topic's opening message is refused (it stays "can't be blank"). Readers see "Message
+  deleted by user" (`Messages.deleted_by_author?/1`; runs of deletions are grouped by kind).
 - **Closing** (GM-12, GM-16): archiving topics closes their open messages
   (`Messages.close_open_in_topics/1` inside the transaction, `announce_closed/1` after it);
   locking (TP-14, `Forum.moderate_topic/4`) does the same. `Idejo.Messages.Authors` tracks live topic views
