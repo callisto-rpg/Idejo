@@ -198,6 +198,13 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
 - **Lock** / **Unlock**: a locked topic is read only; open messages in it close.
 - **Pin** / **Unpin**: pinned topics stay first in their category.
 - **Move to** another category you moderate. Links keep working.
+- **Archive topic**: the topic goes to the **Archive**, read only; its open messages close.
+  The Archive is hidden from every role until an administrator shows it in
+  **Permissions**, so readers (and moderators) no longer see it there.
+- **Permanently delete topic** (under a line, in red): tick **Yes, delete this topic and all
+  its messages for good**, then the button. Everything in the topic goes and cannot come
+  back; the moderation log keeps its title and category (**Deleted a topic for good**).
+  Archive it instead to keep it.
 
 **Change the title:** point at the title and click the pencil next to it, then **Save**.
 Starters change their own topic's title too, while it is open; moderators may also in

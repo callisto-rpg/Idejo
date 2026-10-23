@@ -716,6 +716,16 @@ roles or the permission grid. Every later change must keep it true:
   (`#rename-topic-link`, shown on hover or focus, always on touch screens) opens
   `#rename-topic` by `:target` (no JavaScript needed; `assets/js/title_edit.js` only moves
   the focus), a form posting to `/t/{id}/title` (`TopicTitleController`).
+- **Archive and delete a topic** (steward decision, 2026-10-23), in "Moderate this topic",
+  for `:moderate` in its category: `Forum.archive_topic/3` moves it to the Archive
+  (`archive_category/1`, made first, outside the topic's transaction) with `state:
+  "archived"`, closes its open messages and drops its category's own tags (`topic.archive`
+  logged under the old category); `Forum.delete_topic/3` deletes the row and, by the
+  foreign keys' cascades, everything in it (`topic.delete` logged with title and category, a
+  `delete` activity, open messages' timers stopped). The delete is its own form with a
+  required confirmation box (`confirm=yes`, checked by `TopicModerationController`). Both
+  broadcast `{:topic_changed, id}`. A new table that references topics or messages needs an
+  `on_delete` that lets this work.
 - **Move a topic** (TP-15): `Forum.move_topic(moderator, topic, target, reason)` needs
   `:moderate` in both categories (`Forum.list_move_targets/2`), never into the Archive; open
   messages stay open and links keep working. Logged under the old category with `from`/`to`

@@ -2310,6 +2310,19 @@ html:not([data-js]) .spoiler-cover { display: none; }
 body:has(#rename-topic:target) .title-edit { opacity: 1; }
 @media (hover: none) { .title-edit { opacity: 1; } }
 .rename-topic { display: none; margin-bottom: 1rem; max-width: 40rem; }
+
+/* Deleting a topic for good (steward decision, 2026-10-23): apart, under a line, in red. */
+.delete-topic {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hairline);
+  max-width: 36rem;
+  & .btn { justify-self: start; }
+}
+.delete-topic-title { font-weight: 600; color: var(--color-error); }
+.delete-topic-confirm { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
 .rename-topic:target { display: block; }
 
 /* Help (steward decision, 2026-10-23): the keys, the signs and the ! commands, as lists of

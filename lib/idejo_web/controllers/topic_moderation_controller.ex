@@ -3,8 +3,10 @@
 
 defmodule IdejoWeb.TopicModerationController do
   @moduledoc """
-  The topic page's moderator form: lock, unlock, pin or unpin (TP-14), or move to another
-  category (TP-15), with an optional reason for the moderation log (MO-03). A plain form post, so it works without JavaScript.
+  The topic page's moderator form: lock, unlock, pin or unpin (TP-14), move to another
+  category (TP-15), archive, or delete for good (steward decision, 2026-10-23; only with its
+  confirmation box ticked), with an optional reason for the moderation log (MO-03). A plain
+  form post, so it works without JavaScript.
   """
   use IdejoWeb, :controller
 
@@ -34,6 +36,56 @@ defmodule IdejoWeb.TopicModerationController do
     end
   end
 
+  def create(conn, %{"id" => id, "action" => "archive"} = params) do
+    user = conn.assigns.current_scope.user
+
+    topic =
+      Forum.get_viewable_topic(user, id) ||
+        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+
+    case Forum.archive_topic(user, topic, params["reason"]) do
+      {:ok, archived} ->
+        conn
+        |> put_flash(:info, gettext("Topic archived: it is read only now."))
+        |> redirect(to: back_to(user, archived))
+
+      {:error, :archived} ->
+        conn
+        |> put_flash(:error, gettext("This topic is archived already."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, gettext("You cannot moderate this topic."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+    end
+  end
+
+  def create(conn, %{"id" => id, "action" => "delete"} = params) do
+    user = conn.assigns.current_scope.user
+
+    topic =
+      Forum.get_viewable_topic(user, id) ||
+        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+
+    cond do
+      params["confirm"] != "yes" ->
+        conn
+        |> put_flash(:error, gettext("Tick the box to confirm, then delete the topic."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+
+      match?({:ok, _}, Forum.delete_topic(user, topic, params["reason"])) ->
+        conn
+        |> put_flash(:info, gettext("Topic deleted for good."))
+        |> redirect(to: ~p"/c/#{topic.category.slug}")
+
+      true ->
+        conn
+        |> put_flash(:error, gettext("You cannot moderate this topic."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+    end
+  end
+
   def create(conn, %{"id" => id} = params) do
     user = conn.assigns.current_scope.user
 
@@ -45,6 +97,14 @@ defmodule IdejoWeb.TopicModerationController do
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
     end
+  end
+
+  # The archived topic, when the moderator may still view it (the Archive is hidden from every
+  # role until an administrator shows it); else the category it left.
+  defp back_to(user, topic) do
+    if Forum.get_viewable_topic(user, topic.id),
+      do: ~p"/t/#{topic.id}/#{topic.slug}",
+      else: ~p"/"
   end
 
   defp put_flash_for(conn, {:ok, _topic}, action), do: put_flash(conn, :info, done(action))

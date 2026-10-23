@@ -138,6 +138,50 @@
         </label>
         <button name="action" value="move" class="btn btn-sm">{gettext("Move")}</button>
       </span>
+      <%!-- Steward decision, 2026-10-23: read only, in the Archive. --%>
+      <button
+        :if={@topic.state != "archived"}
+        name="action"
+        value="archive"
+        id="archive-topic"
+        class="btn btn-sm"
+      >
+        <.icon name="hero-archive-box" class="size-4" />{gettext("Archive topic")}
+      </button>
+    </.form>
+    <%!-- Steward decision, 2026-10-23: its own form, so the box must be ticked for it only. --%>
+    <.form
+      for={%{}}
+      action={~p"/t/#{@topic.id}/moderate"}
+      method="post"
+      id="delete-topic-form"
+      class="delete-topic"
+    >
+      <input type="hidden" name="action" value="delete" />
+      <p class="delete-topic-title">{gettext("Permanently delete topic")}</p>
+      <p id="delete-topic-help" class="text-sm opacity-70">
+        {gettext(
+          "The topic and all its messages go for good, for everyone: this cannot be undone. Archive it instead to keep it, read only."
+        )}
+      </p>
+      <label class="grow">
+        <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+        <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />
+      </label>
+      <label class="delete-topic-confirm">
+        <input
+          type="checkbox"
+          name="confirm"
+          value="yes"
+          required
+          class="checkbox checkbox-sm"
+          aria-describedby="delete-topic-help"
+        />
+        {gettext("Yes, delete this topic and all its messages for good")}
+      </label>
+      <button id="delete-topic" class="btn btn-sm btn-error">
+        <.icon name="hero-trash" class="size-4" />{gettext("Permanently delete topic")}
+      </button>
     </.form>
   </details>
 
