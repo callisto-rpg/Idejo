@@ -165,16 +165,29 @@ defmodule IdejoWeb.UserComponents do
   @doc """
   A user's avatar (AC-04): their picture, or their initial on a plain circle. Decorative:
   the name is always shown next to it, so it has no text of its own for screen readers.
+
+  A user with a picture for the dark theme (steward decision, 2026-10-23) gets both, and the
+  stylesheet shows the one for the reader's theme (`.avatar-has-dark`); they load lazily,
+  so only the one shown is fetched. With one picture only, both themes show it.
   """
   attr :user, :map, required: true
   attr :size, :atom, values: [:small, :list, :medium, :large], default: :small
 
   def avatar(assigns) do
-    assigns = assign(assigns, url: Uploads.avatar_url(assigns.user), box: box(assigns.size))
+    {url, dark_url} =
+      case {Uploads.avatar_url(assigns.user), Uploads.dark_avatar_url(assigns.user)} do
+        {nil, dark} -> {dark, nil}
+        pair -> pair
+      end
+
+    assigns = assign(assigns, url: url, dark_url: dark_url, box: box(assigns.size))
 
     ~H"""
-    <span :if={@url} class="avatar shrink-0" aria-hidden="true">
-      <span class={[@box, "rounded-full"]}><img src={@url} alt="" /></span>
+    <span :if={@url} class={["avatar shrink-0", @dark_url && "avatar-has-dark"]} aria-hidden="true">
+      <span class={[@box, "rounded-full"]}>
+        <img src={@url} alt="" class={@dark_url && "avatar-light"} loading={@dark_url && "lazy"} />
+        <img :if={@dark_url} src={@dark_url} alt="" class="avatar-dark" loading="lazy" />
+      </span>
     </span>
     <span :if={!@url} class="avatar avatar-placeholder shrink-0" aria-hidden="true">
       <span class={[@box, "rounded-full bg-neutral text-neutral-content"]}>

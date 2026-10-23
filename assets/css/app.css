@@ -1521,6 +1521,20 @@
     0 0 36px -14px color-mix(in oklab, var(--color-primary) 45%, transparent);
 }
 
+/* AC-04: a user's picture for the dark theme, when they have one (steward decision,
+   2026-10-23): the avatar holds both, and the theme shows one. */
+.avatar-has-dark .avatar-dark { display: none; }
+[data-theme="dark"] .avatar-has-dark {
+  & .avatar-light { display: none; }
+  & .avatar-dark { display: block; }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .avatar-has-dark {
+    & .avatar-light { display: none; }
+    & .avatar-dark { display: block; }
+  }
+}
+
 /* Live notifications (steward decision, 2026-10-23; assets/js/notifier.js): bubbles at the
    top right, newest on top, see-through and blurred, lined and glowing in the colour of what
    they say (the sidebar dots' colours, purple for a reaction). */

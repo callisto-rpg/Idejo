@@ -123,6 +123,7 @@ change and keeps no history.
 ## Your account
 
 Click your name in the top right corner, then **Profile and account**, to change your
-display name, add a picture, change your password, or delete your account. The same menu
+display name, add a picture (and, under **Dark mode picture**, another one for people
+using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".
