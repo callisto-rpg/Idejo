@@ -7,18 +7,39 @@
     <h1>{gettext("Unread")}</h1>
   </header>
 
-  <p :if={@rows == [] and @page == 1} id="nothing-unread" class="empty-state">
+  <p :if={@followed == [] and @rows == [] and @page == 1} id="nothing-unread" class="empty-state">
     {gettext("Nothing new since your last visit.")}
   </p>
 
-  <ol :if={@rows != []} id="topics" class="topic-list">
-    <TopicComponents.topic_row
-      :for={{topic, count} <- @rows}
-      topic={topic}
-      unread={count}
-      category
-    />
-  </ol>
+  <section :if={@followed != []} aria-labelledby="unread-following">
+    <h2 id="unread-following" class="section-divider">{gettext("Following")}</h2>
+    <ol id="followed-topics" class="topic-list">
+      <TopicComponents.topic_row
+        :for={{topic, count} <- @followed}
+        topic={topic}
+        unread={count}
+        category
+      />
+    </ol>
+  </section>
+
+  <%!-- Headed only when Following is there, or past the first page. --%>
+  <section
+    :if={@rows != []}
+    aria-labelledby={(@followed != [] or @page > 1) && "unread-others"}
+  >
+    <h2 :if={@followed != [] or @page > 1} id="unread-others" class="section-divider">
+      {gettext("Other topics")}
+    </h2>
+    <ol id="topics" class="topic-list">
+      <TopicComponents.topic_row
+        :for={{topic, count} <- @rows}
+        topic={topic}
+        unread={count}
+        category
+      />
+    </ol>
+  </section>
 
   <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="pager">
     <.link :if={@page > 1} href={~p"/unread?page=#{@page - 1}"} class="btn btn-sm">

@@ -173,12 +173,41 @@ defmodule Idejo.Reading do
   @doc """
   The topics with unread messages across every category the user may view, most recently
   active first, 30 a page: `{[{topic, unread_count}], more?}`. Topics come with their author
-  and category.
+  and category. `following: false` leaves out the topics the user follows (the Unread page
+  lists those apart, `list_unread_followed_topics/1`).
   """
   @spec list_unread_topics(User.t(), keyword()) :: {[{Topic.t(), pos_integer()}], boolean()}
   def list_unread_topics(%User{} = user, opts \\ []) do
     per_page = Keyword.get(opts, :per_page, 30)
     page = max(Keyword.get(opts, :page, 1), 1)
+
+    query =
+      if Keyword.get(opts, :following, true),
+        do: unread_topics(user),
+        else: from(t in unread_topics(user), where: t.id not in subquery(followed_ids(user)))
+
+    rows =
+      Repo.all(
+        from t in query,
+          offset: ^((page - 1) * per_page),
+          limit: ^(per_page + 1)
+      )
+
+    {Enum.take(rows, per_page), length(rows) > per_page}
+  end
+
+  @doc """
+  Every topic the user follows (TP-13) that has unread messages, most recently active
+  first, all of them: `[{topic, unread_count}]`, for the top of the Unread page (steward
+  decision, 2026-10-23).
+  """
+  @spec list_unread_followed_topics(User.t()) :: [{Topic.t(), pos_integer()}]
+  def list_unread_followed_topics(%User{} = user) do
+    Repo.all(from t in unread_topics(user), where: t.id in subquery(followed_ids(user)))
+  end
+
+  # The topics with unread messages in viewable categories, with their counts, newest first.
+  defp unread_topics(user) do
     viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
 
     counts =
@@ -187,21 +216,17 @@ defmodule Idejo.Reading do
       |> group_by([m], m.topic_id)
       |> select([m], %{topic_id: m.topic_id, count: count(m.id)})
 
-    rows =
-      Repo.all(
-        from t in Topic,
-          join: c in subquery(counts),
-          on: c.topic_id == t.id,
-          where: t.category_id in subquery(viewable),
-          order_by: [desc: t.last_activity_at, desc: t.id],
-          offset: ^((page - 1) * per_page),
-          limit: ^(per_page + 1),
-          preload: [:author, :category, tags: ^Tags.ordered()],
-          select: {t, c.count}
-      )
-
-    {Enum.take(rows, per_page), length(rows) > per_page}
+    from t in Topic,
+      join: c in subquery(counts),
+      on: c.topic_id == t.id,
+      where: t.category_id in subquery(viewable),
+      order_by: [desc: t.last_activity_at, desc: t.id],
+      preload: [:author, :category, tags: ^Tags.ordered()],
+      select: {t, c.count}
   end
+
+  defp followed_ids(%User{id: user_id}),
+    do: from(f in Follow, where: f.user_id == ^user_id and f.following, select: f.topic_id)
 
   # Messages by others opened after the user's read position in their topic, or after the
   # user signed up where they have none.
