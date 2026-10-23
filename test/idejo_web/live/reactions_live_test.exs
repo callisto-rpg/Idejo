@@ -38,7 +38,7 @@ defmodule IdejoWeb.ReactionsLiveTest do
   } do
     me = user_fixture()
     {:ok, lv, html} = open(log_in_user(build_conn(), me), topic)
-    assert html =~ ~s(src="/emoji/1f602.svg")
+    assert html =~ ~s(src="/emoji/1f602.svg?vsn=#{Idejo.Emoji.version()}")
 
     assert lv |> element("#message-#{message.id}-react summary") |> has_element?()
     assert has_element?(lv, "#message-#{message.id}-react button[aria-label=':agree:']")
@@ -87,5 +87,9 @@ defmodule IdejoWeb.ReactionsLiveTest do
 
     assert build_conn() |> get("/emoji/1f602.svg") |> response(200) =~ "<svg"
     assert build_conn() |> get("/reactions/agree.png") |> response(200)
+
+    # Versioned addresses are kept for good: no request when the image is used again.
+    conn = get(build_conn(), Idejo.Emoji.lookup("joy").src)
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
   end
 end
