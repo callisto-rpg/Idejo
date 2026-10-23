@@ -31,7 +31,7 @@ defmodule IdejoWeb.AdminUserRolesLiveTest do
     assert has_element?(lv, "#assigned-#{moderator.id}", "Moderator")
     assert Enum.map(Access.assigned_roles(user), & &1.name) == ["moderator"]
     # Already held, so it is no longer offered.
-    refute has_element?(lv, "#assign-role-form option[value='#{moderator.id}']")
+    refute has_element?(lv, "#assign-role-form input[type=radio][value='#{moderator.id}']")
 
     html = lv |> element("#assigned-#{moderator.id} button", "Remove") |> render_click()
     assert html =~ "Role “Moderator” removed."
@@ -43,10 +43,13 @@ defmodule IdejoWeb.AdminUserRolesLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/users/#{user_fixture().id}")
 
     for name <- [:guest, :member, :owner] do
-      refute has_element?(lv, "#assign-role-form option[value='#{role(name).id}']")
+      refute has_element?(lv, "#assign-role-form input[type=radio][value='#{role(name).id}']")
     end
 
-    assert has_element?(lv, "#assign-role-form option[value='#{role(:administrator).id}']")
+    assert has_element?(
+             lv,
+             "#assign-role-form input[type=radio][value='#{role(:administrator).id}']"
+           )
   end
 
   @tag req: "RP-06"

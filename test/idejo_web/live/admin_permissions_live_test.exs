@@ -40,10 +40,10 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/permissions")
 
     member = role(:member)
-    assert has_element?(lv, "#permission-#{member.id}-post option[selected][value=allow]")
-    assert has_element?(lv, "#permission-#{member.id}-moderate option[selected][value=unset]")
+    assert has_element?(lv, "#permission-#{member.id}-post input[checked][value=allow]")
+    assert has_element?(lv, "#permission-#{member.id}-moderate input[checked][value=unset]")
     # Server-wide a right is allowed or not: no deny to choose.
-    refute has_element?(lv, "#permission-#{member.id}-post option[value=deny]")
+    refute has_element?(lv, "#permission-#{member.id}-post input[value=deny]")
   end
 
   @tag req: "RP-05"
@@ -53,7 +53,7 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
     for name <- [:owner, :administrator] do
       role = role(name)
       assert lv |> element("#role-#{role.id}") |> render() =~ "Always"
-      refute has_element?(lv, "#role-#{role.id} select")
+      refute has_element?(lv, "#role-#{role.id} .dropdown-select")
     end
   end
 
@@ -69,7 +69,7 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
 
     assert has_element?(
              lv,
-             "#permission-#{member.id}-post option[selected][value=unset]",
+             "#permission-#{member.id}-post label:has(input[checked][value=unset])",
              "Server-wide (allowed)"
            )
 
@@ -79,7 +79,7 @@ defmodule IdejoWeb.AdminPermissionsLiveTest do
 
     refute Access.can?(user, :post, general)
     assert Access.permissions(general) == %{{member.id, :post} => :deny}
-    assert has_element?(lv, "#permission-#{member.id}-post option[selected][value=deny]")
+    assert has_element?(lv, "#permission-#{member.id}-post input[checked][value=deny]")
 
     assert [%{change: "permission.update", admin_id: admin_id, after: %{"effect" => "deny"}} | _] =
              Audit.list_entries()

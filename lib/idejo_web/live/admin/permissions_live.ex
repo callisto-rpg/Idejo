@@ -153,21 +153,19 @@ defmodule IdejoWeb.Admin.PermissionsLive do
                   <form id={"permission-#{role.id}-#{right}"} phx-change="set">
                     <input type="hidden" name="role" value={role.id} />
                     <input type="hidden" name="right" value={right} />
-                    <select
+                    <.dropdown
+                      id={"permission-#{role.id}-#{right}-effect"}
                       name="effect"
-                      class="select select-sm"
-                      aria-label={
+                      class="is-small"
+                      label={
                         gettext("%{role}: %{right}",
                           role: Admin.role_name(role),
                           right: right_name(right)
                         )
                       }
-                    >
-                      {Phoenix.HTML.Form.options_for_select(
-                        options(@scope, effect(@server, role, right)),
-                        Atom.to_string(effect(@settings, role, right))
-                      )}
-                    </select>
+                      options={options(@scope, effect(@server, role, right))}
+                      value={Atom.to_string(effect(@settings, role, right))}
+                    />
                   </form>
                 </td>
               <% end %>

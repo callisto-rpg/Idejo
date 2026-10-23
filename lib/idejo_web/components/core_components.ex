@@ -242,6 +242,30 @@ defmodule IdejoWeb.CoreComponents do
     """
   end
 
+  # The app's own dropdown, not the system's (steward decision, 2026-10-23): see dropdown/1.
+  def input(%{type: "select", multiple: false} = assigns) do
+    options =
+      if assigns.prompt, do: [{assigns.prompt, ""} | assigns.options], else: assigns.options
+
+    assigns = assign(assigns, :options, options)
+
+    ~H"""
+    <div class="fieldset mb-2">
+      <span :if={@label} id={"#{@id}-label"} class="label mb-1">{@label}</span>
+      <.dropdown
+        id={@id}
+        name={@name}
+        options={@options}
+        value={@value}
+        labelled_by={@label && "#{@id}-label"}
+        class={[@class, @errors != [] && (@error_class || "is-error")]}
+        {@rest}
+      />
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div class="fieldset mb-2">
@@ -313,6 +337,80 @@ defmodule IdejoWeb.CoreComponents do
       <.icon name="hero-exclamation-circle" class="size-5" />
       {render_slot(@inner_block)}
     </p>
+    """
+  end
+
+  @doc """
+  A dropdown in the app's design (steward decision, 2026-10-23), in place of a `<select>`,
+  whose list the system draws: a `<details>` whose button shows the choice, over a
+  `.popup-menu` of radio buttons with the field's `name`. It works without JavaScript (the
+  public search page needs that); `assets/js/dropdown.js` closes it when a choice is clicked
+  or on Escape, and places the list over containers that would clip it. In forms with
+  `phx-change`, choosing changes the form as a `<select>` would.
+
+  `options`: `{label, value}` pairs, or plain values (each its own label). With no `value`
+  among them, the first is chosen, as a `<select>` does. Name it with `labelled_by` (the id
+  of a visible label) or `label` (for screen readers only, as `aria-label` on a select).
+  """
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :options, :list, required: true
+  attr :value, :any, default: nil
+  attr :labelled_by, :string, default: nil
+  attr :label, :string, default: nil, doc: "a name for screen readers, without a visible label"
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(disabled form required)
+
+  def dropdown(assigns) do
+    options =
+      Enum.map(assigns.options, fn
+        {label, value} -> {to_string(label), to_string(value)}
+        value -> {to_string(value), to_string(value)}
+      end)
+
+    value = if assigns.value in [nil, false], do: nil, else: to_string(assigns.value)
+
+    chosen =
+      if Enum.any?(options, &(elem(&1, 1) == value)),
+        do: value,
+        else: options |> List.first({nil, nil}) |> elem(1)
+
+    assigns =
+      assign(assigns,
+        options: Enum.with_index(options),
+        chosen: chosen,
+        shown: Enum.find_value(options, "", fn {label, v} -> v == chosen && label end)
+      )
+
+    ~H"""
+    <details
+      id={@id}
+      class={["dropdown-select", @class]}
+      data-dropdown
+      phx-mounted={JS.ignore_attributes(["open", "data-placed"])}
+    >
+      <summary
+        class="dropdown-select-button"
+        aria-labelledby={@labelled_by && "#{@labelled_by} #{@id}-value"}
+        aria-label={@label && "#{@label}: #{@shown}"}
+      >
+        <span id={"#{@id}-value"} class="dropdown-select-value">{@shown}</span>
+      </summary>
+      <fieldset class="popup-menu dropdown-select-menu">
+        <legend class="sr-only">{@label || @shown}</legend>
+        <label :for={{{label, value}, i} <- @options} class="dropdown-select-option">
+          <input
+            type="radio"
+            id={"#{@id}-#{i}"}
+            name={@name}
+            value={value}
+            checked={value == @chosen}
+            {@rest}
+          />
+          <span>{label}</span>
+        </label>
+      </fieldset>
+    </details>
     """
   end
 

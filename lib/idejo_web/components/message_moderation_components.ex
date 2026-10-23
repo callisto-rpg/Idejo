@@ -20,7 +20,7 @@ defmodule IdejoWeb.MessageModerationComponents do
   use Phoenix.Component
   use Gettext, backend: IdejoWeb.Gettext
 
-  import IdejoWeb.CoreComponents, only: [icon: 1]
+  import IdejoWeb.CoreComponents, only: [dropdown: 1, icon: 1]
 
   attr :message, :map, required: true
   attr :own?, :boolean, required: true, doc: "the moderator's own message: no close or delete"
@@ -234,18 +234,17 @@ defmodule IdejoWeb.MessageModerationComponents do
             <span class="label mb-1">{gettext("Title of the new thread")}</span>
             <input type="text" name="title" maxlength="150" required class="input input-sm w-full" />
           </label>
-          <label>
-            <span class="label mb-1">{gettext("Category")}</span>
-            <select name="category_id" class="select select-sm w-full">
-              <option
-                :for={category <- @categories}
-                value={category.id}
-                selected={category.id == @current_category_id}
-              >
-                {category.name}
-              </option>
-            </select>
-          </label>
+          <div>
+            <span id="move-new-category-label" class="label mb-1">{gettext("Category")}</span>
+            <.dropdown
+              id="move-new-category"
+              name="category_id"
+              labelled_by="move-new-category-label"
+              class="is-small w-full"
+              options={Enum.map(@categories, &{&1.name, &1.id})}
+              value={@current_category_id}
+            />
+          </div>
           <.reason />
           <div class="inline-card-actions">
             <button class="btn btn-sm btn-primary">{gettext("Move to the new thread")}</button>

@@ -15,6 +15,8 @@ defmodule IdejoWeb.UserComponents do
   use Gettext, backend: IdejoWeb.Gettext
   use IdejoWeb, :verified_routes
 
+  import IdejoWeb.CoreComponents, only: [dropdown: 1]
+
   alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Uploads
@@ -112,16 +114,22 @@ defmodule IdejoWeb.UserComponents do
                 name="return_to"
                 value={@actions.return_to}
               />
-              <label class="block">
-                <span class="label mb-1">{gettext("For")}</span>
-                <select name="days" class="select select-sm w-full" id="ban-days">
-                  <option value="1">{gettext("1 day")}</option>
-                  <option value="7">{gettext("7 days")}</option>
-                  <option value="30">{gettext("30 days")}</option>
-                  <option value="365">{gettext("1 year")}</option>
-                  <option value="forever">{gettext("For good")}</option>
-                </select>
-              </label>
+              <div class="block">
+                <span id="ban-days-label" class="label mb-1">{gettext("For")}</span>
+                <.dropdown
+                  id="ban-days"
+                  name="days"
+                  labelled_by="ban-days-label"
+                  class="is-small w-full"
+                  options={[
+                    {gettext("1 day"), "1"},
+                    {gettext("7 days"), "7"},
+                    {gettext("30 days"), "30"},
+                    {gettext("1 year"), "365"},
+                    {gettext("For good"), "forever"}
+                  ]}
+                />
+              </div>
               <label class="block">
                 <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
                 <input type="text" name="reason" maxlength="500" class="input input-sm w-full" />

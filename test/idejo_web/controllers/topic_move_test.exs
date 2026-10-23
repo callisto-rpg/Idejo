@@ -31,7 +31,9 @@ defmodule IdejoWeb.TopicMoveTest do
     moderator = log_in_user(build_conn(), user_with_role_fixture(:moderator))
     page = moderator |> get(~p"/t/#{topic.id}/#{topic.slug}") |> html_response(200)
     assert page =~ ~s(id="move-target")
-    assert page =~ ~s(<option value="#{staff.id}">Staff</option>)
+
+    assert page =~
+             ~r/<input[^>]*type="radio"[^>]*name="category_id"[^>]*value="#{staff.id}"[^>]*>\s*<span>Staff<\/span>/
 
     {:ok, visitor, _html} =
       live_isolated(build_conn(), IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})

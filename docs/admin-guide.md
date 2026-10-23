@@ -172,14 +172,16 @@ which links are unused, used (and by whom) or expired.
 
 CSS that every page loads after Idejo's own styles, so its rules win: change colours,
 spacing, or anything else. **Save** applies it as pages load; **Reset to default** brings back
-the stylesheet Idejo came with. The default sets how see-through the cards over a page are
-(`--card-opacity`, `--card-blur`: 70% and 3px) and the welcome card (`--overlay-opacity`,
-`--overlay-blur`: 80% and 6px), the menus (the account menu and a topic's menu:
-`--menu-opacity`, `--menu-blur`: 70% and 4px; any element with the `popup-menu` class),
+the stylesheet Idejo came with. The default sets how see-through the menus are (the
+account menu, a topic's menu and the dropdowns: `--menu-opacity`, `--menu-blur`: 70% and
+4px; any element with the `popup-menu` class), the cards and dialogs over a page, which
+follow the menus (`--card-opacity`, `--card-blur`: give them values of their own to set
+them apart), the welcome card (`--overlay-opacity`, `--overlay-blur`: 80% and 6px),
 and the cover over a **!spoiler** message
 (`--spoiler-opacity`, `--spoiler-blur`: 50% and 4px) with its **Reveal spoiler** button
 (`--spoiler-button-opacity`, `--spoiler-button-blur`: 80% and 6px). A stylesheet saved before
-these existed keeps working: menus and the cover then use those values anyway. Each change is in the
+these existed keeps working: menus and the cover then use those values anyway, and cards
+keep the values it saved (**Reset to default** brings the menus' look to them). Each change is in the
 audit log.
 
 ## Moderation

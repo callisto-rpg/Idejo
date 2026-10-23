@@ -41,6 +41,7 @@ import {TopicNav, UnreadLine} from "./topic_nav"
 import "./sidebar"
 import "./title_edit"
 import "./topic_menu"
+import "./dropdown"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
