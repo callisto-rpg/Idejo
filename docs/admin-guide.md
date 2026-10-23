@@ -56,6 +56,10 @@ corner. It has seven tabs.
 - **Who can sign up**: **Anyone**, or **Only people with an invite** (see [Invites](#invites)).
 - **Growing-message window (seconds)**: from 2 to 600, 15 by default. It applies to messages
   started after you change it.
+- **Unanswered message time (minutes)**: from 1 to 1440 (a day), 10 by default. While nobody
+  has written below a message, its author can start a new one (Ctrl+Enter, or Enter three
+  times) only once the message is this old; until then it adds a line to the same message,
+  so someone writing alone keeps one message. It applies at once, to open messages too.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.

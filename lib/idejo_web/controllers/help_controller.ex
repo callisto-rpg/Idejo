@@ -13,6 +13,7 @@ defmodule IdejoWeb.HelpController do
     render(conn, :show,
       page_title: gettext("Help"),
       window: Idejo.Settings.get(:gm_window_seconds),
+      unanswered: Idejo.Settings.get(:gm_unanswered_minutes),
       commands: IdejoWeb.ComposerCommands.all()
     )
   end

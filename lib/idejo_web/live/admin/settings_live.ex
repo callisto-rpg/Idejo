@@ -70,6 +70,22 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 2 to 600; messages already open keep their window."
           )}
         </p>
+        <%!-- GM-05 (steward decision, 2026-10-23). --%>
+        <.input
+          field={@form[:gm_unanswered_minutes]}
+          type="number"
+          label={gettext("Unanswered message time (minutes)")}
+          min="1"
+          max="1440"
+          step="1"
+          aria-describedby="gm-unanswered-help"
+          required
+        />
+        <p id="gm-unanswered-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "While nobody has written below a message, Ctrl+Enter starts a new one only once the message is this old; until then it adds a line to the same message, so someone writing alone keeps one message. From 1 to 1440 (a day)."
+          )}
+        </p>
         <.input
           field={@form[:upload_max_mb]}
           type="number"

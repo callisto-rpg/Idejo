@@ -62,8 +62,9 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 3. One `Idejo.Messages.OpenMessage` process per open message holds the window timer, under
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
 4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
-5. A message closes only on Ctrl+Enter after the window (GM-05), lock or archive, session
-   disconnect (GM-12) or a moderator (GM-16).
+5. A message closes only on Ctrl+Enter after the window (GM-05; with nothing below it, also
+   after the unanswered message time), lock or archive, session disconnect (GM-12) or a
+   moderator (GM-16).
 6. At most one open message per author per topic (GM-09). The first message of a topic is
    never open (GM-14).
 7. Notifications, unread counts and search treat a growing message as one item (GM-13).
@@ -76,7 +77,13 @@ sent first keeps the old text in `message_versions` (GM-11). History is kept onl
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
 `{:window_ended, id}`. The window length is the `gm_window_seconds` setting (default 15,
 2–600 s; steward decision, 2026-10-23), set in **Admin → Settings** (GM-15, AD-04; server-wide
-only in v0.1, no per-category override); a change applies to messages opened after it. Tests
+only in v0.1, no per-category override); a change applies to messages opened after it. The
+**unanswered message time** (`gm_unanswered_minutes`, default 10, 1–1440; steward decision,
+2026-10-23) holds Ctrl+Enter back further: while no message (not deleted) is below the open
+one, it closes only once `opened_at` is that old (`Messages.may_start_new?/2`,
+`unanswered_until/1`; read at each Ctrl+Enter, so a change applies to open messages too);
+until then Ctrl+Enter appends like Enter. `TopicLive` works it out from the messages shown
+for the composer's description (AX-03), with no query. Tests
 set `recover_open_messages: false` and call `Idejo.Messages.Recovery.run/0` themselves.
 
 ### Permissions

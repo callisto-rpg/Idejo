@@ -200,7 +200,7 @@ defmodule Idejo.Messages do
          {:ok, message} <- update_body(open, text, changed?, edit?),
          {:ok, _} <- if(changed?, do: touch_topic(open.topic_id, now, 0), else: {:ok, nil}),
          {:ok, _} <- if(changed?, do: notify_mentions(message), else: {:ok, 0}) do
-      if break? and window_ended?(message, now),
+      if break? and may_start_new?(message, now),
         do: close_locked(message, now),
         else: {:ok, message}
     end
@@ -242,6 +242,34 @@ defmodule Idejo.Messages do
   @spec window_ended?(Message.t(), DateTime.t()) :: boolean()
   def window_ended?(%Message{closes_at: closes_at}, now \\ DateTime.utc_now()),
     do: DateTime.compare(now, closes_at) != :lt
+
+  @doc """
+  Whether Ctrl+Enter completes the author's open message, so what follows starts a new one
+  (GM-05): once its window has ended, and, while nobody has written below it, once it is
+  `gm_unanswered_minutes` old (steward decision, 2026-10-23). Until then Ctrl+Enter is an
+  Enter on a new line: a lone author keeps one message.
+  """
+  @spec may_start_new?(Message.t(), DateTime.t()) :: boolean()
+  def may_start_new?(%Message{} = message, now \\ DateTime.utc_now()) do
+    window_ended?(message, now) and
+      (DateTime.compare(now, unanswered_until(message)) != :lt or answered?(message))
+  end
+
+  @doc "When a message nobody wrote below may be completed by Ctrl+Enter (GM-05)."
+  @spec unanswered_until(Message.t()) :: DateTime.t()
+  def unanswered_until(%Message{opened_at: opened_at}),
+    do: DateTime.add(opened_at, Settings.get(:gm_unanswered_minutes) * 60, :second)
+
+  # Someone wrote below it: a message opened after it, not deleted.
+  defp answered?(message) do
+    Repo.exists?(
+      from m in Message,
+        where:
+          m.topic_id == ^message.topic_id and m.id != ^message.id and is_nil(m.deleted_at) and
+            (m.opened_at > ^message.opened_at or
+               (m.opened_at == ^message.opened_at and m.id > ^message.id))
+    )
+  end
 
   @doc """
   Closes an open message: Ctrl+Enter after the window (GM-05), a session gone for good (GM-12)

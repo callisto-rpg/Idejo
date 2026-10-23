@@ -29,7 +29,9 @@ The text box below the topic is where you write. Its placeholder repeats the key
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
 3. For a short while after your message starts (15 seconds, unless your server changed it),
    you can only add to it. Nothing shows this to others; it only means that one quick
-   thought stays one message.
+   thought stays one message. While nobody has written below it, that lasts longer: until
+   your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
+   line, so when you write alone your thoughts stay one message.
 4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is
    complete, and your next line starts a new message.
 

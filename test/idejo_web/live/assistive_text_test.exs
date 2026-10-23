@@ -96,6 +96,7 @@ defmodule IdejoWeb.AssistiveTextTest do
 
     [_, open] = Forum.list_messages(topic)
     end_window!(open)
+    {:ok, _} = Messages.commit(user_fixture(), topic, "Hello")
     lv |> element("#composer") |> render_hook("commit", %{"body" => "Hi.", "break" => true})
     assert announcer(lv) =~ "Your message is complete."
   end
@@ -129,6 +130,8 @@ defmodule IdejoWeb.AssistiveTextTest do
     assert has_element?(lv, "#composer-window.sr-only", "Enter starts a new message.")
 
     {:ok, open} = Messages.commit(author, topic, "Hello")
+    # Someone wrote below it, so only the window counts (the unanswered time: next test).
+    {:ok, _} = Messages.commit(user_fixture(), topic, "Hi")
     text = lv |> element("#composer-window") |> render()
     assert text =~ "Your message is open."
 
@@ -150,6 +153,30 @@ defmodule IdejoWeb.AssistiveTextTest do
              "Ctrl+Enter, or Enter three times, starts a new message."
 
     refute lv |> element("#composer-window") |> render() =~ "seconds"
+  end
+
+  # GM-05, steward decision, 2026-10-23: the unanswered message time.
+  @tag req: "AX-03"
+  test "AX-03 alone below the last message, the composer says Ctrl+Enter waits", %{
+    conn: conn,
+    topic: topic,
+    author: author
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    {:ok, open} = Messages.commit(author, topic, "Hello")
+    end_window!(open)
+    {:ok, _} = Messages.commit(author, topic, "Hello. Still")
+    send(lv.pid, {:window_ended, open.id})
+
+    assert lv |> element("#composer-window") |> render() =~
+             "starts a new message once someone writes below it, or in 10 minutes."
+
+    {:ok, _} = Messages.commit(user_fixture(), topic, "Hi")
+
+    assert lv |> element("#composer-window") |> render() =~
+             "Ctrl+Enter, or Enter three times, starts a new message."
+
+    refute lv |> element("#composer-window") |> render() =~ "minutes"
   end
 
   @tag req: "AX-03"

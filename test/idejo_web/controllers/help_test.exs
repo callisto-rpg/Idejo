@@ -25,6 +25,8 @@ defmodule IdejoWeb.HelpTest do
     assert text.("#help-send") =~ "Enter three times"
     # The window is this server's (15 s by default).
     assert text.("#help-send") =~ "more than 15 seconds old"
+    # And the unanswered message time (10 minutes by default).
+    assert text.("#help-send") =~ "until it is 10 minutes old"
 
     signs = text.("#help-signs dt")
     for sign <- ["@", "+", "#", "/", "$", "!"], do: assert(signs =~ sign)
