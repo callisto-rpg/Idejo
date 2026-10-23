@@ -441,6 +441,55 @@ defmodule Idejo.Messages do
   end
 
   @doc """
+  Deletes several messages of one topic at once, as a moderator of its category (MO-02;
+  steward decision, 2026-10-23: "Select multiple messages for deletion"). Each is deleted
+  like `delete_as_moderator/3`, all in one transaction, and logged one by one (MO-03); then
+  each is broadcast. The moderator's own messages and those of other topics are left out
+  (`{:error, :none}` when nothing is left); deleted ones do nothing. Returns the deleted
+  messages.
+  """
+  @spec delete_many_as_moderator(User.t(), Topic.t(), [Ecto.UUID.t()], String.t() | nil) ::
+          {:ok, [Message.t()]} | {:error, :forbidden | :none | Ecto.Changeset.t()}
+  def delete_many_as_moderator(%User{} = moderator, %Topic{} = topic, ids, reason \\ nil)
+      when is_list(ids) do
+    topic = Repo.preload(topic, :category)
+
+    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+      result =
+        Repo.transact(fn ->
+          # Locked in id order, so two moderators never wait on each other.
+          from(m in Message,
+            where: m.topic_id == ^topic.id and m.id in ^ids and m.author_id != ^moderator.id,
+            order_by: m.id,
+            lock: "FOR UPDATE"
+          )
+          |> Repo.all()
+          |> delete_each(moderator, reason)
+        end)
+
+      with {:ok, messages} <- result, do: Enum.each(messages, &after_commit/1)
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp delete_each([], _moderator, _reason), do: {:error, :none}
+
+  defp delete_each(messages, moderator, reason) do
+    Enum.reduce_while(messages, {:ok, []}, fn message, {:ok, done} ->
+      case delete_logged(moderator, message, reason) do
+        {:ok, message} -> {:cont, {:ok, [message | done]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, done} -> {:ok, Enum.reverse(done)}
+      error -> error
+    end
+  end
+
+  @doc """
   Edits someone's closed message, as a moderator of its category (MO-02), with an optional
   reason. Like an author's edit (GM-10, GM-11): changing text keeps the earlier version,
   which moderators can see (MO-06). Open messages are closed first by the moderator

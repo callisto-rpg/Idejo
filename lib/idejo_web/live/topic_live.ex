@@ -79,6 +79,7 @@ defmodule IdejoWeb.TopicLive do
            viewable_replies: MapSet.new(),
            moderating: nil,
            selected: nil,
+           select_for: nil,
            move_to: nil,
            move_query: "",
            move_results: [],
@@ -105,6 +106,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(
            moderating: nil,
            selected: nil,
+           select_for: nil,
            move_to: nil,
            move_query: "",
            move_results: [],
@@ -525,10 +527,17 @@ defmodule IdejoWeb.TopicLive do
   def handle_event("close_moderate", _params, socket),
     do: {:noreply, assign(socket, :moderating, nil)}
 
-  # TP-15: choose messages to move. The opening message never moves.
-  def handle_event("start_selecting", %{"id" => id}, %{assigns: %{can_moderate?: true}} = socket) do
-    selected = if id == opening_id(socket), do: MapSet.new(), else: MapSet.new([id])
-    {:noreply, assign(socket, moderating: nil, selected: selected)}
+  # Choose messages to move (TP-15; the opening message never moves) or to delete (MO-02;
+  # steward decision, 2026-10-23: not the moderator's own messages, nor deleted ones).
+  def handle_event(
+        "start_selecting",
+        %{"id" => id} = params,
+        %{assigns: %{can_moderate?: true}} = socket
+      ) do
+    select_for = if params["for"] == "delete", do: :delete, else: :move
+    socket = assign(socket, moderating: nil, select_for: select_for)
+    selected = if selectable?(socket, id), do: MapSet.new([id]), else: MapSet.new()
+    {:noreply, assign(socket, :selected, selected)}
   end
 
   def handle_event(
@@ -538,7 +547,7 @@ defmodule IdejoWeb.TopicLive do
       ) do
     selected =
       cond do
-        id == opening_id(socket) -> selected
+        not selectable?(socket, id) -> selected
         MapSet.member?(selected, id) -> MapSet.delete(selected, id)
         true -> MapSet.put(selected, id)
       end
@@ -547,7 +556,34 @@ defmodule IdejoWeb.TopicLive do
   end
 
   def handle_event("cancel_selecting", _params, socket),
-    do: {:noreply, assign(socket, selected: nil, move_to: nil, move_error: nil)}
+    do: {:noreply, assign(socket, selected: nil, select_for: nil, move_to: nil, move_error: nil)}
+
+  def handle_event(
+        "delete_selected",
+        params,
+        %{assigns: %{selected: %MapSet{} = selected, select_for: :delete}} = socket
+      ) do
+    case Messages.delete_many_as_moderator(
+           user(socket),
+           socket.assigns.topic,
+           MapSet.to_list(selected),
+           params["reason"]
+         ) do
+      {:ok, deleted} ->
+        {:noreply,
+         socket
+         |> assign(selected: nil, select_for: nil)
+         |> put_flash(
+           :info,
+           ngettext("1 message deleted.", "%{count} messages deleted.", length(deleted))
+         )}
+
+      _error ->
+        {:noreply, put_flash(socket, :error, gettext("This could not be done."))}
+    end
+  end
+
+  def handle_event("delete_selected", _params, socket), do: {:noreply, socket}
 
   def handle_event("move_to", %{"to" => to}, %{assigns: %{selected: %MapSet{}}} = socket)
       when to in ~w(new existing) do
@@ -704,12 +740,19 @@ defmodule IdejoWeb.TopicLive do
 
   defp close_editor(socket), do: assign(socket, :editing, nil)
 
-  defp opening_id(socket) do
-    case socket.assigns.messages do
-      [first | _] -> first.id
-      [] -> nil
+  defp selectable?(socket, id) do
+    case Enum.find(socket.assigns.messages, &(&1.id == id)) do
+      nil -> false
+      message -> selectable_in_view?(socket.assigns, message)
     end
   end
+
+  # Which messages may be chosen: to move, any but the opening one (TP-15); to delete, any
+  # not deleted and not the moderator's own (MO-02).
+  defp selectable_in_view?(%{select_for: :delete} = assigns, message),
+    do: is_nil(message.deleted_at) and message.author_id != assigns.current_scope.user.id
+
+  defp selectable_in_view?(assigns, message), do: message.id != List.first(assigns.messages).id
 
   defp search_targets(socket, query) do
     results = Forum.search_move_targets(user(socket), query, socket.assigns.topic.id)
@@ -769,11 +812,15 @@ defmodule IdejoWeb.TopicLive do
         movable?={@moderated.id != List.first(@messages).id}
       />
       <MessageModerationComponents.move_banner
-        :if={@can_moderate? && @selected}
+        :if={@can_moderate? && @selected && @select_for == :move}
+        count={MapSet.size(@selected)}
+      />
+      <MessageModerationComponents.delete_banner
+        :if={@can_moderate? && @selected && @select_for == :delete}
         count={MapSet.size(@selected)}
       />
       <MessageModerationComponents.move_dialog
-        :if={@can_moderate? && @selected && @move_to}
+        :if={@can_moderate? && @selected && @select_for == :move && @move_to}
         to={@move_to}
         count={MapSet.size(@selected)}
         categories={
@@ -820,7 +867,7 @@ defmodule IdejoWeb.TopicLive do
             reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
             selected={@selected && MapSet.member?(@selected, message.id)}
-            opening?={message.id == List.first(@messages).id}
+            selectable?={selectable_in_view?(assigns, message)}
             viewable_replies={@viewable_replies}
           />
         </li>
@@ -860,7 +907,7 @@ defmodule IdejoWeb.TopicLive do
             reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
             selected={@selected && MapSet.member?(@selected, message.id)}
-            opening?={message.id == List.first(@messages).id}
+            selectable?={selectable_in_view?(assigns, message)}
             viewable_replies={@viewable_replies}
           />
         </li>
@@ -965,8 +1012,8 @@ defmodule IdejoWeb.TopicLive do
   attr :image_error, :string, default: nil
   attr :reactions, :list, default: []
   attr :can_react?, :boolean, default: false
-  attr :selected, :any, default: nil, doc: "nil outside choosing messages to move (TP-15)"
-  attr :opening?, :boolean, default: false
+  attr :selected, :any, default: nil, doc: "nil outside choosing messages (TP-15, MO-02)"
+  attr :selectable?, :boolean, default: false, doc: "a checkbox while choosing messages"
   attr :viewable_replies, :any, default: MapSet.new()
 
   # Open and closed messages look the same to readers (GM-07).
@@ -994,8 +1041,8 @@ defmodule IdejoWeb.TopicLive do
       class="message"
     >
       <p id={"message-#{@message.id}-author"} class="message-head">
-        <%!-- TP-15: choosing messages to move; the opening message stays. --%>
-        <label :if={@selected != nil and !@opening?} class="move-select">
+        <%!-- Choosing messages to move (TP-15) or delete (MO-02). --%>
+        <label :if={@selected != nil and @selectable?} class="move-select">
           <input
             type="checkbox"
             id={"select-#{@message.id}"}

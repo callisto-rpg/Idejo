@@ -567,6 +567,10 @@ roles or the permission grid. Every later change must keep it true:
   dialog: close, delete, "Select to be moved"); selecting shows checkboxes and
   `move_banner/1` ("Move all selected messages to": New thread / Existing thread), and
   `move_dialog/1` takes a title and category or searches `Forum.search_move_targets/3`.
+  The card's "Select multiple messages for deletion" (MO-02; steward decision, 2026-10-23)
+  uses the same checkboxes (`select_for: :delete`: messages not deleted and not the
+  moderator's own) with `delete_banner/1`; `Messages.delete_many_as_moderator/4` deletes them
+  in one transaction, each logged.
 - **Reports** (MO-01, `Idejo.Moderation`): signed-in users report others' messages they may
   view, with a reason (`/m/{id}/report`, `ReportController`, no JavaScript; one open report
   per reporter and message). `/moderation` (`ModerationController.index`) shows the open

@@ -7,9 +7,12 @@ defmodule IdejoWeb.MessageModerationComponents do
   2026-10-23):
 
     * `moderate_card/1`: a message's "Moderate", as a card over the page: close an open
-      message (GM-16), delete it (MO-02), or "Select to be moved" (TP-15).
+      message (GM-16), delete it (MO-02), "Select multiple messages for deletion" (MO-02), or
+      "Select to be moved" (TP-15).
     * `move_banner/1`: while selecting, a banner at the top, "Move all selected messages to"
       a new thread or an existing one.
+    * `delete_banner/1`: while selecting for deletion, "Delete all selected messages", with
+      a reason for the log.
     * `move_dialog/1`: the new thread's title and category, or a search for the existing one.
 
   The dialogs use the `InlineCard` hook, with their own close event.
@@ -70,6 +73,19 @@ defmodule IdejoWeb.MessageModerationComponents do
             </button>
           </div>
         </form>
+        <div class="moderate-card-move">
+          <button
+            type="button"
+            class="btn btn-sm"
+            phx-click="start_selecting"
+            phx-value-id={@message.id}
+            phx-value-for="delete"
+          >
+            <.icon name="hero-trash" class="size-4" />{gettext(
+              "Select multiple messages for deletion"
+            )}
+          </button>
+        </div>
         <div :if={@movable?} class="moderate-card-move">
           <button
             type="button"
@@ -130,6 +146,49 @@ defmodule IdejoWeb.MessageModerationComponents do
           {gettext("Cancel")}
         </button>
       </div>
+    </section>
+    """
+  end
+
+  attr :count, :integer, required: true
+
+  def delete_banner(assigns) do
+    ~H"""
+    <section id="delete-banner" class="move-banner" aria-labelledby="delete-banner-title">
+      <p id="delete-banner-title" class="move-banner-title">
+        {gettext("Delete all selected messages")}
+      </p>
+      <p class="move-banner-count" role="status">
+        {ngettext("1 message selected", "%{count} messages selected", @count)}
+      </p>
+      <form id="delete-selected-form" phx-submit="delete_selected" class="move-banner-actions">
+        <label>
+          <span class="sr-only">{gettext("Reason (shown in the moderation log)")}</span>
+          <input
+            type="text"
+            name="reason"
+            maxlength="500"
+            placeholder={gettext("Reason (shown in the moderation log)")}
+            class="input input-sm"
+          />
+        </label>
+        <button
+          class="btn btn-sm btn-error"
+          disabled={@count == 0}
+          data-confirm={
+            ngettext(
+              "Delete this message? Readers will see that a moderator deleted it.",
+              "Delete these %{count} messages? Readers will see that a moderator deleted them.",
+              @count
+            )
+          }
+        >
+          {gettext("Delete selected")}
+        </button>
+        <button type="button" class="btn btn-sm btn-ghost" phx-click="cancel_selecting">
+          {gettext("Cancel")}
+        </button>
+      </form>
     </section>
     """
   end
