@@ -113,7 +113,9 @@ change and keeps no history.
   you are reading.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen: first,
   under **Following**, every topic you follow, then the other topics. A message counts once,
-  however much it grows.
+  however much it grows. The number on it counts the unread messages that reply to you or
+  mention you or one of your roles; its colour is that of the strongest, as for the
+  sidebar's dots. It updates by itself.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
   unfollow them.
 - **Search**, the box at the top, finds words in messages and titles.

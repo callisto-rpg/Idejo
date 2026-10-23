@@ -9,11 +9,12 @@
 // colours: grey, blue, orange, red; purple for a reaction). Nothing about the topic on
 // screen bubbles: the reader sees it live there.
 //
-// Sidebar: fetched again from /sidebar shortly after a notification (once the topic view
-// has marked what it showed as read), when the tab comes back, and on a schedule that slows
-// down as the page gets older: every 5 s for the first 20 s after a page loads (a live
-// navigation counts), then every 30 s, then past 5 minutes every 10 minutes (steward
-// decision, 2026-10-23). Never while the focus is in it.
+// Sidebar, and the count on the header's Unread link: fetched again from /sidebar shortly
+// after a notification (once the topic view has marked what it showed as read), when the
+// tab comes back, and on a schedule that slows down as the page gets older: every 5 s for
+// the first 20 s after a page loads (a live navigation counts), then every 30 s, then past
+// 5 minutes every 10 minutes (steward decision, 2026-10-23). Neither is swapped while it
+// has the focus.
 
 const LIFETIME = 10000
 const MOST = 3
@@ -145,13 +146,14 @@ export const Notifier = {
     }
   },
 
+  // The sidebar and the header's Unread link with its count, from /sidebar. Neither is
+  // swapped while it has the focus.
   async refreshSidebar() {
     const aside = document.getElementById("sidebar")
-    const nav = aside?.querySelector(".sidebar-nav")
-    if (!nav || document.visibilityState !== "visible" || aside.contains(document.activeElement)) return
+    if (document.visibilityState !== "visible") return
 
     const url = new URL(this.el.dataset.sidebar, window.location.origin)
-    if (aside.dataset.category) url.searchParams.set("category", aside.dataset.category)
+    if (aside?.dataset.category) url.searchParams.set("category", aside.dataset.category)
 
     let html
     try {
@@ -161,9 +163,15 @@ export const Notifier = {
     } catch (_offline) {
       return
     }
+    const doc = new DOMParser().parseFromString(html, "text/html")
 
-    const fresh = new DOMParser().parseFromString(html, "text/html").querySelector("#sidebar .sidebar-nav")
-    if (!fresh || aside.contains(document.activeElement)) return
+    const link = document.getElementById("unread-link")
+    const freshLink = doc.getElementById("unread-link")
+    if (link && freshLink && !link.contains(document.activeElement)) link.replaceWith(freshLink)
+
+    const nav = aside?.querySelector(".sidebar-nav")
+    const fresh = doc.querySelector("#sidebar .sidebar-nav")
+    if (!nav || !fresh || aside.contains(document.activeElement)) return
     // Groups and "more topics" stay open or folded as the reader left them.
     const open = new Map([...nav.querySelectorAll("details[id]")].map(d => [d.id, d.open]))
     nav.replaceChildren(...fresh.childNodes)

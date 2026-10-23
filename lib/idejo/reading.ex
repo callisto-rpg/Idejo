@@ -228,6 +228,38 @@ defmodule Idejo.Reading do
   defp followed_ids(%User{id: user_id}),
     do: from(f in Follow, where: f.user_id == ^user_id and f.following, select: f.topic_id)
 
+  @doc """
+  What is waiting for the user personally, for the badge on the header's Unread link
+  (steward decision, 2026-10-23): how many unread messages reply to them, @mention them or
+  +mention one of their roles, in categories they may view, and the strongest of these, as
+  for the sidebar's dots (`:mention`, then `:reply`, then `:role_mention`; nil when none).
+  """
+  @spec for_you(User.t() | nil) :: %{count: non_neg_integer(), level: atom() | nil}
+  def for_you(nil), do: %{count: 0, level: nil}
+
+  def for_you(%User{id: user_id} = user) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    {count, level} =
+      user
+      |> unread_messages()
+      |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
+      |> where([topic: t], t.category_id in subquery(viewable))
+      |> join(:inner, [m], n in Idejo.Notifications.Notification,
+        as: :notification,
+        on:
+          n.message_id == m.id and n.user_id == ^user_id and
+            n.kind in ["mention", "reply", "role_mention"]
+      )
+      |> select([notification: n], {
+        count(n.id),
+        max(fragment("CASE ? WHEN 'mention' THEN 3 WHEN 'reply' THEN 2 ELSE 1 END", n.kind))
+      })
+      |> Repo.one()
+
+    %{count: count, level: level && Enum.at([:role_mention, :reply, :mention], level - 1)}
+  end
+
   # Messages by others opened after the user's read position in their topic, or after the
   # user signed up where they have none.
   defp unread_messages(%User{id: user_id, created_at: signed_up}) do
