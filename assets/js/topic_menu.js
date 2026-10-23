@@ -1,0 +1,136 @@
+// SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// The topic menu (steward decision, 2026-10-23): a right click, the keyboard's menu key or a
+// long press on a topic in a list or in the sidebar (`data-topic-menu`) opens
+// `#topic-menu` (Layouts.topic_menu/1) at that place, with the topic's addresses filled in.
+// Its items are plain forms, so the server does the rest; Copy link copies the topic's
+// address. Arrow keys move between the items, Escape or a click elsewhere closes it and the
+// focus goes back where it was.
+
+const LONG_PRESS_MS = 500
+const MOVE_TOLERANCE = 10
+
+const menu = () => document.getElementById("topic-menu")
+const items = el => Array.from(el.querySelectorAll("[role=menuitem]")).filter(i => i.offsetParent !== null)
+
+let opener = null
+let press = null
+
+export function open(row, x, y) {
+  const el = menu()
+  if (!el) return false
+  const id = row.dataset.topicMenu
+  const path = row.dataset.topicPath
+
+  el.querySelectorAll("form[data-action]").forEach(form => {
+    form.action = `/t/${id}${form.dataset.action}`
+  })
+  // Following, as the sidebar knows: it lists every followed topic.
+  const following = document.querySelector(`#sidebar [data-topic-id="${id}"][data-following]`)
+  el.toggleAttribute("data-following", following !== null)
+  el.dataset.path = path
+  const link = el.querySelector("#topic-menu-link span")
+  link.textContent = link.dataset.label ||= link.textContent
+
+  opener = document.activeElement
+  el.hidden = false
+  // Kept inside the window; set through the DOM, never a style attribute (SP-05).
+  const {width, height} = el.getBoundingClientRect()
+  el.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`
+  el.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`
+  items(el)[0]?.focus()
+  return true
+}
+
+export function close(refocus = true) {
+  const el = menu()
+  if (!el || el.hidden) return
+  el.hidden = true
+  if (refocus && opener && document.contains(opener)) opener.focus()
+  opener = null
+}
+
+const rowOf = target => target.closest?.("[data-topic-menu]")
+
+document.addEventListener("contextmenu", e => {
+  const row = rowOf(e.target)
+  if (!row || !menu()) return
+  e.preventDefault()
+  // From the keyboard there is no pointer: open by the row.
+  const box = row.getBoundingClientRect()
+  const keyboard = e.clientX === 0 && e.clientY === 0
+  open(row, keyboard ? box.left + 16 : e.clientX, keyboard ? box.bottom : e.clientY)
+})
+
+// Long press on touch screens (iOS does not fire contextmenu for it).
+document.addEventListener("touchstart", e => {
+  const row = rowOf(e.target)
+  if (!row || e.touches.length !== 1 || !menu()) return
+  const {clientX: x, clientY: y} = e.touches[0]
+  press = {x, y, timer: setTimeout(() => { press.opened = open(row, x, y) }, LONG_PRESS_MS)}
+}, {passive: true})
+
+document.addEventListener("touchmove", e => {
+  if (!press) return
+  const t = e.touches[0]
+  if (Math.hypot(t.clientX - press.x, t.clientY - press.y) > MOVE_TOLERANCE) clearTimeout(press.timer)
+}, {passive: true})
+
+document.addEventListener("touchend", e => {
+  if (!press) return
+  clearTimeout(press.timer)
+  // The press opened the menu: the finger lifting is not a tap on the link.
+  if (press.opened) e.preventDefault()
+  press = null
+})
+
+document.addEventListener("click", e => {
+  const el = menu()
+  if (!el || el.hidden) return
+  const copy = e.target.closest("#topic-menu-link")
+  if (copy) {
+    copyLink(el, copy)
+  } else if (!el.contains(e.target)) {
+    close(false)
+  }
+})
+
+function copyLink(el, button) {
+  const url = new URL(el.dataset.path, location.origin).href
+  const done = () => {
+    button.querySelector("span").textContent = button.dataset.copied
+    setTimeout(() => close(), 800)
+  }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(done, () => { prompt("", url); close() })
+  } else {
+    prompt("", url)
+    close()
+  }
+}
+
+document.addEventListener("keydown", e => {
+  const el = menu()
+  if (!el || el.hidden) return
+  const list = items(el)
+  const at = list.indexOf(document.activeElement)
+
+  if (e.key === "Escape") {
+    e.preventDefault()
+    close()
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault()
+    const step = e.key === "ArrowDown" ? 1 : -1
+    list[(at + step + list.length) % list.length]?.focus()
+  } else if (e.key === "Home" || e.key === "End") {
+    e.preventDefault()
+    list[e.key === "Home" ? 0 : list.length - 1]?.focus()
+  } else if (e.key === "Tab") {
+    close(false)
+  }
+})
+
+// Scrolling or resizing moves the topic away from the menu.
+window.addEventListener("resize", () => close(false))
+document.addEventListener("scroll", () => close(false), {passive: true, capture: true})

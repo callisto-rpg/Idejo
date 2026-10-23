@@ -18,6 +18,10 @@
   --overlay-opacity: 80%;
   --overlay-blur: 6px;
 
+  /* Menus: the account menu, a topic's menu (right click or long press), and any later one. */
+  --menu-opacity: 70%;
+  --menu-blur: 4px;
+
   /* !spoiler: the cover over a hidden message, and its Reveal button. */
   --spoiler-opacity: 50%;
   --spoiler-blur: 4px;
@@ -30,6 +34,13 @@
   background: color-mix(in oklab, var(--color-base-100) var(--card-opacity), transparent);
   -webkit-backdrop-filter: blur(var(--card-blur));
   backdrop-filter: blur(var(--card-blur));
+}
+
+/* Menus: see-through, blurring what is behind them. Every menu has the class popup-menu. */
+.popup-menu {
+  background: color-mix(in oklab, var(--color-base-100) var(--menu-opacity), transparent);
+  -webkit-backdrop-filter: blur(var(--menu-blur));
+  backdrop-filter: blur(var(--menu-blur));
 }
 
 /* Other overlays. */

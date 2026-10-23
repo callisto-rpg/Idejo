@@ -18,7 +18,7 @@ defmodule IdejoWeb.CardStyleTest do
   end
 
   test "everything that opens over the page shares one thin line" do
-    for selector <- ~w(.modal-box .welcome-card .account-panel .add-reaction-panel .suggestions),
+    for selector <- ~w(.modal-box .welcome-card .popup-menu .add-reaction-panel .suggestions),
         do: assert(rule(selector) =~ "border: 1px solid var(--overlay-line)", selector)
   end
 end

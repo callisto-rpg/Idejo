@@ -151,6 +151,9 @@ defmodule IdejoWeb.Router do
     # Followed by everyone, for administrators (steward decision, 2026-10-23).
     post "/t/:id/autofollow", TopicAutofollowController, :update
     delete "/t/:id/follow", FollowController, :delete
+    # The topic menu (steward decision, 2026-10-23): unfollow & mute, mark unread.
+    post "/t/:id/mute", FollowController, :mute
+    post "/t/:id/unread", FollowController, :unread
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive

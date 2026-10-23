@@ -132,6 +132,70 @@ defmodule IdejoWeb.Layouts do
 
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
+    <.topic_menu :if={@user} />
+    """
+  end
+
+  @doc """
+  The topic menu (steward decision, 2026-10-23): right click or long press on a topic in a
+  list or in the sidebar (`data-topic-menu`, `data-topic-path`) opens it there
+  (`assets/js/topic_menu.js`, which fills in the topic's addresses): Follow or Unfollow
+  (from the sidebar's `data-following`), Unfollow & mute, Mark unread and Copy link. Plain
+  forms with `return=back` to `FollowController`; hidden until a script opens it.
+
+  Like every menu, it is a `.popup-menu`: see-through and blurred, set by the server
+  stylesheet's `--menu-opacity` and `--menu-blur` (`priv/theme/default.css`).
+  """
+  def topic_menu(assigns) do
+    ~H"""
+    <div
+      id="topic-menu"
+      class="popup-menu topic-menu"
+      role="menu"
+      aria-label={gettext("Topic")}
+      phx-update="ignore"
+      hidden
+    >
+      <.form
+        for={%{}}
+        action="/t/:id/follow"
+        method="delete"
+        data-action="/follow"
+        id="topic-menu-unfollow"
+      >
+        <input type="hidden" name="return" value="back" />
+        <button role="menuitem" tabindex="-1">
+          <.icon name="hero-x-mark" class="size-4" />{gettext("Unfollow")}
+        </button>
+      </.form>
+      <.form for={%{}} action="/t/:id/follow" data-action="/follow" id="topic-menu-follow">
+        <input type="hidden" name="return" value="back" />
+        <button role="menuitem" tabindex="-1">
+          <.icon name="hero-plus" class="size-4" />{gettext("Follow")}
+        </button>
+      </.form>
+      <.form for={%{}} action="/t/:id/mute" data-action="/mute" id="topic-menu-mute">
+        <input type="hidden" name="return" value="back" />
+        <button role="menuitem" tabindex="-1">
+          <.icon name="hero-bell-slash" class="size-4" />{gettext("Unfollow & mute")}
+        </button>
+      </.form>
+      <.form for={%{}} action="/t/:id/unread" data-action="/unread" id="topic-menu-unread">
+        <input type="hidden" name="return" value="back" />
+        <button role="menuitem" tabindex="-1">
+          <.icon name="hero-envelope" class="size-4" />{gettext("Mark unread")}
+        </button>
+      </.form>
+      <button
+        type="button"
+        role="menuitem"
+        tabindex="-1"
+        id="topic-menu-link"
+        data-copied={gettext("Link copied")}
+      >
+        <.icon name="hero-link" class="size-4" /><span>{gettext("Copy link")}</span>
+      </button>
+    </div>
     """
   end
 
@@ -180,7 +244,7 @@ defmodule IdejoWeb.Layouts do
             <span class="account-name">{@current_scope.user.display_name}</span>
             <.icon name="hero-chevron-down-micro" class="size-4 opacity-60" />
           </summary>
-          <div class="account-panel">
+          <div class="account-panel popup-menu">
             <p class="account-panel-who">
               <span class="font-medium">{@current_scope.user.display_name}</span>
               <span class="opacity-60">@{@current_scope.user.username}</span>
@@ -452,6 +516,9 @@ defmodule IdejoWeb.Layouts do
     <li
       class={["sidebar-topic", @activity && "has-news", @on_screen? && "is-current"]}
       data-topic-id={@topic.id}
+      data-topic-menu={@place.user? && @topic.id}
+      data-topic-path={~p"/t/#{@topic.id}/#{@topic.slug}"}
+      data-following={@following? && "true"}
     >
       <span
         class={["sidebar-dot", @activity && "is-#{String.replace(to_string(@activity), "_", "-")}"]}

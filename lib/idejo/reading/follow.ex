@@ -15,6 +15,8 @@ defmodule Idejo.Reading.Follow do
     belongs_to :user, Idejo.Accounts.User, primary_key: true
     belongs_to :topic, Idejo.Forum.Topic, primary_key: true
     field :following, :boolean, default: true
+    # "Unfollow & mute" (steward decision, 2026-10-23): nothing from it until followed again.
+    field :muted, :boolean, default: false
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end

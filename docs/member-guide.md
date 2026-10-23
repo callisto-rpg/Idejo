@@ -155,6 +155,11 @@ change and keeps no history.
   the top right that opens the same list.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
   unfollow them, and the topics marked **Followed by everyone**, unless you unfollow them.
+- **A topic's menu**: right-click a topic in a list or in the sidebar (on a phone, press and
+  hold it) for **Follow** or **Unfollow**, **Unfollow & mute**, **Mark unread** and **Copy
+  link**. A muted topic tells you nothing at all, even when someone mentions you
+  (`@you` or one of your `+roles`) or replies to you, and stays off **Unread**, until you
+  follow it again. **Mark unread** makes its latest message by someone else new again.
 - **Search**, the box at the top, finds words in messages and titles.
 
 ## Your account
