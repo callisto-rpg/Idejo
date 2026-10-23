@@ -9,7 +9,8 @@ defmodule Idejo.RateLimit do
   or `{:error, :rate_limited}` past the limit. Limits per action:
 
     * per IP: `:request` (every request), `:sign_in`, `:sign_up`, `:reset_password`;
-    * per user: `:commit` (every Enter), `:new_message`, `:new_topic`, `:report`, `:upload`, `:react`, `:vote` (polls).
+    * per user: `:commit` (every Enter), `:new_message`, `:new_topic`, `:report`, `:upload`, `:react`, `:vote` (polls),
+      `:push_subscribe` (PN-16).
 
   Off when `config :idejo, :rate_limits, enabled: false` (the test configuration; the rate
   limit tests turn it on).
@@ -30,7 +31,9 @@ defmodule Idejo.RateLimit do
     report: {20, @hour},
     upload: {30, @hour},
     react: {120, @minute},
-    vote: {120, @minute}
+    vote: {120, @minute},
+    # PN-16: every signed-in page load syncs the browser's subscription (PN-18).
+    push_subscribe: {60, @minute}
   }
 
   @type action ::
@@ -45,6 +48,7 @@ defmodule Idejo.RateLimit do
           | :upload
           | :react
           | :vote
+          | :push_subscribe
 
   @doc "The limit of an action: `{count, window in milliseconds}`."
   @spec limit(action()) :: {pos_integer(), pos_integer()}

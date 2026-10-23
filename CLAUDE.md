@@ -848,7 +848,7 @@ roles or the permission grid. Every later change must keep it true:
 - **Rate limits** (SP-05, `Idejo.RateLimit`, Hammer/ETS; extra review: DV-06): per IP in
   plugs (`IdejoWeb.Plugs.RateLimit`: `:request` on every request in the endpoint, `:sign_in`,
   `:sign_up`, `:reset_password` in their controllers; 429 with `Retry-After`), per user in the
-  contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload` →
+  contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload`, `:push_subscribe` →
   `{:error, :rate_limited}`, which every caller must handle). Limits are in
   `Idejo.RateLimit`. `IdejoWeb.Plugs.ClientIp` takes the visitor's address from the rightmost
   `X-Forwarded-For` only when the peer is on a private network (Caddy); `:behind_proxy` turns
@@ -874,6 +874,26 @@ roles or the permission grid. Every later change must keep it true:
   the setup wizard, so new installs too). `Release.push_key/0` and `rotate_push_keys/0`
   (audited `push.rotate_keys`, no admin) are `idejo-admin push-key` and `rotate-push-keys`;
   `health` checks the keys can be read.
+- **Push subscriptions** (PN-13, PN-16; extra review: DV-06): `push_subscriptions` rows
+  (`Idejo.Push.Subscription`: endpoint, unique; `p256dh` and `auth`, URL-safe Base64 without
+  padding, checked to be a P-256 point and 16 bytes; user agent; `session_id`, the sign-in's
+  `user_tokens.socket_id`; `last_success_at`, `failure_count`). `Push.subscribe/4` (refused
+  while push is off, rate-limited `:push_subscribe`) upserts on the endpoint, then keeps the
+  user's 10 newest (`Push.max_per_user/0`). They end with their session:
+  `Accounts.delete_user_session_token/1` (sign-out) and `update_user_password/3` (other
+  sessions) call `Push.delete_for_sessions/1`; `reset_user_password/2`, bans and
+  `delete_user/2` call `Push.delete_for_user/1`, inside their transactions; a new way of
+  ending sessions (AC-08) must do the same. Rotating the VAPID keys calls
+  `Push.delete_all/0`. `Idejo.Push.Endpoint.check/1` (PN-16) is asked before saving and
+  must be asked before every send: `https`, no userinfo, the host in the `push_services`
+  setting (one per line, `*.` for any name under a domain; **Admin → Settings**), and every
+  address it resolves to public (`public?/1`: no loopback, private, link-local, CGNAT, ULA,
+  multicast, reserved or documentation range; mapped and NAT64 IPv6 checked as their IPv4).
+  It returns the addresses so the sender connects to one of them (no DNS rebinding). Tests
+  resolve with `Idejo.FakeDNS` (`config :idejo, :push_resolver`), never the network. The
+  browser posts `PushSubscription.toJSON()` to `POST /push/subscriptions` and removes it with
+  `DELETE` (`PushSubscriptionController`, signed in, CSRF header; 204, or 422/429/404 with
+  `{"error": reason}`).
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

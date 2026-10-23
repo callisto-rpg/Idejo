@@ -202,7 +202,12 @@ defmodule Idejo.Release do
   def rotate_push_keys! do
     Repo.transact(fn ->
       with {:ok, key} <- Vapid.rotate(),
-           {:ok, _} <- Audit.record(nil, "push.rotate_keys", nil, %{"public_key" => key}) do
+           ended = Idejo.Push.delete_all(),
+           {:ok, _} <-
+             Audit.record(nil, "push.rotate_keys", nil, %{
+               "public_key" => key,
+               "subscriptions_ended" => ended
+             }) do
         {:ok, key}
       end
     end)

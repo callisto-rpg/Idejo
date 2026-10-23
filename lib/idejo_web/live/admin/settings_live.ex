@@ -105,6 +105,18 @@ defmodule IdejoWeb.Admin.SettingsLive do
         <p class="text-sm opacity-70 -mt-1 mb-4">
           {gettext("When off, members are not offered browser notifications and none are sent.")}
         </p>
+        <.input
+          field={@form[:push_services]}
+          type="textarea"
+          label={gettext("Push services")}
+          rows="4"
+          aria-describedby="push-services-help"
+        />
+        <p id="push-services-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "The only hosts browser notifications are sent to, one per line; *.example.org allows any name under example.org. The defaults are the services of Chrome, Edge, Firefox, Safari and Windows; add yours, for example a UnifiedPush server."
+          )}
+        </p>
         <%!-- The welcome card and "Rules & Roles" (steward decision, 2026-10-23). --%>
         <.input
           field={@form[:server_about]}
