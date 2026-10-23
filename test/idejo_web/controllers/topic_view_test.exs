@@ -26,7 +26,11 @@ defmodule IdejoWeb.TopicViewTest do
 
   defp doc(conn, path), do: conn |> get(path) |> html_response(200) |> LazyHTML.from_document()
   defp query(doc, selector), do: LazyHTML.query(doc, selector)
-  defp texts(doc, selector), do: doc |> query(selector) |> Enum.map(&LazyHTML.text/1)
+
+  defp texts(doc, selector),
+    do: doc |> query(selector) |> Enum.map(&(&1 |> LazyHTML.text() |> squish()))
+
+  defp squish(text), do: text |> String.split() |> Enum.join(" ")
 
   test "compact by default: the toggle, and cards with their tags but no preview", %{} do
     for path <- [~p"/", ~p"/c/general"] do
@@ -65,9 +69,15 @@ defmodule IdejoWeb.TopicViewTest do
     doc = conn |> html_response(200) |> LazyHTML.from_document()
     card = "#topic-#{topic.id}.is-expanded"
 
-    assert texts(doc, "#{card} .topic-preview-text") == ["Tomatoes along the wall"]
+    # The image in the text is a small pill; the image itself is also in the gallery.
+    assert texts(doc, "#{card} .topic-preview-text") == ["Tomatoes along the wall image:"]
 
-    assert doc |> query("#{card} .topic-preview-image") |> LazyHTML.attribute("src") == [
+    assert doc
+           |> query("#{card} .topic-preview-text .image-pill img")
+           |> LazyHTML.attribute("src") ==
+             ["/uploads/garden.webp"]
+
+    assert doc |> query("#{card} .topic-preview-gallery img") |> LazyHTML.attribute("src") == [
              "/uploads/garden.webp"
            ]
 
@@ -101,7 +111,7 @@ defmodule IdejoWeb.TopicViewTest do
     assert Enum.count(query(doc, ".topic-preview-person")) == 6
     assert Enum.empty?(query(doc, ".topic-preview-more"))
     assert texts(doc, ".topic-preview-text") == ["(spoiler)"]
-    assert Enum.empty?(query(doc, ".topic-preview-image"))
+    assert Enum.empty?(query(doc, ".topic-preview-gallery"))
   end
 
   test "a topic with only its opening message shows no Latest messages", %{topic: topic} do
@@ -110,5 +120,49 @@ defmodule IdejoWeb.TopicViewTest do
     assert preview.participant_count == 1
     doc = doc(build_conn(), ~p"/c/general?view=expanded")
     assert Enum.empty?(query(doc, ".topic-preview-latest"))
+  end
+
+  test "the gallery shows the topic's images, four at most, then +N images; latest messages get pills",
+       %{topic: topic} do
+    writer = user_fixture()
+
+    for n <- 1..5 do
+      {:ok, _} = Forum.post_message(writer, topic, %{"body" => "Look ![](/uploads/p#{n}.webp)"})
+    end
+
+    doc = doc(build_conn(), ~p"/c/general?view=expanded")
+    gallery = query(doc, "#topic-#{topic.id} .topic-preview-gallery.has-4")
+
+    assert gallery |> LazyHTML.query("img") |> LazyHTML.attribute("src") ==
+             ["/uploads/garden.webp", "/uploads/p1.webp", "/uploads/p2.webp", "/uploads/p3.webp"]
+
+    assert texts(doc, ".topic-preview-more-images") == ["+2 images"]
+    assert texts(doc, ".topic-preview-gallery .sr-only") == ["6 images"]
+
+    assert texts(doc, ".topic-preview-message-text") == [
+             "Look image:",
+             "Look image:",
+             "Look image:"
+           ]
+  end
+
+  test "excerpt segments: text and uploaded images, emoji as text, cut on a word" do
+    message = %Idejo.Messages.Message{
+      body_html:
+        ~s(<p>Hi <img src="/emoji/x.svg" alt="🙂"> see <img src="/uploads/a.webp" alt="a"> and a very long tail of words</p>)
+    }
+
+    assert Forum.excerpt_segments(message, 200) == [
+             text: "Hi 🙂 see ",
+             image: "/uploads/a.webp",
+             text: " and a very long tail of words"
+           ]
+
+    assert Forum.excerpt_segments(message, 20) == [
+             text: "Hi 🙂 see ",
+             image: "/uploads/a.webp",
+             text: " and",
+             text: "…"
+           ]
   end
 end
