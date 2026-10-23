@@ -5,8 +5,7 @@
 <Layouts.app flash={@flash} current_scope={@current_scope}>
   <header class="page-intro">
     <h1>
-      <Admin.swatch colour={@role.colour} />
-      {Admin.role_name(@role)}
+      <Admin.role_label role={@role} />
     </h1>
     <p>{ngettext("1 member", "%{count} members", @count)}</p>
   </header>

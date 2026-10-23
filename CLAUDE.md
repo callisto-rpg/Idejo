@@ -91,18 +91,24 @@ that role too); every verified user holds member on top of their other roles
 
 Role editor (RP-02, **Admin → Roles**): custom roles have a name (unique ignoring case, also
 against built-in names) and an optional `#rrggbb` colour, and can be renamed, moved one place
-up or down, and deleted. Built-in roles only change colour and, except member and guest, their
-mention settings (TP-10). Owner and administrator stay on
+up or down, and deleted. Built-in roles only change colour, "Visible next to name" and,
+except member and guest, their mention settings (TP-10). Owner and administrator stay on
 top and guest stays last (`Access.movable?/1`). Every change is audited (`role.create`,
-`role.update`, `role.reorder`, `role.delete`). Colours are drawn as SVG `fill`, never as
-`style` (SP-05).
+`role.update`, `role.reorder`, `role.delete`). A role's name is written in its colour, grey
+without one (steward decision, 2026-10-23): always `Admin.role_label/1`, whose `role-{id}`
+class gets `--role` from `Layouts.role_colours/1` (one nonce `<style>` in the root layout)
+and, on admin pages, from the `RoleColours` hook (`data-role-colour`, set through the DOM),
+so a colour just changed shows; never a `style` attribute (SP-05). Any role, built-in too,
+can turn off "Visible next to name" (`roles.show_next_to_name`, default on): conversations
+show the author's highest visible role (`Access.shown_role/1`), the role keeps its rights.
 
 Role assignment (RP-06, **Admin → Users → a user**): `Access.assign_role/3` and
 `Access.unassign_role/3`, audited as `role.grant` / `role.revoke`. Only owners give or remove
 the owner role (steward decision, 2026-10-19); guest and member are never given. Removing
 refuses the last owner and an administrator's own administrator role. When a user stops being
 an administrator, their sessions' LiveViews are disconnected so open admin pages re-check.
-The name colour is the colour of the highest-ranked role that has one (`Access.name_colour/1`).
+The name colour is the colour of the highest-ranked role that has one (`Access.name_colour/1`,
+`Admin.coloured_name/1` in the admin users list and page).
 `Access.grant_role/2` (unaudited) is only for setup and test fixtures.
 
 Self-select roles (steward decision, 2026-10-23): owners and administrators mark custom roles

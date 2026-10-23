@@ -117,6 +117,6 @@ defmodule IdejoWeb.AdminUserRolesLiveTest do
     {:ok, _} = Access.assign_role(admin, user, team)
 
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
-    assert has_element?(lv, "#user-#{user.id} rect[fill='#aa2255']")
+    assert has_element?(lv, "#user-#{user.id} .name-colour[data-role-colour='#aa2255']")
   end
 end

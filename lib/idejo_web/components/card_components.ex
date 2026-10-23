@@ -29,8 +29,7 @@ defmodule IdejoWeb.CardComponents do
   def inline_card(%{card: %{kind: :role}} = assigns) do
     ~H"""
     <h2 id="inline-card-name" class="inline-card-title">
-      <Admin.swatch colour={@card.role.colour} />
-      <span class="inline-card-sign" aria-hidden="true">+</span>{Admin.role_name(@card.role)}
+      <span class="inline-card-sign" aria-hidden="true">+</span><Admin.role_label role={@card.role} />
     </h2>
     <p class="inline-card-meta">{ngettext("1 member", "%{count} members", @card.count)}</p>
     <ul :if={@card.members != []} class="inline-card-list" aria-label={gettext("Members")}>

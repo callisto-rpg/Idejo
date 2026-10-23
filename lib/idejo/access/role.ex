@@ -9,6 +9,9 @@ defmodule Idejo.Access.Role do
   Role mentions (TP-10, `+role`): `mentionable` lets everyone notify the role's members;
   `mentions_below` lets its members notify any role ranked below it. Member and guest are
   never mentioned, so they take neither.
+
+  `show_next_to_name` ("Visible next to name", steward decision, 2026-10-23): conversations
+  show the highest-ranked such role next to an author's name; any role may turn it off.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -28,6 +31,7 @@ defmodule Idejo.Access.Role do
     field :mentions_below, :boolean, default: false
     # Members may give themselves this role (custom roles only; steward decision, 2026-10-23).
     field :self_select, :boolean, default: false
+    field :show_next_to_name, :boolean, default: true
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -39,16 +43,16 @@ defmodule Idejo.Access.Role do
   def built_in_names, do: @built_in
 
   @doc """
-  A changeset for a role's name, colour and mention settings. Built-in roles keep their name;
+  A changeset for a role's name, colour, display and mention settings. Built-in roles keep their name;
   member and guest take no mention settings. Names are unique ignoring case, so "Member"
   cannot sit next to the built-in member. The colour is `#rrggbb`, or empty for none.
   """
   def changeset(role, attrs) do
     fields =
       cond do
-        role.built_in and role.name in ~w(member guest) -> [:colour]
-        role.built_in -> [:colour, :mentionable, :mentions_below]
-        true -> [:name, :colour, :mentionable, :mentions_below, :self_select]
+        role.built_in and role.name in ~w(member guest) -> [:colour, :show_next_to_name]
+        role.built_in -> [:colour, :show_next_to_name, :mentionable, :mentions_below]
+        true -> [:name, :colour, :show_next_to_name, :mentionable, :mentions_below, :self_select]
       end
 
     role

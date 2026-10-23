@@ -98,8 +98,7 @@ defmodule IdejoWeb.Admin.UserLive do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope} section={:users}>
       <.header>
-        <Admin.swatch colour={Access.name_colour(@roles)} />
-        {@user.display_name}
+        <Admin.coloured_name roles={@roles}>{@user.display_name}</Admin.coloured_name>
         <:subtitle>@{@user.username}</:subtitle>
       </.header>
 
@@ -139,8 +138,7 @@ defmodule IdejoWeb.Admin.UserLive do
             id={"assigned-#{role.id}"}
             class="flex flex-wrap items-center gap-3 rounded border border-base-300 p-2"
           >
-            <Admin.swatch colour={role.colour} />
-            <span class="font-semibold">{Admin.role_name(role)}</span>
+            <Admin.role_label role={role} class="font-semibold" />
             <span class="flex-1"></span>
             <button
               :if={removable?(@current_scope.user, @user, role)}

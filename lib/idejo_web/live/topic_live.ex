@@ -165,7 +165,8 @@ defmodule IdejoWeb.TopicLive do
     assign(socket, :viewable_replies, Forum.viewable_message_ids(user(socket), foreign))
   end
 
-  # The role above each author's name (GM-07): their highest-ranked one, with the name colour.
+  # The role next to each author's name (GM-07): their highest-ranked one that is "Visible
+  # next to name" (steward decision, 2026-10-23), or none.
   # Only authors not seen yet are looked up, so most events cost no query (NF-01).
   defp add_roles(socket, messages) do
     missing =
@@ -181,9 +182,7 @@ defmodule IdejoWeb.TopicLive do
     roles =
       missing
       |> Access.roles_of_users()
-      |> Map.new(fn {id, [top | _] = roles} ->
-        {id, %{name: Admin.role_name(top), colour: Access.name_colour(roles)}}
-      end)
+      |> Map.new(fn {id, roles} -> {id, Access.shown_role(roles)} end)
 
     assign(socket, :roles, Map.merge(socket.assigns.roles, roles))
   end
@@ -944,10 +943,7 @@ defmodule IdejoWeb.TopicLive do
       <UserComponents.avatar user={@author} size={:list} />
       <%!-- TP-10: the name opens the user's card, like an @mention (InlineLinks hook). --%>
       <a href={~p"/u/#{@author.id}"} class="author-name font-semibold">{@author.display_name}</a>
-      <span :if={@role} class="author-role">
-        <Admin.swatch colour={@role.colour} />
-        {@role.name}
-      </span>
+      <Admin.role_label :if={@role} role={@role} class="author-role" />
     </span>
     """
   end

@@ -23,16 +23,38 @@ defmodule IdejoWeb.Admin do
   def role_name(%Role{name: name}), do: name
 
   @doc """
-  A small square in a role's colour, or nothing when it has none. Drawn as an SVG fill, not
-  a style attribute: the content security policy refuses inline styles.
+  A role's name in the role's colour, grey when it has none (steward decision, 2026-10-23).
+  The colour is the `--role` of the `role-{id}` class, set by `IdejoWeb.Layouts.role_colours/1`
+  in the page's head and, on admin pages, by the `RoleColours` hook from `data-role-colour`,
+  so a colour just changed shows at once: the content security policy refuses style
+  attributes.
   """
-  attr :colour, :string, default: nil
+  attr :role, Role, required: true
+  attr :class, :any, default: nil
 
-  def swatch(assigns) do
+  def role_label(assigns) do
+    assigns = assign(assigns, :name, role_name(assigns.role))
+
     ~H"""
-    <svg :if={@colour} width="16" height="16" aria-hidden="true" class="inline-block align-middle">
-      <rect width="16" height="16" rx="3" fill={@colour} />
-    </svg>
+    <span class={["role-name", "role-#{@role.id}", @class]} data-role-colour={@role.colour}>{@name}</span>
+    """
+  end
+
+  @doc """
+  A user's name in their name colour (RP-06: the highest-ranked role that has one), or as
+  plain text. Takes the user's roles from `Idejo.Access.roles_of/1`.
+  """
+  attr :roles, :list, required: true
+  slot :inner_block, required: true
+
+  def coloured_name(assigns) do
+    assigns = assign(assigns, :role, Idejo.Access.name_role(assigns.roles))
+
+    ~H"""
+    <span
+      class={@role && ["name-colour", "role-#{@role.id}"]}
+      data-role-colour={@role && @role.colour}
+    >{render_slot(@inner_block)}</span>
     """
   end
 end

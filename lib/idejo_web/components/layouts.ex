@@ -432,6 +432,28 @@ defmodule IdejoWeb.Layouts do
     """
   end
 
+  @doc """
+  The roles' colours (steward decision, 2026-10-23): `--role` on each `role-{id}` class, in
+  one `<style>` carrying the request's nonce, for `IdejoWeb.Admin.role_label/1`. Roles are
+  public (`/r/{slug}`), so every role with a colour is listed.
+  """
+  attr :nonce, :string, default: nil
+
+  def role_colours(assigns) do
+    rules =
+      for %{colour: colour, id: id} when is_binary(colour) <- Idejo.Access.list_roles(),
+          into: "",
+          do: ".role-#{id}{--role:#{colour}}"
+
+    assigns = assign(assigns, :rules, rules)
+
+    ~H"""
+    <style :if={@nonce && @rules != ""} nonce={@nonce}>
+      <%= @rules %>
+    </style>
+    """
+  end
+
   attr :user, :map, required: true
 
   # NO-01: the Notifications screen, with the unread count. Counted when the layout renders,
@@ -612,7 +634,10 @@ defmodule IdejoWeb.Layouts do
           {gettext("Stylesheet")}
         </.link>
       </nav>
-      {render_slot(@inner_block)}
+      <%!-- A role colour changed here shows at once, before the next page load. --%>
+      <div id="admin-content" phx-hook="RoleColours">
+        {render_slot(@inner_block)}
+      </div>
     </Layouts.app>
     """
   end

@@ -45,8 +45,11 @@ defmodule IdejoWeb.Admin.UsersLive do
 
       <.table :if={@users != []} id="users" rows={@users} row_id={&"user-#{&1.id}"}>
         <:col :let={user} label={gettext("Name")}>
-          <IdejoWeb.Admin.swatch colour={Access.name_colour(@roles[user.id])} />
-          <.link navigate={~p"/admin/users/#{user.id}"} class="link">{user.display_name}</.link>
+          <.link navigate={~p"/admin/users/#{user.id}"} class="link">
+            <IdejoWeb.Admin.coloured_name roles={@roles[user.id]}>
+              {user.display_name}
+            </IdejoWeb.Admin.coloured_name>
+          </.link>
           <span class="opacity-70">@{user.username}</span>
         </:col>
         <:col :let={user} label={gettext("Email")}>

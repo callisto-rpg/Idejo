@@ -21,6 +21,7 @@
       nonce={assigns[:style_csp_nonce]}
       user={assigns[:current_scope] && @current_scope.user}
     />
+    <IdejoWeb.Layouts.role_colours nonce={assigns[:style_csp_nonce]} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
     <script phx-track-static type="text/javascript" src={~p"/assets/js/theme.js"}>
