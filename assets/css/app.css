@@ -663,29 +663,46 @@
     color: var(--ink-soft);
     font-size: 0.875rem;
   }
-  /* RP-03: groups fold away (a <details>, open by default). */
+  /* RP-03: each group's name over its categories. */
   .sidebar-group + .sidebar-group { margin-top: 0.75rem; }
-  .sidebar-group-title {
+
+  /* A category folds (steward decision, 2026-10-23; assets/js/sidebar.js): folded, only its
+     topics with something new show, and the one on screen. The button needs scripts. */
+  .sidebar-category-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    & > .sidebar-link { flex: 1; min-width: 0; }
+  }
+  .sidebar-fold { display: none; }
+  [data-js] .sidebar-fold {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--radius-field);
+    color: var(--ink-faint);
     cursor: pointer;
-    list-style: none;
-    &::-webkit-details-marker { display: none; }
     &::after {
       content: "";
       width: 0.4rem;
       height: 0.4rem;
-      margin-right: 0.25rem;
+      margin-top: -0.2rem;
       border-right: 1.5px solid currentColor;
       border-bottom: 1.5px solid currentColor;
       transform: rotate(45deg);
       transition: transform 150ms ease;
     }
-    &:hover { color: var(--color-base-content); }
+    &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
+    &[aria-pressed="true"]::after { margin-top: 0; transform: rotate(-45deg); }
   }
-  .sidebar-group:not([open]) > .sidebar-group-title::after { transform: rotate(-45deg); }
-  .sidebar-group-title:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 0.25rem; }
+  .sidebar-category.is-folded {
+    & .sidebar-topic:not(.has-news, .is-current),
+    & .sidebar-more > summary,
+    & .sidebar-more-item:not(:has(.has-news)) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .sidebar-fold::after { transition: none; } }
 
   .sidebar-empty { padding: 0 0.625rem; color: var(--ink-faint); font-size: 0.9375rem; }
 

@@ -126,7 +126,9 @@ change and keeps no history.
   the pictures of who wrote there (five, then "+N more"). Your choice stays for the next
   pages. A topic's tags sit at the right, above its number of messages.
 - The **sidebar** on the left lists the categories in the same order and groups as the home
-  page (click a group's name to fold it away), and under each one the topics you follow there, in the order you joined them. Past four,
+  page, and under each one the topics you follow there, in the order you joined them. The
+  small arrow beside a category folds it: then only its topics with new messages show (and
+  the one you are reading); your browser remembers. Past four,
   **N more topics** shows the rest. A dot before a topic means something new since you last
   opened it: grey for new messages, blue when one of your `+roles` was mentioned, orange for
   a reply to you, red when you were mentioned (`@you`). The sidebar keeps itself up to date

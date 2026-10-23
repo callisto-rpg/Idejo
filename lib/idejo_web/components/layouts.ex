@@ -376,16 +376,16 @@ defmodule IdejoWeb.Layouts do
               place={@place}
             />
           <% several -> %>
-            <%!-- RP-03: one foldable section per group, ungrouped last; open by default. --%>
-            <details
+            <%!-- RP-03: one section per group, ungrouped last. Groups do not fold; categories
+                 do (steward decision, 2026-10-23). --%>
+            <div
               :for={{group, items} <- several}
               id={"sidebar-group-#{if group, do: group.id, else: "other"}"}
-              open
               class="sidebar-group"
             >
-              <summary class="sidebar-heading sidebar-group-title">
+              <p class="sidebar-heading sidebar-group-title">
                 {if group, do: group.name, else: gettext("Other")}
-              </summary>
+              </p>
               <.sidebar_categories
                 summaries={items}
                 current={@current}
@@ -393,7 +393,7 @@ defmodule IdejoWeb.Layouts do
                 activity={@activity}
                 place={@place}
               />
-            </details>
+            </div>
         <% end %>
         <p :if={@summaries == []} class="sidebar-empty">{gettext("No categories yet.")}</p>
       </nav>
@@ -412,26 +412,44 @@ defmodule IdejoWeb.Layouts do
   attr :place, :map, required: true, doc: "`topic_id` (the topic on screen), `following`"
 
   # The categories of one section of the sidebar, each with the topics the user follows there.
+  # A category with topics has a fold button (steward decision, 2026-10-23; sidebar.js, which
+  # remembers it): folded, only its topics with something new show, and the one on screen.
   defp sidebar_categories(assigns) do
     ~H"""
     <ul>
-      <li :for={%{category: category} = summary <- @summaries}>
-        <a
-          href={~p"/c/#{category.slug}"}
-          class={[
-            "sidebar-link",
-            "cat-#{category.id}",
-            @current && @current.id == category.id && "is-current"
-          ]}
-          aria-current={@current && @current.id == category.id && "page"}
-        >
-          <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
-          <span class="sidebar-name">{category.name}</span>
-          <span :if={summary.last_activity_at} class="sidebar-when">
-            <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
-          </span>
-        </a>
+      <li
+        :for={%{category: category} = summary <- @summaries}
+        class="sidebar-category"
+        data-category-id={category.id}
+      >
+        <div class="sidebar-category-row">
+          <a
+            href={~p"/c/#{category.slug}"}
+            class={[
+              "sidebar-link",
+              "cat-#{category.id}",
+              @current && @current.id == category.id && "is-current"
+            ]}
+            aria-current={@current && @current.id == category.id && "page"}
+          >
+            <IdejoWeb.TopicComponents.category_mark category={category} size={:small} />
+            <span class="sidebar-name">{category.name}</span>
+            <span :if={summary.last_activity_at} class="sidebar-when">
+              <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
+            </span>
+          </a>
+          <button
+            :if={Map.get(@followed, category.id, []) != []}
+            type="button"
+            class="sidebar-fold"
+            aria-pressed="false"
+            aria-controls={"sidebar-topics-#{category.id}"}
+            aria-label={gettext("Only topics with new messages in %{name}", name: category.name)}
+            title={gettext("Show only topics with new messages, or all")}
+          ></button>
+        </div>
         <.followed_topics
+          id={"sidebar-topics-#{category.id}"}
           topics={Map.get(@followed, category.id, [])}
           activity={@activity}
           place={@place}
@@ -441,6 +459,7 @@ defmodule IdejoWeb.Layouts do
     """
   end
 
+  attr :id, :string, required: true
   attr :topics, :list, required: true
   attr :activity, :map, default: %{}
   attr :place, :map, required: true
@@ -462,14 +481,14 @@ defmodule IdejoWeb.Layouts do
     assigns = assign(assigns, shown: shown, more: more)
 
     ~H"""
-    <ul :if={@topics != []} class="sidebar-topics">
+    <ul :if={@topics != []} id={@id} class="sidebar-topics">
       <.followed_topic
         :for={topic <- @shown}
         topic={topic}
         activity={@activity[topic.id]}
         place={@place}
       />
-      <li :if={@more != []}>
+      <li :if={@more != []} class="sidebar-more-item">
         <details id={"sidebar-more-#{hd(@more).category_id}"} class="sidebar-more">
           <summary>
             <span class="sidebar-more-closed">

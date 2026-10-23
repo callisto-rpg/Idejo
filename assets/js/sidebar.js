@@ -97,3 +97,52 @@ wide.addEventListener("change", closeDrawer)
 // LiveView re-renders the header on navigation; keep the button's state right.
 window.addEventListener("phx:page-loading-stop", sync)
 sync()
+
+// Folded categories (steward decision, 2026-10-23): a category's button shows only its topics
+// with something new (and the one on screen), remembered by the browser. Its topics past the
+// first four are opened while it is folded, so the new ones among them show too. Applied
+// again each time the Notifier hook swaps in a fresh sidebar.
+const FOLDED = "idejo:folded-categories"
+
+const foldedIds = () => {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FOLDED) || "[]"))
+  } catch (_e) {
+    return new Set()
+  }
+}
+
+const setFolded = (category, folded) => {
+  category.classList.toggle("is-folded", folded)
+  category.querySelector(".sidebar-fold")?.setAttribute("aria-pressed", String(folded))
+  const more = category.querySelector(".sidebar-more")
+  if (more && folded) more.open = true
+}
+
+export function applyFolds() {
+  const ids = foldedIds()
+  document.querySelectorAll("#sidebar .sidebar-category").forEach(category => {
+    setFolded(category, ids.has(category.dataset.categoryId))
+  })
+}
+
+document.addEventListener("click", (e) => {
+  const button = e.target.closest(".sidebar-fold")
+  if (!button) return
+  const category = button.closest(".sidebar-category")
+  const ids = foldedIds()
+  const folded = !category.classList.contains("is-folded")
+  if (folded) ids.add(category.dataset.categoryId)
+  else ids.delete(category.dataset.categoryId)
+  setFolded(category, folded)
+  // Unfolded, past the first four go back behind "more topics".
+  const more = category.querySelector(".sidebar-more")
+  if (more && !folded) more.open = false
+  try {
+    localStorage.setItem(FOLDED, JSON.stringify([...ids]))
+  } catch (_e) {
+    // Storage refused (private window): folded for this page only.
+  }
+})
+
+applyFolds()

@@ -163,4 +163,47 @@ defmodule IdejoWeb.SidebarTopicsTest do
     assert js =~ ~s(window.addEventListener("phx:topic_activity")
     assert js =~ ~s(url.searchParams.set("topic")
   end
+
+  # Steward decision, 2026-10-23: categories fold, groups do not.
+  test "a category with topics has a fold button; folded, only topics with news show", %{
+    general: general,
+    me: me,
+    topic: topic
+  } do
+    {:ok, quiet} = Forum.create_topic(me, general, %{"title" => "Quiet", "body" => "Mine"})
+    :ok = Reading.follow(me, topic)
+    Reading.mark_read(me, topic)
+    {:ok, _} = Forum.post_message(user_fixture(), topic, %{"body" => "News"})
+
+    doc = sidebar(log_in_user(build_conn(), me), ~p"/")
+    category = LazyHTML.query(doc, ~s(.sidebar-category[data-category-id="#{general.id}"]))
+
+    assert [list_id] =
+             category
+             |> LazyHTML.query(".sidebar-fold[aria-pressed=false]")
+             |> LazyHTML.attribute("aria-controls")
+
+    assert Enum.count(LazyHTML.query(category, "##{list_id}")) == 1
+    # What folding keeps: the topic with something new, not the quiet one.
+    assert Enum.count(
+             LazyHTML.query(doc, ~s(.sidebar-topic.has-news[data-topic-id="#{topic.id}"]))
+           ) == 1
+
+    assert Enum.empty?(
+             LazyHTML.query(doc, ~s(.sidebar-topic.has-news[data-topic-id="#{quiet.id}"]))
+           )
+
+    css = File.read!("assets/css/app.css")
+    assert css =~ ".sidebar-category.is-folded {"
+    assert css =~ "& .sidebar-topic:not(.has-news, .is-current),"
+
+    js = File.read!("assets/js/sidebar.js")
+    assert js =~ ~s(const FOLDED = "idejo:folded-categories")
+    assert File.read!("assets/js/notifier.js") =~ "applyFolds()"
+
+    # A category with no topics listed has nothing to fold.
+    {:ok, _} = Forum.create_category(user_with_role_fixture(:administrator), %{"name" => "Empty"})
+    doc = sidebar(log_in_user(build_conn(), me), ~p"/")
+    assert Enum.count(LazyHTML.query(doc, ".sidebar-fold")) == 1
+  end
 end
