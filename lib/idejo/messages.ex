@@ -334,6 +334,71 @@ defmodule Idejo.Messages do
     result
   end
 
+  @doc """
+  Deletes a message, as its author (steward decision, 2026-10-23): asked for when an edit
+  leaves no text. Like a moderator's delete (MO-02), the message stays with its text and
+  versions for moderators, readers see "Message deleted by user" (`deleted_by_author?/1`),
+  and search, notifications and unread counts leave it out; the topic counts one message
+  less, with a `delete` activity (FD-02). Not logged: no moderator acted.
+
+  Refused like `edit/3` (`{:error, :forbidden}`: someone else's, open, deleted, or a topic
+  that takes no messages), and for the topic's opening message (`{:error, :opening}`), which
+  the topic needs.
+  """
+  @spec delete_own(User.t(), Message.t()) ::
+          {:ok, Message.t()} | {:error, :forbidden | :opening | Ecto.Changeset.t()}
+  def delete_own(%User{} = author, %Message{} = message) do
+    result =
+      Repo.transact(fn ->
+        message = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+        topic = Repo.get!(Topic, message.topic_id)
+
+        cond do
+          message.author_id != author.id -> {:error, :forbidden}
+          message.deleted_at != nil -> {:error, :forbidden}
+          message.state != "closed" -> {:error, :forbidden}
+          not Forum.can_post?(author, topic) -> {:error, :forbidden}
+          opening?(message) -> {:error, :opening}
+          true -> delete_by_author(author, message, topic)
+        end
+      end)
+
+    with {:ok, message} <- result, do: broadcast(message.topic_id, {:message, message})
+    result
+  end
+
+  @doc "Whether a deleted message was deleted by its author rather than by a moderator."
+  @spec deleted_by_author?(Message.t()) :: boolean()
+  def deleted_by_author?(%Message{deleted_at: nil}), do: false
+  def deleted_by_author?(%Message{} = message), do: message.deleted_by_id == message.author_id
+
+  defp opening?(message) do
+    first =
+      Repo.one(
+        from m in Message,
+          where: m.topic_id == ^message.topic_id,
+          order_by: [asc: m.opened_at, asc: m.id],
+          limit: 1,
+          select: m.id
+      )
+
+    first == message.id
+  end
+
+  defp delete_by_author(author, message, topic) do
+    with {:ok, message} <-
+           message
+           |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(), deleted_by_id: author.id)
+           |> Repo.update(),
+         {1, _} <-
+           Repo.update_all(from(t in Topic, where: t.id == ^topic.id),
+             inc: [message_count: -1]
+           ),
+         {:ok, _} <- activity(author, message, "delete", topic.uri) do
+      {:ok, message}
+    end
+  end
+
   defp save_edit(author, message, text, topic) do
     now = DateTime.utc_now()
     edit? = not String.starts_with?(text, message.body_md)

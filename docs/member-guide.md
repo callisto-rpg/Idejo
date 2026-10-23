@@ -43,6 +43,10 @@ leave the topic.
 - **While your message is open**, change the text right in the box and press Enter. The
   changed part shows as unsent until you do.
 - **After it is complete**, use **Edit** under it.
+- **To delete it**, use **Edit**, remove all the text and save. You are asked "Are you sure
+  you want to delete your own message?"; **Yes** deletes it, and others see "Message deleted
+  by user" in its place (moderators can still read it). The first message of a topic cannot
+  be deleted this way.
 
 Once you change text you had already sent, a small **view earlier version** link appears
 under the message, so everyone can see what it said before. Adding to the end is not a
