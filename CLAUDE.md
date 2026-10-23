@@ -74,12 +74,10 @@ and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunc
 sent first keeps the old text in `message_versions` (GM-11). History is kept only for edits
 (TP-05): a message that only received appends keeps just its final text, with no versions and
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
-`{:window_ended, id}`. The window length is the
-`gm_window_seconds` setting (default 15, 2–600 s; steward decision, 2026-10-23, departing from
-the specs' 45 s), set in **Admin → Settings** (GM-15, AD-04;
-server-wide only in v0.1, no per-category override); a change applies to messages opened after
-it. Tests set `recover_open_messages: false` and call
-`Idejo.Messages.Recovery.run/0` themselves.
+`{:window_ended, id}`. The window length is the `gm_window_seconds` setting (default 15,
+2–600 s; steward decision, 2026-10-23), set in **Admin → Settings** (GM-15, AD-04; server-wide
+only in v0.1, no per-category override); a change applies to messages opened after it. Tests
+set `recover_open_messages: false` and call `Idejo.Messages.Recovery.run/0` themselves.
 
 ### Permissions
 
