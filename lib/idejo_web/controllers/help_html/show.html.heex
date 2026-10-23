@@ -39,6 +39,11 @@
               "Sends on a new line of the same message. Once your message is more than %{count} seconds old, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
               @window
             )}
+            {ngettext(
+              "While nobody has written below your message, that waits until it is %{count} minute old: someone writing alone keeps one message.",
+              "While nobody has written below your message, that waits until it is %{count} minutes old: someone writing alone keeps one message.",
+              @unanswered
+            )}
           </dd>
         </div>
       </dl>

@@ -137,6 +137,8 @@ defmodule IdejoWeb.ComposerTest do
     |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1))
     |> Repo.update!()
 
+    # Someone answered (else the unanswered message time applies).
+    {:ok, _} = Idejo.Messages.commit(user_fixture(), topic, "Ok")
     enter(lv, "Done. Bye", true)
     assert_reply(lv, %{closed: true})
 
@@ -150,6 +152,25 @@ defmodule IdejoWeb.ComposerTest do
     {:ok, lv, _html} = watch(conn, topic)
     enter(lv, "First line", true)
     assert_reply(lv, %{closed: false, body: "First line."})
+  end
+
+  # Steward decision, 2026-10-23: the unanswered message time.
+  @tag req: "GM-05"
+  test "GM-05 alone below the last message, Ctrl+Enter after the window keeps it open", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    enter(lv, "Thinking aloud")
+    [_, mine] = Forum.list_messages(topic)
+
+    mine
+    |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1))
+    |> Repo.update!()
+
+    enter(lv, "Thinking aloud. More", true)
+    assert_reply(lv, %{closed: false, body: "Thinking aloud. More."})
+    assert Repo.reload!(mine).state == "open"
   end
 
   @tag req: "GM-05"

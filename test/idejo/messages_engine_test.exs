@@ -155,6 +155,8 @@ defmodule Idejo.MessagesEngineTest do
   test "GM-05 Ctrl+Enter after the window closes the message; the next line starts a new one",
        %{topic: topic, author: author} do
     message = topic |> then(&commit!(author, &1, "One")) |> end_window!()
+    # Someone wrote below it (else the unanswered time applies, tested below).
+    commit!(user_fixture(), topic, "Reply")
 
     closed = commit!(author, topic, "One. Last words", break: true)
     assert closed.id == message.id
@@ -166,6 +168,33 @@ defmodule Idejo.MessagesEngineTest do
     next = commit!(author, topic, "New thought")
     refute next.id == message.id
     assert next.state == "open"
+  end
+
+  # Steward decision, 2026-10-23: the unanswered message time (`gm_unanswered_minutes`).
+  @tag req: "GM-05"
+  test "GM-05 with nobody below it, Ctrl+Enter completes a message only once it is old enough",
+       %{topic: topic, author: author} do
+    message = topic |> then(&commit!(author, &1, "Alone")) |> end_window!()
+
+    # Ten minutes by default: Ctrl+Enter is a line of the same message until then.
+    still = commit!(author, topic, "Alone. Still", break: true)
+    assert still.id == message.id
+    assert still.state == "open"
+    assert Messages.unanswered_until(still) == DateTime.add(still.opened_at, 600, :second)
+
+    # A message deleted below it does not count as an answer.
+    {:ok, reply} = Messages.commit(user_fixture(), topic, "Spam")
+    {:ok, _} = Messages.delete_as_moderator(user_with_role_fixture(:administrator), reply, "x")
+    reply = Repo.reload!(reply)
+    {:ok, _} = Messages.close(reply)
+    assert commit!(author, topic, "Alone. Still. Again", break: true).state == "open"
+
+    # Older than the time: it completes, answered or not.
+    still
+    |> Ecto.Changeset.change(opened_at: DateTime.add(DateTime.utc_now(), -601, :second))
+    |> Repo.update!()
+
+    assert commit!(author, topic, "Alone. Still. Again. Done", break: true).state == "closed"
   end
 
   @tag req: "GM-09"

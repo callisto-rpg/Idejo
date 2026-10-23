@@ -111,6 +111,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
+         |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> put_messages(Forum.list_messages(topic))
          |> put_first_unread(session["first_unread"])
@@ -493,11 +494,17 @@ defmodule IdejoWeb.TopicLive do
 
   # One timer at a time, only while the viewer's own open message is inside its window.
   defp schedule_tick(%{assigns: %{tick: nil}} = socket) do
-    case open_message(socket.assigns.messages, user(socket)) do
-      %{closes_at: closes_at} ->
-        if connected?(socket) and DateTime.after?(closes_at, DateTime.utc_now()),
-          do: assign(socket, :tick, Process.send_after(self(), :tick, 1000)),
-          else: socket
+    %{messages: messages, unanswered_minutes: minutes} = socket.assigns
+
+    case open_message(messages, user(socket)) do
+      %{} = mine ->
+        if connected?(socket) and
+             DateTime.after?(
+               start_new_at(mine, answered?(messages, mine), minutes),
+               DateTime.utc_now()
+             ),
+           do: assign(socket, :tick, Process.send_after(self(), :tick, 1000)),
+           else: socket
 
       nil ->
         socket
@@ -505,6 +512,21 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp schedule_tick(socket), do: socket
+
+  # When Ctrl+Enter may start a new message (GM-05, `Idejo.Messages.may_start_new?/2`): once
+  # the window has ended and, while nobody wrote below it, once it is old enough (steward
+  # decision, 2026-10-23). Worked out from the messages shown, with no query (NF-01).
+  defp start_new_at(mine, true, _minutes), do: mine.closes_at
+
+  defp start_new_at(mine, false, minutes),
+    do: Enum.max([mine.closes_at, DateTime.add(mine.opened_at, minutes * 60)], DateTime)
+
+  defp answered?(messages, mine) do
+    messages
+    |> Enum.drop_while(&(&1.id != mine.id))
+    |> Enum.drop(1)
+    |> Enum.any?(&is_nil(&1.deleted_at))
+  end
 
   # Messages keep their place; a new one goes at the end (GM-08: ordered by first commit).
   defp upsert(messages, message) do
@@ -1218,6 +1240,8 @@ defmodule IdejoWeb.TopicLive do
             upload={@composer_upload}
             image_error={@image_error}
             poll={@mine && @polls[@mine.id]}
+            answered?={Enum.any?(@later, &is_nil(&1.deleted_at))}
+            unanswered_minutes={@unanswered_minutes}
           />
         </li>
         <li
@@ -1843,13 +1867,23 @@ defmodule IdejoWeb.TopicLive do
   attr :upload, :any, required: true
   attr :image_error, :string, required: true
   attr :poll, :map, default: nil, doc: "the open message's poll (`!poll`)"
+  attr :answered?, :boolean, default: true, doc: "someone wrote below the open message"
+  attr :unanswered_minutes, :integer, default: 10
 
   # No countdown, button or status around it (GM-07): only the text box. The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
   # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
+    %{mine: mine, now: now} = assigns
+
     assigns =
-      assign(assigns, :left, assigns.mine && DateTime.diff(assigns.mine.closes_at, assigns.now))
+      assign(assigns,
+        left: mine && DateTime.diff(mine.closes_at, now),
+        # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
+        lone_left:
+          mine && !assigns.answered? &&
+            DateTime.diff(start_new_at(mine, false, assigns.unanswered_minutes), now)
+      )
 
     ~H"""
     <section aria-label={gettext("Your message")} class="message message-mine">
@@ -1896,6 +1930,13 @@ defmodule IdejoWeb.TopicLive do
         <%= cond do %>
           <% is_nil(@mine) -> %>
             {gettext("Enter starts a new message.")}
+          <% @lone_left && @lone_left > 0 -> %>
+            {gettext("Your message is open.")}
+            {ngettext(
+              "Ctrl+Enter, or Enter three times, starts a new message once someone writes below it, or in %{count} minute.",
+              "Ctrl+Enter, or Enter three times, starts a new message once someone writes below it, or in %{count} minutes.",
+              div(@lone_left + 59, 60)
+            )}
           <% @left > 0 -> %>
             {gettext("Your message is open.")}
             {ngettext(
