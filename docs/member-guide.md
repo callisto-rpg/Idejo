@@ -49,6 +49,9 @@ topic is locked, or when a moderator closes it.
   you want to delete your own message?"; **Yes** deletes it, and others see "Message deleted
   by user" in its place (moderators can still read it). The first message of a topic cannot
   be deleted this way.
+- **Your topic's title**: point at the title of a topic you started and click the pencil
+  next to it (on a phone it always shows), change the title and **Save**. Its address
+  changes with it; the old one still leads there. Locked and archived topics keep theirs.
 
 Once you change text you had already sent, a small **view earlier version** link appears
 under the message, so everyone can see what it said before. Adding to the end is not a

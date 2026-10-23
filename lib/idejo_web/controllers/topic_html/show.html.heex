@@ -9,7 +9,20 @@
   topic={@topic}
 >
   <.header>
-    {@topic.title}
+    <span id="topic-title" class="topic-title">{@topic.title}</span>
+    <%!-- The title's pencil (steward decision, 2026-10-23), shown on hover or focus; for the
+         starter and moderators. It opens the form below through `:target`, so it needs no
+         JavaScript. --%>
+    <a
+      :if={@can_rename?}
+      href="#rename-topic"
+      id="rename-topic-link"
+      class="title-edit"
+      aria-label={gettext("Change the title")}
+      title={gettext("Change the title")}
+    >
+      <.icon name="hero-pencil-square-micro" class="size-5" />
+    </a>
     <:subtitle>
       <.link href={~p"/c/#{@topic.category.slug}"} class="topic-category">
         <TopicComponents.category_mark category={@topic.category} />
@@ -52,6 +65,30 @@
       </.form>
     </:actions>
   </.header>
+
+  <.form
+    :if={@can_rename?}
+    for={%{}}
+    action={~p"/t/#{@topic.id}/title"}
+    method="post"
+    id="rename-topic"
+    class="rename-topic"
+  >
+    <label for="rename-topic-title" class="label mb-1">{gettext("Title")}</label>
+    <div class="flex flex-wrap gap-2">
+      <input
+        id="rename-topic-title"
+        name="title"
+        type="text"
+        value={@topic.title}
+        maxlength="150"
+        required
+        class="input input-sm flex-1 min-w-48"
+      />
+      <button class="btn btn-sm btn-primary">{gettext("Save")}</button>
+      <a href="#" class="btn btn-sm btn-ghost">{gettext("Cancel")}</a>
+    </div>
+  </.form>
 
   <%!-- TP-14: moderator tools, a plain form (no JavaScript needed); each action is logged. --%>
   <details :if={@can_moderate?} id="topic-moderation" class="panel-details">

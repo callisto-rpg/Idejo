@@ -49,4 +49,13 @@ defmodule Idejo.Forum.Topic do
     |> validate_length(:title, max: @title_max)
     |> validate_required([:id, :uri, :category_id, :author_id, :slug, :last_activity_at])
   end
+
+  @doc "A changeset for a new title (steward decision, 2026-10-23); the caller sets the slug."
+  def title_changeset(topic, attrs) do
+    topic
+    |> cast(attrs, [:title])
+    |> update_change(:title, &(&1 && String.trim(&1)))
+    |> validate_required([:title])
+    |> validate_length(:title, max: @title_max)
+  end
 end

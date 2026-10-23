@@ -43,6 +43,7 @@ defmodule IdejoWeb.TopicController do
               first_unread: first_unread,
               following?: Reading.following?(user, topic),
               can_autofollow?: Idejo.Access.administrator?(user),
+              can_rename?: Forum.can_rename_topic?(user, topic),
               forked_from: forked_from(user, topic),
               # Without ?reply_to=, which only opens the form.
               canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
