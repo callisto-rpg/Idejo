@@ -952,8 +952,12 @@
   /* ---------------------------------------------------------------------------------------
      Page content */
 
+  /* A page's title: every <h1> (all in .page-intro), and headings that should look like one
+     without being one, as Rules & Roles' About and Rules (.heading-h1; a page keeps one h1,
+     AX-01). Smaller than it was (steward decision, 2026-10-24). */
+  .page-intro h1,
+  .heading-h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
   .page-intro {
-    & h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
     & h1 + p, & p { margin-top: 0.375rem; color: var(--ink-soft); }
   }
   .page-intro-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
@@ -2551,7 +2555,8 @@ html:not([data-js]) .spoiler-cover { display: none; }
   .category-card-link,
   .inline-card-title,
   .welcome-title,
-  .page-intro h1 {
+  .page-intro h1,
+  .heading-h1 {
     font-family: var(--font-title);
     font-optical-sizing: auto;
     letter-spacing: -0.005em;

@@ -35,6 +35,11 @@ defmodule IdejoWeb.WelcomeComponents do
 
   attr :data, :map, required: true, doc: "from `welcome_data/1`"
   attr :heading, :string, values: ~w(h2 h3), default: "h2"
+
+  attr :heading_class, :string,
+    default: "welcome-heading",
+    doc: "About's and Rules' look: small labels in the card, `heading-h1` on the page"
+
   attr :return_to, :string, default: nil
   attr :submit, :string, required: true
   attr :id, :string, default: "welcome", doc: "prefix of the ids, unique on the page"
@@ -43,13 +48,13 @@ defmodule IdejoWeb.WelcomeComponents do
   def welcome_content(assigns) do
     ~H"""
     <section :if={@data.about != ""} class="welcome-section" aria-labelledby={"#{@id}-about"}>
-      <.dynamic_tag tag_name={@heading} id={"#{@id}-about"} class="welcome-heading">
+      <.dynamic_tag tag_name={@heading} id={"#{@id}-about"} class={@heading_class}>
         {gettext("About")}
       </.dynamic_tag>
       <MessageComponents.body html={Body.to_html(@data.about)} />
     </section>
     <section :if={@data.rules != ""} class="welcome-section" aria-labelledby={"#{@id}-rules"}>
-      <.dynamic_tag tag_name={@heading} id={"#{@id}-rules"} class="welcome-heading">
+      <.dynamic_tag tag_name={@heading} id={"#{@id}-rules"} class={@heading_class}>
         {gettext("Rules")}
       </.dynamic_tag>
       <MessageComponents.body html={Body.to_html(@data.rules)} />
