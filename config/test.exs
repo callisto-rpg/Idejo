@@ -57,6 +57,9 @@ config :idejo, recover_open_messages: false
 # tests turn them on.
 config :idejo, :rate_limits, enabled: false
 
+# PN-16: push endpoints resolve to fixed addresses, with no network.
+config :idejo, :push_resolver, {Idejo.FakeDNS, :getaddrs}
+
 # TP-12: uploads go to a scratch directory, emptied by test_helper.exs.
 config :idejo, :uploads_dir, Path.expand("../tmp/test_uploads", __DIR__)
 config :idejo, :backup_dir, Path.expand("../tmp/test_backups", __DIR__)
