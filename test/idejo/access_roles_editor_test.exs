@@ -72,6 +72,7 @@ defmodule Idejo.AccessRolesEditorTest do
       assert after_ == %{
                "name" => "Team",
                "colour" => "#3366ff",
+               "show_next_to_name" => true,
                "position" => 4,
                "mentionable" => false,
                "mentions_below" => false,

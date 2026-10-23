@@ -78,8 +78,7 @@ defmodule IdejoWeb.WelcomeComponents do
               checked={MapSet.member?(@data.held, role.id)}
               class="checkbox checkbox-sm"
             />
-            <Admin.swatch colour={role.colour} />
-            <span>{role.name}</span>
+            <Admin.role_label role={role} />
           </label>
         </div>
       </fieldset>

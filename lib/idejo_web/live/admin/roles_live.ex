@@ -5,7 +5,9 @@ defmodule IdejoWeb.Admin.RolesLive do
   @moduledoc """
   Admin panel: the role editor (RP-02). Create custom roles with a name and a colour, rename
   them, change any role's colour, move roles up or down in rank, and delete custom roles.
-  Owner and administrator stay on top and guest stays last.
+  Owner and administrator stay on top and guest stays last. Any role can be kept off the line
+  next to its members' names in conversations ("Visible next to name"; steward decision,
+  2026-10-23).
   """
   use IdejoWeb, :live_view
 
@@ -135,6 +137,21 @@ defmodule IdejoWeb.Admin.RolesLive do
 
   attr :form, :any, required: true
 
+  # Steward decision, 2026-10-23: off, members still hold the role, but conversations show
+  # their next visible role instead.
+  defp visibility(assigns) do
+    ~H"""
+    <.input
+      field={@form[:show_next_to_name]}
+      type="checkbox"
+      class="toggle toggle-sm"
+      label={gettext("Visible next to name")}
+    />
+    """
+  end
+
+  attr :form, :any, required: true
+
   # Members give themselves the role (steward decision, 2026-10-23): with its rights.
   defp self_select(assigns) do
     ~H"""
@@ -163,7 +180,7 @@ defmodule IdejoWeb.Admin.RolesLive do
         {gettext("Roles")}
         <:subtitle>
           {gettext(
-            "Higher roles come first; a member's name takes the colour of their highest role. Owner and administrator always have every right."
+            "Higher roles come first; a member's name takes the colour of their highest role, and conversations show their highest role visible next to names. Owner and administrator always have every right."
           )}
         </:subtitle>
       </.header>
@@ -197,6 +214,7 @@ defmodule IdejoWeb.Admin.RolesLive do
                   placeholder="#3366ff"
                   spellcheck="false"
                 />
+                <.visibility form={form} />
                 <.mention_settings :if={mentionable_kind?(role)} form={form} />
                 <.self_select :if={!role.built_in} form={form} />
                 <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
@@ -205,8 +223,7 @@ defmodule IdejoWeb.Admin.RolesLive do
                 </button>
               </.form>
             <% _ -> %>
-              <Admin.swatch colour={role.colour} />
-              <span class="font-semibold">{Admin.role_name(role)}</span>
+              <Admin.role_label role={role} class="font-semibold" />
               <span :if={role.built_in} class="badge badge-sm">{gettext("built-in")}</span>
               <span :if={!role.built_in} class="text-sm opacity-70">
                 {ngettext("1 member", "%{count} members", Map.get(@holders, role.id, 0))}
@@ -215,6 +232,9 @@ defmodule IdejoWeb.Admin.RolesLive do
                 <code>+{Access.role_slug(role)}</code>
                 <span :if={role.mentionable}>· {gettext("can be tagged by everyone")}</span>
                 <span :if={role.mentions_below}>· {gettext("can tag roles beneath")}</span>
+              </span>
+              <span :if={!role.show_next_to_name} class="badge badge-sm badge-ghost">
+                {gettext("not shown next to names")}
               </span>
               <span :if={role.self_select} class="badge badge-sm badge-primary badge-soft">
                 {gettext("members can choose it")}
@@ -284,6 +304,7 @@ defmodule IdejoWeb.Admin.RolesLive do
             placeholder="#3366ff"
             spellcheck="false"
           />
+          <.visibility form={@new_form} />
           <.mention_settings form={@new_form} />
           <.self_select form={@new_form} />
           <.button class="btn btn-primary">{gettext("Create role")}</.button>

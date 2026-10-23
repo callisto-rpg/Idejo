@@ -67,9 +67,8 @@ defmodule IdejoWeb.UserComponents do
         </.dynamic_tag>
         <p class="opacity-70">@{@card.user.username}</p>
         <ul :if={@card.roles != []} class="mt-2 flex flex-wrap gap-2" aria-label={gettext("Roles")}>
-          <li :for={role <- @card.roles} class="badge badge-sm gap-1">
-            <Admin.swatch colour={role.colour} />
-            {Admin.role_name(role)}
+          <li :for={role <- @card.roles} class="badge badge-sm">
+            <Admin.role_label role={role} />
           </li>
         </ul>
         <.user_actions :if={@card[:actions]} user={@card.user} actions={@card.actions} />

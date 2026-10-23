@@ -47,7 +47,9 @@ defmodule IdejoWeb.AdminRolesLiveTest do
 
     assert html =~ "Role “Team” created."
     team = role!("Team")
-    assert lv |> element("#role-#{team.id}") |> render() =~ ~s(fill="#3366ff")
+
+    assert lv |> element("#role-#{team.id} .role-name") |> render() =~
+             ~s(data-role-colour="#3366ff")
   end
 
   @tag req: "RP-02"

@@ -76,7 +76,7 @@ Everyone who has an account, with their roles, newest first. Open a person to:
 - **Remove** a role. The server always keeps at least one owner, and you cannot remove your
   own administrator role, so nobody locks the server out by mistake.
 
-The highest role that has a colour colours the person's name in topics.
+The highest role that has a colour colours the person's name in these lists.
 
 ### Categories
 
@@ -142,10 +142,15 @@ which links are unused, used (and by whom) or expired.
 
 ### Roles
 
-- **New role**: a name and an optional colour (`#rrggbb`).
+- **New role**: a name and an optional colour (`#rrggbb`). A role's name is written in its
+  colour everywhere it appears, or in grey without one.
 - The arrows set the order: a higher role ranks higher, for the name colour and the role
-  shown above each message. Owner and administrator stay on top, guest at the bottom.
-- **Edit** renames a role or changes its colour (built-in roles only change colour);
+  shown next to each author's name. Owner and administrator stay on top, guest at the bottom.
+- **Visible next to name** (on at first): turned off, the role still gives its rights, but
+  conversations show the member's next role that is visible instead (often Member). Turn it
+  off for Member to show only roles that stand out.
+- **Edit** renames a role or changes its colour and **Visible next to name** (built-in roles
+  keep their name);
   **Delete** removes a role you made, and its members lose it.
 - **Can be tagged by everyone**: anyone may notify the role's members by writing
   **+role** (the role's name as shown in the list, such as `+help-desk`). Out of the box:

@@ -300,8 +300,30 @@ defmodule Idejo.Access do
   """
   @spec name_colour([Role.t()]) :: String.t() | nil
   def name_colour(roles) when is_list(roles) do
-    roles |> Enum.sort_by(&{&1.position, &1.name}) |> Enum.find_value(& &1.colour)
+    case name_role(roles) do
+      nil -> nil
+      role -> role.colour
+    end
   end
+
+  @doc """
+  Returns the role that sets the name colour (`name_colour/1`), or `nil` when no role has one.
+  """
+  @spec name_role([Role.t()]) :: Role.t() | nil
+  def name_role(roles) when is_list(roles) do
+    roles |> by_rank() |> Enum.find(& &1.colour)
+  end
+
+  @doc """
+  Returns the role shown next to a name in conversations: the highest-ranked one that is
+  "Visible next to name" (`show_next_to_name`; steward decision, 2026-10-23), or `nil`.
+  """
+  @spec shown_role([Role.t()]) :: Role.t() | nil
+  def shown_role(roles) when is_list(roles) do
+    roles |> by_rank() |> Enum.find(& &1.show_next_to_name)
+  end
+
+  defp by_rank(roles), do: Enum.sort_by(roles, &{&1.position, &1.name})
 
   ## Role editor (RP-02)
 
@@ -453,6 +475,7 @@ defmodule Idejo.Access do
       Audit.snapshot(role, [
         :name,
         :colour,
+        :show_next_to_name,
         :position,
         :mentionable,
         :mentions_below,
