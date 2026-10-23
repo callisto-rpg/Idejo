@@ -59,7 +59,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
           field={@form[:gm_window_seconds]}
           type="number"
           label={gettext("Growing-message window (seconds)")}
-          min="10"
+          min="2"
           max="600"
           step="1"
           aria-describedby="gm-window-help"
@@ -67,7 +67,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
         />
         <p id="gm-window-help" class="text-sm opacity-70 -mt-1 mb-4">
           {gettext(
-            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 10 to 600; messages already open keep their window."
+            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 2 to 600; messages already open keep their window."
           )}
         </p>
         <.input

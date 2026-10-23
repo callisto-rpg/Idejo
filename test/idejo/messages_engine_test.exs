@@ -33,7 +33,7 @@ defmodule Idejo.MessagesEngineTest do
     message
   end
 
-  # Moves the window's end into the past, as if its 45 s had gone by.
+  # Moves the window's end into the past, as if its 15 s had gone by.
   defp end_window!(message) do
     message
     |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1, :second))
@@ -101,7 +101,7 @@ defmodule Idejo.MessagesEngineTest do
     author: author
   } do
     first = commit!(author, topic, "One")
-    assert DateTime.diff(first.closes_at, first.opened_at) == 45
+    assert DateTime.diff(first.closes_at, first.opened_at) == 15
 
     later = commit!(author, topic, "One. Two")
     assert later.closes_at == first.closes_at

@@ -131,15 +131,24 @@ defmodule IdejoWeb.AssistiveTextTest do
     {:ok, open} = Messages.commit(author, topic, "Hello")
     text = lv |> element("#composer-window") |> render()
     assert text =~ "Your message is open."
-    assert [_, left] = Regex.run(~r/Ctrl\+Enter starts a new message in (\d+) seconds?\./, text)
-    assert String.to_integer(left) in 40..45
 
-    # As if 45 s had gone by: the next append carries the past closes_at, and the server
+    assert [_, left] =
+             Regex.run(
+               ~r/Ctrl\+Enter, or Enter three times, starts a new message in (\d+) seconds?\./,
+               text
+             )
+
+    assert String.to_integer(left) in 10..15
+
+    # As if 15 s had gone by: the next append carries the past closes_at, and the server
     # re-renders on its ticks and on the window_ended event.
     end_window!(open)
     {:ok, _} = Messages.commit(author, topic, "Hello. Still here")
     send(lv.pid, {:window_ended, open.id})
-    assert lv |> element("#composer-window") |> render() =~ "Ctrl+Enter starts a new message."
+
+    assert lv |> element("#composer-window") |> render() =~
+             "Ctrl+Enter, or Enter three times, starts a new message."
+
     refute lv |> element("#composer-window") |> render() =~ "seconds"
   end
 

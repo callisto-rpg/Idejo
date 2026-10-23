@@ -16,9 +16,10 @@ works.
 
 - **Categories** hold **topics**; every topic is a live conversation made of **messages**.
 - A message **grows**: each time its author presses Enter, the new text joins the same
-  message, live for everyone. For a short while after it starts (the **window**, 45 seconds
-  by default) the author cannot start a second one; after that, Ctrl+Enter starts a new
-  message. So a topic reads like a forum thread and feels like a chat.
+  message, live for everyone. For a short while after it starts (the **window**, 15 seconds
+  by default) the author cannot start a second one; after that, Ctrl+Enter (or Enter three
+  times in a row) starts a new message. So a topic reads like a forum thread and feels like
+  a chat.
 - What people may do depends on their **roles** and on each category's **permissions**.
 
 ## Who can do what
@@ -53,7 +54,7 @@ corner. It has seven tabs.
 
 - **Server name**: shown in the header, in page titles and in emails.
 - **Who can sign up**: **Anyone**, or **Only people with an invite** (see [Invites](#invites)).
-- **Growing-message window (seconds)**: from 10 to 600, 45 by default. It applies to messages
+- **Growing-message window (seconds)**: from 2 to 600, 15 by default. It applies to messages
   started after you change it.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with

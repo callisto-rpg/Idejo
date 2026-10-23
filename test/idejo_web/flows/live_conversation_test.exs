@@ -88,11 +88,11 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
     visitor = open_topic(build_conn(), topic)
 
     # 1. Enter after a first line: the message appears for everyone, with ". " added; the
-    #    sent text stays in the composer; the 45 s window starts, unseen.
+    #    sent text stays in the composer; the window (15 s by default) starts, unseen.
     assert enter(author, "Hello everyone") == %{closed: false, body: "Hello everyone."}
 
     message = Repo.get_by!(Message, topic_id: topic.id, state: "open")
-    assert DateTime.diff(message.closes_at, message.opened_at) == 45
+    assert DateTime.diff(message.closes_at, message.opened_at) == 15
     assert text(visitor, message) =~ "Hello everyone."
     assert items(author) == ["message-#{first.id}", "message-#{message.id}"]
     refute author |> element("#composer") |> render() =~ ~r/\d+\s*s\b/
@@ -160,7 +160,7 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
 
     assert has_element?(visitor, "#message-#{message.id}-versions", "Who is comming tonight?")
 
-    # 4. The window ends (as if 45 s had gone by): the author is still in the same message and
+    # 4. The window ends (as if 15 s had gone by): the author is still in the same message and
     #    Enter still adds to it. Only now does Ctrl+Enter close it and start a new message.
     message
     |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1))
