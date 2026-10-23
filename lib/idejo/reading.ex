@@ -19,6 +19,10 @@ defmodule Idejo.Reading do
   (`auto_follow/2`, in the same transaction), and followers are notified of new messages
   (NO-01, with notifications). An explicit unfollow is kept as `following: false`, so posting
   again does not follow again; only "Follow" does.
+
+  A topic an administrator marked "followed by everyone" (`topics.autofollow`, steward
+  decision, 2026-10-23) is followed by every user without a `follows` row for it, members
+  who join later included, and listed as followed for visitors; an unfollow still holds.
   """
   import Ecto.Query
 
@@ -77,34 +81,57 @@ defmodule Idejo.Reading do
     {:ok, :followed}
   end
 
-  @doc "Returns true when the user follows the topic. Visitors follow nothing."
+  @doc """
+  Returns true when the user follows the topic: their `follows` row says so, or they have
+  none and the topic is followed by everyone. Visitors follow nothing they could unfollow.
+  """
   @spec following?(User.t() | nil, Topic.t()) :: boolean()
   def following?(nil, _topic), do: false
 
-  def following?(%User{id: user_id}, %Topic{id: topic_id}) do
-    Repo.exists?(
-      from f in Follow,
-        where: f.user_id == ^user_id and f.topic_id == ^topic_id and f.following
-    )
+  def following?(%User{id: user_id}, %Topic{id: topic_id} = topic) do
+    case Repo.one(
+           from f in Follow,
+             where: f.user_id == ^user_id and f.topic_id == ^topic_id,
+             select: f.following
+         ) do
+      nil -> topic.autofollow
+      following -> following
+    end
   end
 
   @doc """
   The topics the user follows in categories they may view, in the order they started
-  following them (oldest first, so the sidebar list stays put). Visitors follow nothing.
+  following them (oldest first, so the sidebar list stays put); a topic followed by
+  everyone counts from its creation. Visitors get the topics followed by everyone that they
+  may view.
   """
   @spec list_followed_topics(User.t() | nil) :: [Topic.t()]
-  def list_followed_topics(nil), do: []
-
-  def list_followed_topics(%User{id: user_id} = user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+  def list_followed_topics(nil) do
+    viewable = Category |> Access.where_allowed(nil, :view) |> select([c], c.id)
 
     Repo.all(
       from t in Topic,
-        join: f in Follow,
-        on: f.topic_id == t.id and f.user_id == ^user_id and f.following,
-        where: t.category_id in subquery(viewable),
-        order_by: [asc: f.created_at, asc: t.id]
+        where: t.autofollow and t.category_id in subquery(viewable),
+        order_by: [asc: t.created_at, asc: t.id]
     )
+  end
+
+  def list_followed_topics(%User{} = user) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    Repo.all(
+      from [t, f] in followed(user),
+        where: t.category_id in subquery(viewable),
+        order_by: [asc: coalesce(f.created_at, t.created_at), asc: t.id]
+    )
+  end
+
+  # The topics the user follows, with their `follows` row (nil for one followed by everyone).
+  defp followed(%User{id: user_id}) do
+    from t in Topic,
+      left_join: f in Follow,
+      on: f.topic_id == t.id and f.user_id == ^user_id,
+      where: f.following or (t.autofollow and is_nil(f.user_id))
   end
 
   defp set_following(user_id, topic_id, following) do
@@ -225,8 +252,7 @@ defmodule Idejo.Reading do
       select: {t, c.count}
   end
 
-  defp followed_ids(%User{id: user_id}),
-    do: from(f in Follow, where: f.user_id == ^user_id and f.following, select: f.topic_id)
+  defp followed_ids(user), do: from(t in followed(user), select: t.id)
 
   @doc """
   What is waiting for the user personally, for the badge on the header's Unread link

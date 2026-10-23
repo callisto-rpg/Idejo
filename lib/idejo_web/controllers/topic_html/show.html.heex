@@ -24,6 +24,9 @@
       <span :if={@topic.pinned} id="topic-pinned" class="badge badge-sm ml-2">
         {gettext("Pinned")}
       </span>
+      <span :if={@topic.autofollow} id="topic-autofollow" class="badge badge-sm ml-2">
+        {gettext("Followed by everyone")}
+      </span>
     </:subtitle>
     <:actions :if={@current_scope && @current_scope.user}>
       <.form
@@ -100,6 +103,34 @@
       </span>
     </.form>
   </details>
+
+  <%!-- Followed by everyone (steward decision, 2026-10-23): owners and administrators. --%>
+  <.form
+    :if={@can_autofollow?}
+    for={%{}}
+    action={~p"/t/#{@topic.id}/autofollow"}
+    method="post"
+    id="autofollow-form"
+    class="panel-details"
+  >
+    <input type="hidden" name="autofollow" value={to_string(!@topic.autofollow)} />
+    <p id="autofollow-help" class="text-sm opacity-70">
+      {if @topic.autofollow,
+        do:
+          gettext(
+            "Everyone who may read this topic follows it, unless they unfollow it; visitors see it in their sidebar."
+          ),
+        else:
+          gettext(
+            "Make everyone who may read this topic follow it, members who join later too; they can still unfollow it."
+          )}
+    </p>
+    <button class="btn btn-sm mt-2" aria-describedby="autofollow-help">
+      {if @topic.autofollow,
+        do: gettext("Stop making everyone follow it"),
+        else: gettext("Make everyone follow it")}
+    </button>
+  </.form>
 
   <TopicComponents.tag_list tags={@topic.tags} class="topic-tags" />
 

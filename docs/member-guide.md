@@ -118,7 +118,7 @@ change and keeps no history.
   mention you or one of your roles; its colour is that of the strongest, as for the
   sidebar's dots. It updates by itself.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
-  unfollow them.
+  unfollow them, and the topics marked **Followed by everyone**, unless you unfollow them.
 - **Search**, the box at the top, finds words in messages and titles.
 
 ## Your account

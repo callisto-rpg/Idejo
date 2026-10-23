@@ -456,7 +456,14 @@ roles or the permission grid. Every later change must keep it true:
   writes the message); an explicit unfollow stays as `following: false`, so posting again does
   not undo it (steward decision: followers get notified of new messages, with NO-01). The
   topic page has Follow / Unfollow forms posting to `/t/{id}/follow` (`FollowController`,
-  POST / DELETE, no JavaScript needed).
+  POST / DELETE, no JavaScript needed). Topics followed by everyone (steward decision,
+  2026-10-23): owners and administrators mark them on the topic page
+  (`Forum.set_autofollow/3`, audited `topic.autofollow`; `TopicAutofollowController`, POST
+  `/t/{id}/autofollow`); a user without a `follows` row for one follows it (members who
+  join later included: nothing is copied), an unfollow row still holds, and visitors' sidebars
+  list the ones they may view, without × or +. `Reading.following?/2`,
+  `list_followed_topics/1`, the Unread page and `Notifications` followers (every active user
+  who did not unfollow, then filtered by view) all read it.
 - **Tags** (TP-19, `Idejo.Forum.Tags`, `Idejo.Forum.Tag`; steward decision, 2026-10-22:
   built in M5 though the MVP sheet defers tags): administrators make them in **Admin → Tags**
   (`Admin.TagsLive`), server-wide (`category_id` nil) or for one category (never the Archive),

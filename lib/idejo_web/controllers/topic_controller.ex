@@ -39,6 +39,7 @@ defmodule IdejoWeb.TopicController do
               page_title: topic.title,
               reply_to_id: params["reply_to"],
               following?: Reading.following?(user, topic),
+              can_autofollow?: Idejo.Access.administrator?(user),
               forked_from: forked_from(user, topic),
               # Without ?reply_to=, which only opens the form.
               canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
