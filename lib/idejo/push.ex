@@ -16,17 +16,25 @@ defmodule Idejo.Push do
   deletion), and all of them when the VAPID keys are rotated. Their endpoints are checked by
   `Idejo.Push.Endpoint` (PN-16).
 
+  `deliver/3` sends a payload to every browser of a user: one `Idejo.Push.Worker` job each,
+  in the `push` queue (PN-15).
+
   Changes to this module get an extra careful human review (DV-06).
   """
   import Ecto.Query
 
+  alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
-  alias Idejo.Push.{Endpoint, Subscription}
+  alias Idejo.Push.{Endpoint, Subscription, Worker}
   alias Idejo.RateLimit
   alias Idejo.Repo
   alias Idejo.Settings
 
   @max_per_user 10
+  # PN-12: the encrypted body stays under 3 KB; encryption adds 103 bytes (header, delimiter
+  # and tag, `Idejo.Push.Crypto`).
+  @max_payload 3072 - 103 - 1
+  @ttl 24 * 3600
 
   @doc "Whether push notifications are on for this server (PN-19)."
   @spec enabled?() :: boolean()
@@ -101,6 +109,65 @@ defmodule Idejo.Push do
     )
 
     {:ok, saved}
+  end
+
+  @doc """
+  Sends `payload` (the declarative JSON map, PN-12) to every browser of `user`: one job each
+  in the `push` queue, sent with a TTL of 24 hours and `urgency` (`"normal"` by default, or
+  `"high"`). Returns how many were queued; `{:error, :too_large}` when the payload would not
+  stay under 3 KB encrypted.
+  """
+  @spec deliver(User.t(), map(), keyword()) ::
+          {:ok, non_neg_integer()} | {:error, :disabled | :too_large}
+  def deliver(%User{} = user, payload, opts \\ []) when is_map(payload) do
+    urgency = Keyword.get(opts, :urgency, "normal")
+
+    cond do
+      not enabled?() ->
+        {:error, :disabled}
+
+      byte_size(Jason.encode!(payload)) > @max_payload ->
+        {:error, :too_large}
+
+      true ->
+        jobs =
+          for subscription <- list_subscriptions(user) do
+            Worker.new(%{
+              "subscription_id" => subscription.id,
+              "payload" => payload,
+              "ttl" => @ttl,
+              "urgency" => urgency
+            })
+          end
+
+        {:ok, length(Oban.insert_all(jobs))}
+    end
+  end
+
+  @doc "The largest payload, in bytes of JSON, that stays under 3 KB encrypted (PN-12)."
+  @spec max_payload() :: pos_integer()
+  def max_payload, do: @max_payload
+
+  @doc """
+  The VAPID contact (`sub`, PN-14): the email of the server's first owner, else the address
+  emails are sent from.
+  """
+  @spec contact() :: String.t()
+  def contact do
+    owner =
+      Repo.one(
+        from u in User,
+          join: ur in UserRole,
+          on: ur.user_id == u.id,
+          join: r in Role,
+          on: r.id == ur.role_id,
+          where: r.built_in and r.name == "owner",
+          order_by: [asc: u.created_at],
+          limit: 1,
+          select: u.email
+      )
+
+    "mailto:" <> (owner || Settings.get(:mail_from))
   end
 
   @doc "Deletes `user`'s subscription with `endpoint`, if there is one."
