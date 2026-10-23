@@ -684,6 +684,15 @@ roles or the permission grid. Every later change must keep it true:
   right. Moderators get a "Moderate this topic" form on the topic page
   (`TopicModerationController`, POST `/t/{id}/moderate`, no JavaScript); topic lists and
   pages show Locked and Pinned badges.
+- **Topic title** (steward decision, 2026-10-23): `Forum.rename_topic(user, topic, title,
+  reason)` for those `Forum.can_rename_topic?/2` allows: `:moderate` in the category, or the
+  starter while they may post (`can_post?/2`); never archived topics. The slug follows the
+  title (old slugs 301, TP-06); a moderator renaming someone else's topic is logged as
+  `topic.rename` (`from`/`to`); an `update` activity carries `name`; then
+  `{:topic_changed, id}`. On the topic page a pencil after the `<h1>` text
+  (`#rename-topic-link`, shown on hover or focus, always on touch screens) opens
+  `#rename-topic` by `:target` (no JavaScript needed; `assets/js/title_edit.js` only moves
+  the focus), a form posting to `/t/{id}/title` (`TopicTitleController`).
 - **Move a topic** (TP-15): `Forum.move_topic(moderator, topic, target, reason)` needs
   `:moderate` in both categories (`Forum.list_move_targets/2`), never into the Archive; open
   messages stay open and links keep working. Logged under the old category with `from`/`to`

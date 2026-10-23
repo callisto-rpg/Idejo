@@ -639,6 +639,69 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Whether the user may change the topic's title (steward decision, 2026-10-23): someone with
+  `:moderate` in its category, or its starter while they may post in it (open, not locked).
+  Archived topics keep theirs.
+  """
+  @spec can_rename_topic?(User.t() | nil, Topic.t()) :: boolean()
+  def can_rename_topic?(nil, _topic), do: false
+  def can_rename_topic?(_user, %Topic{state: "archived"}), do: false
+
+  def can_rename_topic?(%User{} = user, %Topic{} = topic) do
+    topic = Repo.preload(topic, :category)
+
+    Access.can?(user, :moderate, topic.category) or
+      (topic.author_id == user.id and can_post?(user, topic))
+  end
+
+  @doc """
+  Changes a topic's title (steward decision, 2026-10-23), as `can_rename_topic?/2` allows
+  (`{:error, :forbidden}` otherwise). The slug follows the title; the old address redirects
+  (TP-06). A moderator renaming someone else's topic is logged (MO-03) as `topic.rename`
+  with the titles before and after; every rename writes an `update` activity, then the
+  topic's viewers get `{:topic_changed, topic_id}`.
+  """
+  @spec rename_topic(User.t(), Topic.t(), String.t(), String.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def rename_topic(%User{} = user, %Topic{} = topic, title, reason \\ nil) do
+    result =
+      Repo.transact(fn ->
+        topic =
+          Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+          |> Repo.preload(:category)
+
+        changeset = Topic.title_changeset(topic, %{"title" => title})
+
+        cond do
+          not can_rename_topic?(user, topic) -> {:error, :forbidden}
+          not changeset.valid? -> {:error, changeset}
+          changeset.changes == %{} -> {:ok, topic}
+          true -> save_title(user, topic, changeset, reason)
+        end
+      end)
+
+    with {:ok, topic} <- result, do: Messages.broadcast(topic.id, {:topic_changed, topic.id})
+    result
+  end
+
+  defp save_title(user, topic, changeset, reason) do
+    title = Ecto.Changeset.get_change(changeset, :title)
+    details = %{"from" => topic.title, "to" => title}
+
+    with {:ok, updated} <-
+           changeset |> Ecto.Changeset.put_change(:slug, slugify(title, "topic")) |> Repo.update(),
+         {:ok, _} <-
+           if(user.id == topic.author_id,
+             do: {:ok, nil},
+             else:
+               Moderation.record(user, "topic.rename", updated, reason: reason, details: details)
+           ),
+         {:ok, _} <- topic_update_activity(user, updated) do
+      {:ok, updated}
+    end
+  end
+
+  @doc """
   Sets a topic's tags (TP-19), as someone with the `:tag` right in its category (built-in
   moderators by default; `{:error, :forbidden}` otherwise): `tag_ids` among the category's
   available tags (`{:error, :invalid_tags}`), at least one when it has any
@@ -954,7 +1017,12 @@ defmodule Idejo.Forum do
         object_uri: topic.uri,
         target_uri: category_uri,
         payload:
-          %{"type" => "Page", "state" => topic.state, "pinned" => topic.pinned}
+          %{
+            "type" => "Page",
+            "name" => topic.title,
+            "state" => topic.state,
+            "pinned" => topic.pinned
+          }
           |> put_tags(topic)
       })
     )

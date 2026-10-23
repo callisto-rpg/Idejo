@@ -197,6 +197,11 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
 - **Pin** / **Unpin**: pinned topics stay first in their category.
 - **Move to** another category you moderate. Links keep working.
 
+**Change the title:** point at the title and click the pencil next to it, then **Save**.
+Starters change their own topic's title too, while it is open; moderators may also in
+locked topics, and nobody in archived ones. A moderator's change to someone else's topic is
+logged (**Renamed a topic**, with the titles before and after).
+
 **Make everyone follow it** (owners and administrators, under the topic's moderation
 form): everyone who may read the topic follows it, including members who join later, and
 visitors see it in their sidebar. It shows a **Followed by everyone** badge. People can

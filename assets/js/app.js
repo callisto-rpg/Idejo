@@ -38,6 +38,7 @@ import {Notifier} from "./notifier"
 import {RoleColours} from "./role_colours"
 import {TopicNav, UnreadLine} from "./topic_nav"
 import "./sidebar"
+import "./title_edit"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

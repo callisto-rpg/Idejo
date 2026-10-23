@@ -143,6 +143,8 @@ defmodule IdejoWeb.Router do
     post "/t/:id/moderate", TopicModerationController, :create
     # TP-19: change a topic's tags (the :tag right), a plain form.
     post "/t/:id/tags", TopicTagsController, :update
+    # The topic's title, for its starter and moderators (steward decision, 2026-10-23).
+    post "/t/:id/title", TopicTitleController, :update
     # The welcome card's and "Rules & Roles"' form: self-select roles, card seen.
     post "/welcome", WelcomeController, :update
     post "/t/:id/follow", FollowController, :create
