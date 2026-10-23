@@ -54,7 +54,12 @@ defmodule IdejoWeb.CategoryGroupsTest do
            ]
 
     assert texts(html, "#sidebar .sidebar-group-title") == ["Hobbies", "Outside", "Other"]
-    assert texts(html, "#sidebar details[open] .sidebar-name") == ["Games", "Garden", "General"]
+    assert texts(html, "#sidebar .sidebar-group .sidebar-name") == ["Games", "Garden", "General"]
+    # Groups do not fold (steward decision, 2026-10-23): categories do.
+    assert html
+           |> LazyHTML.from_document()
+           |> LazyHTML.query("#sidebar details.sidebar-group")
+           |> Enum.empty?()
 
     # Reordering and deleting groups: categories stay, ungrouped.
     {:ok, _} = Forum.move_group(admin, outside, :up)

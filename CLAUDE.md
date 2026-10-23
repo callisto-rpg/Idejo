@@ -667,7 +667,11 @@ roles or the permission grid. Every later change must keep it true:
   burn), from a notification or the `"topic_activity"` event `TopicLive` pushes (steward
   decisions, 2026-10-23). The sidebar
   lists `Forum.list_category_summaries/1` (view right, in the query) in the home page's
-  order and sections (`Forum.sections/2`; groups fold away as `<details>`); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
+  order and sections (`Forum.sections/2`; groups are plain headings and do not fold; each
+  category with topics has a `.sidebar-fold` toggle, `aria-pressed`, that folds it to its
+  `.has-news` topics and the one on screen, remembered in `localStorage`
+  (`idejo:folded-categories`) and applied again by `applyFolds()` after the Notifier swaps
+  the sidebar; steward decision, 2026-10-23); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
   before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
   swipe right opens it and left closes it; followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their

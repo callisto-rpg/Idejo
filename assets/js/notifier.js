@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import {applyFolds} from "./sidebar"
+
 // Notifier hook (steward decision, 2026-10-23), on IdejoWeb.NotifierLive: live notifications.
 //
 // Bubbles: each notification shows for ten seconds at the top right, newest on top; the
@@ -213,10 +215,11 @@ export const Notifier = {
     const nav = aside?.querySelector(".sidebar-nav")
     const fresh = doc.querySelector("#sidebar .sidebar-nav")
     if (!nav || !fresh || aside.contains(document.activeElement)) return
-    // Groups and "more topics" stay open or folded as the reader left them.
+    // "More topics" stay open or folded as the reader left them, and so do the categories.
     const open = new Map([...nav.querySelectorAll("details[id]")].map(d => [d.id, d.open]))
     nav.replaceChildren(...fresh.childNodes)
     nav.querySelectorAll("details[id]").forEach(d => { if (open.has(d.id)) d.open = open.get(d.id) })
+    applyFolds()
     this.reglow()
   },
 }
