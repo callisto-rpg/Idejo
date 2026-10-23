@@ -154,6 +154,40 @@ defmodule IdejoWeb.ComposerTest do
     assert_reply(lv, %{closed: false, body: "First line."})
   end
 
+  # Steward decision, 2026-10-23: the line under the composer runs to when Ctrl+Enter may start
+  # a new message: the unanswered message time alone, the window once someone wrote below.
+  @tag req: "GM-05"
+  test "GM-05 the line under the composer shows the time left before Ctrl+Enter works", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    refute has_element?(lv, "#composer-timer")
+    enter(lv, "Thinking aloud")
+    [_, mine] = Forum.list_messages(topic)
+
+    ends = fn ->
+      [value] =
+        lv
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("#composer-timer[phx-hook=ComposerTimer][aria-hidden=true]")
+        |> LazyHTML.attribute("data-end")
+
+      value |> String.to_integer() |> DateTime.from_unix!(:millisecond)
+    end
+
+    assert_in_delta DateTime.diff(ends.(), mine.opened_at, :millisecond), 600_000, 1
+
+    {:ok, _} = Idejo.Messages.commit(user_fixture(), topic, "Go on")
+    assert_in_delta DateTime.diff(ends.(), mine.opened_at, :millisecond), 15_000, 1
+
+    # Complete: the line goes with the open message.
+    Idejo.Messages.close(mine)
+    _ = render(lv)
+    refute has_element?(lv, "#composer-timer")
+  end
+
   # Steward decision, 2026-10-23: the unanswered message time.
   @tag req: "GM-05"
   test "GM-05 alone below the last message, Ctrl+Enter after the window keeps it open", %{
