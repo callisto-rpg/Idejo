@@ -992,6 +992,9 @@ defmodule Idejo.Forum do
         true -> Repo.transact(fn -> insert_topic(user, category, form.changes, source) end)
       end
 
+    # Committed: whoever the first message notifies hears of it live.
+    with {:ok, topic} <- result, do: Idejo.Notifications.announce(topic)
+
     # The source topic's viewers get its new "continued in" link (TP-04).
     with {:ok, _topic} when source != nil <- result,
          do: Messages.broadcast(source.topic_id, {:forked, source.id})

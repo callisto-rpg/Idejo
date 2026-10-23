@@ -374,10 +374,26 @@ roles or the permission grid. Every later change must keep it true:
   the topic (`notify_new/2`); an append or an edit notifies only someone newly mentioned,
   turning their earlier notification for that message into an unread mention when that
   ranks higher (`notify_mentions/2`). Both run inside the transaction that writes the
-  message; any new way of writing a message must call them. They are shown only as the
-  sidebar's dots on followed topics (`Reading.activity/2`): there is no notifications page
-  or bell (steward decision, 2026-10-23, departing from MVP §5's Notifications screen), and
-  `read_at` is no longer set.
+  message; any new way of writing a message must call them. They are shown as the
+  sidebar's dots on followed topics (`Reading.activity/2`) and as live bubbles: there is no
+  notifications page or bell (steward decision, 2026-10-23, departing from MVP §5's
+  Notifications screen), and `read_at` is no longer set.
+- **Live notifications** (steward decision, 2026-10-23): what `notify_new/2` and
+  `notify_mentions/2` insert waits in the writing process (process dictionary) until
+  `Notifications.announce/1` after commit: `Messages.broadcast/2` calls it for every
+  `{:message, m}` (so every message write must broadcast after its transaction, as it
+  already must), `Forum.create_topic/4` for a topic's first message; entries of another,
+  failed, transaction are dropped. Each goes to `"user:{id}"` as `{:notification, live}`,
+  and `Notifications.announce_reaction/3` sends one for a reaction (nothing stored). The
+  root layout renders `IdejoWeb.NotifierLive` for signed-in users, outside the page's main
+  LiveView (live navigation keeps it); it pushes each as `"notification"` to the `Notifier`
+  hook (`assets/js/notifier.js`): bubbles at the top right (`.bubble.is-{kind}`, the dots'
+  colours, purple for reactions; 10 s, paused while pointed at or focused; newest on top,
+  three at most; none for the topic on screen, `#topic-live[data-topic-id]`), and the
+  sidebar fetched again from `/sidebar` (`SidebarController`, `Layouts.sidebar/1`) after a
+  notification, when the tab comes back, and every 5 s for the first 20 s after a page
+  loads (live navigation included), then every 30 s, then past 5 min every 10 min, never while it has the focus,
+  keeping `<details>` open or folded by id.
 - **Inline links** (TP-10; steward decision, 2026-10-22, replacing "@user only"): every body
   renders through `Idejo.Messages.Body.to_html/2` with its context (`author:`/`author_id:`,
   `category_id:`/`topic_id:`, or `Body.context(message)`; messages, previews, versions),
@@ -472,8 +488,9 @@ roles or the permission grid. Every later change must keep it true:
 - **Reactions** (TP-17, `Idejo.Reactions`): `reactions` rows (message, user, emoji name),
   several emoji per user. `toggle/3` adds or takes back; any signed-in, verified reader who
   may view the topic reacts (not to deleted messages, not in locked or archived topics);
-  rate-limited (`:react`). Reactions notify nobody (steward decision, 2026-10-23: the
-  Notifications page is gone; older `"reaction"` rows stay unused). After each change
+  rate-limited (`:react`). Reactions store no notification (steward decision, 2026-10-23:
+  the Notifications page is gone; older `"reaction"` rows stay unused); the author gets a
+  live bubble. After each change
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
   several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions

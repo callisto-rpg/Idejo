@@ -60,12 +60,14 @@ defmodule Idejo.Notifications do
         }
       end
 
-    {count, _} =
+    {count, inserted} =
       Repo.insert_all(Notification, rows,
         on_conflict: :nothing,
-        conflict_target: [:user_id, :message_id]
+        conflict_target: [:user_id, :message_id],
+        returning: [:user_id, :kind, :message_id]
       )
 
+    remember(inserted, topic)
     {:ok, count}
   end
 
@@ -108,10 +110,15 @@ defmodule Idejo.Notifications do
         where: n.kind in ^weaker,
         update: [set: [kind: ^kind, read_at: nil, updated_at: ^now]]
 
-    Repo.insert_all(Notification, rows,
-      on_conflict: upgrade,
-      conflict_target: [:user_id, :message_id]
-    )
+    {count, changed} =
+      Repo.insert_all(Notification, rows,
+        on_conflict: upgrade,
+        conflict_target: [:user_id, :message_id],
+        returning: [:user_id, :kind, :message_id]
+      )
+
+    remember(changed, topic)
+    {count, changed}
   end
 
   # The users the message mentions: `{@users, members of the +roles its author may notify}`.
@@ -156,5 +163,97 @@ defmodule Idejo.Notifications do
     |> Repo.all()
     |> Enum.filter(&Access.can?(&1, :view, category))
     |> Enum.map(& &1.id)
+  end
+
+  ## Live announcements (steward decision, 2026-10-23)
+  #
+  # The notifications above are written inside the transaction that writes the message, so
+  # they cannot be announced there: the transaction may still fail. They wait in the writing
+  # process until `announce/1`, called once it has committed (by `Idejo.Messages.broadcast/2`
+  # for a message, by `Idejo.Forum.create_topic/4` for a topic's first one).
+
+  @pending :idejo_pending_notifications
+
+  @typedoc "What a live notification says, for `IdejoWeb.NotifierLive`'s bubbles."
+  @type live :: %{
+          kind: String.t(),
+          message_id: Ecto.UUID.t(),
+          topic_id: Ecto.UUID.t(),
+          topic_title: String.t(),
+          author_name: String.t(),
+          excerpt: String.t(),
+          emoji: %{src: String.t(), alt: String.t()} | nil
+        }
+
+  @doc "Subscribes the caller to the user's live notifications: `{:notification, live()}`."
+  @spec subscribe(User.t()) :: :ok | {:error, term()}
+  def subscribe(%User{id: id}), do: Phoenix.PubSub.subscribe(Idejo.PubSub, "user:" <> id)
+
+  defp remember([], _topic), do: :ok
+
+  defp remember(rows, topic) do
+    rows = Enum.map(rows, &%{user_id: &1.user_id, kind: &1.kind, message_id: &1.message_id})
+    Process.put(@pending, Enum.map(rows, &Map.put(&1, :topic_id, topic.id)) ++ pending())
+    :ok
+  end
+
+  defp pending, do: Process.get(@pending, [])
+
+  @doc """
+  Announces the notifications this process wrote for a message (or for the first message of
+  a topic just created), now that their transaction has committed. Whatever else waits is
+  dropped: it belongs to a transaction that failed.
+  """
+  @spec announce(Message.t() | Topic.t()) :: :ok
+  def announce(message_or_topic) do
+    {mine, _others} = Enum.split_with(pending(), &belongs?(&1, message_or_topic))
+    Process.delete(@pending)
+
+    case mine do
+      [] -> :ok
+      [first | _] -> broadcast_all(mine, Repo.get(Message, first.message_id))
+    end
+  end
+
+  defp belongs?(entry, %Message{id: id}), do: entry.message_id == id
+  defp belongs?(entry, %Topic{id: id}), do: entry.topic_id == id
+
+  defp broadcast_all(_entries, nil), do: :ok
+
+  defp broadcast_all(entries, message) do
+    base = live(message, nil)
+    for entry <- entries, do: send_live(entry.user_id, %{base | kind: entry.kind})
+    :ok
+  end
+
+  @doc """
+  Announces a reaction to the message's author (TP-17): a bubble only, nothing stored.
+  Reacting to one's own message announces nothing.
+  """
+  @spec announce_reaction(User.t(), Message.t(), Idejo.Emoji.t()) :: :ok
+  def announce_reaction(%User{id: id}, %Message{author_id: id}, _emoji), do: :ok
+
+  def announce_reaction(%User{} = user, %Message{} = message, emoji) do
+    live = live(message, %{src: emoji.src, alt: emoji.char || ":#{emoji.name}:"})
+    send_live(message.author_id, %{live | kind: "reaction", author_name: user.display_name})
+  end
+
+  defp live(message, emoji) do
+    message = Repo.preload(message, [:author, :topic])
+
+    %{
+      kind: nil,
+      message_id: message.id,
+      topic_id: message.topic_id,
+      topic_title: message.topic.title,
+      author_name: message.author.display_name,
+      excerpt: Idejo.Forum.excerpt(message),
+      emoji: emoji
+    }
+  end
+
+  defp send_live(user_id, live) do
+    Phoenix.PubSub.broadcast(Idejo.PubSub, "user:" <> user_id, {:notification, live})
+    :ok
   end
 end

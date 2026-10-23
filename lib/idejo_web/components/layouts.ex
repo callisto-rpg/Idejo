@@ -228,12 +228,16 @@ defmodule IdejoWeb.Layouts do
   end
 
   attr :user, :any, required: true
-  attr :current, :any, required: true
+  attr :current, :any, required: true, doc: "the category shown (only its `id` is read), or nil"
 
-  # The categories the visitor may view, in their order and groups, each with the topics
-  # the user follows in it (TP-13), oldest followed first. Hidden and shown by the header's
-  # button (assets/js/sidebar.js), which the browser remembers.
-  defp sidebar(assigns) do
+  @doc """
+  The sidebar: the categories the visitor may view, in their order and groups, each with the
+  topics the user follows in it (TP-13), oldest followed first. Hidden and shown by the
+  header's button (assets/js/sidebar.js), which the browser remembers. Also served alone at
+  `/sidebar` (`SidebarController`), which the `Notifier` hook fetches to bring it up to date
+  without a page load (steward decision, 2026-10-23).
+  """
+  def sidebar(assigns) do
     # In the home page's order, in the same sections (RP-03).
     summaries = Idejo.Forum.list_category_summaries(assigns.user)
     sections = Idejo.Forum.sections(summaries, Idejo.Forum.list_groups())
@@ -252,7 +256,7 @@ defmodule IdejoWeb.Layouts do
       )
 
     ~H"""
-    <aside id="sidebar" class="app-sidebar">
+    <aside id="sidebar" class="app-sidebar" data-category={@current && @current.id}>
       <nav aria-label={gettext("Categories")} class="sidebar-nav">
         <%!-- These links first, above the categories (steward decision, 2026-10-23). --%>
         <div class="sidebar-quicklinks">
@@ -282,7 +286,12 @@ defmodule IdejoWeb.Layouts do
             />
           <% several -> %>
             <%!-- RP-03: one foldable section per group, ungrouped last; open by default. --%>
-            <details :for={{group, items} <- several} open class="sidebar-group">
+            <details
+              :for={{group, items} <- several}
+              id={"sidebar-group-#{if group, do: group.id, else: "other"}"}
+              open
+              class="sidebar-group"
+            >
               <summary class="sidebar-heading sidebar-group-title">
                 {if group, do: group.name, else: gettext("Other")}
               </summary>
@@ -350,7 +359,7 @@ defmodule IdejoWeb.Layouts do
     <ul :if={@topics != []} class="sidebar-topics">
       <.followed_topic :for={topic <- @shown} topic={topic} activity={@activity[topic.id]} />
       <li :if={@more != []}>
-        <details class="sidebar-more">
+        <details id={"sidebar-more-#{hd(@more).category_id}"} class="sidebar-more">
           <summary>
             <span class="sidebar-more-closed">
               {ngettext("1 more topic", "%{count} more topics", length(@more))}
