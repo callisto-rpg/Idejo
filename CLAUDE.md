@@ -843,7 +843,7 @@ roles or the permission grid. Every later change must keep it true:
   turns them on (not async) and uses addresses and accounts of its own.
 - **Command-line recovery** (AD-09, `Idejo.Release`; extra review: DV-06):
   `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `backup`,
-  `restore FILE [--yes]`, `health`) runs
+  `restore FILE [--yes]`, `health`, `push-key`, `rotate-push-keys [--yes]`) runs
   `Idejo.Release` functions with `bin/idejo rpc` when the server is running, else
   `bin/idejo eval` (which starts only the repo, through `Ecto.Migrator.with_repo`). They print
   on standard output (under rpc standard error goes to the server's log) and fail with
@@ -852,6 +852,15 @@ roles or the permission grid. Every later change must keep it true:
   endpoint runs: the one web call `Release` makes) and is audited as `user.password_reset`
   with no admin. `restore` runs only with the server stopped (eval), after a typed
   confirmation. Usage: `docs/deploying.md`.
+- **Push keys and switch** (PN-14, PN-19; steward decision, 2026-10-24; extra review:
+  DV-06): web push lives in `Idejo.Push` (`lib/idejo/push/`). `Push.enabled?/0` is the "Push
+  notifications" setting (`push_enabled`, `"on"`/`"off"`, **Admin → Settings**): off means
+  no banner, no subscribing, no sending. The VAPID keys (`Idejo.Push.Vapid`) are two
+  `settings` rows outside `Settings`'s definitions (no form changes them), the private one
+  encrypted by `Settings.Secret`; a migration makes them on every install (it runs before
+  the setup wizard, so new installs too). `Release.push_key/0` and `rotate_push_keys/0`
+  (audited `push.rotate_keys`, no admin) are `idejo-admin push-key` and `rotate-push-keys`;
+  `health` checks the keys can be read.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

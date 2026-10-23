@@ -100,11 +100,11 @@ defmodule Idejo.ReleaseTest do
 
   describe "health" do
     @tag req: "AD-09"
-    test "AD-09 checks the server, database, migrations, owner, uploads and backup" do
+    test "AD-09 checks the server, database, migrations, owner, push keys, uploads and backup" do
       checks = Release.health_checks()
 
       assert Enum.map(checks, &elem(&1, 0)) ==
-               ~w(server database migrations owner uploads backup)
+               ["server", "database", "migrations", "owner", "push keys", "uploads", "backup"]
 
       assert {"owner", :warning, _} = List.keyfind(checks, "owner", 0)
       assert Enum.all?(checks, &(elem(&1, 1) in [:ok, :warning]))

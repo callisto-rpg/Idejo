@@ -20,6 +20,7 @@ defmodule Idejo.Release do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Backup
+  alias Idejo.Push.Vapid
   alias Idejo.Repo
 
   def migrate do
@@ -162,6 +163,51 @@ defmodule Idejo.Release do
     end
   end
 
+  ## Push keys (PN-14, AD-09)
+
+  @doc """
+  `bin/idejo-admin push-key`: prints the server's VAPID public key, the one browsers
+  subscribe with.
+  """
+  @spec push_key() :: :ok
+  def push_key do
+    case with_repo(&Vapid.public_key/0) do
+      nil -> fail("This server has no push keys; restart the app to run its migrations.")
+      key -> IO.puts(key)
+    end
+  end
+
+  @doc """
+  `bin/idejo-admin rotate-push-keys`: replaces the VAPID key pair, ends every browser's push
+  subscription (they were made with the old key) and records `push.rotate_keys` in the audit
+  log, with no admin. Browsers subscribe again with the new key when their member next opens
+  a page (PN-18).
+  """
+  @spec rotate_push_keys() :: :ok
+  def rotate_push_keys do
+    {:ok, key} = with_repo(&rotate_push_keys!/0)
+
+    IO.puts("""
+    New push public key:
+
+        #{key}
+
+    Every browser's push subscription has ended; each subscribes again with the new key
+    the next time its member opens a page.\
+    """)
+  end
+
+  @doc "Rotates the VAPID keys and audits it. Returns the new public key."
+  @spec rotate_push_keys!() :: {:ok, String.t()}
+  def rotate_push_keys! do
+    Repo.transact(fn ->
+      with {:ok, key} <- Vapid.rotate(),
+           {:ok, _} <- Audit.record(nil, "push.rotate_keys", nil, %{"public_key" => key}) do
+        {:ok, key}
+      end
+    end)
+  end
+
   ## Health (AD-09)
 
   @doc """
@@ -182,7 +228,7 @@ defmodule Idejo.Release do
 
   @doc """
   Runs the health checks: `{name, :ok | :warning | :error, detail}` for the server, the
-  database, migrations, the owner, the uploads directory and the last backup.
+  database, migrations, the owner, the push keys, the uploads directory and the last backup.
   """
   @spec health_checks() :: [{String.t(), :ok | :warning | :error, String.t()}]
   def health_checks do
@@ -191,7 +237,11 @@ defmodule Idejo.Release do
     # Without a database, the checks that read it would only repeat its error.
     needs_database =
       if match?({:ok, _}, database),
-        do: [{"migrations", check_migrations()}, {"owner", check_owner()}],
+        do: [
+          {"migrations", check_migrations()},
+          {"owner", check_owner()},
+          {"push keys", check_push_keys()}
+        ],
         else: []
 
     checks =
@@ -232,6 +282,19 @@ defmodule Idejo.Release do
     if Idejo.Setup.needed?(),
       do: {:warning, "none yet; open the server in a browser to run the setup wizard"},
       else: {:ok, "set up"}
+  end
+
+  defp check_push_keys do
+    case Vapid.keys() do
+      {:ok, _keys} ->
+        {:ok, "readable"}
+
+      {:error, :missing} ->
+        {:error, "missing; restart the app to run its migrations"}
+
+      {:error, :unreadable} ->
+        {:error, "cannot be read (SECRET_KEY_BASE changed?); run rotate-push-keys"}
+    end
   end
 
   # The directory comes from the configuration, the file name from here: nothing from users.
