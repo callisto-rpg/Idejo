@@ -614,7 +614,9 @@ roles or the permission grid. Every later change must keep it true:
   tags. Topic lists preload `tags: Tags.ordered()` and show them with
   `TopicComponents.tag_list/1` (links in a `<p>`, never `<li>`s, so `#topics li > a` stays
   the titles), each linking to "Filter by tag": `/tags?tags[]=slug` (`TagController`,
-  public GET form, no JavaScript), topics carrying **all** chosen tags
+  public GET form, no JavaScript), topics carrying **all** chosen tags, or with the
+  "Operator" toggle's Or (`?op=or`, `match: :any`; submit buttons in the form, classed like
+  the View toggle; steward decision, 2026-10-24) **any** of them
   (`Tags.list_tagged_topics/3`), filtered by view right in the query, 30 a page.
 - **Message editor** (TP-02): `MessageComponents.editor/1`, a Markdown text box with Write /
   Preview, used for every message (the first message now, replies and the composer later).

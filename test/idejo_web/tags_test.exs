@@ -58,6 +58,9 @@ defmodule IdejoWeb.TagsTest do
     |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
   end
 
+  defp texts(doc, selector),
+    do: doc |> LazyHTML.query(selector) |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
   @tag req: "TP-19"
   test "TP-19 a tag's link opens Filter by tag with it chosen; topics carry all chosen tags", %{
     conn: conn,
@@ -94,6 +97,46 @@ defmodule IdejoWeb.TagsTest do
     html = conn |> get(~p"/tags?#{%{"tags" => [secret.slug]}}") |> html_response(200)
     assert titles(html) == []
     refute html =~ "id=\"tagged-heading\""
+  end
+
+  # The Operator toggle (steward decision, 2026-10-24): And (the default) or Or, submit
+  # buttons styled as the View toggle.
+  @tag req: "TP-19"
+  test "TP-19 the Operator toggle switches between all chosen tags (And) and any (Or)", %{
+    conn: conn,
+    general: general,
+    alpha: alpha,
+    beta: beta
+  } do
+    topic!(general, "Both tags", [alpha, beta])
+    topic!(general, "Alpha only", [alpha])
+    topic!(general, "Beta only", [beta])
+    tags = [alpha.slug, beta.slug]
+
+    doc = conn |> get(~p"/tags?#{%{"tags" => tags}}") |> html_response(200)
+    assert titles(doc) == ["Both tags"]
+    doc = LazyHTML.from_document(doc)
+
+    assert texts(doc, "#tag-filter .view-toggle > .view-toggle-label") == ["Operator"]
+    assert texts(doc, "#operator-toggle .join > button.btn.join-item[name=op]") == ["And", "Or"]
+    assert texts(doc, "#operator-toggle .btn-primary[aria-pressed=true]") == ["And"]
+
+    assert LazyHTML.attribute(LazyHTML.query(doc, "#tag-filter input[name=op]"), "value") == [
+             "and"
+           ]
+
+    # Pressing Or sends the hidden op first, then the button's: the button's wins.
+    html = conn |> get("/tags?op=and&tags[]=#{alpha.slug}&tags[]=#{beta.slug}&op=or")
+    html = html_response(html, 200)
+    assert titles(html) |> Enum.sort() == ["Alpha only", "Beta only", "Both tags"]
+    assert html =~ "Topics carrying any of these tags"
+
+    doc = LazyHTML.from_document(html)
+    assert texts(doc, "#operator-toggle .btn-primary[aria-pressed=true]") == ["Or"]
+
+    assert LazyHTML.attribute(LazyHTML.query(doc, "#tag-filter input[name=op]"), "value") == [
+             "or"
+           ]
   end
 
   @tag req: "TP-19"

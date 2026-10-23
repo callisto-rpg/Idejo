@@ -67,9 +67,10 @@ defmodule Idejo.Forum.Tags do
   end
 
   @doc """
-  The topics carrying every one of `tags`, in categories the visitor (`nil`) or user may
-  view, the most recently active first, with their category, starter and tags, 30 a page:
-  `{topics, more?}`. No tags, no topics.
+  The topics carrying every one of `tags` (`match: :all`, the default) or at least one of
+  them (`match: :any`; steward decision, 2026-10-24), in categories the visitor (`nil`) or
+  user may view, the most recently active first, with their category, starter and tags, 30 a
+  page: `{topics, more?}`. No tags, no topics.
   """
   @spec list_tagged_topics(User.t() | nil, [Tag.t()], keyword()) :: {[Topic.t()], boolean()}
   def list_tagged_topics(user, tags, opts \\ [])
@@ -80,18 +81,19 @@ defmodule Idejo.Forum.Tags do
     page = max(Keyword.get(opts, :page, 1), 1)
     tag_ids = tags |> Enum.map(& &1.id) |> Enum.uniq()
     viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+    needed = if Keyword.get(opts, :match, :all) == :any, do: 1, else: length(tag_ids)
 
-    carrying_all =
+    carrying =
       from tt in "topic_tags",
         where: tt.tag_id in type(^tag_ids, {:array, :binary_id}),
         group_by: tt.topic_id,
-        having: count(tt.tag_id) == ^length(tag_ids),
+        having: count(tt.tag_id) >= ^needed,
         select: type(tt.topic_id, :binary_id)
 
     topics =
       Repo.all(
         from t in Topic,
-          where: t.id in subquery(carrying_all),
+          where: t.id in subquery(carrying),
           where: t.category_id in subquery(viewable),
           order_by: [desc: t.last_activity_at, desc: t.id],
           offset: ^((page - 1) * per_page),

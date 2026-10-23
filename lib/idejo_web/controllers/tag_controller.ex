@@ -5,8 +5,9 @@ defmodule IdejoWeb.TagController do
   @moduledoc """
   "Filter by tag" (TP-19) at `/tags`, public and server-rendered (a GET form, no JavaScript
   needed): the tags the visitor may filter by, grouped server-wide then by category, and the
-  topics carrying every chosen tag (`?tags[]=slug`, steward decision: all, not any), most
-  recently active first, 30 a page. A tag's link elsewhere opens this page with it chosen.
+  topics carrying every chosen tag (`?tags[]=slug`), or with `?op=or` at least one of them
+  (the "Operator" toggle; steward decision, 2026-10-24), most recently active first, 30 a
+  page. A tag's link elsewhere opens this page with it chosen.
   Unknown slugs and tags of categories the visitor may not view are ignored.
   """
   use IdejoWeb, :controller
@@ -19,12 +20,15 @@ defmodule IdejoWeb.TagController do
     slugs = params |> Map.get("tags", []) |> List.wrap() |> Enum.filter(&is_binary/1)
     selected = Enum.filter(tags, &(&1.slug in slugs))
     page = page(params)
-    {topics, more?} = Tags.list_tagged_topics(user, selected, page: page)
+    op = if params["op"] == "or", do: :or, else: :and
+    match = if op == :or, do: :any, else: :all
+    {topics, more?} = Tags.list_tagged_topics(user, selected, page: page, match: match)
 
     render(conn, :index,
       page_title: gettext("Filter by tag"),
       groups: groups(tags),
       selected: selected,
+      op: op,
       topics: topics,
       page: page,
       more?: more?
