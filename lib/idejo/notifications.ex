@@ -12,8 +12,9 @@ defmodule Idejo.Notifications do
   its author may notify them, `role_mention`; steward decision, 2026-10-23) and the topic's
   followers (TP-13, steward decision, `follow`), never its author and never someone who may
   not view the topic. Someone in several of these gets one notification, of the first kind
-  in that order. An @mentioned user who may view the topic also follows it,
-  unless they unfollowed it before (steward decision, 2026-10-22).
+  in that order. An @mentioned user, or a member of a +mentioned role, who may view the topic
+  also follows it, unless they unfollowed it before (steward decisions, 2026-10-22 and
+  2026-10-23).
 
   A growing message notifies once, when it opens (NO-02, GM-13): an append, or an edit,
   notifies only someone newly mentioned. Their earlier notification for that message becomes
@@ -114,7 +115,8 @@ defmodule Idejo.Notifications do
   end
 
   # The users the message mentions: `{@users, members of the +roles its author may notify}`.
-  # The @users follow the topic when they may view it.
+  # Both follow the topic when they may view it (+roles too: steward decision, 2026-10-23),
+  # so it shows on their sidebar; an explicit unfollow stays.
   defp mentioned(message, topic) do
     users =
       message.body_md
@@ -122,9 +124,15 @@ defmodule Idejo.Notifications do
       |> Enum.map(& &1.id)
       |> List.delete(message.author_id)
 
-    for user_id <- may_view(users, topic), do: Idejo.Reading.auto_follow(user_id, topic.id)
+    role_members =
+      message.body_md
+      |> Body.mentioned_role_members(Body.context(message))
+      |> List.delete(message.author_id)
 
-    {users, Body.mentioned_role_members(message.body_md, Body.context(message))}
+    for user_id <- may_view(Enum.uniq(users ++ role_members), topic),
+        do: Idejo.Reading.auto_follow(user_id, topic.id)
+
+    {users, role_members}
   end
 
   defp replied_author(%Message{reply_to_id: nil}), do: nil

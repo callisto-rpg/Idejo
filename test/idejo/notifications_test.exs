@@ -146,6 +146,26 @@ defmodule Idejo.NotificationsTest do
   end
 
   @tag req: "NO-01"
+  test "NO-01 members of a +mentioned role follow the topic, unless they unfollowed it", %{
+    admin: admin,
+    bo: bo,
+    cy: cy,
+    topic: topic
+  } do
+    {:ok, crew} =
+      Access.create_role(admin, %{"name" => unique_role_name("Crew"), "mentionable" => "true"})
+
+    dee = user_fixture()
+    for user <- [cy, dee], do: :ok = Access.grant_role(user, crew)
+    :ok = Reading.unfollow(dee, topic)
+
+    {:ok, _} = Forum.post_message(bo, topic, %{"body" => "Help, +#{Access.role_slug(crew)}"})
+
+    assert Reading.following?(cy, topic)
+    refute Reading.following?(dee, topic)
+  end
+
+  @tag req: "NO-01"
   test "NO-01 nobody is notified of a topic they may not view", %{
     admin: admin,
     ada: ada,
