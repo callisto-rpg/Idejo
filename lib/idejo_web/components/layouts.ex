@@ -295,6 +295,11 @@ defmodule IdejoWeb.Layouts do
             <.icon name="hero-book-open" class="size-4" />
             {gettext("Rules & Roles")}
           </a>
+          <%!-- The keys, the signs and the ! commands (steward decision, 2026-10-23). --%>
+          <a href={~p"/help"} class="sidebar-link" id="help-link">
+            <.icon name="hero-question-mark-circle" class="size-4" />
+            {gettext("Help")}
+          </a>
         </div>
         <%= case @sections do %>
           <% [{_group, only}] -> %>

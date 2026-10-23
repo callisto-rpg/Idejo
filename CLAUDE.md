@@ -312,7 +312,12 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{reply_to_id || message id}/new-topic?from={message id}`, where `NewTopicLive` fills the
   first message with the author's own message (TP-09); `!schedule` pushes `"open_schedule"`
   with the text not sent yet (never sent text: nothing when sent text was changed), and the
-  dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours.
+  dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours. The commands are defined
+  once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
+- **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
+  linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
+  server's window), the signs `@ + # / $ !`, and every command from
+  `ComposerCommands.all/0`. A change to the keys, the signs or the commands updates it.
 - **Scheduled messages** (steward decision, 2026-10-23; `Idejo.Messages.Scheduling`,
   `scheduled_messages`): up to 168 hours, decimals allowed (`parse_hours/1`, at least a
   minute), with the post right now. One Oban job each (`Idejo.Messages.ScheduledWorker`, queue
@@ -601,7 +606,7 @@ roles or the permission grid. Every later change must keep it true:
   strongest wins) and a bolder
   name; and (`swipe/5`: not from the left edge, not in code,
   tables, text boxes or the emoji picker; steward decision, 2026-10-23); All categories, Filter
-  by tag and Rules & Roles sit above its categories. The home page shows no title (its `<h1>`
+  by tag, Rules & Roles and Help sit above its categories. The home page shows no title (its `<h1>`
   is `sr-only`: the header names the server) and its sections open with `.section-divider`
   titles (Fraunces, a line across the page). The home page is a
   category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.

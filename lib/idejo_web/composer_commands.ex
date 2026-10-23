@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule IdejoWeb.ComposerCommands do
+  @moduledoc """
+  The composer's `!` commands (steward decision, 2026-10-23), in one place: the list the
+  `Suggest` class shows after `!` (`for_composer/2`) and the Help page (`all/0`). A new
+  command is added here, then handled in the `Composer` hook (`assets/js/composer.js`).
+  """
+  use Gettext, backend: IdejoWeb.Gettext
+
+  @type command :: %{name: String.t(), label: String.t(), detail: String.t(), help: String.t()}
+
+  @doc "Every command, in the order the list shows them."
+  @spec all() :: [command()]
+  def all do
+    [
+      %{
+        name: "image",
+        detail: gettext("Add an image at the end of your message"),
+        help:
+          gettext(
+            "Opens your files. The picture you choose goes at the end of your message, not sent yet."
+          )
+      },
+      %{
+        name: "new-topic",
+        detail: gettext("Send, then start a new topic from it"),
+        help:
+          gettext(
+            "Sends what you wrote, then opens New topic with your message as its first message: give it a title. When you were replying, the new topic continues from the message you replied to; that message gets a Continue topic button."
+          )
+      },
+      %{
+        name: "schedule",
+        detail: gettext("Post what you have not sent yet, later"),
+        help:
+          gettext(
+            "Posts the text you have not sent yet in a number of hours (decimals work, at most 168). Only you see it until then, under the box, where Cancel takes it back. It is posted as one finished message, marked scheduled message."
+          )
+      }
+    ]
+    |> Enum.map(&Map.put(&1, :label, "!" <> &1.name))
+  end
+
+  @doc """
+  The commands an author may use in a composer: `!image` with uploads allowed, `!new-topic`
+  when they may start a topic somewhere. Only what the list needs.
+  """
+  @spec for_composer(boolean(), boolean()) :: [map()]
+  def for_composer(upload?, can_fork?) do
+    for %{name: name} = command <- all(),
+        name != "image" or upload?,
+        name != "new-topic" or can_fork?,
+        do: Map.take(command, [:name, :label, :detail])
+  end
+end

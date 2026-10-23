@@ -120,6 +120,8 @@ change and keeps no history.
   the topics that carry all of them.
 - **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
   may give yourself. You see them once when you join; change your roles there at any time.
+- **Help** (in the sidebar, under Rules & Roles): the keys that send, the signs (`@`, `+`,
+  `#`, `/`, `$`, `!`) and every `!` command, on one page.
 - **Bubbles** appear at the top right as things happen: a new message in a topic you follow
   (grey), one of your `+roles` mentioned (blue), a reply to you (orange), you mentioned
   (red), a reaction to your message (purple). Each stays ten seconds (pointing at it pauses

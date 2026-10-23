@@ -1057,7 +1057,7 @@ defmodule IdejoWeb.TopicLive do
           <.composer
             mine={@mine}
             pending={@pending}
-            commands={commands(@composer_upload, @can_fork?)}
+            commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
             reply_to={@reply_to}
             roles={@roles}
             author={@current_scope.user}
@@ -1574,19 +1574,6 @@ defmodule IdejoWeb.TopicLive do
       </ol>
     </details>
     """
-  end
-
-  # The composer's `!` commands (steward decision, 2026-10-23), as the `Suggest` list shows
-  # them: those this author may use here.
-  defp commands(upload, can_fork?) do
-    [
-      upload && %{name: "image", detail: gettext("Add an image at the end of your message")},
-      can_fork? &&
-        %{name: "new-topic", detail: gettext("Send, then start a new topic from it")},
-      %{name: "schedule", detail: gettext("Post what you have not sent yet, later")}
-    ]
-    |> Enum.filter(& &1)
-    |> Enum.map(&Map.put(&1, :label, "!" <> &1.name))
   end
 
   # The start of a text not posted yet, as typed (its Markdown), on one line.

@@ -53,6 +53,8 @@ defmodule IdejoWeb.Router do
     get "/tags", TagController, :index
     # "Rules & Roles": About, Rules and the self-select roles (steward decision, 2026-10-23).
     get "/rules", WelcomeController, :show
+    # Help: the keys, the signs and the ! commands (steward decision, 2026-10-23).
+    get "/help", HelpController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).
     get "/u/:id", UserController, :show
     # TP-10: a role's page, which a +role mention links to.
