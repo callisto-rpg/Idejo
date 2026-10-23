@@ -9,8 +9,9 @@ defmodule IdejoWeb.TopicController do
 
   The messages, live (TP-04), and the message form come from `IdejoWeb.TopicLive`, embedded
   here; its first render is part of this page's HTML. Opening it marks the topic read for a
-  signed-in user (TP-07). `?reply_to={message id}` opens the form
-  as a reply to that message (TP-08), without JavaScript needed to choose it.
+  signed-in user (TP-07); the oldest message unread before that is passed on, so the page
+  opens there. `?reply_to={message id}` opens the form as a reply to that message (TP-08),
+  without JavaScript needed to choose it.
   """
   use IdejoWeb, :controller
 
@@ -28,7 +29,8 @@ defmodule IdejoWeb.TopicController do
 
       topic ->
         if params["slug"] == topic.slug do
-          # Opening a topic marks everything in it read (TP-07).
+          # Where the user left off, before opening the topic marks everything read (TP-07).
+          first_unread = Reading.first_unread(user, topic)
           Reading.mark_read(user, topic)
 
           render(
@@ -38,6 +40,7 @@ defmodule IdejoWeb.TopicController do
               topic: topic,
               page_title: topic.title,
               reply_to_id: params["reply_to"],
+              first_unread: first_unread,
               following?: Reading.following?(user, topic),
               can_autofollow?: Idejo.Access.administrator?(user),
               forked_from: forked_from(user, topic),

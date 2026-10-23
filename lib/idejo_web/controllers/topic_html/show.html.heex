@@ -184,6 +184,10 @@
 
   {live_render(@conn, IdejoWeb.TopicLive,
     id: "topic-#{@topic.id}",
-    session: %{"topic_id" => @topic.id, "reply_to_id" => @reply_to_id}
+    session: %{
+      "topic_id" => @topic.id,
+      "reply_to_id" => @reply_to_id,
+      "first_unread" => @first_unread
+    }
   )}
 </Layouts.app>

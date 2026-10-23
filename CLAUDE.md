@@ -354,6 +354,19 @@ roles or the permission grid. Every later change must keep it true:
   (`Reading.for_you/1`, view right in the query; steward decision, 2026-10-23), coloured
   like the sidebar's dots (`.unread-badge.is-{level}`); `/sidebar` serves the link too, so
   the `Notifier` hook keeps the count current.
+  Where one left off (steward decision, 2026-10-23): `TopicController` asks
+  `Reading.first_unread/2` (nil without a read position) before `mark_read/2` and passes it
+  to `TopicLive` (session `"first_unread"`), which draws the red "N unread messages" line
+  (`#unread-line`, `.unread-line`; not `.unread-marker`, the lists' "N new") in that
+  message's `<li>`; the `UnreadLine` hook (`assets/js/topic_nav.js`) centres the page on it
+  unless the address has a `#`, CSS fades it after 4 s and `"unread_line_done"` drops it.
+- **Topic navigator** (steward decision, 2026-10-23): `TopicLive`'s `#topic-nav` (named
+  `<nav>`), links to `#message-{id}` of the first message, the first unread, the last and the
+  reader's last (not deleted). The `TopicNav` hook shows it once the page's `<h1>` is under
+  the header: a card at the right when the space beside `#main > div` fits it, else a pill
+  at the top right that opens it (`data-shown`, `data-mode`, `data-open`, kept by
+  `JS.ignore_attributes`); a jump centres the message and focuses its first control.
+  Hidden without JavaScript.
 - **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
   decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
   re-encoded in the same format without metadata (SP-05), animated frames kept, JPEGs turned

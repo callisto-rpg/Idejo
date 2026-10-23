@@ -66,6 +66,27 @@ defmodule Idejo.ReadingTest do
   end
 
   @tag req: "TP-07"
+  test "TP-07 first_unread is where a reader left off a topic they opened before", %{
+    topic: topic,
+    reader: reader
+  } do
+    # Never opened (no read position), and visitors: nowhere to go back to.
+    assert Reading.first_unread(reader, topic) == nil
+    assert Reading.first_unread(nil, topic) == nil
+
+    :ok = Reading.mark_read(reader, topic)
+    assert Reading.first_unread(reader, topic) == nil
+
+    post!(topic, reader, "Mine")
+    first = post!(topic)
+    post!(topic)
+    assert Reading.first_unread(reader, topic) == %{id: first.id, count: 2}
+
+    :ok = Reading.mark_read(reader, topic)
+    assert Reading.first_unread(reader, topic) == nil
+  end
+
+  @tag req: "TP-07"
   test "TP-07 a growing message is one unread item and does not turn unread as it grows", %{
     topic: topic,
     reader: reader

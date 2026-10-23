@@ -59,6 +59,32 @@ defmodule Idejo.Reading do
     :ok
   end
 
+  @doc """
+  Where the user left off in a topic they opened before: the oldest unread message and how
+  many there are, as `%{id: message_id, count: n}`, for the topic page to open there with an
+  "N unread messages" line (steward decision, 2026-10-23). Nil for visitors, for a topic the
+  user never opened (no read position) and when nothing is unread. Call it before
+  `mark_read/2`.
+  """
+  @spec first_unread(User.t() | nil, Topic.t()) ::
+          %{id: Ecto.UUID.t(), count: pos_integer()} | nil
+  def first_unread(nil, _topic), do: nil
+
+  def first_unread(%User{} = user, %Topic{id: topic_id}) do
+    user
+    |> unread_messages()
+    |> where([m, rp], m.topic_id == ^topic_id and not is_nil(rp.user_id))
+    |> select([m], %{
+      id: type(fragment("(array_agg(? ORDER BY ?, ?))[1]", m.id, m.opened_at, m.id), Ecto.UUID),
+      count: count(m.id)
+    })
+    |> Repo.one()
+    |> case do
+      %{count: 0} -> nil
+      first -> first
+    end
+  end
+
   @doc "Follows the topic (TP-13), also after an earlier unfollow."
   @spec follow(User.t(), Topic.t()) :: :ok
   def follow(%User{} = user, %Topic{} = topic), do: set_following(user.id, topic.id, true)

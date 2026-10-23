@@ -36,13 +36,14 @@ import {EditorSuggest} from "./suggest"
 import {EmojiPicker} from "./emoji_picker"
 import {Notifier} from "./notifier"
 import {RoleColours} from "./role_colours"
+import {TopicNav, UnreadLine} from "./topic_nav"
 import "./sidebar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier},
+  hooks: {...colocatedHooks, Composer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine},
 })
 
 // Show progress bar on live navigation and form submits
