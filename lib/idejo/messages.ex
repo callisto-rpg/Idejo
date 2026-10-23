@@ -371,6 +371,39 @@ defmodule Idejo.Messages do
     result
   end
 
+  @doc """
+  Marks the author's message as a spoiler, or no longer one (`!spoiler`, steward decision,
+  2026-10-23): readers see it blurred until they choose Reveal. Not an edit: no version is
+  kept. Refused like `edit/3`, but open messages are marked too (the composer's).
+  """
+  @spec set_spoiler(User.t(), Message.t(), boolean()) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def set_spoiler(%User{} = author, %Message{} = message, spoiler?) when is_boolean(spoiler?) do
+    result =
+      Repo.transact(fn ->
+        message = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+        topic = Repo.get!(Topic, message.topic_id)
+
+        cond do
+          message.author_id != author.id -> {:error, :forbidden}
+          message.deleted_at != nil -> {:error, :forbidden}
+          not Forum.can_post?(author, topic) -> {:error, :forbidden}
+          message.spoiler == spoiler? -> {:ok, message}
+          true -> save_spoiler(author, message, spoiler?, topic)
+        end
+      end)
+
+    with {:ok, message} <- result, do: broadcast(message.topic_id, {:message, message})
+    result
+  end
+
+  defp save_spoiler(author, message, spoiler?, topic) do
+    with {:ok, message} <- message |> Ecto.Changeset.change(spoiler: spoiler?) |> Repo.update(),
+         {:ok, _} <- activity(author, message, "update", topic.uri) do
+      {:ok, message}
+    end
+  end
+
   @doc "Whether a deleted message was deleted by its author rather than by a moderator."
   @spec deleted_by_author?(Message.t()) :: boolean()
   def deleted_by_author?(%Message{deleted_at: nil}), do: false

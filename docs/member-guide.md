@@ -86,10 +86,20 @@ change and keeps no history.
     replying, the new topic continues from the message you replied to. Your message stays
     where it is too, and the message the topic continues from gets a **Continue topic**
     button.
+  - **!poll** sends what you wrote, then asks for a question, its answers (**Add an answer**
+    for more than two, at most ten), whether **several answers** may be chosen, and in how
+    many hours it closes (decimals work; at most 168). The poll goes under your message, one
+    per message. Anyone who may post in the topic votes, and may **Change vote** until it
+    closes. You see the counts from the start, others once they voted, and everyone once it
+    closed; nobody sees who voted for what.
   - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
     work, such as `0.5` for half an hour; at most 168, a week). Only you see it until then,
     under the box, where **Cancel** takes it back. It is posted as one finished message,
     with a small **scheduled message** label. Text you already sent cannot be scheduled.
+  - **!spoiler** sends what you wrote and hides your message (and its poll) behind a blur
+    with a **Reveal spoiler** button, until each reader chooses it. Replies quoting it, the
+    search results and notifications show *(spoiler)* instead of its words. Choose
+    **!spoiler** again, while the message is still yours to continue, to show it plainly.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
   lines, `> quotes`, lists and links. Messages have no length limit; a long one shows a
   **Show all** button.
@@ -120,6 +130,8 @@ change and keeps no history.
   the topics that carry all of them.
 - **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
   may give yourself. You see them once when you join; change your roles there at any time.
+- **Help** (in the sidebar, under Rules & Roles): the keys that send, the signs (`@`, `+`,
+  `#`, `/`, `$`, `!`) and every `!` command, on one page.
 - **Bubbles** appear at the top right as things happen: a new message in a topic you follow
   (grey), one of your `+roles` mentioned (blue), a reply to you (orange), you mentioned
   (red), a reaction to your message (purple). Each stays ten seconds (pointing at it pauses

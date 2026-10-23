@@ -1,0 +1,107 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("Help")}</h1>
+  </header>
+  <div class="help-page">
+    <section id="help-send" aria-labelledby="help-send-title">
+      <h2 id="help-send-title">{gettext("Sending")}</h2>
+      <p>
+        {gettext(
+          "What you send with Enter joins one growing message, live for everyone, until you start a new one."
+        )}
+      </p>
+      <dl class="help-list">
+        <div>
+          <dt><kbd>Enter</kbd></dt>
+          <dd>
+            {gettext(
+              "Sends what you wrote. Keep typing and press Enter again: it joins the same message."
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt><kbd>Shift</kbd>+<kbd>Enter</kbd></dt>
+          <dd>{gettext("A new line in the box. Nothing is sent.")}</dd>
+        </div>
+        <div>
+          <dt>
+            <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
+            {gettext("or")}
+            <kbd>Enter</kbd> ×3
+          </dt>
+          <dd>
+            {ngettext(
+              "Sends on a new line of the same message. Once your message is more than %{count} second old, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
+              "Sends on a new line of the same message. Once your message is more than %{count} seconds old, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
+              @window
+            )}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="help-signs" aria-labelledby="help-signs-title">
+      <h2 id="help-signs-title">{gettext("Links and suggestions")}</h2>
+      <p>
+        {gettext(
+          "At the start of a word, these signs open a list of suggestions while you type: click one, or use the arrow keys and Enter (or Tab); Escape closes the list."
+        )}
+      </p>
+      <dl class="help-list">
+        <div>
+          <dt><kbd>@</kbd>{gettext("username")}</dt>
+          <dd>
+            {gettext(
+              "Mentions someone: they are notified and follow the topic, unless they unfollowed it."
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt><kbd>+</kbd>{gettext("role")}</dt>
+          <dd>
+            {gettext(
+              "Notifies everyone with that role who can read the topic. Which roles you may tag is set by the administrators."
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt><kbd>#</kbd>{gettext("topic")}</dt>
+          <dd>{gettext("Links to a topic; once sent, it reads the topic's title.")}</dd>
+        </div>
+        <div>
+          <dt><kbd>/</kbd>{gettext("category")}</dt>
+          <dd>{gettext("Links to a category.")}</dd>
+        </div>
+        <div>
+          <dt><kbd>$</kbd>{gettext("tag")}</dt>
+          <dd>{gettext("Links to the topics with that tag.")}</dd>
+        </div>
+        <div>
+          <dt><kbd>!</kbd>{gettext("command")}</dt>
+          <dd>
+            {gettext("Runs a command, listed below. What you typed for it leaves the box.")}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="help-commands" aria-labelledby="help-commands-title">
+      <h2 id="help-commands-title">{gettext("Commands")}</h2>
+      <p>
+        {gettext(
+          "Type ! at the start of a word in the box under a topic, then pick a command. The list shows the ones you may use there."
+        )}
+      </p>
+      <dl class="help-list">
+        <div :for={command <- @commands} id={"help-command-#{command.name}"}>
+          <dt><code>{command.label}</code></dt>
+          <dd>{command.help}</dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+</Layouts.app>

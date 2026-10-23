@@ -17,6 +17,12 @@
   /* Other overlays: the welcome card (Rules & Roles). */
   --overlay-opacity: 80%;
   --overlay-blur: 6px;
+
+  /* !spoiler: the cover over a hidden message, and its Reveal button. */
+  --spoiler-opacity: 50%;
+  --spoiler-blur: 4px;
+  --spoiler-button-opacity: 80%;
+  --spoiler-button-blur: 6px;
 }
 
 /* Cards: see-through, blurring what is behind them. */

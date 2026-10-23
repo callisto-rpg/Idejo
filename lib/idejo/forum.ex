@@ -11,6 +11,7 @@ defmodule Idejo.Forum do
   """
 
   import Ecto.Query, warn: false
+  use Gettext, backend: IdejoWeb.Gettext
 
   alias Idejo.Access
   alias Idejo.Accounts.User
@@ -1398,7 +1399,13 @@ defmodule Idejo.Forum do
   formatting, cut at about `length` characters on a word.
   """
   @spec excerpt(Message.t(), pos_integer()) :: String.t()
-  def excerpt(%Message{body_html: html}, length \\ 140) do
+  def excerpt(message, length \\ 140)
+
+  # `!spoiler` (steward decision, 2026-10-23): quotes, cards and bubbles give nothing away.
+  def excerpt(%Message{spoiler: true}, _length),
+    do: gettext("(spoiler)")
+
+  def excerpt(%Message{body_html: html}, length) do
     text =
       html
       # TP-17: an emoji image reads as its emoji (its alt text).

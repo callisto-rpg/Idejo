@@ -11,7 +11,8 @@ defmodule IdejoWeb.ComposerCommandsTest do
 
   alias Idejo.Access
   alias Idejo.Forum
-  alias Idejo.Messages.{ScheduledMessage, ScheduledWorker}
+  alias Idejo.Messages
+  alias Idejo.Messages.{Polls, PollWorker, ScheduledMessage, ScheduledWorker}
   alias Idejo.Repo
 
   setup %{conn: conn} do
@@ -56,14 +57,14 @@ defmodule IdejoWeb.ComposerCommandsTest do
     topic: topic
   } do
     {:ok, view, _html} = watch(conn, topic)
-    assert commands(view) == ["!image", "!new-topic", "!schedule"]
+    assert commands(view) == ["!image", "!new-topic", "!poll", "!schedule", "!spoiler"]
 
     # Without the start right anywhere (General is the only category) there is no !new-topic.
     {:ok, _} =
       Access.set_permission(admin, Access.built_in_role!(:member), general, :start, :deny)
 
     {:ok, view, _html} = watch(conn, topic)
-    assert commands(view) == ["!image", "!schedule"]
+    assert commands(view) == ["!image", "!poll", "!schedule", "!spoiler"]
   end
 
   @tag req: "TP-09"
@@ -172,5 +173,129 @@ defmodule IdejoWeb.ComposerCommandsTest do
     [_, posted] = Forum.list_messages(topic)
     assert has_element?(view, "#message-#{posted.id}-scheduled", "scheduled message")
     refute has_element?(view, "#scheduled-messages")
+  end
+
+  test "!poll sends, then adds a poll under the message, where posters vote", %{
+    conn: conn,
+    member: member,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+
+    # Nothing sent yet: the poll needs a message to go under.
+    assert render_hook(view, "open_poll", %{}) =~ "Write your message first, then choose !poll."
+
+    render_hook(view, "commit", %{
+      "body" => "Where shall we meet",
+      "break" => false,
+      "then" => "poll"
+    })
+
+    assert has_element?(view, "#poll-dialog")
+    [_, sent] = Forum.list_messages(topic)
+
+    # Two answers to start with; Add an answer for more, keeping what was typed.
+    view |> form("#poll-form", poll: %{question: "Where?"}) |> render_change()
+    view |> element("#poll-add-option") |> render_click()
+    assert has_element?(view, "#poll-option-2")
+    assert view |> element("#poll-question") |> render() =~ ~s(value="Where?")
+
+    assert view
+           |> form("#poll-form",
+             poll: %{question: "Where?", options: ["Park", "", ""], hours: "24"}
+           )
+           |> render_submit() =~ "Give at least two answers."
+
+    view
+    |> form("#poll-form",
+      poll: %{question: "Where?", options: ["Park", "Café", ""], multiple: "false", hours: "24"}
+    )
+    |> render_submit()
+
+    refute has_element?(view, "#poll-dialog")
+    # Under the author's open message, in the composer's place.
+    assert has_element?(view, "#message-#{sent.id} #poll-#{sent.id}", "Where?")
+
+    # Another poster votes; they see the counts only then.
+    other = user_fixture(%{display_name: "Cy"})
+    {:ok, theirs, _html} = watch(log_in_user(build_conn(), other), topic)
+    assert has_element?(theirs, "#poll-#{sent.id}", "Results show once you vote.")
+    refute has_element?(theirs, "#poll-#{sent.id} .poll-count")
+
+    %{options: [park, _cafe]} = Polls.summary(sent.id)
+
+    theirs
+    |> form("#poll-#{sent.id}", %{"options" => [park.id]})
+    |> render_submit()
+
+    assert has_element?(theirs, "#poll-#{sent.id} .poll-count", "1 vote (100%)")
+    assert has_element?(theirs, "#poll-#{sent.id} button", "Change vote")
+    # The author sees the counts as they come.
+    assert has_element?(view, "#poll-#{sent.id} .poll-count", "1 vote (100%)")
+
+    # One poll per message.
+    assert render_hook(view, "open_poll", %{}) =~ "This message has a poll already."
+    assert member.id == sent.author_id
+  end
+
+  test "a poll closes at its time and shows everyone its counts", %{conn: conn, topic: topic} do
+    {:ok, view, _html} = watch(conn, topic)
+    render_hook(view, "commit", %{"body" => "Pick one", "break" => false})
+    [_, sent] = Forum.list_messages(topic)
+    member = Repo.preload(sent, :author).author
+
+    {:ok, %{id: poll_id}} =
+      Polls.create(member, sent, %{
+        "question" => "Tea?",
+        "options" => ["Yes", "No"],
+        "hours" => "1"
+      })
+
+    assert_enqueued(worker: PollWorker, args: %{id: poll_id})
+    Repo.update_all(Messages.Poll, set: [closes_at: DateTime.add(DateTime.utc_now(), -1)])
+
+    {:ok, reader, _html} = watch(build_conn(), topic)
+    assert perform_job(PollWorker, %{id: poll_id}) == :ok
+    assert has_element?(view, "#poll-#{sent.id} .poll-closed", "Closed")
+    assert has_element?(reader, "#poll-#{sent.id} .poll-count", "0 votes (0%)")
+    refute has_element?(reader, "#poll-#{sent.id} button")
+  end
+
+  test "!spoiler hides the message behind Reveal spoiler, and again shows it", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+    assert render_hook(view, "spoiler", %{}) =~ "Write your message first, then choose !spoiler."
+
+    assert render_hook(view, "commit", %{
+             "body" => "The butler did it",
+             "break" => false,
+             "then" => "spoiler"
+           }) =~ "Your message is hidden as a spoiler."
+
+    [_, sent] = Forum.list_messages(topic)
+    assert sent.spoiler
+
+    {:ok, reader, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    assert has_element?(reader, "#message-#{sent.id}-reveal", "Reveal spoiler")
+    # Out of reach of the keyboard and screen readers until revealed.
+    assert has_element?(reader, "#message-#{sent.id}-hidden[inert]")
+
+    reader |> element("#message-#{sent.id}-reveal") |> render_click()
+    refute has_element?(reader, "#message-#{sent.id}-reveal")
+    refute has_element?(reader, "#message-#{sent.id}-hidden[inert]")
+
+    # Quotes give nothing away.
+    assert Forum.excerpt(Repo.reload!(sent)) == "(spoiler)"
+
+    # Without scripts (the page's first render) there is no inert: the text reads as usual.
+    html = build_conn() |> get(~p"/t/#{topic.id}/#{topic.slug}") |> html_response(200)
+    assert html =~ "The butler did it"
+    refute html |> LazyHTML.from_document() |> LazyHTML.query("[inert]") |> Enum.any?()
+
+    assert render_hook(view, "spoiler", %{}) =~ "Your message is no longer a spoiler."
+    refute Repo.reload!(sent).spoiler
+    refute has_element?(reader, "#message-#{sent.id}-reveal")
   end
 end

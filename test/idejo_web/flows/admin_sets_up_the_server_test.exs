@@ -169,11 +169,12 @@ defmodule IdejoWeb.Flows.AdminSetsUpTheServerTest do
 
     home = pilot_conn |> recycle() |> get(~p"/") |> html_response(200)
     assert home =~ "Announcements"
-    assert home =~ "Help"
+    # The Help category, not the sidebar's Help page.
+    assert home =~ ~s(href="/c/help")
 
     visitor_home = build_conn() |> get(~p"/") |> html_response(200)
     assert visitor_home =~ "Announcements"
-    refute visitor_home =~ "Help"
+    refute visitor_home =~ ~s(href="/c/help")
 
     # The owner puts the pilot member in Team: now they post in Announcements.
     {:ok, lv, _html} = live(conn, ~p"/admin/users/#{pia.id}")
