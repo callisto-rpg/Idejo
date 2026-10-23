@@ -1882,7 +1882,9 @@ defmodule IdejoWeb.TopicLive do
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
           mine && !assigns.answered? &&
-            DateTime.diff(start_new_at(mine, false, assigns.unanswered_minutes), now)
+            DateTime.diff(start_new_at(mine, false, assigns.unanswered_minutes), now),
+        # The line under the composer (steward decision, 2026-10-23) runs to this moment.
+        ready_at: mine && start_new_at(mine, assigns.answered?, assigns.unanswered_minutes)
       )
 
     ~H"""
@@ -1925,6 +1927,24 @@ defmodule IdejoWeb.TopicLive do
           hidden
         >
         </ul>
+      </div>
+      <%!-- Until Ctrl+Enter may start a new message (steward decision, 2026-10-23): a thin
+           line filling up under the box, to the window's end, or while nobody wrote below, to
+           the unanswered message time's. The `ComposerTimer` hook draws it; decorative, as
+           #composer-window says the same in words (AX-03). --%>
+      <div
+        :if={@ready_at}
+        id="composer-timer"
+        class="composer-timer"
+        phx-hook="ComposerTimer"
+        data-start={DateTime.to_unix(@mine.opened_at, :millisecond)}
+        data-end={DateTime.to_unix(@ready_at, :millisecond)}
+        data-now={DateTime.to_unix(@now, :millisecond)}
+        aria-hidden="true"
+        hidden
+        phx-mounted={JS.ignore_attributes(["hidden"])}
+      >
+        <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>

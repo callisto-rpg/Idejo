@@ -295,8 +295,13 @@ roles or the permission grid. Every later change must keep it true:
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
-  when nothing is open). Only a text box whose placeholder names the keys: no countdown,
-  button or status, and no box (steward decision, 2026-10-23): sent text is drawn like a
+  when nothing is open). Only a text box whose placeholder names the keys: no button or
+  status, and no box (steward decision, 2026-10-23), but a thin orange line under it
+  (`#composer-timer`, `ComposerTimer` hook, `aria-hidden`; steward decision, 2026-10-23)
+  that fills up until Ctrl+Enter may start a new message (the window's end, or the
+  unanswered message time's while nobody wrote below: `start_new_at/3`), its front glowing
+  white in yellow, then burns in and goes; the hook sets its duration and negative delay
+  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every
   character under the transparent textarea), and text just sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
