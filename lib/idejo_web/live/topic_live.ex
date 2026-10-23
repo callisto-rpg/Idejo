@@ -222,6 +222,13 @@ defmodule IdejoWeb.TopicLive do
     # A message that arrives while the topic is open is read (TP-07); appends change nothing.
     if is_nil(old), do: Reading.mark_read(user(socket), socket.assigns.topic)
 
+    # A new message makes the topic's name glow in the sidebar (the Notifier hook listens
+    # on the window; steward decision, 2026-10-23).
+    socket =
+      if is_nil(old),
+        do: push_event(socket, "topic_activity", %{topic_id: socket.assigns.topic.id}),
+        else: socket
+
     {:noreply,
      socket
      |> announce(old, message)

@@ -43,6 +43,10 @@ defmodule IdejoWeb.Layouts do
 
   attr :category, :any, default: nil, doc: "the category shown, marked in the sidebar"
 
+  attr :topic, :any,
+    default: nil,
+    doc: "the topic shown: highlighted in the sidebar, and listed there even when not followed"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -97,7 +101,7 @@ defmodule IdejoWeb.Layouts do
     </header>
 
     <div class="app-body">
-      <.sidebar user={@user} current={@category} />
+      <.sidebar user={@user} current={@category} topic={@topic} />
 
       <div class="app-column">
         <div
@@ -226,12 +230,20 @@ defmodule IdejoWeb.Layouts do
   attr :user, :any, required: true
   attr :current, :any, required: true, doc: "the category shown (only its `id` is read), or nil"
 
+  attr :topic, :any,
+    default: nil,
+    doc: "the topic shown (`id`, `title`, `slug`, `category_id`), or nil"
+
   @doc """
   The sidebar: the categories the visitor may view, in their order and groups, each with the
   topics the user follows in it (TP-13), oldest followed first. Hidden and shown by the
   header's button (assets/js/sidebar.js), which the browser remembers. Also served alone at
   `/sidebar` (`SidebarController`), which the `Notifier` hook fetches to bring it up to date
   without a page load (steward decision, 2026-10-23).
+
+  The topic on screen is highlighted, never folded under "more topics", and listed under
+  its category for a signed-in user even when they do not follow it, with a "+" to follow
+  it where a followed topic has its "×" (steward decision, 2026-10-23).
   """
   def sidebar(assigns) do
     # In the home page's order, in the same sections (RP-03).
@@ -239,20 +251,34 @@ defmodule IdejoWeb.Layouts do
     sections = Idejo.Forum.sections(summaries, Idejo.Forum.list_groups())
 
     followed_topics = Idejo.Reading.list_followed_topics(assigns.user)
-    followed = Enum.group_by(followed_topics, & &1.category_id)
+    following = MapSet.new(followed_topics, & &1.id)
+    topic = assigns.topic
+
+    # The topic on screen, last under its category, when the user does not follow it.
+    listed =
+      if assigns.user && topic && not MapSet.member?(following, topic.id),
+        do: followed_topics ++ [topic],
+        else: followed_topics
+
     # What is new in each followed topic: its dot (steward decision, 2026-10-23).
-    activity = Idejo.Reading.activity(assigns.user, Enum.map(followed_topics, & &1.id))
+    activity = Idejo.Reading.activity(assigns.user, MapSet.to_list(following))
 
     assigns =
       assign(assigns,
         summaries: summaries,
         sections: sections,
-        followed: followed,
-        activity: activity
+        followed: Enum.group_by(listed, & &1.category_id),
+        activity: activity,
+        place: %{topic_id: topic && topic.id, following: following}
       )
 
     ~H"""
-    <aside id="sidebar" class="app-sidebar" data-category={@current && @current.id}>
+    <aside
+      id="sidebar"
+      class="app-sidebar"
+      data-category={@current && @current.id}
+      data-topic={@place.topic_id}
+    >
       <nav aria-label={gettext("Categories")} class="sidebar-nav">
         <%!-- These links first, above the categories (steward decision, 2026-10-23). --%>
         <div class="sidebar-quicklinks">
@@ -279,6 +305,7 @@ defmodule IdejoWeb.Layouts do
               current={@current}
               followed={@followed}
               activity={@activity}
+              place={@place}
             />
           <% several -> %>
             <%!-- RP-03: one foldable section per group, ungrouped last; open by default. --%>
@@ -296,6 +323,7 @@ defmodule IdejoWeb.Layouts do
                 current={@current}
                 followed={@followed}
                 activity={@activity}
+                place={@place}
               />
             </details>
         <% end %>
@@ -313,6 +341,7 @@ defmodule IdejoWeb.Layouts do
   attr :current, :any, required: true
   attr :followed, :map, required: true
   attr :activity, :map, default: %{}
+  attr :place, :map, required: true, doc: "`topic_id` (the topic on screen), `following`"
 
   # The categories of one section of the sidebar, each with the topics the user follows there.
   defp sidebar_categories(assigns) do
@@ -334,7 +363,11 @@ defmodule IdejoWeb.Layouts do
             <IdejoWeb.TopicComponents.time_ago at={summary.last_activity_at} short />
           </span>
         </a>
-        <.followed_topics topics={Map.get(@followed, category.id, [])} activity={@activity} />
+        <.followed_topics
+          topics={Map.get(@followed, category.id, [])}
+          activity={@activity}
+          place={@place}
+        />
       </li>
     </ul>
     """
@@ -342,18 +375,32 @@ defmodule IdejoWeb.Layouts do
 
   attr :topics, :list, required: true
   attr :activity, :map, default: %{}
+  attr :place, :map, required: true
 
   @followed_shown 4
 
   # The topics followed in one category: the first four, then the rest behind a "more topics"
-  # disclosure (a <details>, so it opens without JavaScript).
+  # disclosure (a <details>, so it opens without JavaScript). The topic on screen is always
+  # among those shown.
   defp followed_topics(assigns) do
     {shown, more} = Enum.split(assigns.topics, @followed_shown)
+
+    {shown, more} =
+      case Enum.split_with(more, &(&1.id == assigns.place.topic_id)) do
+        {[on_screen], rest} -> {shown ++ [on_screen], rest}
+        _ -> {shown, more}
+      end
+
     assigns = assign(assigns, shown: shown, more: more)
 
     ~H"""
     <ul :if={@topics != []} class="sidebar-topics">
-      <.followed_topic :for={topic <- @shown} topic={topic} activity={@activity[topic.id]} />
+      <.followed_topic
+        :for={topic <- @shown}
+        topic={topic}
+        activity={@activity[topic.id]}
+        place={@place}
+      />
       <li :if={@more != []}>
         <details id={"sidebar-more-#{hd(@more).category_id}"} class="sidebar-more">
           <summary>
@@ -363,7 +410,12 @@ defmodule IdejoWeb.Layouts do
             <span class="sidebar-more-open">{gettext("Fewer topics")}</span>
           </summary>
           <ul class="sidebar-topics">
-            <.followed_topic :for={topic <- @more} topic={topic} activity={@activity[topic.id]} />
+            <.followed_topic
+              :for={topic <- @more}
+              topic={topic}
+              activity={@activity[topic.id]}
+              place={@place}
+            />
           </ul>
         </details>
       </li>
@@ -377,28 +429,47 @@ defmodule IdejoWeb.Layouts do
     default: nil,
     doc: "nil, :new, :role_mention, :reply or :mention (Reading.activity/2)"
 
-  # One followed topic, with an unfollow button shown on hover or focus (TP-13). A plain form
-  # post: FollowController leads back to the page it came from. Something new there shows as
-  # a dot, grey, blue for a mention of one of the user's roles, orange for a reply to the
-  # user, red for a mention of them, and a stronger name.
+  attr :place, :map, required: true
+
+  # One topic: followed, with an "×" to unfollow it (TP-13), or the topic on screen, not
+  # followed, with a "+" to follow it. Plain form posts: FollowController leads back to the
+  # page they came from. Something new there shows as a dot, grey, blue for a mention of one
+  # of the user's roles, orange for a reply to the user, red for a mention of them, and a
+  # stronger name. The topic on screen is highlighted; a new message there makes its name
+  # glow (the Notifier hook, `data-topic-id`).
   defp followed_topic(assigns) do
+    assigns =
+      assign(assigns,
+        on_screen?: assigns.topic.id == assigns.place.topic_id,
+        following?: MapSet.member?(assigns.place.following, assigns.topic.id)
+      )
+
     ~H"""
-    <li class={["sidebar-topic", @activity && "has-news"]}>
+    <li
+      class={["sidebar-topic", @activity && "has-news", @on_screen? && "is-current"]}
+      data-topic-id={@topic.id}
+    >
       <span
         class={["sidebar-dot", @activity && "is-#{String.replace(to_string(@activity), "_", "-")}"]}
         aria-hidden="true"
       ></span>
-      <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="sidebar-topic-link">
+      <a
+        href={~p"/t/#{@topic.id}/#{@topic.slug}"}
+        class="sidebar-topic-link"
+        aria-current={@on_screen? && "page"}
+        title={@topic.title}
+      >
         <span class="sidebar-topic-name">{@topic.title}</span><span
           :if={@activity}
           class="sr-only"
         >{activity_text(@activity)}</span>
       </a>
       <.form
+        :if={@following?}
         for={%{}}
         action={~p"/t/#{@topic.id}/follow"}
         method="delete"
-        class="sidebar-unfollow"
+        class="sidebar-topic-action sidebar-unfollow"
       >
         <input type="hidden" name="return" value="back" />
         <button
@@ -407,6 +478,22 @@ defmodule IdejoWeb.Layouts do
           title={gettext("Unfollow")}
         >
           <.icon name="hero-x-mark-micro" class="size-3.5" />
+        </button>
+      </.form>
+      <.form
+        :if={!@following?}
+        for={%{}}
+        action={~p"/t/#{@topic.id}/follow"}
+        method="post"
+        class="sidebar-topic-action sidebar-follow"
+      >
+        <input type="hidden" name="return" value="back" />
+        <button
+          type="submit"
+          aria-label={gettext("Follow %{title}", title: @topic.title)}
+          title={gettext("Follow")}
+        >
+          <.icon name="hero-plus-micro" class="size-3.5" />
         </button>
       </.form>
     </li>

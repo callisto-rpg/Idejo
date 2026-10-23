@@ -5,8 +5,8 @@ defmodule IdejoWeb.FollowController do
   @moduledoc """
   Follow and unfollow a topic (TP-13): plain form posts from the topic page and the sidebar,
   so they work without JavaScript. Only a topic the user may view can be followed; any other
-  is not found. The topic page leads back to the topic; the sidebar's unfollow
-  (`return=back`) to the page it was sent from, when the browser says which one.
+  is not found. The topic page leads back to the topic; the sidebar's "×" and "+"
+  (`return=back`) to the page they were sent from, when the browser says which one.
   """
   use IdejoWeb, :controller
 

@@ -15,8 +15,13 @@
 // the first 20 s after a page loads (a live navigation counts), then every 30 s, then past
 // 5 minutes every 10 minutes (steward decision, 2026-10-23). Neither is swapped while it
 // has the focus.
+//
+// Glow: a new message in a topic of the sidebar makes its name glow like sent text burns
+// in, half as strongly (.sidebar-burn): on a notification, and on "topic_activity", which
+// the open topic's view sends to the window. A sidebar swapped in mid-glow carries on.
 
 const LIFETIME = 10000
+const BURN_MS = 2200
 const MOST = 3
 const SETTLE = 1500
 
@@ -30,6 +35,9 @@ export const Notifier = {
   mounted() {
     this.box = this.el.querySelector("#bubbles")
     this.handleEvent("notification", n => this.notify(n))
+    this.glowing = new Map()
+    this.onActivity = e => this.glow(e.detail.topic_id)
+    window.addEventListener("phx:topic_activity", this.onActivity)
     this.onVisible = () => { if (document.visibilityState === "visible") this.refreshSidebar() }
     document.addEventListener("visibilitychange", this.onVisible)
     // This view outlives live navigation: each new page starts the schedule again.
@@ -43,6 +51,7 @@ export const Notifier = {
     clearTimeout(this.settle)
     document.removeEventListener("visibilitychange", this.onVisible)
     window.removeEventListener("phx:page-loading-stop", this.onPage)
+    window.removeEventListener("phx:topic_activity", this.onActivity)
   },
 
   schedule() {
@@ -57,6 +66,7 @@ export const Notifier = {
 
   notify(n) {
     if (n.kind !== "reaction") {
+      this.glow(n.topic_id)
       clearTimeout(this.settle)
       this.settle = setTimeout(() => this.refreshSidebar(), SETTLE)
     }
@@ -146,6 +156,36 @@ export const Notifier = {
     }
   },
 
+  // The topic's name in the sidebar glows; one already glowing for a moment is left alone.
+  glow(topicId) {
+    const started = this.glowing.get(topicId)
+    if (started && Date.now() - started < 500) return
+    this.glowing.set(topicId, Date.now())
+    const name = this.topicName(topicId)
+    if (!name) return
+    name.classList.remove("sidebar-burn")
+    name.style.animationDelay = ""
+    void name.offsetWidth  // restarts the animation
+    name.classList.add("sidebar-burn")
+  },
+
+  topicName(topicId) {
+    return document.querySelector(`#sidebar .sidebar-topic[data-topic-id="${CSS.escape(topicId)}"] .sidebar-topic-name`)
+  },
+
+  // After a swap: names still glowing go on where they were, through the DOM (never a style
+  // attribute in the markup: the content security policy refuses those).
+  reglow() {
+    for (const [topicId, started] of this.glowing) {
+      const elapsed = Date.now() - started
+      if (elapsed >= BURN_MS) { this.glowing.delete(topicId); continue }
+      const name = this.topicName(topicId)
+      if (!name) continue
+      name.style.animationDelay = `-${elapsed}ms`
+      name.classList.add("sidebar-burn")
+    }
+  },
+
   // The sidebar and the header's Unread link with its count, from /sidebar. Neither is
   // swapped while it has the focus.
   async refreshSidebar() {
@@ -154,6 +194,7 @@ export const Notifier = {
 
     const url = new URL(this.el.dataset.sidebar, window.location.origin)
     if (aside?.dataset.category) url.searchParams.set("category", aside.dataset.category)
+    if (aside?.dataset.topic) url.searchParams.set("topic", aside.dataset.topic)
 
     let html
     try {
@@ -176,5 +217,6 @@ export const Notifier = {
     const open = new Map([...nav.querySelectorAll("details[id]")].map(d => [d.id, d.open]))
     nav.replaceChildren(...fresh.childNodes)
     nav.querySelectorAll("details[id]").forEach(d => { if (open.has(d.id)) d.open = open.get(d.id) })
+    this.reglow()
   },
 }
