@@ -10,14 +10,19 @@ defmodule IdejoWeb.PageController do
   The home page: the categories the visitor or user may view (AC-05), in their order, with
   their topic count and last activity, then the most recently active topics.
   """
-  def home(conn, _params) do
+  def home(conn, params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
     categories = Forum.list_category_summaries(user)
+    active_topics = Forum.list_active_topics(user)
+    # Compact or expanded topic cards (steward decision, 2026-10-23).
+    {conn, view} = IdejoWeb.TopicView.choose(conn, params)
 
     render(conn, :home,
       categories: categories,
       sections: Forum.sections(categories, Forum.list_groups()),
-      active_topics: Forum.list_active_topics(user),
+      active_topics: active_topics,
+      view: view,
+      previews: IdejoWeb.TopicView.previews(view, active_topics),
       canonical_url: url(~p"/")
     )
   end

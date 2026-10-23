@@ -112,18 +112,22 @@ defmodule IdejoWeb.TopicComponents do
     and name (the home page's active topics; needs the category loaded).
   * `unread` - the "N new" marker (TP-07), or nil.
 
+  * `preview` - an expanded card (steward decision, 2026-10-23): `Idejo.Forum.topic_previews/1`
+    for this topic, or nil for a compact one.
+
   Right click or long press opens the topic menu (`data-topic-menu`, `Layouts.topic_menu/1`).
   """
   attr :topic, :map, required: true
   attr :category, :boolean, default: false
   attr :lead, :atom, values: [:author, :category], default: :author
   attr :unread, :integer, default: nil
+  attr :preview, :map, default: nil
 
   def topic_row(assigns) do
     ~H"""
     <li
       id={"topic-#{@topic.id}"}
-      class={["topic-row", "cat-#{@topic.category_id}"]}
+      class={["topic-row", "cat-#{@topic.category_id}", @preview && "is-expanded"]}
       data-topic-menu={@topic.id}
       data-topic-path={~p"/t/#{@topic.id}/#{@topic.slug}"}
     >
@@ -172,8 +176,92 @@ defmodule IdejoWeb.TopicComponents do
           {ngettext("1 message", "%{count} messages", @topic.message_count)}
         </span>
       </p>
+      <.topic_preview :if={@preview} topic={@topic} preview={@preview} />
     </li>
     """
+  end
+
+  attr :topic, :map, required: true
+  attr :preview, :map, required: true
+
+  # An expanded card's body (steward decision, 2026-10-23): the opening message's text, with
+  # its first image at the right; "Latest messages" over a line and the last three; and the
+  # avatars of who wrote there, five and "+N more" past six.
+  defp topic_preview(assigns) do
+    %{participants: people, participant_count: count} = assigns.preview
+    shown = if count > 6, do: Enum.take(people, 5), else: people
+
+    assigns = assign(assigns, shown: shown, more: count - length(shown))
+
+    ~H"""
+    <div class="topic-preview">
+      <div :if={@preview.first} class="topic-preview-first">
+        <p class="topic-preview-text">{Idejo.Forum.excerpt(@preview.first, 400)}</p>
+        <img
+          :if={@preview.image}
+          src={@preview.image}
+          alt=""
+          class="topic-preview-image"
+          loading="lazy"
+        />
+      </div>
+      <div :if={@preview.latest != []} class="topic-preview-latest">
+        <%!-- Not a heading: the category page's list sits right under its h1 (AX-01). --%>
+        <p class="topic-preview-heading">{gettext("Latest messages")}</p>
+        <ol>
+          <li :for={message <- @preview.latest} class="topic-preview-message">
+            <UserComponents.avatar user={message.author} size={:small} />
+            <a href={~p"/m/#{message.id}"} class="topic-preview-message-link">
+              <span class="font-medium">{message.author.display_name}</span>
+              <span class="topic-preview-message-text">{Idejo.Forum.excerpt(message, 160)}</span>
+            </a>
+            <.time_ago at={message.opened_at} />
+          </li>
+        </ol>
+      </div>
+      <p :if={@shown != []} class="topic-preview-people">
+        <span class="sr-only">{gettext("Written by:")}</span>
+        <span :for={user <- @shown} class="topic-preview-person" title={user.display_name}>
+          <UserComponents.avatar user={user} size={:small} />
+          <span class="sr-only">{user.display_name}</span>
+        </span>
+        <span :if={@more > 0} class="topic-preview-more">
+          {ngettext("+%{count} more", "+%{count} more", @more)}
+        </span>
+      </p>
+    </div>
+    """
+  end
+
+  attr :view, :atom, required: true, values: [:compact, :expanded]
+  attr :path, :string, required: true, doc: "the page's address, without ?view="
+
+  @doc """
+  The "View" toggle of the home and category pages (steward decision, 2026-10-23): Compact
+  (the default) or Expanded topic cards. Two links, so it works without JavaScript;
+  `IdejoWeb.TopicView` remembers the choice.
+  """
+  def view_toggle(assigns) do
+    ~H"""
+    <nav aria-label={gettext("View")} class="view-toggle" id="view-toggle">
+      <span class="view-toggle-label" aria-hidden="true">{gettext("View")}</span>
+      <a
+        :for={{view, label} <- [compact: gettext("Compact"), expanded: gettext("Expanded")]}
+        href={with_view(@path, view)}
+        id={"view-#{view}"}
+        aria-current={@view == view && "true"}
+        class={@view == view && "is-active"}
+      >
+        {label}
+      </a>
+    </nav>
+    """
+  end
+
+  defp with_view(path, view) do
+    %URI{query: query} = uri = URI.parse(path)
+    params = URI.decode_query(query || "") |> Map.put("view", Atom.to_string(view))
+    URI.to_string(%{uri | query: URI.encode_query(params)})
   end
 
   @doc """

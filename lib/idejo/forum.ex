@@ -1462,6 +1462,91 @@ defmodule Idejo.Forum do
 
   def get_topic_message(_topic, _id), do: nil
 
+  @typedoc "What an expanded topic card shows (`topic_previews/1`)."
+  @type preview :: %{
+          first: Message.t() | nil,
+          image: String.t() | nil,
+          latest: [Message.t()],
+          participants: [User.t()],
+          participant_count: non_neg_integer()
+        }
+
+  @doc """
+  What the expanded topic cards show (steward decision, 2026-10-23), for the given topics,
+  in a few queries whatever their number: `%{topic_id => preview}` with the opening message,
+  the first uploaded image in it (not for a spoiler), the three latest other messages
+  (oldest first, with their authors) and everyone who wrote there, in the order they first
+  did. Messages deleted by a moderator or their author are left out. The caller has checked
+  the view right on the topics.
+  """
+  @spec topic_previews([Ecto.UUID.t()]) :: %{Ecto.UUID.t() => preview()}
+  def topic_previews([]), do: %{}
+
+  def topic_previews(topic_ids) do
+    shown = from m in Message, where: m.topic_id in ^topic_ids and is_nil(m.deleted_at)
+
+    firsts = ranked(shown, :asc, 1) |> Map.new(&{&1.topic_id, &1})
+    latest = ranked(shown, :desc, 4) |> Enum.group_by(& &1.topic_id)
+
+    writers =
+      from(m in shown,
+        group_by: [m.topic_id, m.author_id],
+        order_by: [asc: min(m.opened_at)],
+        select: {m.topic_id, m.author_id}
+      )
+      |> Repo.all()
+
+    users = Repo.all(from u in User, where: u.id in ^Enum.uniq(Enum.map(writers, &elem(&1, 1))))
+    users = Map.new(users, &{&1.id, &1})
+    writers = Enum.group_by(writers, &elem(&1, 0), &Map.fetch!(users, elem(&1, 1)))
+
+    Map.new(topic_ids, fn id ->
+      first = firsts[id]
+      others = for m <- Map.get(latest, id, []), first == nil or m.id != first.id, do: m
+
+      {id,
+       %{
+         first: first,
+         image: first && first_image(first),
+         latest: others |> Enum.take(3) |> Enum.reverse(),
+         participants: Map.get(writers, id, []),
+         participant_count: length(Map.get(writers, id, []))
+       }}
+    end)
+  end
+
+  # The first `count` messages of each topic, from the oldest or the newest, with authors.
+  defp ranked(query, direction, count) do
+    ranks =
+      from m in query,
+        select: %{
+          id: m.id,
+          rank:
+            over(row_number(),
+              partition_by: m.topic_id,
+              order_by: [{^direction, m.opened_at}, {^direction, m.id}]
+            )
+        }
+
+    from(m in Message,
+      join: r in subquery(ranks),
+      on: r.id == m.id and r.rank <= ^count,
+      order_by: [{^direction, m.opened_at}, {^direction, m.id}],
+      preload: :author
+    )
+    |> Repo.all()
+  end
+
+  # An image uploaded into the message (TP-12), not an emoji.
+  defp first_image(%Message{spoiler: true}), do: nil
+
+  defp first_image(%Message{body_html: html}) do
+    case Regex.run(~r{<img [^>]*\bsrc="(/uploads/[^"]+)"}, html || "") do
+      [_, src] -> src
+      nil -> nil
+    end
+  end
+
   @doc """
   A short plain-text excerpt of a message, for inline replies (TP-08): its text without
   formatting, cut at about `length` characters on a word.

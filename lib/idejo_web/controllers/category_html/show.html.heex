@@ -9,6 +9,12 @@
       <h1>{@category.name}</h1>
       <p :if={@category.description != ""}>{@category.description}</p>
     </div>
+    <TopicComponents.view_toggle
+      view={@view}
+      path={
+        if @page > 1, do: ~p"/c/#{@category.slug}?page=#{@page}", else: ~p"/c/#{@category.slug}"
+      }
+    />
     <.link
       :if={@can_start?}
       href={~p"/c/#{@category.slug}/new"}
@@ -25,7 +31,12 @@
   </p>
 
   <ol :if={@topics != []} id="topics" class="topic-list">
-    <TopicComponents.topic_row :for={topic <- @topics} topic={topic} unread={@unread[topic.id]} />
+    <TopicComponents.topic_row
+      :for={topic <- @topics}
+      topic={topic}
+      unread={@unread[topic.id]}
+      preview={@previews[topic.id]}
+    />
   </ol>
 
   <nav :if={@page > 1 or @more?} aria-label={gettext("Pages")} class="pager">

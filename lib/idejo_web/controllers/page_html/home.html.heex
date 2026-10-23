@@ -16,10 +16,18 @@
     <section
       :for={{{group, summaries}, index} <- Enum.with_index(@sections)}
       aria-labelledby={"categories-heading-#{index}"}
+      class={index == 0 && @active_topics != [] && "has-view-toggle"}
     >
       <h2 id={"categories-heading-#{index}"} class="section-divider">
         {section_title(group, length(@sections))}
       </h2>
+      <%!-- The view toggle sits at the top, beside the first title (steward decision,
+           2026-10-23); it changes the active topics' cards below. --%>
+      <TopicComponents.view_toggle
+        :if={index == 0 && @active_topics != []}
+        view={@view}
+        path={~p"/"}
+      />
       <ul id={if index == 0, do: "categories", else: "categories-#{index}"} class="category-grid">
         <li
           :for={%{category: category} = summary <- summaries}
@@ -53,7 +61,12 @@
   <section :if={@active_topics != []} aria-labelledby="active-heading">
     <h2 id="active-heading" class="section-divider">{gettext("Active topics")}</h2>
     <ol id="active-topics" class="topic-list">
-      <TopicComponents.topic_row :for={topic <- @active_topics} topic={topic} lead={:category} />
+      <TopicComponents.topic_row
+        :for={topic <- @active_topics}
+        topic={topic}
+        lead={:category}
+        preview={@previews[topic.id]}
+      />
     </ol>
   </section>
 </Layouts.app>

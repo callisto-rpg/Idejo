@@ -118,6 +118,11 @@ change and keeps no history.
 
 - The **home page** shows the categories as cards, with their number of topics and last
   activity, and below them the **active topics**: the most recently active ones everywhere.
+- **View** (at the top right of the home page and of each category page): **Compact**, the
+  usual one-line topics, or **Expanded**, where each topic also shows the start of its first
+  message (with its picture at the right, if it has one), its three **latest messages**, and
+  the pictures of who wrote there (five, then "+N more"). Your choice stays for the next
+  pages. A topic's tags sit at the right, above its number of messages.
 - The **sidebar** on the left lists the categories in the same order and groups as the home
   page (click a group's name to fold it away), and under each one the topics you follow there, in the order you joined them. Past four,
   **N more topics** shows the rest. A dot before a topic means something new since you last

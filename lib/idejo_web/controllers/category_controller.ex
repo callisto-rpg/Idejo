@@ -24,6 +24,8 @@ defmodule IdejoWeb.CategoryController do
       category ->
         page = page(params)
         {topics, more?} = Forum.list_topics(category, page: page)
+        # Compact or expanded topic cards (steward decision, 2026-10-23).
+        {conn, view} = IdejoWeb.TopicView.choose(conn, params)
 
         render(conn, :show,
           category: category,
@@ -33,6 +35,8 @@ defmodule IdejoWeb.CategoryController do
           unread: Reading.unread_counts(user, Enum.map(topics, & &1.id)),
           page: page,
           more?: more?,
+          view: view,
+          previews: IdejoWeb.TopicView.previews(view, topics),
           canonical_url: canonical_url(category, page)
         )
     end

@@ -104,6 +104,9 @@ defmodule IdejoWeb.AccessibilityTest do
     assert_all_accessible(conn, [
       ~p"/",
       ~p"/c/#{general.slug}",
+      # Expanded topic cards (steward decision, 2026-10-23).
+      ~p"/?view=expanded",
+      ~p"/c/#{general.slug}?view=expanded",
       ~p"/t/#{topic.id}/#{topic.slug}",
       ~p"/t/#{topic.id}/#{topic.slug}?reply_to=#{reply.id}",
       ~p"/search",
