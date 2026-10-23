@@ -57,7 +57,10 @@ defmodule IdejoWeb.ReactionsLiveTest do
   end
 
   @tag req: "TP-17"
-  test "TP-17 the + opens every emoji with a search box", %{topic: topic, message: message} do
+  test "TP-17 the + opens the picker; the browser draws it and the choice reacts", %{
+    topic: topic,
+    message: message
+  } do
     {:ok, lv, _html} = open(log_in_user(build_conn(), user_fixture()), topic)
 
     lv
@@ -65,14 +68,37 @@ defmodule IdejoWeb.ReactionsLiveTest do
     |> render_click()
 
     assert has_element?(lv, "dialog#emoji-picker[aria-labelledby=emoji-picker-title]")
-    assert has_element?(lv, "#emoji-picker button[aria-label=':bruh:']")
+    picker = lv |> element("#emoji-picker-body") |> render()
+    assert picker =~ ~s(phx-hook="EmojiPicker")
+    assert picker =~ ~s(data-message-id="#{message.id}")
+    assert picker =~ ~s(data-src="/emoji-index.json?v=#{Idejo.Emoji.index_version()}")
+    assert picker =~ ~s(<input type="search" id="emoji-search")
+    # The emoji themselves are not sent over the live connection.
+    refute picker =~ "add-reaction-choice"
 
-    lv |> form("#emoji-search-form", %{q: "tada"}) |> render_change()
-    refute has_element?(lv, "#emoji-picker button[aria-label=':bruh:']")
-    lv |> element("#emoji-picker button[aria-label=':tada:']") |> render_click()
-
+    lv |> element("#emoji-picker-body") |> render_hook("react", %{id: message.id, emoji: "tada"})
     refute has_element?(lv, "#emoji-picker")
     assert [%{emoji: "tada"}] = Reactions.summary(message.id)
+  end
+
+  @tag req: "TP-17"
+  test "TP-17 the picker's list: every emoji by category, kept by the browser" do
+    conn = get(build_conn(), "/emoji-index.json?v=#{Idejo.Emoji.index_version()}")
+
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
+
+    assert %{"categories" => [%{"key" => "Server", "emoji" => server} | _] = categories} =
+             json_response(conn, 200)
+
+    assert ["agree", ":agree:", "/reactions/agree.png" <> _, []] = hd(server)
+
+    all = for %{"emoji" => emoji} <- categories, entry <- emoji, do: entry
+    assert length(all) == Enum.sum(for {_, e} <- Idejo.Emoji.groups(), do: length(e))
+    assert ["+1", "👍", "/emoji/1f44d.svg" <> _, ["thumbsup"]] = Enum.find(all, &(hd(&1) == "+1"))
+
+    # An old address is checked each time instead.
+    assert build_conn() |> get("/emoji-index.json") |> get_resp_header("cache-control") ==
+             ["no-cache"]
   end
 
   @tag req: "TP-17"

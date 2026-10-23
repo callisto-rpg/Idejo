@@ -472,8 +472,12 @@ roles or the permission grid. Every later change must keep it true:
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
   several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions
-  (`add_reaction/1`: the eight defaults and +) and the + dialog (`emoji_picker/1`, search,
-  reusing the `InlineCard` hook with `data-close-event`).
+  (`add_reaction/1`: the eight defaults and +) and the + dialog (`emoji_picker/1`, reusing
+  the `InlineCard` hook with `data-close-event`). The server renders only its frame: the
+  `EmojiPicker` hook (`assets/js/emoji_picker.js`, `phx-update="ignore"`) fetches
+  `/emoji-index.json?v=` (`EmojiController`, `Emoji.index_json/0`, built at compile time,
+  cached for a year), draws the groups once per page, searches in the browser and pushes
+  `"react"`. Never send the emoji list over the live connection (1,881 emoji, 550 KB).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
   one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP
