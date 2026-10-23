@@ -32,11 +32,27 @@ defmodule IdejoWeb.ComposerCommands do
           )
       },
       %{
+        name: "poll",
+        detail: gettext("Add a poll under your message"),
+        help:
+          gettext(
+            "Sends what you wrote, then asks for a question, its answers, whether several answers may be chosen and how many hours it stays open (decimals work, at most 168). The poll goes under your message, one per message. Anyone who may post here votes and may change their vote until it closes; the counts show once you voted, and to everyone once it closed. Nobody sees who voted for what."
+          )
+      },
+      %{
         name: "schedule",
         detail: gettext("Post what you have not sent yet, later"),
         help:
           gettext(
             "Posts the text you have not sent yet in a number of hours (decimals work, at most 168). Only you see it until then, under the box, where Cancel takes it back. It is posted as one finished message, marked scheduled message."
+          )
+      },
+      %{
+        name: "spoiler",
+        detail: gettext("Hide your message until readers reveal it"),
+        help:
+          gettext(
+            "Sends what you wrote and hides your message behind a blur, with a Reveal spoiler button; quotes and search results show (spoiler) instead of its words. Choose !spoiler again to show it plainly."
           )
       }
     ]

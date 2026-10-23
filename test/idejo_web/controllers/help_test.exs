@@ -34,6 +34,7 @@ defmodule IdejoWeb.HelpTest do
       assert text.("#help-command-#{command.name} dd") =~ command.help
     end
 
-    assert Enum.map(ComposerCommands.all(), & &1.label) == ["!image", "!new-topic", "!schedule"]
+    assert Enum.map(ComposerCommands.all(), & &1.label) ==
+             ["!image", "!new-topic", "!poll", "!schedule", "!spoiler"]
   end
 end

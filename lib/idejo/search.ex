@@ -19,6 +19,7 @@ defmodule Idejo.Search do
 
   alias Idejo.Access
   alias Idejo.Accounts.User
+  alias Idejo.Forum
   alias Idejo.Forum.{Category, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Repo
@@ -105,7 +106,9 @@ defmodule Idejo.Search do
 
     results =
       Enum.zip_with(messages, rows, fn message, {_, headline} ->
-        %{message: message, excerpt: excerpt(headline)}
+        # `!spoiler` (steward decision, 2026-10-23): found, but its words stay hidden.
+        excerpt = if message.spoiler, do: [text: Forum.excerpt(message)], else: excerpt(headline)
+        %{message: message, excerpt: excerpt}
       end)
 
     {Enum.take(results, per_page), length(results) > per_page}

@@ -41,12 +41,13 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
-  alias Idejo.Messages.Scheduling
+  alias Idejo.Messages.{Polls, Scheduling}
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.MessageModerationComponents
+  alias IdejoWeb.PollComponents
   alias IdejoWeb.ReactionComponents
   alias IdejoWeb.UserComponents
 
@@ -90,7 +91,11 @@ defmodule IdejoWeb.TopicLive do
            first_unread: nil,
            unread_line?: false,
            pending: [],
-           schedule: nil
+           schedule: nil,
+           polls: %{},
+           poll_form: nil,
+           live?: connected?(socket),
+           revealed: MapSet.new()
          )}
 
       topic ->
@@ -122,7 +127,9 @@ defmodule IdejoWeb.TopicLive do
            move_error: nil
          )
          |> put_reactions()
-         |> assign(schedule: nil, schedule_error: nil)
+         |> put_polls()
+         |> assign(schedule: nil, schedule_error: nil, poll_form: nil)
+         |> assign(live?: connected?(socket), revealed: MapSet.new())
          |> put_pending()
          |> ImageUploads.allow(:composer_image, can_post?)
          |> ImageUploads.allow(:edit_image, can_post?)
@@ -169,6 +176,12 @@ defmodule IdejoWeb.TopicLive do
   defp put_reactions(socket) do
     ids = Enum.map(socket.assigns.messages, & &1.id)
     assign(socket, :reactions, Idejo.Reactions.summaries(ids))
+  end
+
+  # `!poll`: the polls under the messages shown, in one query; later changes come as events.
+  defp put_polls(socket) do
+    ids = Enum.map(socket.assigns.messages, & &1.id)
+    assign(socket, :polls, Polls.summaries(ids))
   end
 
   # TP-09: each message's "continued in" topics that the viewer may see.
@@ -305,6 +318,15 @@ defmodule IdejoWeb.TopicLive do
       {:noreply,
        assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))}
 
+  # `!poll`: someone voted, or a poll was added or closed; worked out once (NF-01).
+  def handle_info({:poll, message_id, summary}, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         polls: Map.put(socket.assigns.polls, message_id, summary),
+         now: DateTime.utc_now()
+       )}
+
   # TP-15: messages moved into or out of this topic: read it again.
   def handle_info({:messages_moved, _topic_id}, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
@@ -325,6 +347,7 @@ defmodule IdejoWeb.TopicLive do
          |> put_messages(messages)
          |> put_forks()
          |> put_reactions()
+         |> put_polls()
          |> sync_composer()}
     end
   end
@@ -420,6 +443,49 @@ defmodule IdejoWeb.TopicLive do
     redirect(socket, to: ~p"/m/#{source_id}/new-topic?from=#{message.id}")
   end
 
+  # What a command sends for (steward decision, 2026-10-23): `!new-topic` goes on to the new
+  # topic; `!poll` and `!spoiler` act on the message just sent.
+  defp after_send(socket, "new_topic", message), do: new_topic_from(socket, message)
+
+  defp after_send(socket, "poll", message),
+    do: socket |> assign(:reply_to, nil) |> open_poll(message)
+
+  defp after_send(socket, "spoiler", message),
+    do: socket |> assign(:reply_to, nil) |> toggle_spoiler(message)
+
+  defp after_send(socket, _then, _message), do: assign(socket, :reply_to, nil)
+
+  # `!poll`: the dialog for a poll under the author's message, one per message.
+  defp open_poll(socket, message) do
+    if Map.has_key?(socket.assigns.polls, message.id) or Polls.summary(message.id) != nil,
+      do: put_flash(socket, :error, gettext("This message has a poll already.")),
+      else:
+        assign(socket, :poll_form, %{message_id: message.id, params: %{}, count: 2, error: nil})
+  end
+
+  defp poll_error(:question), do: gettext("Write the question.")
+  defp poll_error(:options), do: gettext("Give at least two answers.")
+
+  defp poll_error(:hours),
+    do: gettext("Enter a number of hours above 0, at most %{max}.", max: Scheduling.max_hours())
+
+  defp poll_error(:rate_limited),
+    do: gettext("You are sending very fast. Wait a moment, then try again.")
+
+  # `!spoiler`: on, or off again; the message reaches every viewer as an event.
+  defp toggle_spoiler(socket, message) do
+    case Messages.set_spoiler(user(socket), message, !message.spoiler) do
+      {:ok, %{spoiler: true}} ->
+        put_flash(socket, :info, gettext("Your message is hidden as a spoiler."))
+
+      {:ok, _message} ->
+        put_flash(socket, :info, gettext("Your message is no longer a spoiler."))
+
+      {:error, _reason} ->
+        put_flash(socket, :error, gettext("You cannot post in this topic."))
+    end
+  end
+
   defp mine?(socket, message) do
     user = user(socket)
     user != nil and user.id == message.author_id
@@ -457,15 +523,10 @@ defmodule IdejoWeb.TopicLive do
       {:ok, nil} ->
         {:reply, %{closed: false, body: ""}, socket}
 
-      # `!new-topic`: sent, then on to the new topic (steward decision, 2026-10-23).
-      {:ok, message} when then == "new_topic" ->
-        {:reply, %{closed: message.state == "closed", body: message.body_md},
-         new_topic_from(socket, message)}
-
       # The message itself arrives like everyone else's, as an event.
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
-         assign(socket, :reply_to, nil)}
+         after_send(socket, then, message)}
 
       {:error, :forbidden} ->
         {:reply, %{error: true},
@@ -496,6 +557,93 @@ defmodule IdejoWeb.TopicLive do
 
       message ->
         {:noreply, new_topic_from(socket, message)}
+    end
+  end
+
+  # `!poll` and `!spoiler` with nothing new to send: for the open message.
+  def handle_event(command, _params, socket) when command in ["open_poll", "spoiler"] do
+    case open_message(socket.assigns.messages, user(socket)) do
+      nil ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Write your message first, then choose !%{command}.",
+             command: if(command == "spoiler", do: "spoiler", else: "poll")
+           )
+         )}
+
+      message when command == "spoiler" ->
+        {:noreply, toggle_spoiler(socket, message)}
+
+      message ->
+        {:noreply, open_poll(socket, message)}
+    end
+  end
+
+  # The poll dialog keeps what is typed, so adding an answer loses nothing.
+  def handle_event("poll_change", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
+      when is_map(params) and form != nil,
+      do: {:noreply, assign(socket, :poll_form, %{form | params: params})}
+
+  def handle_event("poll_add_option", _params, %{assigns: %{poll_form: form}} = socket)
+      when form != nil,
+      do:
+        {:noreply,
+         assign(socket, :poll_form, %{form | count: min(form.count + 1, Polls.max_options())})}
+
+  def handle_event("hide_poll", _params, socket), do: {:noreply, assign(socket, :poll_form, nil)}
+
+  def handle_event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
+      when is_map(params) and form != nil do
+    message = Repo.get(Messages.Message, form.message_id)
+
+    case message && Polls.create(user(socket), message, params) do
+      {:ok, _summary} ->
+        {:noreply, assign(socket, :poll_form, nil)}
+
+      {:error, reason} when reason in [:question, :options, :hours, :rate_limited] ->
+        {:noreply,
+         assign(socket, :poll_form, %{form | params: params, error: poll_error(reason)})}
+
+      {:error, :taken} ->
+        {:noreply,
+         socket
+         |> assign(:poll_form, nil)
+         |> put_flash(:error, gettext("This message has a poll already."))}
+
+      _forbidden ->
+        {:noreply,
+         socket
+         |> assign(:poll_form, nil)
+         |> put_flash(:error, gettext("You cannot post in this topic."))}
+    end
+  end
+
+  def handle_event("create_poll", _params, socket), do: {:noreply, socket}
+
+  # `!spoiler`: this viewer sees the message plainly from now on.
+  def handle_event("reveal_spoiler", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, id))}
+
+  # `!poll`: a vote, or a changed one; the new counts reach every viewer as an event.
+  def handle_event("vote", %{"message_id" => id} = params, socket) when is_binary(id) do
+    options = for option <- List.wrap(params["options"]), is_binary(option), do: option
+
+    with %{} = user <- user(socket),
+         %Messages.Message{} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
+         {:ok, _summary} <- Polls.vote(user, message, options) do
+      {:noreply, socket}
+    else
+      {:error, :closed} ->
+        {:noreply, put_flash(socket, :error, gettext("This poll has closed."))}
+
+      {:error, :rate_limited} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("You have voted a lot lately. Please wait a little."))}
+
+      _ ->
+        {:noreply, socket}
     end
   end
 
@@ -975,6 +1123,7 @@ defmodule IdejoWeb.TopicLive do
       <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
       <.delete_own_dialog :if={@confirm_delete} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
+      <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -1051,6 +1200,10 @@ defmodule IdejoWeb.TopicLive do
             selected={@selected && MapSet.member?(@selected, message.id)}
             selectable?={selectable_in_view?(assigns, message)}
             viewable_replies={@viewable_replies}
+            poll={@polls[message.id]}
+            now={@now}
+            live?={@live?}
+            revealed?={MapSet.member?(@revealed, message.id)}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -1064,6 +1217,7 @@ defmodule IdejoWeb.TopicLive do
             now={@now}
             upload={@composer_upload}
             image_error={@image_error}
+            poll={@mine && @polls[@mine.id]}
           />
         </li>
         <li
@@ -1098,6 +1252,10 @@ defmodule IdejoWeb.TopicLive do
             selected={@selected && MapSet.member?(@selected, message.id)}
             selectable?={selectable_in_view?(assigns, message)}
             viewable_replies={@viewable_replies}
+            poll={@polls[message.id]}
+            now={@now}
+            live?={@live?}
+            revealed?={MapSet.member?(@revealed, message.id)}
           />
         </li>
       </ol>
@@ -1328,6 +1486,10 @@ defmodule IdejoWeb.TopicLive do
   attr :selected, :any, default: nil, doc: "nil outside choosing messages (TP-15, MO-02)"
   attr :selectable?, :boolean, default: false, doc: "a checkbox while choosing messages"
   attr :viewable_replies, :any, default: MapSet.new()
+  attr :poll, :map, default: nil, doc: "the message's poll (`!poll`), or nil"
+  attr :now, DateTime, default: nil
+  attr :live?, :boolean, default: false
+  attr :revealed?, :boolean, default: false, doc: "a spoiler the viewer revealed"
 
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
@@ -1448,11 +1610,47 @@ defmodule IdejoWeb.TopicLive do
           </button>
         </div>
       </.form>
-      <MessageComponents.collapsible_body
-        :if={!@edit_form}
-        id={"message-#{@message.id}-body"}
-        html={@message.body_html}
-      />
+      <%!-- `!spoiler` (steward decision, 2026-10-23): blurred under a Reveal button until the
+           reader reveals it; out of reach of the keyboard and screen readers until then. The
+           stylesheet shows the cover only when scripts run, as the button needs them. --%>
+      <div
+        id={"message-#{@message.id}-content"}
+        class={["message-content", @message.spoiler && !@revealed? && "is-spoiler"]}
+      >
+        <div
+          id={"message-#{@message.id}-hidden"}
+          tabindex="-1"
+          inert={@message.spoiler and !@revealed? and @live?}
+        >
+          <MessageComponents.collapsible_body
+            :if={!@edit_form}
+            id={"message-#{@message.id}-body"}
+            html={@message.body_html}
+          />
+          <PollComponents.poll
+            :if={@poll && (is_nil(@message.deleted_at) or @can_moderate?)}
+            poll={@poll}
+            message={@message}
+            viewer={@viewer}
+            can_vote?={@can_post? and is_nil(@message.deleted_at)}
+            now={@now || DateTime.utc_now()}
+          />
+        </div>
+        <div :if={@message.spoiler and !@revealed?} class="spoiler-cover">
+          <button
+            type="button"
+            id={"message-#{@message.id}-reveal"}
+            class="spoiler-reveal"
+            phx-click={
+              JS.remove_attribute("inert", to: "#message-#{@message.id}-hidden")
+              |> JS.push("reveal_spoiler", value: %{id: @message.id})
+              |> JS.focus(to: "#message-#{@message.id}-hidden")
+            }
+          >
+            <.icon name="hero-eye-micro" class="size-4" />{gettext("Reveal spoiler")}
+          </button>
+        </div>
+      </div>
       <div :if={@message.edited or @message.scheduled} class="message-meta">
         <span
           :if={@message.scheduled}
@@ -1644,6 +1842,7 @@ defmodule IdejoWeb.TopicLive do
   attr :now, DateTime, required: true
   attr :upload, :any, required: true
   attr :image_error, :string, required: true
+  attr :poll, :map, default: nil, doc: "the open message's poll (`!poll`)"
 
   # No countdown, button or status around it (GM-07): only the text box. The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
@@ -1715,6 +1914,15 @@ defmodule IdejoWeb.TopicLive do
         <.live_file_input upload={@upload} />
       </form>
       <p :if={@image_error} role="alert" class="text-sm text-error mt-1">{@image_error}</p>
+      <%!-- `!poll`: under the author's message, as readers see it. --%>
+      <PollComponents.poll
+        :if={@poll}
+        poll={@poll}
+        message={@mine}
+        viewer={@author}
+        can_vote?={true}
+        now={@now}
+      />
       <%!-- `!schedule`: what waits to be posted here; only its author sees it. --%>
       <section
         :if={@pending != []}

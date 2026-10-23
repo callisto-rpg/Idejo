@@ -275,6 +275,27 @@ defmodule IdejoWeb.AccessibilityTest do
     view |> form("#schedule-form", %{hours: "2"}) |> render_submit()
     assert has_element?(view, "#scheduled-messages")
     assert_fragment_accessible(render(view), "#{path}, scheduled messages")
+
+    # !poll: the dialog, then the poll under the message; !spoiler: the cover and its button.
+    render_hook(view, "commit", %{"body" => "Lunch", "break" => false, "then" => "poll"})
+    view |> element("#poll-add-option") |> render_click()
+    assert_fragment_accessible(render(view), "#{path}, adding a poll")
+
+    view
+    |> form("#poll-form", poll: %{question: "Where?", options: ["Here", "There"], hours: "2"})
+    |> render_submit()
+
+    assert has_element?(view, ".poll")
+    render_hook(view, "spoiler", %{})
+    assert_fragment_accessible(render(view), "#{path}, poll")
+
+    {:ok, reader, _html} =
+      live_isolated(log_in_user(build_conn(), user_fixture()), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
+    assert has_element?(reader, ".spoiler-reveal")
+    assert_fragment_accessible(render(reader), "#{path}, spoiler")
   end
 
   @tag req: "AX-01"

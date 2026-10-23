@@ -9,7 +9,9 @@
 // Commands (steward decision, 2026-10-23), listed after ! by `Suggest`: !image picks an image
 // that lands at the end of the message; !new-topic sends, then goes to "New topic from this"
 // with the message's text; !schedule asks the server's dialog for a delay and, once
-// scheduled, takes the text not sent yet out of the box.
+// scheduled, takes the text not sent yet out of the box. !poll and !spoiler send what is new,
+// then act on the message: the poll dialog opens, or the message is hidden as a spoiler (or
+// shown again).
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code.
@@ -192,6 +194,11 @@ export const Composer = {
     } else if (name === "new-topic") {
       if (this.unsent().trim() !== "") this.send(false, "new_topic")
       else this.pushEvent("new_topic", {})
+    } else if (name === "poll" || name === "spoiler") {
+      // The poll dialog gives the focus back to the box when it closes.
+      if (name === "poll") InlineCard.opener = this.input
+      if (this.unsent().trim() !== "") this.send(false, name)
+      else this.pushEvent(name === "poll" ? "open_poll" : "spoiler", {})
     } else if (name === "schedule") {
       // The dialog gives the focus back to the box when it closes.
       InlineCard.opener = this.input
@@ -231,7 +238,7 @@ export const Composer = {
     return true
   },
 
-  // `then`: what the server does once it is stored ("new_topic" for !new-topic).
+  // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler").
   send(isBreak, then) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value)

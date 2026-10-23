@@ -312,8 +312,28 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{reply_to_id || message id}/new-topic?from={message id}`, where `NewTopicLive` fills the
   first message with the author's own message (TP-09); `!schedule` pushes `"open_schedule"`
   with the text not sent yet (never sent text: nothing when sent text was changed), and the
-  dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours. The commands are defined
+  dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours; `!poll` and `!spoiler`
+  send what is new with `then: "poll"` / `"spoiler"` (or push `"open_poll"` / `"spoiler"`
+  for the open message; nothing open asks for the message first). The commands are defined
   once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
+- **Polls** (steward decision, 2026-10-23; `Idejo.Messages.Polls`, `polls`, `poll_options`,
+  `poll_votes`): `!poll`'s dialog (`PollComponents.poll_dialog/1`, `#poll-dialog`) takes a
+  question, 2 to 10 answers, "Allow several answers" and hours like `!schedule` (required,
+  at most 168), for the author's message (one poll each, `create/3`). `PollComponents.poll/1`
+  shows it under the message (under the composer for the author's open message): a form
+  posting `"vote"`; anyone with the post right votes (`Forum.can_post?/2`, not on deleted
+  messages), changes or takes back their vote until `closes_at`. Votes are anonymous; counts
+  (`<progress>` bars) show to voters, the author and, once closed, everyone
+  (`results_shown?/4`). `{:poll, message_id, summary}` goes to the topic after each change,
+  worked out once (NF-01); `Idejo.Messages.PollWorker` (queue `messages`) sends it again at
+  `closes_at`. Votes are rate-limited (`:vote`).
+- **Spoilers** (steward decision, 2026-10-23; `messages.spoiler`,
+  `Messages.set_spoiler/3`, author only, open messages too, broadcast as `{:message, m}`):
+  `TopicLive` covers the body and poll with `.spoiler-cover` (50% opacity, 4px blur) and a
+  "Reveal spoiler" button (80%, 6px; the variables are in `priv/theme/default.css`), the
+  content `inert` until the viewer reveals it (`"reveal_spoiler"`, per view). Only once
+  connected: without JavaScript there is no cover and no `inert`. `Forum.excerpt/2` and
+  search excerpts read "(spoiler)".
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
   server's window), the signs `@ + # / $ !`, and every command from

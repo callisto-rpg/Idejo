@@ -170,7 +170,11 @@ CSS that every page loads after Idejo's own styles, so its rules win: change col
 spacing, or anything else. **Save** applies it as pages load; **Reset to default** brings back
 the stylesheet Idejo came with. The default sets how see-through the cards over a page are
 (`--card-opacity`, `--card-blur`: 70% and 3px) and the welcome card (`--overlay-opacity`,
-`--overlay-blur`: 80% and 6px). Each change is in the audit log.
+`--overlay-blur`: 80% and 6px), and the cover over a **!spoiler** message
+(`--spoiler-opacity`, `--spoiler-blur`: 50% and 4px) with its **Reveal spoiler** button
+(`--spoiler-button-opacity`, `--spoiler-button-blur`: 80% and 6px). A stylesheet saved before
+these existed keeps working: the cover then uses those values anyway. Each change is in the
+audit log.
 
 ## Moderation
 
