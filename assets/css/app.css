@@ -1350,7 +1350,8 @@
   .topic-preview-more { margin-left: 0.5rem; color: var(--ink-faint); font-size: 0.75rem; }
 
   /* The view toggle (steward decision, 2026-10-23): a label, then two links drawn as joined
-     buttons, the chosen one primary (steward decision, 2026-10-24). */
+     buttons, the chosen one primary (steward decision, 2026-10-24). Filter by tag's Operator
+     toggle takes the same classes (steward decision, 2026-10-24). */
   .view-toggle {
     display: inline-flex;
     align-items: center;
@@ -1385,6 +1386,7 @@
   }
   /* "Filter by tag": the tags to choose, grouped by where they belong. */
   .tag-filter { display: grid; gap: 1rem; }
+  .tag-filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; }
   .tag-filter fieldset { display: grid; gap: 0.5rem; }
   .tag-filter legend { margin-bottom: 0.375rem; color: var(--ink-soft); font-size: 0.8125rem; font-weight: 600; }
   .tag-choices { display: flex; flex-wrap: wrap; gap: 0.375rem; }

@@ -214,4 +214,26 @@ defmodule Idejo.ForumTagsTest do
 
     assert Tags.list_tagged_topics(nil, []) == {[], false}
   end
+
+  # The Operator toggle's Or (steward decision, 2026-10-24).
+  @tag req: "TP-19"
+  test "TP-19 filtering with match: :any lists topics carrying at least one of the tags", %{
+    admin: admin,
+    general: general
+  } do
+    a = tag!(admin, "Alpha")
+    b = tag!(admin, "Beta")
+    c = tag!(admin, "Gamma")
+
+    both = topic!(general, "Both", [a, b])
+    only_a = topic!(general, "Only A", [a])
+    only_b = topic!(general, "Only B", [b])
+    _only_c = topic!(general, "Only C", [c])
+
+    {topics, false} = Tags.list_tagged_topics(nil, [a, b], match: :any)
+    assert Enum.map(topics, & &1.id) |> Enum.sort() == Enum.sort([both.id, only_a.id, only_b.id])
+
+    {topics, false} = Tags.list_tagged_topics(nil, [a, b], match: :all)
+    assert Enum.map(topics, & &1.id) == [both.id]
+  end
 end

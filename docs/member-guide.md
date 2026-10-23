@@ -142,7 +142,8 @@ change and keeps no history.
   category has any) and a first message, with **Preview**. Nobody sees it before you post it.
 - **Tags** show under a topic's title and in topic lists. Clicking one opens
   **Filter by tag** (also in the sidebar): tick one or more tags and **Show topics** lists
-  the topics that carry all of them.
+  the topics that carry all of them. **Operator** switches between **And** (all the ticked
+  tags) and **Or** (at least one of them).
 - **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
   may give yourself. You see them once when you join; change your roles there at any time.
 - **Help** (in the sidebar, under Rules & Roles): the keys that send, the signs (`@`, `+`,

@@ -10,6 +10,6 @@ defmodule IdejoWeb.TagHTML do
   embed_templates "tag_html/*"
 
   @doc "The address of another page of the same filter."
-  def page_path(selected, page),
-    do: ~p"/tags?#{%{"tags" => Enum.map(selected, & &1.slug), "page" => page}}"
+  def page_path(selected, op, page),
+    do: ~p"/tags?#{%{"tags" => Enum.map(selected, & &1.slug), "op" => op, "page" => page}}"
 end
