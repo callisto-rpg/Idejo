@@ -10,7 +10,7 @@ defmodule IdejoWeb.SidebarHTML do
 
   def show(assigns) do
     ~H"""
-    <Layouts.sidebar user={@user} current={@current} />
+    <Layouts.sidebar user={@user} current={@current} topic={@topic} />
     <Layouts.unread_link user={@user} />
     """
   end

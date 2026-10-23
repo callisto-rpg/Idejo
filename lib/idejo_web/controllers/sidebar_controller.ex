@@ -8,7 +8,8 @@ defmodule IdejoWeb.SidebarController do
   fetches them when a notification arrives and on a schedule (assets/js/notifier.js), so
   the followed topics, their dots and the count stay current without a page load (steward
   decision, 2026-10-23).
-  `?category=` marks the category the page shows, as the page itself does.
+  `?category=` marks the category the page shows and `?topic=` the topic, as the page itself
+  does (a topic the user may not view is ignored).
   """
   use IdejoWeb, :controller
 
@@ -19,9 +20,17 @@ defmodule IdejoWeb.SidebarController do
         :error -> nil
       end
 
+    user = conn.assigns.current_scope.user
+
+    topic =
+      case Ecto.UUID.cast(params["topic"] || "") do
+        {:ok, id} -> Idejo.Forum.get_viewable_topic(user, id)
+        :error -> nil
+      end
+
     conn
     |> put_root_layout(false)
     |> put_resp_header("cache-control", "no-store")
-    |> render(:show, user: conn.assigns.current_scope.user, current: current)
+    |> render(:show, user: user, current: current, topic: topic)
   end
 end

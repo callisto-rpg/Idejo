@@ -532,10 +532,17 @@ roles or the permission grid. Every later change must keep it true:
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
   categories sidebar (each category with the topics the user follows there,
   `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
-  "N more topics" `<details>`; each with an unfollow × shown on hover or focus, a form to
-  `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to the
-  same-host `Referer`) and the content column (`width={:narrow}` for reading, `:wide` for the
-  home grid and the admin panel; pass `category=` to mark it in the sidebar). The sidebar
+  "N more topics" `<details>`; each with an unfollow ×, faint until pointed at or focused, a
+  form to `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to
+  the same-host `Referer`; long names end in "…", the lists' grid columns being
+  `minmax(0, 1fr)`) and the content column (`width={:narrow}` for reading, `:wide` for the
+  home grid and the admin panel; pass `category=` to mark it in the sidebar, and `topic=` on
+  a topic page). The topic on screen is highlighted (`.sidebar-topic.is-current`,
+  `aria-current`), never folded under "more topics", and listed under its category even
+  when not followed, with a "+" (`POST /t/{id}/follow`, `return=back`) where the × would be;
+  a new message in a sidebar topic makes its name glow (`.sidebar-burn`, half the composer's
+  burn), from a notification or the `"topic_activity"` event `TopicLive` pushes (steward
+  decisions, 2026-10-23). The sidebar
   lists `Forum.list_category_summaries/1` (view right, in the query) in the home page's
   order and sections (`Forum.sections/2`; groups fold away as `<details>`); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
   before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
