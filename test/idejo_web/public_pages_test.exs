@@ -36,7 +36,7 @@ defmodule IdejoWeb.PublicPagesTest do
   end
 
   defp signed_in_paths(%{general: general}) do
-    [~p"/users/settings", ~p"/c/#{general.slug}/new", ~p"/admin", ~p"/notifications"]
+    [~p"/users/settings", ~p"/c/#{general.slug}/new", ~p"/admin"]
   end
 
   defp doc(html), do: LazyHTML.from_document(html)

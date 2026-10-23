@@ -9,7 +9,6 @@ defmodule Idejo.ReactionsTest do
   alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
-  alias Idejo.Notifications
   alias Idejo.Notifications.Notification
   alias Idejo.Reactions
 
@@ -84,36 +83,13 @@ defmodule Idejo.ReactionsTest do
   end
 
   @tag req: "TP-17"
-  test "TP-17 the author gets one notification per message, unread again on new reactions", %{
+  test "TP-17 reactions notify nobody, not even the author", %{
     author: author,
     message: message
   } do
-    ada = user_fixture()
-    bea = user_fixture()
-
-    # Reacting to one's own message notifies nobody.
-    {:ok, _} = Reactions.toggle(author, message, "joy")
+    {:ok, _} = Reactions.toggle(user_fixture(), message, "joy")
+    {:ok, _} = Reactions.toggle(author, message, "heart")
     refute notification(author, message)
-
-    {:ok, _} = Reactions.toggle(ada, message, "joy")
-    {:ok, _} = Reactions.toggle(ada, message, "heart")
-    assert Repo.aggregate(from(n in Notification, where: n.user_id == ^author.id), :count) == 1
-
-    :ok = Notifications.mark_all_read(author)
-    {:ok, _} = Reactions.toggle(bea, message, "joy")
-    assert notification(author, message).read_at == nil
-
-    {[listed], false} = Notifications.list(author)
-    assert listed.kind == "reaction"
-    assert listed.reactions == 3
-
-    assert IdejoWeb.NotificationHTML.headline(listed) ==
-             "Your message in “Picnic” has 3 reactions"
-
-    # When nobody else's reaction is left, the notification goes.
-    for {user, emoji} <- [{ada, "joy"}, {ada, "heart"}, {bea, "joy"}],
-        do: {:ok, _} = Reactions.toggle(user, message, emoji)
-
-    refute notification(author, message)
+    assert Repo.aggregate(Notification, :count) == 0
   end
 end

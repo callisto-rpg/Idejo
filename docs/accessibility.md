@@ -39,7 +39,7 @@ build:
 | Page or action | Result |
 | --- | --- |
 | Tab order on the topic page, as a visitor and as an owner | Logical: skip link, account links, site links, theme, category, then each message (time, @mentions, Moderate, Edit, Report, New topic from this, Reply), the composer, the footer |
-| Visible focus on every stop of home, category, topic, new topic, settings, notifications, search, moderation and every admin page | Outlined everywhere |
+| Visible focus on every stop of home, category, topic, new topic, settings, unread, search, moderation and every admin page | Outlined everywhere |
 | Skip link | First stop; Enter moves the focus to the main content |
 | Signing in | Keyboard only |
 | Composer | Enter sends; Ctrl+Enter inside the window continues the same message |

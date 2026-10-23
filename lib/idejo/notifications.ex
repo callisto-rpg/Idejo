@@ -3,7 +3,9 @@
 
 defmodule Idejo.Notifications do
   @moduledoc """
-  In-app notifications (NO-01, NO-02; in-app only in v0.1).
+  In-app notifications (NO-01, NO-02; in-app only in v0.1). They are shown as the sidebar's
+  dots on followed topics (`Idejo.Reading.activity/2`); there is no notifications page
+  (steward decision, 2026-10-23), so `read_at` is no longer set.
 
   A new message notifies, once each: the users it @mentions (`mention`), the author of the
   message it replies to (TP-08, `reply`), the members of the roles it +mentions (TP-10, when
@@ -12,8 +14,6 @@ defmodule Idejo.Notifications do
   not view the topic. Someone in several of these gets one notification, of the first kind
   in that order. An @mentioned user who may view the topic also follows it,
   unless they unfollowed it before (steward decision, 2026-10-22).
-
-  Reactions (TP-17) notify the message's author once per message (`Idejo.Reactions`).
 
   A growing message notifies once, when it opens (NO-02, GM-13): an append, or an edit,
   notifies only someone newly mentioned. Their earlier notification for that message becomes
@@ -148,87 +148,5 @@ defmodule Idejo.Notifications do
     |> Repo.all()
     |> Enum.filter(&Access.can?(&1, :view, category))
     |> Enum.map(& &1.id)
-  end
-
-  @doc "The number of unread notifications the user may still see."
-  @spec unread_count(User.t() | nil) :: non_neg_integer()
-  def unread_count(nil), do: 0
-
-  def unread_count(%User{} = user) do
-    user |> visible() |> where([n], is_nil(n.read_at)) |> Repo.aggregate(:count)
-  end
-
-  @doc """
-  The user's notifications, unread first, then newest, 30 a page: `{notifications, more?}`.
-  Each comes with its message, the message's author and topic. Notifications for topics the
-  user may no longer view are left out.
-  """
-  @spec list(User.t(), keyword()) :: {[Notification.t()], boolean()}
-  def list(%User{} = user, opts \\ []) do
-    per_page = Keyword.get(opts, :per_page, 30)
-    page = max(Keyword.get(opts, :page, 1), 1)
-
-    rows =
-      user
-      |> visible()
-      |> order_by([n], desc: is_nil(n.read_at), desc: n.updated_at, desc: n.id)
-      |> offset(^((page - 1) * per_page))
-      |> limit(^(per_page + 1))
-      |> preload(message: [:author, :topic])
-      |> Repo.all()
-      |> put_reaction_counts()
-
-    {Enum.take(rows, per_page), length(rows) > per_page}
-  end
-
-  @doc """
-  Marks one of the user's notifications read and returns it with its message, or `nil` when
-  it is not theirs or no longer visible to them.
-  """
-  @spec open(User.t(), String.t()) :: Notification.t() | nil
-  def open(%User{} = user, id) do
-    with {:ok, id} <- Ecto.UUID.cast(id),
-         %Notification{} = notification <-
-           user |> visible() |> where([n], n.id == ^id) |> preload(:message) |> Repo.one() do
-      if notification.read_at,
-        do: notification,
-        else: notification |> Ecto.Changeset.change(read_at: DateTime.utc_now()) |> Repo.update!()
-    else
-      _ -> nil
-    end
-  end
-
-  # TP-17: a reaction notification says how many reactions the message has now.
-  defp put_reaction_counts(rows) do
-    counts =
-      rows
-      |> Enum.filter(&(&1.kind == "reaction"))
-      |> Enum.map(& &1.message_id)
-      |> Idejo.Reactions.counts()
-
-    Enum.map(rows, &%{&1 | reactions: Map.get(counts, &1.message_id, 0)})
-  end
-
-  @doc "Marks all the user's notifications read."
-  @spec mark_all_read(User.t()) :: :ok
-  def mark_all_read(%User{id: user_id}) do
-    Repo.update_all(
-      from(n in Notification, where: n.user_id == ^user_id and is_nil(n.read_at)),
-      set: [read_at: DateTime.utc_now()]
-    )
-
-    :ok
-  end
-
-  defp visible(%User{id: user_id} = user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
-    from n in Notification,
-      join: m in assoc(n, :message),
-      join: t in Topic,
-      on: t.id == m.topic_id,
-      where: n.user_id == ^user_id and t.category_id in subquery(viewable),
-      # MO-02: nothing about a message a moderator deleted.
-      where: is_nil(m.deleted_at)
   end
 end

@@ -367,17 +367,17 @@ roles or the permission grid. Every later change must keep it true:
   (`Search.excerpt/1`), never raw HTML. `/search` (`SearchController`, public, GET form, no
   JavaScript), linked from the header.
 - **Notifications** (NO-01, NO-02, `Idejo.Notifications`, in-app only): one `notifications`
-  row per user and message (`kind`: mention, reply, role_mention, follow, and reaction). A
-  new message notifies the users it @mentions, the author it replies to, the members of the
-  roles it +mentions (`role_mention`, steward decision, 2026-10-23) and the topic's
-  followers, in that priority, never its author or anyone who may not view the topic
-  (`notify_new/2`); an append or an edit notifies only someone newly mentioned, turning
-  their earlier notification for that message into an unread mention when that ranks
-  higher (`notify_mentions/2`). Both run inside the transaction that writes
-  the message; any new way of writing a message must call them. `/notifications`
-  (`NotificationController`, no JavaScript) lists them unread first; `/notifications/{id}`
-  marks one read and redirects to `/m/{id}`. The header link shows the unread count, counted
-  per page render (not live). Notifications for topics the user can no longer view are hidden.
+  row per user and message (`kind`: mention, reply, role_mention, follow; older `reaction`
+  rows stay unused). A new message notifies the users it @mentions, the author it replies
+  to, the members of the roles it +mentions (`role_mention`, steward decision, 2026-10-23)
+  and the topic's followers, in that priority, never its author or anyone who may not view
+  the topic (`notify_new/2`); an append or an edit notifies only someone newly mentioned,
+  turning their earlier notification for that message into an unread mention when that
+  ranks higher (`notify_mentions/2`). Both run inside the transaction that writes the
+  message; any new way of writing a message must call them. They are shown only as the
+  sidebar's dots on followed topics (`Reading.activity/2`): there is no notifications page
+  or bell (steward decision, 2026-10-23, departing from MVP §5's Notifications screen), and
+  `read_at` is no longer set.
 - **Inline links** (TP-10; steward decision, 2026-10-22, replacing "@user only"): every body
   renders through `Idejo.Messages.Body.to_html/2` with its context (`author:`/`author_id:`,
   `category_id:`/`topic_id:`, or `Body.context(message)`; messages, previews, versions),
@@ -471,9 +471,8 @@ roles or the permission grid. Every later change must keep it true:
 - **Reactions** (TP-17, `Idejo.Reactions`): `reactions` rows (message, user, emoji name),
   several emoji per user. `toggle/3` adds or takes back; any signed-in, verified reader who
   may view the topic reacts (not to deleted messages, not in locked or archived topics);
-  rate-limited (`:react`). The author gets one `"reaction"` notification per message
-  ("Your message in … has N reactions", count from `Reactions.counts/1`), unread again on
-  each new reaction by someone else, deleted when none is left. After each change
+  rate-limited (`:react`). Reactions notify nobody (steward decision, 2026-10-23: the
+  Notifications page is gone; older `"reaction"` rows stay unused). After each change
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
   several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions
@@ -502,7 +501,7 @@ roles or the permission grid. Every later change must keep it true:
   `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - **Page frame and look**: `Layouts.app` draws the header bar (server name, search box,
-  Unread, Moderation, the notifications bell, and the account menu: a `<details>` holding
+  Unread, Moderation, and the account menu: a `<details>` holding
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript), the
   categories sidebar (each category with the topics the user follows there,
   `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
@@ -720,7 +719,7 @@ M4 exit check (MVP §7): search finds a message by a word added in its last comm
 (`test/idejo/search_test.exs`, SE-03); a growing message produces one notification
 (`test/idejo/notifications_test.exs`, NO-02).
 Not implemented in M4, left for later:
-- live delivery of the notification count (it is counted per page render);
+- live delivery of the notification count (moot since the bell was removed, 2026-10-23);
 - removing uploads that no message or avatar uses (images inserted, then deleted before
   sending).
 

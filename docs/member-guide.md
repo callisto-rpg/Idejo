@@ -108,8 +108,6 @@ change and keeps no history.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen: first,
   under **Following**, every topic you follow, then the other topics. A message counts once,
   however much it grows.
-- **Notifications**, the bell at the top, shows your mentions, replies to you and new messages in topics you
-  follow.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you
   unfollow them.
 - **Search**, the box at the top, finds words in messages and titles.

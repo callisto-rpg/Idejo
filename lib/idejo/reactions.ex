@@ -10,9 +10,8 @@ defmodule Idejo.Reactions do
   several emoji to one message. Messages deleted by a moderator (MO-02) and topics that are
   locked or archived (read only) take no reactions.
 
-  The author gets one notification per message, of kind `"reaction"` ("Your message in … has
-  N reactions"): it turns unread again when someone else reacts, and goes when no one else's
-  reaction is left. After each change the topic's viewers get
+  Reactions notify nobody: they show under the message (steward decision, 2026-10-23, with
+  the Notifications page gone). After each change the topic's viewers get
   `{:reactions, message_id, summary}`, worked out once (NF-01).
   """
   import Ecto.Query
@@ -23,7 +22,6 @@ defmodule Idejo.Reactions do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Messages.{Message, Reaction}
-  alias Idejo.Notifications.Notification
   alias Idejo.RateLimit
   alias Idejo.Repo
 
@@ -52,13 +50,10 @@ defmodule Idejo.Reactions do
 
         if existing do
           Repo.delete!(existing)
-          forget_notification(message)
         else
           Repo.insert!(%Reaction{message_id: message.id, user_id: user.id, emoji: emoji},
             on_conflict: :nothing
           )
-
-          notify(user, message)
         end
 
         {:ok, summary(message.id)}
@@ -113,64 +108,5 @@ defmodule Idejo.Reactions do
       for emoji <- Enum.reverse(order),
           do: %{emoji: emoji, count: length(users[emoji]), user_ids: users[emoji]}
     end)
-  end
-
-  @doc "How many reactions each of the given messages has, by others than its author."
-  @spec counts([Ecto.UUID.t()]) :: %{Ecto.UUID.t() => non_neg_integer()}
-  def counts([]), do: %{}
-
-  def counts(message_ids) do
-    Repo.all(
-      from r in Reaction,
-        join: m in Message,
-        on: m.id == r.message_id,
-        where: r.message_id in ^message_ids and r.user_id != m.author_id,
-        group_by: r.message_id,
-        select: {r.message_id, count(r.id)}
-    )
-    |> Map.new()
-  end
-
-  # One notification per message for its author; someone else reacting makes it unread again.
-  defp notify(%User{id: user_id}, %Message{author_id: user_id}), do: :ok
-
-  defp notify(_user, message) do
-    now = DateTime.utc_now()
-
-    Repo.insert_all(
-      Notification,
-      [
-        %{
-          id: Ecto.UUID.generate(version: 7),
-          user_id: message.author_id,
-          message_id: message.id,
-          kind: "reaction",
-          created_at: now,
-          updated_at: now
-        }
-      ],
-      on_conflict:
-        from(n in Notification,
-          where: n.kind == "reaction",
-          update: [set: [read_at: nil, updated_at: ^now]]
-        ),
-      conflict_target: [:user_id, :message_id]
-    )
-
-    :ok
-  end
-
-  # When nobody else's reaction is left, the author's notification goes.
-  defp forget_notification(message) do
-    if Map.get(counts([message.id]), message.id, 0) == 0 do
-      Repo.delete_all(
-        from n in Notification,
-          where:
-            n.user_id == ^message.author_id and n.message_id == ^message.id and
-              n.kind == "reaction"
-      )
-    end
-
-    :ok
   end
 end

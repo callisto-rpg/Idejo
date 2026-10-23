@@ -10,7 +10,6 @@ defmodule Idejo.ModerationDeleteEditTest do
   alias Idejo.Messages
   alias Idejo.Moderation
   alias Idejo.Moderation.{Action, Report}
-  alias Idejo.Notifications
   alias Idejo.Reading
   alias Idejo.Search
 
@@ -67,13 +66,13 @@ defmodule Idejo.ModerationDeleteEditTest do
     :ok = Reading.mark_read(reader, topic)
     {:ok, rude} = Forum.post_message(author, topic, %{"body" => "Zebracorn @#{reader.username}"})
     assert {[_], false} = Search.search(reader, "zebracorn")
-    assert Notifications.unread_count(reader) == 1
+    assert Reading.activity(reader, [topic.id]) == %{topic.id => :mention}
     assert Reading.unread_counts(reader, [topic.id]) == %{topic.id => 1}
 
     {:ok, rude} = Messages.delete_as_moderator(moderator, rude)
 
     assert Search.search(reader, "zebracorn") == {[], false}
-    assert Notifications.unread_count(reader) == 0
+    assert Reading.activity(reader, [topic.id]) == %{}
     assert Reading.unread_counts(reader, [topic.id]) == %{}
     assert Moderation.report_message(reader, rude, %{"reason" => "x"}) == {:error, :forbidden}
 

@@ -95,7 +95,6 @@ defmodule IdejoWeb.Layouts do
           <span class="header-link-text">{gettext("Unread")}</span>
         </a>
         <.moderation_link :if={@user} user={@user} />
-        <.notifications_link :if={@user} user={@user} />
       </nav>
 
       <.account_menu current_scope={@current_scope} />
@@ -459,24 +458,6 @@ defmodule IdejoWeb.Layouts do
     <style :if={@nonce && @rules != ""} nonce={@nonce}>
       <%= @rules %>
     </style>
-    """
-  end
-
-  attr :user, :map, required: true
-
-  # NO-01: the Notifications screen, with the unread count. Counted when the layout renders,
-  # so it is current on each page; it does not change live on an open page.
-  defp notifications_link(assigns) do
-    assigns = assign(assigns, :count, Idejo.Notifications.unread_count(assigns.user))
-
-    ~H"""
-    <a href={~p"/notifications"} id="notifications-link" class="header-icon">
-      <.icon name="hero-bell" class="size-5" />
-      <span class="sr-only">{gettext("Notifications")}</span>
-      <span :if={@count > 0} class="header-badge">
-        {@count}<span class="sr-only">{gettext(" unread")}</span>
-      </span>
-    </a>
     """
   end
 

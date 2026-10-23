@@ -5,8 +5,8 @@ defmodule Idejo.Notifications.Notification do
   @moduledoc """
   An in-app notification (NO-01): a message that mentions the user (`mention`), replies to
   them (`reply`), mentions one of their roles (`role_mention`) or was posted in a topic they
-  follow (`follow`); or the reactions to their message (`reaction`). One per user and message
-  (NO-02).
+  follow (`follow`). One per user and message (NO-02). Rows of kind `reaction` are from
+  before reactions stopped notifying (2026-10-23).
   """
   use Ecto.Schema
 
@@ -19,9 +19,6 @@ defmodule Idejo.Notifications.Notification do
     field :read_at, :utc_datetime_usec
     belongs_to :user, Idejo.Accounts.User
     belongs_to :message, Idejo.Messages.Message
-    # TP-17: for a "reaction" notification, how many reactions the message has, set by
-    # `Idejo.Notifications.list/2`.
-    field :reactions, :integer, virtual: true
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end
