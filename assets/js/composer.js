@@ -98,6 +98,11 @@ import {Suggest} from "./suggest"
 // How long text just sent glows before it reads like the rest (matches .composer-burn).
 const BURN_MS = 2200
 
+// Enter three times in a row, nothing typed between and each within this of the last, works
+// as Ctrl+Enter (steward decision, 2026-10-23), so phones, which have no Ctrl, can do it too.
+const ENTER_RUN = 3
+const ENTER_RUN_MS = 1000
+
 // Marks, for each character of `after`, whether it is new since `before`: what a send burns.
 export function burnMarks(before, after) {
   const marks = []
@@ -132,15 +137,17 @@ export const Composer = {
     // After a reload the author's open message is still theirs to continue (GM-12 grace).
     this.restore(this.el.dataset.sent || "")
 
-    this.input.addEventListener("input", () => this.paint())
+    this.input.addEventListener("input", () => {
+      this.enters = 0
+      this.paint()
+    })
     // TP-10: suggestions while typing an inline link; added first, so its Enter picks.
     this.suggest = new Suggest(this.input, this.el.querySelector("[role=listbox]"),
       (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply))
     this.input.addEventListener("keydown", e => {
       if (e.key !== "Enter" || e.isComposing || e.shiftKey) return
       e.preventDefault()
-      // No Ctrl+Enter on touch screens for now (steward decision): their return is Enter.
-      this.send(e.ctrlKey || e.metaKey)
+      this.send(e.ctrlKey || e.metaKey || this.enterRun())
     })
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
@@ -168,6 +175,16 @@ export const Composer = {
     this.input.value = sent + typed
     this.sent = sent
     this.paint()
+  },
+
+  // Counts Enters in a row; true at the third, which then starts the count again.
+  enterRun() {
+    const now = performance.now()
+    this.enters = now - (this.lastEnter ?? -Infinity) <= ENTER_RUN_MS ? (this.enters || 0) + 1 : 1
+    this.lastEnter = now
+    if (this.enters < ENTER_RUN) return false
+    this.enters = 0
+    return true
   },
 
   send(isBreak) {

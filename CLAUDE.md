@@ -13,7 +13,7 @@ affects architecture, conventions, commands or milestone status (DV-01).
 A self-hosted community server: one install hosts one community, organised like a forum
 (categories → topics → messages), where every topic is a live chat. Quick lines sent with
 Enter merge into one **growing message**. The composer is the open message: sent text stays in
-it, and a fixed window (45 s default) only sets how soon the author may start a new message
+it, and a fixed window (15 s default) only sets how soon the author may start a new message
 with Ctrl+Enter, so conversations read like a forum while feeling like a chat.
 
 ## Specifications — the source of truth
@@ -75,7 +75,8 @@ sent first keeps the old text in `message_versions` (GM-11). History is kept onl
 (TP-05): a message that only received appends keeps just its final text, with no versions and
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
 `{:window_ended, id}`. The window length is the
-`gm_window_seconds` setting (default 45, 10–600 s), set in **Admin → Settings** (GM-15, AD-04;
+`gm_window_seconds` setting (default 15, 2–600 s; steward decision, 2026-10-23, departing from
+the specs' 45 s), set in **Admin → Settings** (GM-15, AD-04;
 server-wide only in v0.1, no per-category override); a change applies to messages opened after
 it. Tests set `recover_open_messages: false` and call
 `Idejo.Messages.Recovery.run/0` themselves.
@@ -298,7 +299,9 @@ roles or the permission grid. Every later change must keep it true:
   focus (AX-01). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
-  or reconnect. No Ctrl+Enter on touch screens for now (steward decision).
+  or reconnect. Three Enters in a row, nothing typed between and each within 1 s of the last,
+  work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
+  screens too, which have no Ctrl.
 - **Assistive text** (AX-02, AX-03, GM-07): the open state is never visible, only text.
   `TopicLive` has one hidden live region (`#topic-announcer`, `role="status"`) that announces
   a message when it opens and when it closes (or once, when posted closed), never at appends

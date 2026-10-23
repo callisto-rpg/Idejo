@@ -22,8 +22,9 @@ defmodule IdejoWeb.TopicLive do
   names the keys. It is the author's open message, in place: the messages before it, then
   the composer (under the author's name), then the replies that came after, which push it
   up. With no open message it sits at the end. The `Composer` hook (`assets/js/composer.js`)
-  sends the whole text on Enter, or with `"break"` on Ctrl+Enter, to `Idejo.Messages.commit/4`
-  and keeps it in the box; the reply tells it whether the message closed (GM-05).
+  sends the whole text on Enter, or with `"break"` on Ctrl+Enter or a third Enter in a row,
+  to `Idejo.Messages.commit/4` and keeps it in the box; the reply tells it whether the
+  message closed (GM-05).
 
   **For assistive technology** (AX-02, AX-03) the open state exists only as text: a hidden
   live region announces each message once when it opens and once when it closes, never at
@@ -1489,7 +1490,7 @@ defmodule IdejoWeb.TopicLive do
           aria-label={gettext("Message")}
           aria-describedby="composer-window"
           placeholder={
-            gettext("Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line")
+            gettext("Enter · send | Shift+Enter · new line | Ctrl+Enter or Enter ×3 · new message")
           }
         ></textarea>
         <%!-- TP-10: suggestions while typing @, +, #, / or $ (assets/js/suggest.js). --%>
@@ -1509,13 +1510,13 @@ defmodule IdejoWeb.TopicLive do
           <% @left > 0 -> %>
             {gettext("Your message is open.")}
             {ngettext(
-              "Ctrl+Enter starts a new message in %{count} second.",
-              "Ctrl+Enter starts a new message in %{count} seconds.",
+              "Ctrl+Enter, or Enter three times, starts a new message in %{count} second.",
+              "Ctrl+Enter, or Enter three times, starts a new message in %{count} seconds.",
               @left
             )}
           <% true -> %>
             {gettext("Your message is open.")}
-            {gettext("Ctrl+Enter starts a new message.")}
+            {gettext("Ctrl+Enter, or Enter three times, starts a new message.")}
         <% end %>
       </p>
       <%!-- TP-12: images pasted or dropped into the composer upload through this input; the

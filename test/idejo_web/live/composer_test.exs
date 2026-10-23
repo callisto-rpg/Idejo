@@ -52,7 +52,9 @@ defmodule IdejoWeb.ComposerTest do
     {:ok, lv, _html} = watch(conn, topic)
     composer = lv |> element("#composer") |> render()
 
-    assert composer =~ "Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line"
+    assert composer =~
+             "Enter · send | Shift+Enter · new line | Ctrl+Enter or Enter ×3 · new message"
+
     assert composer =~ "<textarea"
     refute composer =~ "<button"
     refute composer =~ ~r/\d+\s*s\b/
@@ -148,6 +150,17 @@ defmodule IdejoWeb.ComposerTest do
     {:ok, lv, _html} = watch(conn, topic)
     enter(lv, "First line", true)
     assert_reply(lv, %{closed: false, body: "First line."})
+  end
+
+  @tag req: "GM-05"
+  test "GM-05 three Enters in a row work as Ctrl+Enter, on touch screens too" do
+    js = File.read!("assets/js/composer.js")
+    assert js =~ "const ENTER_RUN = 3"
+    assert js =~ "const ENTER_RUN_MS = 1000"
+    # Every Enter counts, whatever the device; typing in between starts the count again.
+    assert js =~ "this.send(e.ctrlKey || e.metaKey || this.enterRun())"
+    assert js =~ ~r/addEventListener\("input", \(\) => \{\s*this.enters = 0/
+    refute js =~ "No Ctrl+Enter on touch screens"
   end
 
   @tag req: "GM-02"

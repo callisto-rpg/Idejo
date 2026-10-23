@@ -42,7 +42,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
 
     assert has_element?(
              lv,
-             ~s(#settings-form input[name="settings[gm_window_seconds]"][value="45"])
+             ~s(#settings-form input[name="settings[gm_window_seconds]"][value="15"])
            )
 
     assert lv
@@ -54,7 +54,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     assert [%{admin_id: admin_id, before: before, after: after_}] = settings_entries()
 
     assert admin_id == admin.id
-    assert before == %{"gm_window_seconds" => 45}
+    assert before == %{"gm_window_seconds" => 15}
     assert after_ == %{"gm_window_seconds" => 90}
   end
 
@@ -63,7 +63,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     {:ok, lv, _html} = live(conn, ~p"/admin")
 
     for {value, error} <- [
-          {"9", "must be greater than or equal to 10"},
+          {"1", "must be greater than or equal to 2"},
           {"601", "must be less than or equal to 600"},
           {"", "is invalid"}
         ] do
@@ -74,7 +74,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
       assert has_element?(lv, "#settings-form p.text-error", error)
     end
 
-    assert Settings.get(:gm_window_seconds) == 45
+    assert Settings.get(:gm_window_seconds) == 15
     assert settings_entries() == []
   end
 
@@ -84,8 +84,8 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     topic: topic
   } do
     early = user_fixture()
-    {:ok, before} = Messages.commit(early, topic, "Opened under 45 s")
-    assert window(before) == 45
+    {:ok, before} = Messages.commit(early, topic, "Opened under 15 s")
+    assert window(before) == 15
 
     {:ok, _} = Settings.update_settings(admin, %{"gm_window_seconds" => "120"})
 
@@ -93,7 +93,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     assert window(late) == 120
 
     # An open message keeps the window fixed at its first commit (GM-03).
-    {:ok, appended} = Messages.commit(early, topic, "Opened under 45 s. Still going")
+    {:ok, appended} = Messages.commit(early, topic, "Opened under 15 s. Still going")
     assert appended.id == before.id
     assert appended.closes_at == before.closes_at
   end

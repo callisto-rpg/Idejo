@@ -53,7 +53,7 @@ defmodule Idejo.Settings do
     smtp_password: %{type: :string, default: "", max: 255, secret: true},
     # Growing messages (GM-03, GM-15): seconds from a message's first commit until its author
     # may start a new one. Server-wide only in v0.1 (MVP); Admin → Settings (AD-04).
-    gm_window_seconds: %{type: :integer, default: 45, required: true, range: 10..600},
+    gm_window_seconds: %{type: :integer, default: 15, required: true, range: 2..600},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},

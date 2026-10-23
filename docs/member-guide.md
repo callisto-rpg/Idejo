@@ -15,6 +15,7 @@ What is different is how you write: **your message grows as you go.**
 | **Enter** | Sends what you wrote. Everyone sees it at once. Keep typing and press Enter again: it joins the **same message**, on the same line. |
 | **Shift+Enter** | A line break, as in any text box. Nothing is sent. |
 | **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
+| **Enter** three times | The same as Ctrl+Enter: press Enter three times in a row, quickly, without typing in between. This is how it works on a phone or tablet, which has no Ctrl. |
 
 The text box below the topic is where you write. Its placeholder repeats the keys.
 
@@ -26,17 +27,16 @@ The text box below the topic is where you write. Its placeholder repeats the key
    message. If your sentence had no punctuation, Idejo adds a full stop.
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
-3. For a short while after your message starts (45 seconds, unless your server changed it),
+3. For a short while after your message starts (15 seconds, unless your server changed it),
    you can only add to it. Nothing shows this to others; it only means that one quick
    thought stays one message.
-4. When you are done, press **Ctrl+Enter**: the message is complete, and your next line
-   starts a new message.
+4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is
+   complete, and your next line starts a new message.
 
 Your message also completes when you leave the topic for more than 30 seconds, when the
 topic is locked, or when a moderator closes it.
 
-**On a phone or tablet** there is no Ctrl+Enter yet: your message keeps growing until you
-leave the topic.
+**On a phone or tablet**, press Enter three times in a row instead of Ctrl+Enter.
 
 ## Changing what you wrote
 
