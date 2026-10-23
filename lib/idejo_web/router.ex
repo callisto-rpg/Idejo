@@ -144,6 +144,8 @@ defmodule IdejoWeb.Router do
     # The welcome card's and "Rules & Roles"' form: self-select roles, card seen.
     post "/welcome", WelcomeController, :update
     post "/t/:id/follow", FollowController, :create
+    # Followed by everyone, for administrators (steward decision, 2026-10-23).
+    post "/t/:id/autofollow", TopicAutofollowController, :update
     delete "/t/:id/follow", FollowController, :delete
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do

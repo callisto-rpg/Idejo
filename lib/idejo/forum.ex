@@ -478,6 +478,42 @@ defmodule Idejo.Forum do
     end)
   end
 
+  ## Followed by everyone (steward decision, 2026-10-23)
+
+  @doc """
+  Marks a topic followed by everyone, or not, as an administrator (owners and
+  administrators; `{:error, :forbidden}` otherwise): every user who may view it follows it
+  unless they unfollow it, and visitors see it followed (`Idejo.Reading`). Audited as
+  `topic.autofollow` (SP-06). A change to what already is does nothing.
+  """
+  @spec set_autofollow(User.t(), Topic.t(), boolean()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def set_autofollow(%User{} = admin, %Topic{} = topic, autofollow) when is_boolean(autofollow) do
+    cond do
+      not Access.administrator?(admin) ->
+        {:error, :forbidden}
+
+      topic.autofollow == autofollow ->
+        {:ok, topic}
+
+      true ->
+        Repo.transact(fn -> save_autofollow(admin, topic, autofollow) end)
+    end
+  end
+
+  defp save_autofollow(admin, topic, autofollow) do
+    with {:ok, updated} <- topic |> Ecto.Changeset.change(autofollow: autofollow) |> Repo.update(),
+         {:ok, _} <-
+           Audit.record(
+             admin,
+             "topic.autofollow",
+             Audit.snapshot(topic, [:title, :autofollow]),
+             Audit.snapshot(updated, [:title, :autofollow])
+           ) do
+      {:ok, updated}
+    end
+  end
+
   ## Moderating topics (TP-14)
 
   @doc """

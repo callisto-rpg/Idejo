@@ -20,6 +20,9 @@ defmodule Idejo.Forum.Topic do
     field :slug, :string
     field :state, :string, default: "open"
     field :pinned, :boolean, default: false
+    # Followed by everyone who may view it, unless they unfollow it (steward decision,
+    # 2026-10-23; Idejo.Reading).
+    field :autofollow, :boolean, default: false
     field :message_count, :integer, default: 0
     field :last_activity_at, :utc_datetime_usec
     belongs_to :category, Idejo.Forum.Category

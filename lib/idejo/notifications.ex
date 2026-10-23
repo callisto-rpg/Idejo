@@ -37,7 +37,7 @@ defmodule Idejo.Notifications do
   def notify_new(%Message{} = message, %Topic{} = topic) do
     {mentioned, role_members} = mentioned(message, topic)
     replied = replied_author(message)
-    followers = followers(topic.id)
+    followers = followers(topic)
 
     kinds =
       Map.new(followers, &{&1, "follow"})
@@ -147,7 +147,19 @@ defmodule Idejo.Notifications do
   defp replied_author(%Message{reply_to_id: id}),
     do: Repo.one(from m in Message, where: m.id == ^id, select: m.author_id)
 
-  defp followers(topic_id),
+  # A topic followed by everyone (steward decision, 2026-10-23): every active user who did
+  # not unfollow it; `may_view/2` then keeps those who may view it.
+  defp followers(%Topic{autofollow: true, id: topic_id}) do
+    unfollowed = from f in Follow, where: f.topic_id == ^topic_id and not f.following
+
+    Repo.all(
+      from u in User,
+        where: u.status == "active" and u.id not in subquery(select(unfollowed, [f], f.user_id)),
+        select: u.id
+    )
+  end
+
+  defp followers(%Topic{id: topic_id}),
     do:
       Repo.all(
         from f in Follow, where: f.topic_id == ^topic_id and f.following, select: f.user_id

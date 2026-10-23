@@ -268,7 +268,7 @@ defmodule IdejoWeb.Layouts do
         sections: sections,
         followed: Enum.group_by(listed, & &1.category_id),
         activity: activity,
-        place: %{topic_id: topic && topic.id, following: following}
+        place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil}
       )
 
     ~H"""
@@ -463,8 +463,9 @@ defmodule IdejoWeb.Layouts do
           class="sr-only"
         >{activity_text(@activity)}</span>
       </a>
+      <%!-- Visitors see the topics followed by everyone, with nothing to follow or unfollow. --%>
       <.form
-        :if={@following?}
+        :if={@place.user? && @following?}
         for={%{}}
         action={~p"/t/#{@topic.id}/follow"}
         method="delete"
@@ -480,7 +481,7 @@ defmodule IdejoWeb.Layouts do
         </button>
       </.form>
       <.form
-        :if={!@following?}
+        :if={@place.user? && !@following?}
         for={%{}}
         action={~p"/t/#{@topic.id}/follow"}
         method="post"

@@ -188,6 +188,12 @@ see who reported it. **Moderation** lists reported messages, the longest waiting
 - **Pin** / **Unpin**: pinned topics stay first in their category.
 - **Move to** another category you moderate. Links keep working.
 
+**Make everyone follow it** (owners and administrators, under the topic's moderation
+form): everyone who may read the topic follows it, including members who join later, and
+visitors see it in their sidebar. It shows a **Followed by everyone** badge. People can
+still unfollow it, and each of them is notified of its new messages as with any topic they
+follow. **Stop making everyone follow it** undoes it for those who never chose themselves.
+
 **Edit tags** (under the title, with the **Edit tags** right): tick the topic's tags, at
 least one, and **Save tags**. Logged like the rest, with the tags before and after.
 
