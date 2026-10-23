@@ -196,6 +196,10 @@ least one, and **Save tags**. Logged like the rest, with the tags before and aft
 - **Close message**: ends someone's open message, as if they had pressed Ctrl+Enter.
 - **Delete message**: readers see "Message deleted by a moderator"; moderators still see the
   text and its history. Its open reports are resolved.
+- **Select multiple messages for deletion**: every message you may delete gets a checkbox
+  (not your own, nor ones already deleted), and a banner at the top reads **Delete all
+  selected messages**. Give a reason if you like and press **Delete selected**; each message
+  is deleted as above and logged on its own.
 - **Edit**: correct someone's message, for example to remove personal data. Earlier
   versions are kept, and moderators see every version of any edited message.
 - **Select to be moved**: every message of the thread gets a checkbox (except its first
