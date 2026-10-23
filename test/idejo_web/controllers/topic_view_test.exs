@@ -40,6 +40,13 @@ defmodule IdejoWeb.TopicViewTest do
                doc |> query("#view-compact[aria-current=true]") |> LazyHTML.attribute("href")
 
       assert Enum.count(query(doc, "#view-expanded:not([aria-current])")) == 1
+
+      # The label sits outside the buttons and names them (steward decision, 2026-10-24).
+      assert texts(doc, "#view-toggle > .view-toggle-label") == ["View"]
+      assert Enum.count(query(doc, "#view-toggle > nav[aria-labelledby=view-toggle-label]")) == 1
+      assert Enum.count(query(doc, "#view-toggle nav > a.btn.join-item")) == 2
+      assert Enum.count(query(doc, "#view-compact.btn-primary")) == 1
+      assert Enum.empty?(query(doc, "#view-expanded.btn-primary"))
       assert Enum.empty?(query(doc, ".topic-preview"))
     end
 
