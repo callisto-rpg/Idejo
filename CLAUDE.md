@@ -228,7 +228,12 @@ roles or the permission grid. Every later change must keep it true:
   `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
   `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's
   file and row are deleted. Show users with `UserComponents.avatar/1` (picture or initial,
-  decorative). The same page changes the password (AC-01, below).
+  decorative). A second, optional picture for the dark theme (`users.avatar_dark_id`,
+  `Accounts.set_avatar(user, path, :dark)`, `remove_avatar(user, :dark)`,
+  `Uploads.dark_avatar_url/1`; steward decision, 2026-10-23) is set under "Dark mode
+  picture", a `<details>` folded until one exists; `avatar/1` then renders both images
+  (lazy, `.avatar-has-dark`) and the stylesheet shows the theme's; with one picture only,
+  both themes show it. The same page changes the password (AC-01, below).
 - **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
   password. The row stays (its `uri` and the records naming it keep working) but is
   anonymised: placeholder email and username that sign-up can never produce, "Deleted user",

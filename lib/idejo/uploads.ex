@@ -93,6 +93,14 @@ defmodule Idejo.Uploads do
   def avatar_url(%User{avatar_id: nil}), do: nil
   def avatar_url(%User{avatar_id: id}), do: "/uploads/#{id}.webp"
 
+  @doc """
+  The public path of a user's avatar for the dark theme, or `nil` when they have none
+  (steward decision, 2026-10-23).
+  """
+  @spec dark_avatar_url(User.t()) :: String.t() | nil
+  def dark_avatar_url(%User{avatar_dark_id: nil}), do: nil
+  def dark_avatar_url(%User{avatar_dark_id: id}), do: "/uploads/#{id}.webp"
+
   @doc "Deletes an upload and its file, e.g. a replaced avatar. Unknown ids do nothing."
   @spec delete(Ecto.UUID.t() | nil) :: :ok
   def delete(nil), do: :ok

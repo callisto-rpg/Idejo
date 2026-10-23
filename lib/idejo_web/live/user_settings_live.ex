@@ -6,8 +6,10 @@ defmodule IdejoWeb.UserSettingsLive do
   Profile and account: the signed-in user changes their display name and avatar (AC-04)
   and password (AC-01), and can delete their account (AC-07).
 
-  The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/2`: a 256 px
-  WebP square without metadata), and can be removed.
+  The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/3`: a 256 px
+  WebP square without metadata), and can be removed. So can a second picture for the dark
+  theme, under "Dark mode picture", folded away until one is set (steward decision,
+  2026-10-23).
   """
   use IdejoWeb, :live_view
 
@@ -29,23 +31,29 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:image_error, nil)
-     |> allow_upload(:avatar,
-       accept: Uploads.extensions(),
-       max_entries: 1,
-       max_file_size: Uploads.max_bytes(),
-       auto_upload: true,
-       progress: &avatar_progress/3
-     )}
+     |> allow_avatar(:avatar)
+     |> allow_avatar(:dark_avatar)}
   end
 
-  # AC-04: a chosen picture becomes the avatar as soon as it has uploaded.
-  defp avatar_progress(:avatar, entry, socket) do
+  defp allow_avatar(socket, name) do
+    allow_upload(socket, name,
+      accept: Uploads.extensions(),
+      max_entries: 1,
+      max_file_size: Uploads.max_bytes(),
+      auto_upload: true,
+      progress: &avatar_progress/3
+    )
+  end
+
+  # AC-04: a chosen picture becomes the avatar (or the dark theme's) as soon as it has uploaded.
+  defp avatar_progress(name, entry, socket) do
     if entry.done? do
       user = socket.assigns.current_scope.user
+      theme = if name == :dark_avatar, do: :dark, else: :light
 
       result =
         consume_uploaded_entry(socket, entry, fn %{path: path} ->
-          {:ok, Accounts.set_avatar(user, path)}
+          {:ok, Accounts.set_avatar(user, path, theme)}
         end)
 
       case result do
@@ -53,7 +61,7 @@ defmodule IdejoWeb.UserSettingsLive do
         {:ok, _user} ->
           {:noreply,
            socket
-           |> put_flash(:info, gettext("Avatar saved."))
+           |> put_flash(:info, saved_text(theme))
            |> redirect(to: ~p"/users/settings")}
 
         {:error, :too_large} ->
@@ -74,6 +82,9 @@ defmodule IdejoWeb.UserSettingsLive do
       {:noreply, socket}
     end
   end
+
+  defp saved_text(:light), do: gettext("Avatar saved.")
+  defp saved_text(:dark), do: gettext("Dark mode picture saved.")
 
   defp password_form(user, changeset \\ nil),
     do: to_form(changeset || Accounts.change_user_password(user), as: :password)
@@ -104,6 +115,18 @@ defmodule IdejoWeb.UserSettingsLive do
 
   def handle_event("validate_avatar", _params, socket),
     do: {:noreply, ImageUploads.check(socket, :avatar)}
+
+  def handle_event("validate_dark_avatar", _params, socket),
+    do: {:noreply, ImageUploads.check(socket, :dark_avatar)}
+
+  def handle_event("remove_dark_avatar", _params, socket) do
+    {:ok, _user} = Accounts.remove_avatar(socket.assigns.current_scope.user, :dark)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, gettext("Dark mode picture removed."))
+     |> redirect(to: ~p"/users/settings")}
+  end
 
   def handle_event("remove_avatar", _params, socket) do
     {:ok, _user} = Accounts.remove_avatar(socket.assigns.current_scope.user)
@@ -211,6 +234,46 @@ defmodule IdejoWeb.UserSettingsLive do
           </button>
         </div>
         <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
+
+        <%!-- Steward decision, 2026-10-23: folded away until there is one. --%>
+        <details
+          id="dark-avatar"
+          class="mt-4"
+          open={@current_scope.user.avatar_dark_id != nil}
+        >
+          <summary class="cursor-pointer text-sm font-medium">{gettext("Dark mode picture")}</summary>
+          <p class="text-sm opacity-70 mt-2 max-w-prose">
+            {gettext(
+              "Shown instead of your avatar to people using the dark theme. Without one, your avatar shows in both themes."
+            )}
+          </p>
+          <div class="flex items-center gap-4 mt-2">
+            <span :if={@current_scope.user.avatar_dark_id} class="avatar shrink-0" aria-hidden="true">
+              <span class="w-12 rounded-full">
+                <img src={Uploads.dark_avatar_url(@current_scope.user)} alt="" />
+              </span>
+            </span>
+            <form
+              id="dark-avatar-form"
+              phx-change="validate_dark_avatar"
+              phx-submit="validate_dark_avatar"
+            >
+              <label class="flex flex-col gap-1 text-sm">
+                <span>{gettext("Choose a picture (JPEG, PNG, GIF or WebP)")}</span>
+                <.live_file_input upload={@uploads.dark_avatar} class="file-input file-input-sm" />
+              </label>
+            </form>
+            <button
+              :if={@current_scope.user.avatar_dark_id}
+              type="button"
+              id="remove-dark-avatar"
+              class="btn btn-sm"
+              phx-click="remove_dark_avatar"
+            >
+              {gettext("Remove dark mode picture")}
+            </button>
+          </div>
+        </details>
       </section>
 
       <section class="mt-10" aria-labelledby="password-heading">

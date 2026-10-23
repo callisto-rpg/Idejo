@@ -406,26 +406,38 @@ defmodule Idejo.Accounts do
 
   @doc """
   Sets the user's avatar from the image at `path` (`Idejo.Uploads.store_avatar/2`), records
-  an `update` activity and deletes the picture it replaces.
+  an `update` activity and deletes the picture it replaces. `:dark` sets the picture shown
+  with the dark theme instead (steward decision, 2026-10-23).
   """
-  @spec set_avatar(User.t(), Path.t()) ::
+  @spec set_avatar(User.t(), Path.t(), :light | :dark) ::
           {:ok, User.t()}
           | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
-  def set_avatar(%User{} = user, path) do
+  def set_avatar(%User{} = user, path, theme \\ :light) when theme in [:light, :dark] do
     with {:ok, upload} <- Uploads.store_avatar(user, path) do
-      Repo.transact(fn -> replace_avatar(user, upload.id) end)
+      Repo.transact(fn -> replace_avatar(user, avatar_field(theme), upload.id) end)
     end
   end
 
-  @doc "Removes the user's avatar; they are shown with their initial again (AC-04)."
-  @spec remove_avatar(User.t()) :: {:ok, User.t()}
-  def remove_avatar(%User{avatar_id: nil} = user), do: {:ok, user}
-  def remove_avatar(%User{} = user), do: Repo.transact(fn -> replace_avatar(user, nil) end)
+  @doc """
+  Removes the user's avatar; they are shown with their initial again (AC-04). `:dark`
+  removes the dark theme's picture: the avatar shows with both themes again.
+  """
+  @spec remove_avatar(User.t(), :light | :dark) :: {:ok, User.t()}
+  def remove_avatar(%User{} = user, theme \\ :light) when theme in [:light, :dark] do
+    field = avatar_field(theme)
 
-  defp replace_avatar(user, avatar_id) do
-    with {:ok, updated} <- user |> Ecto.Changeset.change(avatar_id: avatar_id) |> Repo.update(),
+    if Map.fetch!(user, field),
+      do: Repo.transact(fn -> replace_avatar(user, field, nil) end),
+      else: {:ok, user}
+  end
+
+  defp avatar_field(:light), do: :avatar_id
+  defp avatar_field(:dark), do: :avatar_dark_id
+
+  defp replace_avatar(user, field, upload_id) do
+    with {:ok, updated} <- user |> Ecto.Changeset.change([{field, upload_id}]) |> Repo.update(),
          {:ok, _activity} <- Repo.insert(Federation.activity_changeset(person_update(updated))),
-         :ok <- Uploads.delete(user.avatar_id) do
+         :ok <- Uploads.delete(Map.fetch!(user, field)) do
       {:ok, updated}
     end
   end
@@ -557,12 +569,14 @@ defmodule Idejo.Accounts do
           password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
           confirmed_at: nil,
           status: "deleted",
-          avatar_id: nil
+          avatar_id: nil,
+          avatar_dark_id: nil
         )
         |> Repo.update!()
 
-      # AC-04: the picture goes with the account.
+      # AC-04: the pictures go with the account.
       :ok = Uploads.delete(user.avatar_id)
+      :ok = Uploads.delete(user.avatar_dark_id)
 
       Repo.insert!(
         Federation.activity_changeset(%{

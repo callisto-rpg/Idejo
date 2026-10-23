@@ -27,6 +27,8 @@ defmodule Idejo.Accounts.User do
     field :welcomed_at, :utc_datetime
     # AC-04: the avatar, an upload stored as `<avatar_id>.webp` (Idejo.Uploads.avatar_url/1).
     field :avatar_id, :binary_id
+    # The avatar for the dark theme, optional (steward decision, 2026-10-23).
+    field :avatar_dark_id, :binary_id
     # MO-02: banned since, and until (nil: for good); see Idejo.Accounts.banned?/1.
     field :banned_at, :utc_datetime_usec
     field :banned_until, :utc_datetime_usec
