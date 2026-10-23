@@ -108,6 +108,16 @@ export function insertAtCaret(input, text) {
   input.setSelectionRange(caret, caret)
 }
 
+// What a reloaded page keeps of the text a browser put back in the box: only what followed
+// the open message's text (`sent`, as the server holds it), which was typed and not sent.
+// Anything else, the message itself included, would be shown twice.
+export function keptAfterReload(value, sent) {
+  if (sent === "" || value === "") return ""
+  const start = sent + " "
+  if (value.startsWith(start)) return value.slice(start.length)
+  return value.startsWith(sent) ? value.slice(sent.length).replace(/^ /, "") : ""
+}
+
 import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
 
@@ -150,6 +160,10 @@ export const Composer = {
     this.input = this.el.querySelector("textarea")
     this.backdrop = this.el.querySelector(".composer-backdrop")
     this.sent = ""
+    // A browser may put back what the box held before a reload, although it asks not to
+    // (autocomplete="off"): that is the sent text again, not something typed. Only what
+    // follows the sent text stays, as unsent.
+    this.input.value = keptAfterReload(this.input.value, this.el.dataset.sent || "")
     // After a reload the author's open message is still theirs to continue (GM-12 grace).
     this.restore(this.el.dataset.sent || "")
 

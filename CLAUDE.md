@@ -309,7 +309,9 @@ roles or the permission grid. Every later change must keep it true:
   focus (AX-01). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
-  or reconnect. Three Enters in a row, nothing typed between and each within 1 s of the last,
+  or reconnect; the text box is `autocomplete="off"`, and what a browser still puts back on
+  reload is cut to what followed the sent text (`keptAfterReload/2`), so the message never
+  shows twice. Three Enters in a row, nothing typed between and each within 1 s of the last,
   work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
   screens too, which have no Ctrl.
 - **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the

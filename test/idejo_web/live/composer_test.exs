@@ -239,6 +239,53 @@ defmodule IdejoWeb.ComposerTest do
     assert_push_event(lv, "composer_sent", %{body: "Half a thought."})
   end
 
+  # A browser that puts back what the box held before the reload must not show the message
+  # twice (the sent text, then the same again as unsent).
+  @tag req: "GM-12"
+  test "GM-12 after a reload the open message is in the box once", %{conn: conn, topic: topic} do
+    html = conn |> get(~p"/t/#{topic.id}/chat") |> html_response(200)
+    assert html =~ ~r/<textarea[^>]*class="composer-input"[^>]*autocomplete="off"/
+
+    js = File.read!("assets/js/composer.js")
+    # Before the sent text is put back, what the browser restored is cut to what followed it.
+    assert js =~
+             ~s(this.input.value = keptAfterReload(this.input.value, this.el.dataset.sent || ""\))
+
+    assert [_, mounted] = Regex.run(~r/mounted\(\) \{(.*?)\n  \},/s, js)
+    [before_restore | _] = String.split(mounted, "this.restore(")
+    assert before_restore =~ "keptAfterReload"
+
+    # keptAfterReload/2, mirrored: only text typed after the sent text survives.
+    kept = fn value, sent ->
+      cond do
+        sent == "" or value == "" ->
+          ""
+
+        String.starts_with?(value, sent <> " ") ->
+          String.replace_prefix(value, sent <> " ", "")
+
+        String.starts_with?(value, sent) ->
+          value |> String.replace_prefix(sent, "") |> String.replace_prefix(" ", "")
+
+        true ->
+          ""
+      end
+    end
+
+    assert kept.("Half a thought. ", "Half a thought.") == ""
+    assert kept.("Half a thought. And more", "Half a thought.") == "And more"
+    assert kept.("Half a thought.", "Half a thought.") == ""
+    assert kept.("Something else", "Half a thought.") == ""
+    assert kept.("Typed", "") == ""
+
+    for line <- [
+          ~s{if (sent === "" || value === "") return ""},
+          ~s{if (value.startsWith(start)) return value.slice(start.length)},
+          ~s{return value.startsWith(sent) ? value.slice(sent.length).replace(/^ /, "") : ""}
+        ],
+        do: assert(js =~ line)
+  end
+
   @tag req: "GM-01"
   test "GM-01 a refused commit tells the composer", %{conn: conn, topic: topic} do
     {:ok, lv, _html} = watch(conn, topic)
