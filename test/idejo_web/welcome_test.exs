@@ -127,6 +127,6 @@ defmodule IdejoWeb.WelcomeTest do
 
     {:ok, lv, html} = live(conn, ~p"/admin/roles")
     assert html =~ "members can choose it"
-    assert has_element?(lv, "#new-role-form select[name='role[self_select]']")
+    assert has_element?(lv, "#new-role-form input[type=radio][name='role[self_select]']")
   end
 end

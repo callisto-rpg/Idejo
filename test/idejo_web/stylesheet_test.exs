@@ -11,10 +11,13 @@ defmodule IdejoWeb.StylesheetTest do
   alias Idejo.Settings
   alias IdejoWeb.ThemeController
 
-  test "the default stylesheet: cards at 70% and 3px of blur, overlays at 80% and 6px" do
+  test "the default stylesheet: cards like the menus (70%, 4px of blur), overlays at 80% and 6px" do
     css = Settings.default(:custom_css)
-    assert css =~ "--card-opacity: 70%;"
-    assert css =~ "--card-blur: 3px;"
+    assert css =~ "--menu-opacity: 70%;"
+    assert css =~ "--menu-blur: 4px;"
+    # Steward decision, 2026-10-23: dialog cards follow the menus.
+    assert css =~ "--card-opacity: var(--menu-opacity);"
+    assert css =~ "--card-blur: var(--menu-blur);"
     assert css =~ "--overlay-opacity: 80%;"
     assert css =~ "--overlay-blur: 6px;"
     assert css =~ ~r/\.modal-box \{[^}]*backdrop-filter: blur\(var\(--card-blur\)\)/
@@ -38,7 +41,7 @@ defmodule IdejoWeb.StylesheetTest do
   test "administrators edit, save and reset the stylesheet in Admin → Stylesheet" do
     admin = user_with_role_fixture(:administrator)
     {:ok, lv, html} = live(log_in_user(build_conn(), admin), ~p"/admin/stylesheet")
-    assert html =~ "--card-blur: 3px;"
+    assert html =~ "--card-blur: var(--menu-blur);"
 
     lv
     |> form("#stylesheet-form", theme: %{custom_css: ".brand-name { color: red; }"})

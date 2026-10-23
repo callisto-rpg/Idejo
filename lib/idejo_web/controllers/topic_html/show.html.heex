@@ -130,12 +130,16 @@
       </button>
       <%!-- TP-15: to a category the moderator also moderates. --%>
       <span :if={@move_targets != []} class="flex items-end gap-2">
-        <label>
-          <span class="label mb-1">{gettext("Move to")}</span>
-          <select name="category_id" id="move-target" class="select select-sm">
-            <option :for={category <- @move_targets} value={category.id}>{category.name}</option>
-          </select>
-        </label>
+        <span>
+          <span id="move-target-label" class="label mb-1">{gettext("Move to")}</span>
+          <.dropdown
+            id="move-target"
+            name="category_id"
+            labelled_by="move-target-label"
+            class="is-small"
+            options={Enum.map(@move_targets, &{&1.name, &1.id})}
+          />
+        </span>
         <button name="action" value="move" class="btn btn-sm">{gettext("Move")}</button>
       </span>
       <%!-- Steward decision, 2026-10-23: read only, in the Archive. --%>

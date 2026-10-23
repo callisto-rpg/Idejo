@@ -567,6 +567,17 @@ roles or the permission grid. Every later change must keep it true:
   surface in `app.css`, see-through and blurred by `--menu-opacity` / `--menu-blur` (70%,
   4px) from the server stylesheet (`priv/theme/default.css`); a new menu takes the class.
   The header's glass is its `::before`, so menus in it blur the page under them.
+  **Dropdowns** (steward decision, 2026-10-23): never the system's `<select>`. Use
+  `CoreComponents.dropdown/1` (or `.input type="select"`, which draws it): a `<details>`
+  whose button shows the choice, over a `.popup-menu` of radio buttons with the field's
+  name, so it works without JavaScript and in `phx-change` forms; `assets/js/dropdown.js`
+  closes it on a clicked choice, Enter or Escape and places the list `fixed` so tables and
+  dialogs do not clip it. Name it with `labelled_by` (a visible label's id) or `label`.
+  `test/idejo_web/dropdown_test.exs` fails on any `<select>` in a template. **Arrows**: the
+  account menu and the topic menu are `.has-arrow` (a speech bubble's triangle at
+  `--arrow-x`; the topic menu points it at the click, above or below); dropdowns have none.
+  **Dialog cards** (`.modal-box`) take the menus' look: their `--card-opacity` and
+  `--card-blur` follow `--menu-opacity` and `--menu-blur` in the server stylesheet.
 - **Follow** (TP-13, `Idejo.Reading`): `follows` rows (user, topic, `following`). Starting a
   topic or posting in it follows it (`Reading.auto_follow/2` inside the transaction that
   writes the message); an explicit unfollow stays as `following: false`, so posting again does

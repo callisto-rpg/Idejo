@@ -16,19 +16,16 @@
       <span class="label mb-1">{gettext("Words to find")}</span>
       <input type="search" name="q" value={@q} class="input w-full" id="search-q" />
     </label>
-    <label>
-      <span class="label mb-1">{gettext("Category")}</span>
-      <select name="category" class="select" id="search-category">
-        <option value="">{gettext("All categories")}</option>
-        <option
-          :for={category <- @categories}
-          value={category.slug}
-          selected={@category && @category.id == category.id}
-        >
-          {category.name}
-        </option>
-      </select>
-    </label>
+    <div>
+      <span id="search-category-label" class="label mb-1">{gettext("Category")}</span>
+      <.dropdown
+        id="search-category"
+        name="category"
+        labelled_by="search-category-label"
+        options={[{gettext("All categories"), ""} | Enum.map(@categories, &{&1.name, &1.slug})]}
+        value={@category && @category.slug}
+      />
+    </div>
     <button class="btn btn-primary">{gettext("Search")}</button>
   </form>
 

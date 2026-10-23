@@ -48,6 +48,6 @@ defmodule IdejoWeb.RoleMentionsTest do
     # Member and guest offer no mention settings.
     member = Access.built_in_role!(:member)
     lv |> element("#role-#{member.id} button", "Edit") |> render_click()
-    refute has_element?(lv, "#edit-role-#{member.id} select")
+    refute has_element?(lv, "#edit-role-#{member.id} .dropdown-select")
   end
 end

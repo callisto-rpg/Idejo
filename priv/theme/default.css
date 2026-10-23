@@ -10,17 +10,19 @@
  */
 
 :root {
-  /* Cards over the page: a user's card, moderation, the emoji picker, moving messages. */
-  --card-opacity: 70%;
-  --card-blur: 3px;
+  /* Menus: the account menu, a topic's menu (right click or long press), the dropdowns,
+     and any later one. */
+  --menu-opacity: 70%;
+  --menu-blur: 4px;
+
+  /* Cards over the page (a user's card, moderation, the emoji picker, moving messages,
+     dialogs) look like the menus; give them values of their own to set them apart. */
+  --card-opacity: var(--menu-opacity);
+  --card-blur: var(--menu-blur);
 
   /* Other overlays: the welcome card (Rules & Roles). */
   --overlay-opacity: 80%;
   --overlay-blur: 6px;
-
-  /* Menus: the account menu, a topic's menu (right click or long press), and any later one. */
-  --menu-opacity: 70%;
-  --menu-blur: 4px;
 
   /* !spoiler: the cover over a hidden message, and its Reveal button. */
   --spoiler-opacity: 50%;

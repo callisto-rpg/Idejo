@@ -150,7 +150,7 @@ defmodule IdejoWeb.Layouts do
     ~H"""
     <div
       id="topic-menu"
-      class="popup-menu topic-menu"
+      class="popup-menu topic-menu has-arrow"
       role="menu"
       aria-label={gettext("Topic")}
       phx-update="ignore"
@@ -244,7 +244,7 @@ defmodule IdejoWeb.Layouts do
             <span class="account-name">{@current_scope.user.display_name}</span>
             <.icon name="hero-chevron-down-micro" class="size-4 opacity-60" />
           </summary>
-          <div class="account-panel popup-menu">
+          <div class="account-panel popup-menu has-arrow arrow-right">
             <p class="account-panel-who">
               <span class="font-medium">{@current_scope.user.display_name}</span>
               <span class="opacity-60">@{@current_scope.user.username}</span>

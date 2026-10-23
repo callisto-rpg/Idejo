@@ -64,8 +64,8 @@ defmodule IdejoWeb.ForkTest do
     assert html =~ "Who brings bread?"
     assert has_element?(lv, ~s(#forked-from a[href="/m/#{source.id}"]))
     # The source's category comes first; the user may pick another they can start in.
-    assert has_element?(lv, "#topic_category_id option[selected]", "General")
-    assert has_element?(lv, "#topic_category_id option", "Help")
+    assert has_element?(lv, "#topic_category_id label:has(input[checked])", "General")
+    assert has_element?(lv, "#topic_category_id label", "Help")
 
     {:ok, conn} =
       lv

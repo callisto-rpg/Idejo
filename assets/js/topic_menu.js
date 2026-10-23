@@ -9,6 +9,9 @@
 // focus goes back where it was.
 
 const LONG_PRESS_MS = 500
+// Where the arrow sits from the menu's left, and how far the menu stands from the point.
+const ARROW_X = 16
+const ARROW_GAP = 10
 const MOVE_TOLERANCE = 10
 
 const menu = () => document.getElementById("topic-menu")
@@ -35,10 +38,17 @@ export function open(row, x, y) {
 
   opener = document.activeElement
   el.hidden = false
+  // Its arrow points at (x, y): under the point, or above it when there is no room below.
   // Kept inside the window; set through the DOM, never a style attribute (SP-05).
   const {width, height} = el.getBoundingClientRect()
-  el.style.left = `${Math.max(8, Math.min(x, innerWidth - width - 8))}px`
-  el.style.top = `${Math.max(8, Math.min(y, innerHeight - height - 8))}px`
+  const left = Math.max(8, Math.min(x - ARROW_X, innerWidth - width - 8))
+  const below = y + ARROW_GAP + height <= innerHeight - 8
+  const top = below ? y + ARROW_GAP : Math.max(8, y - ARROW_GAP - height)
+  el.style.left = `${left}px`
+  el.style.top = `${top}px`
+  el.style.setProperty("--arrow-x", `${Math.max(14, Math.min(x - left, width - 14))}px`)
+  if (below) delete el.dataset.arrow
+  else el.dataset.arrow = "bottom"
   items(el)[0]?.focus()
   return true
 }
