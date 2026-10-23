@@ -18,7 +18,7 @@ The twelve open questions from the feature list are settled as follows; each dec
 
 | Question | Decision |
 | --- | --- |
-| Growing-message window | The window only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it, and it is not shown. No size limit on a growing message. Default window 45 s, adjustable server-wide and per category. |
+| Growing-message window | The window only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it, and it is not shown. No size limit on a growing message. Default window 15 s, adjustable server-wide and per category. |
 | Editing an open message | Allowed, in the same composer: sent text stays in it, shown in higher contrast than unsent text, and the author can go back into it at any time. After Enter, typing simply carries on, like editing a message inline in Discord. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
 | Line break key | Shift+Enter inserts a line break; Enter sends what changed and keeps typing on the same line; Ctrl+Enter sends and continues on a new line, or starts a new message once the window has ended. |
 | When a topic stops being live | Optional auto-archive after 65 days of inactivity by default; period editable in server-wide settings. |
@@ -78,7 +78,7 @@ The composer has no chrome: only the text box, with placeholder text that names 
 
 The composer sits in the topic at the place of the author’s open message. Replies from other members appear below it, so the composer moves up as the conversation continues; with no open message, it sits at the end of the topic.
 
-A fixed window (45 s by default) starts at the first commit. It does not end the message: it only sets how soon the author may start a new one. After the window the author is still typing in the same message until they choose to start a new one. The window is not extended by appends, and a message has no size limit.
+A fixed window (15 s by default) starts at the first commit. It does not end the message: it only sets how soon the author may start a new one. After the window the author is still typing in the same message until they choose to start a new one. The window is not extended by appends, and a message has no size limit.
 
 &#91;embedded content: message states · compose, open, closed\]
 
@@ -105,7 +105,7 @@ A fixed window (45 s by default) starts at the first commit. It does not end the
 | GM-12 | An open message also closes when its topic is locked or archived, or when the author’s session disconnects | Must |
 | GM-13 | Notifications, unread counts, search, feeds and webhooks treat a growing message as one item (see sections 10, 11, 15) | Must |
 | GM-14 | The first message of a topic is never live: it is composed privately and posted closed (see TP-02) | Must |
-| GM-15 | Window length set server-wide (default 45 s) with a per-category override; consolidation can be switched off per category | Must |
+| GM-15 | Window length set server-wide (default 15 s) with a per-category override; consolidation can be switched off per category | Must |
 | GM-16 | Moderators can close another user’s open message | Should |
 
 ## 6. Topics
@@ -242,7 +242,7 @@ After a one-command install, everything day-to-day is done in the web admin pane
 | AD-01 | One-command install with containers (app, database, reverse proxy with automatic certificates); first-run wizard creates the owner account | Must |
 | AD-02 | Web admin panel for settings, users, roles, categories, emoji, storage, email, appearance and legal pages | Must |
 | AD-03 | Auto-archive setting: off by default; when on, a topic with no new message for 65 days becomes archived (read-only, still searchable). The period is editable in server-wide settings; moderators can reopen a topic | Must |
-| AD-04 | Growing-message window: server default (45 s) and per-category override (GM-15) | Must |
+| AD-04 | Growing-message window: server default (15 s) and per-category override (GM-15) | Must |
 | AD-05 | Scheduled backups to local disk or S3-compatible storage; restore from the admin panel or command line | Must |
 | AD-06 | In-place upgrades with automatic database migrations and an automatic backup first | Must |
 | AD-07 | File storage on local disk or S3-compatible storage, with per-user quotas | Must |

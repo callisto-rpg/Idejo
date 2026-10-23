@@ -24,7 +24,7 @@ v0.1 keeps the complete growing-message behaviour and a minimal version of every
 | --- | --- | --- |
 | Structure | One level of categories; public, members-only or role-restricted | Sub-categories, landing page, category templates |
 | Topics | Create, live conversation, inline replies, fork to new topic, @user mentions, images, lock, pin, move | Role/@here mentions, file attachments, link previews, reactions, solutions, tags, polls, merge and split, presence |
-| Growing messages | All rules, 45 s server-wide window | Per-category window or switch-off (GM-15) |
+| Growing messages | All rules, 15 s server-wide window | Per-category window or switch-off (GM-15) |
 | Roles and permissions | Built-in roles, custom roles, per-category allow/deny per role for four rights | Per-user overrides, “view as”, delegated management, automatic and timed roles |
 | Accounts | Email sign-up (open or invite-only), password reset, guest reading, self-deletion | Two-factor, passkeys, SSO, data export, trust levels, profile fields |
 | Moderation | Reports, delete, edit, lock, close open message, ban, action log | Automod, approval queue, raid protection, appeals |
@@ -41,8 +41,8 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 
 | ID | v0.1 form |
 | --- | --- |
-| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 45 s window not reset by appends that only limits when a new message can start, Ctrl+Enter new line or new message, Shift+Enter line break, `. ` added after unpunctuated text, no size limit, no visible open-state chrome, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
-| GM-15 | Window length set server-wide only (default 45 s) |
+| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 15 s window not reset by appends that only limits when a new message can start, Ctrl+Enter new line or new message, Shift+Enter line break, `. ` added after unpunctuated text, no size limit, no visible open-state chrome, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
+| GM-15 | Window length set server-wide only (default 15 s) |
 | GM-16 | As v1: moderators can close an open message |
 | TP-01, TP-02 | As v1: title, first message (tags come later) |
 | TP-03 | Topic list with title, starter, message count, last activity, unread marker; pinned first |
@@ -100,7 +100,7 @@ Three flows cover everything the pilot must do; each becomes an end-to-end test.
 
 **Live conversation**
 
-1. A member opens the topic and presses Enter after a first line: the message appears for everyone. The sent text stays in the composer, in higher contrast, with `. ` added; the 45 s window starts, unseen.
+1. A member opens the topic and presses Enter after a first line: the message appears for everyone. The sent text stays in the composer, in higher contrast, with `. ` added; the 15 s window starts, unseen.
 2. They keep typing as in any chat and pressing Enter; each part joins the same message on the same line. Ctrl+Enter continues on a new line of the same message. Another member replies meanwhile; the reply appears below the author’s composer, which moves up and keeps growing.
 3. The author fixes a typo in an earlier line, right in the composer; the changed text shows as unsent until Enter, then a discreet “view earlier version” tag appears.
 4. The window ends: the author is still typing in the same message and Enter still adds to it. Only now does Ctrl+Enter close it and start a new message on a new line.
@@ -147,7 +147,7 @@ PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` w
 | activities | id, actor\_uri, verb, object\_uri, target\_uri, payload, created\_at | Outbox for future federation (FD-02) |
 | invites | code, created\_by, used\_by, expires\_at |  |
 | uploads | id, user\_id, path, mime, size, created\_at | Images only |
-| settings | key, value | e.g. `gm_window_seconds = 45`, registration mode, SMTP |
+| settings | key, value | e.g. `gm_window_seconds = 15`, registration mode, SMTP |
 
 ## 7. Build plan
 
