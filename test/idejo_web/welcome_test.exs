@@ -115,6 +115,29 @@ defmodule IdejoWeb.WelcomeTest do
     assert redirected_to(conn) == ~p"/"
   end
 
+  # Steward decision, 2026-10-24: on the page, About and Rules look like page titles (still
+  # h2: one h1 a page); in the welcome card they stay small labels.
+  test "Rules & Roles: About and Rules styled as the page's title; the card keeps its labels" do
+    doc = build_conn() |> get(~p"/rules") |> html_response(200) |> LazyHTML.from_document()
+    assert Enum.count(LazyHTML.query(doc, "h1")) == 1
+
+    assert doc
+           |> LazyHTML.query("h2.heading-h1")
+           |> Enum.map(&LazyHTML.text/1)
+           |> Enum.map(&String.trim/1) ==
+             ["About", "Rules"]
+
+    card =
+      log_in_user(build_conn(), user_fixture(%{welcome: true}))
+      |> get(~p"/")
+      |> html_response(200)
+
+    assert card =~ ~r/<h3[^>]*class="welcome-heading"[^>]*>\s*About/
+
+    css = File.read!("assets/css/app.css")
+    assert css =~ ".page-intro h1,\n  .heading-h1 { font-size: 1.5rem;"
+  end
+
   test "administrators write About and Rules, and mark roles self-select", %{admin: admin} do
     conn = log_in_user(build_conn(), admin)
     {:ok, lv, _html} = live(conn, ~p"/admin")
