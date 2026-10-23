@@ -124,6 +124,8 @@ defmodule IdejoWeb.Router do
 
     # TP-07: topics with something new across categories, no JavaScript needed.
     get "/unread", UnreadController, :index
+    # The sidebar alone, brought up to date by the Notifier hook (steward decision, 2026-10-23).
+    get "/sidebar", SidebarController, :show
     # MO-01, MO-03: the report queue and the moderation log, for moderators.
     get "/moderation", ModerationController, :index
     post "/moderation/reports/:message_id", ModerationController, :handle_reports

@@ -819,7 +819,7 @@ defmodule IdejoWeb.TopicLive do
       )
 
     ~H"""
-    <div id="topic-live" phx-hook="InlineLinks">
+    <div id="topic-live" phx-hook="InlineLinks" data-topic-id={@topic && @topic.id}>
       <dialog
         :if={@card}
         id="inline-card"

@@ -94,7 +94,8 @@ change and keeps no history.
   page (click a group's name to fold it away), and under each one the topics you follow there, in the order you joined them. Past four,
   **N more topics** shows the rest. A dot before a topic means something new since you last
   opened it: grey for new messages, blue when one of your `+roles` was mentioned, orange for
-  a reply to you, red when you were mentioned (`@you`). The **×** next to a topic (shown when you point at it)
+  a reply to you, red when you were mentioned (`@you`). The sidebar keeps itself up to date
+  while the page is open. The **×** next to a topic (shown when you point at it)
   unfollows it. The button at the top left hides the sidebar, and your browser remembers;
   on a phone the same button opens it, and so does a swipe to the right (a swipe to the left
   closes it).
@@ -105,6 +106,11 @@ change and keeps no history.
   the topics that carry all of them.
 - **Rules & Roles** (in the sidebar): what this server is about, its rules, and the roles you
   may give yourself. You see them once when you join; change your roles there at any time.
+- **Bubbles** appear at the top right as things happen: a new message in a topic you follow
+  (grey), one of your `+roles` mentioned (blue), a reply to you (orange), you mentioned
+  (red), a reaction to your message (purple). Each stays ten seconds (pointing at it pauses
+  it); click it to go to the message, or × to dismiss it. Nothing bubbles about the topic
+  you are reading.
 - **Unread** (in the bar at the top) lists topics with messages you have not seen: first,
   under **Following**, every topic you follow, then the other topics. A message counts once,
   however much it grows.

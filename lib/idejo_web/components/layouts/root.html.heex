@@ -37,5 +37,9 @@
       {gettext("Skip to content")}
     </a>
     {@inner_content}
+    <%!-- Live notifications: bubbles and the sidebar kept current (steward decision,
+      2026-10-23). A LiveView of its own outside the page's main one, so live navigation
+      keeps it. --%>
+    {assigns[:current_scope] && @current_scope.user && live_render(@conn, IdejoWeb.NotifierLive)}
   </body>
 </html>

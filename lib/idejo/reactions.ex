@@ -10,8 +10,9 @@ defmodule Idejo.Reactions do
   several emoji to one message. Messages deleted by a moderator (MO-02) and topics that are
   locked or archived (read only) take no reactions.
 
-  Reactions notify nobody: they show under the message (steward decision, 2026-10-23, with
-  the Notifications page gone). After each change the topic's viewers get
+  Reactions store no notification: they show under the message (steward decision,
+  2026-10-23, with the Notifications page gone), and the author gets a live bubble
+  (`Idejo.Notifications.announce_reaction/3`). After each change the topic's viewers get
   `{:reactions, message_id, summary}`, worked out once (NF-01).
   """
   import Ecto.Query
@@ -22,6 +23,7 @@ defmodule Idejo.Reactions do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Messages.{Message, Reaction}
+  alias Idejo.Notifications
   alias Idejo.RateLimit
   alias Idejo.Repo
 
@@ -44,7 +46,7 @@ defmodule Idejo.Reactions do
   end
 
   defp save(user, message, emoji) do
-    {:ok, summary} =
+    {:ok, {summary, added?}} =
       Repo.transact(fn ->
         existing = Repo.get_by(Reaction, message_id: message.id, user_id: user.id, emoji: emoji)
 
@@ -56,10 +58,12 @@ defmodule Idejo.Reactions do
           )
         end
 
-        {:ok, summary(message.id)}
+        {:ok, {summary(message.id), is_nil(existing)}}
       end)
 
     Messages.broadcast(message.topic_id, {:reactions, message.id, summary})
+    # A bubble for the author, live only (steward decision, 2026-10-23).
+    if added?, do: Notifications.announce_reaction(user, message, Emoji.lookup(emoji))
     {:ok, summary}
   end
 
