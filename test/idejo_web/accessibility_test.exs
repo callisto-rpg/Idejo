@@ -140,7 +140,6 @@ defmodule IdejoWeb.AccessibilityTest do
     assert_all_accessible(conn, [
       ~p"/",
       ~p"/unread",
-      ~p"/notifications",
       ~p"/users/settings",
       ~p"/c/#{general.slug}/new",
       ~p"/m/#{reply.id}/new-topic",

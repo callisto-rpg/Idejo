@@ -9,7 +9,6 @@ defmodule Idejo.NotificationsTest do
   alias Idejo.Access
   alias Idejo.Forum
   alias Idejo.Messages
-  alias Idejo.Notifications
   alias Idejo.Notifications.Notification
   alias Idejo.Reading
 
@@ -85,9 +84,7 @@ defmodule Idejo.NotificationsTest do
 
     assert kinds(open) == %{bo.id => "mention", cy.id => "mention"}
 
-    # Read, it stays read when later appends mention Bo again.
-    :ok = Notifications.mark_all_read(bo)
-
+    # Later appends that mention Bo again add nothing.
     {:ok, _} =
       Messages.commit(
         ada,
@@ -95,7 +92,6 @@ defmodule Idejo.NotificationsTest do
         "First line. More 10. Hey @#{bo.username} and @#{cy.username}. @#{bo.username}!"
       )
 
-    assert Notifications.unread_count(bo) == 0
     assert Repo.aggregate(from(n in Notification, where: n.user_id == ^bo.id), :count) == 1
   end
 
@@ -133,11 +129,6 @@ defmodule Idejo.NotificationsTest do
 
     assert kinds(message) == %{ada.id => "reply", cy.id => "role_mention"}
 
-    {[cy_notification], false} = Notifications.list(cy)
-
-    assert IdejoWeb.NotificationHTML.headline(cy_notification) ==
-             "Bo mentioned one of your roles in “Plans”"
-
     # A ping added to a growing message turns a follow into a role mention, and nothing else.
     dee = user_fixture()
     :ok = Access.grant_role(dee, crew)
@@ -163,16 +154,13 @@ defmodule Idejo.NotificationsTest do
     topic: topic
   } do
     :ok = Reading.follow(bo, topic)
-    {:ok, _} = Forum.post_message(ada, topic, %{"body" => "Before"})
-    assert Notifications.unread_count(bo) == 1
+    {:ok, before} = Forum.post_message(ada, topic, %{"body" => "Before"})
+    assert kinds(before) == %{bo.id => "follow"}
 
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:member), general, :view, :deny)
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:guest), general, :view, :deny)
 
     {:ok, after_} = Forum.post_message(ada, topic, %{"body" => "After, @#{bo.username}"})
     assert kinds(after_) == %{}
-    # And earlier ones are no longer shown.
-    assert Notifications.unread_count(bo) == 0
-    assert {[], false} = Notifications.list(bo)
   end
 end

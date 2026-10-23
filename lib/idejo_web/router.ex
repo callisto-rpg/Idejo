@@ -124,10 +124,6 @@ defmodule IdejoWeb.Router do
 
     # TP-07: topics with something new across categories, no JavaScript needed.
     get "/unread", UnreadController, :index
-    # NO-01: the Notifications screen (MVP §5).
-    get "/notifications", NotificationController, :index
-    post "/notifications/read", NotificationController, :read_all
-    get "/notifications/:id", NotificationController, :show
     # MO-01, MO-03: the report queue and the moderation log, for moderators.
     get "/moderation", ModerationController, :index
     post "/moderation/reports/:message_id", ModerationController, :handle_reports
