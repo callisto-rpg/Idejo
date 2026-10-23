@@ -136,12 +136,14 @@ defmodule Idejo.Reading do
 
   @doc """
   What is new for the user in each of the given topics, for the dots of the sidebar (steward
-  decision, 2026-10-23), as `%{topic_id => :new | :reply | :mention}`; topics with nothing
-  unread are left out. Among the unread messages (`unread_counts/2`'s): `:mention` when one
-  @mentions or +mentions the user, else `:reply` when one replies to them, else `:new`. Read
-  from their notifications (NO-01), so the strongest wins.
+  decision, 2026-10-23), as `%{topic_id => :new | :role_mention | :reply | :mention}`; topics
+  with nothing unread are left out. Among the unread messages (`unread_counts/2`'s):
+  `:mention` when one @mentions the user, else `:reply` when one replies to them, else
+  `:role_mention` when one +mentions one of their roles, else `:new`. Read from their
+  notifications (NO-01), so the strongest wins.
   """
-  @spec activity(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => :new | :reply | :mention}
+  @spec activity(User.t() | nil, [Ecto.UUID.t()]) ::
+          %{Ecto.UUID.t() => :new | :role_mention | :reply | :mention}
   def activity(nil, _topic_ids), do: %{}
   def activity(_user, []), do: %{}
 
@@ -157,14 +159,14 @@ defmodule Idejo.Reading do
       m.topic_id,
       max(
         fragment(
-          "CASE ? WHEN 'mention' THEN 3 WHEN 'reply' THEN 2 ELSE 1 END",
+          "CASE ? WHEN 'mention' THEN 4 WHEN 'reply' THEN 3 WHEN 'role_mention' THEN 2 ELSE 1 END",
           n.kind
         )
       )
     })
     |> Repo.all()
     |> Map.new(fn {topic_id, level} ->
-      {topic_id, Enum.at([:new, :reply, :mention], level - 1)}
+      {topic_id, Enum.at([:new, :role_mention, :reply, :mention], level - 1)}
     end)
   end
 

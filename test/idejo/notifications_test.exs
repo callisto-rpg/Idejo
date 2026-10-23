@@ -111,6 +111,50 @@ defmodule Idejo.NotificationsTest do
   end
 
   @tag req: "NO-01"
+  test "NO-01 a +role mention is its own kind, below a reply, above a follow", %{
+    admin: admin,
+    ada: ada,
+    bo: bo,
+    cy: cy,
+    topic: topic
+  } do
+    [first] = Forum.list_messages(topic)
+
+    {:ok, crew} =
+      Access.create_role(admin, %{"name" => unique_role_name("Crew"), "mentionable" => "true"})
+
+    for user <- [ada, cy], do: :ok = Access.grant_role(user, crew)
+    :ok = Reading.follow(cy, topic)
+    ping = "+#{Access.role_slug(crew)}"
+
+    # Ada is replied to and her role pinged: a reply. Cy follows and holds the role.
+    {:ok, message} =
+      Forum.post_message(bo, topic, %{"body" => "Who comes? #{ping}", "reply_to_id" => first.id})
+
+    assert kinds(message) == %{ada.id => "reply", cy.id => "role_mention"}
+
+    {[cy_notification], false} = Notifications.list(cy)
+
+    assert IdejoWeb.NotificationHTML.headline(cy_notification) ==
+             "Bo mentioned one of your roles in “Plans”"
+
+    # A ping added to a growing message turns a follow into a role mention, and nothing else.
+    dee = user_fixture()
+    :ok = Access.grant_role(dee, crew)
+    :ok = Reading.follow(dee, topic)
+    {:ok, open} = Messages.commit(bo, topic, "Bring chairs")
+    assert kinds(open)[dee.id] == "follow"
+
+    {:ok, open} = Messages.commit(bo, topic, "Bring chairs. #{ping}")
+    assert kinds(open)[dee.id] == "role_mention"
+    assert kinds(open)[ada.id] == "role_mention"
+
+    # An @mention added later still wins.
+    {:ok, open} = Messages.commit(bo, topic, "Bring chairs. #{ping} @#{dee.username}")
+    assert kinds(open)[dee.id] == "mention"
+  end
+
+  @tag req: "NO-01"
   test "NO-01 nobody is notified of a topic they may not view", %{
     admin: admin,
     ada: ada,

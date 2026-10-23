@@ -368,15 +368,22 @@ defmodule IdejoWeb.Layouts do
   end
 
   attr :topic, :map, required: true
-  attr :activity, :atom, default: nil, doc: "nil, :new, :reply or :mention (Reading.activity/2)"
+
+  attr :activity, :atom,
+    default: nil,
+    doc: "nil, :new, :role_mention, :reply or :mention (Reading.activity/2)"
 
   # One followed topic, with an unfollow button shown on hover or focus (TP-13). A plain form
   # post: FollowController leads back to the page it came from. Something new there shows as
-  # a dot, grey, orange for a reply to the user, red for a mention, and a stronger name.
+  # a dot, grey, blue for a mention of one of the user's roles, orange for a reply to the
+  # user, red for a mention of them, and a stronger name.
   defp followed_topic(assigns) do
     ~H"""
     <li class={["sidebar-topic", @activity && "has-news"]}>
-      <span class={["sidebar-dot", @activity && "is-#{@activity}"]} aria-hidden="true"></span>
+      <span
+        class={["sidebar-dot", @activity && "is-#{String.replace(to_string(@activity), "_", "-")}"]}
+        aria-hidden="true"
+      ></span>
       <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="sidebar-topic-link">
         <span class="sidebar-topic-name">{@topic.title}</span><span
           :if={@activity}
@@ -403,6 +410,7 @@ defmodule IdejoWeb.Layouts do
   end
 
   defp activity_text(:new), do: gettext(" (new messages)")
+  defp activity_text(:role_mention), do: gettext(" (one of your roles was mentioned)")
   defp activity_text(:reply), do: gettext(" (a reply to you)")
   defp activity_text(:mention), do: gettext(" (you were mentioned)")
 

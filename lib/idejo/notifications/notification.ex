@@ -3,8 +3,10 @@
 
 defmodule Idejo.Notifications.Notification do
   @moduledoc """
-  An in-app notification (NO-01): a message that mentions the user, replies to them, or was
-  posted in a topic they follow. One per user and message (NO-02).
+  An in-app notification (NO-01): a message that mentions the user (`mention`), replies to
+  them (`reply`), mentions one of their roles (`role_mention`) or was posted in a topic they
+  follow (`follow`); or the reactions to their message (`reaction`). One per user and message
+  (NO-02).
   """
   use Ecto.Schema
 

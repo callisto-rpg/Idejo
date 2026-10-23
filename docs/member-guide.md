@@ -93,8 +93,8 @@ change and keeps no history.
 - The **sidebar** on the left lists the categories in the same order and groups as the home
   page (click a group's name to fold it away), and under each one the topics you follow there, in the order you joined them. Past four,
   **N more topics** shows the rest. A dot before a topic means something new since you last
-  opened it: grey for new messages, orange for a reply to you, red when you were mentioned
-  (`@you` or one of your `+roles`). The **×** next to a topic (shown when you point at it)
+  opened it: grey for new messages, blue when one of your `+roles` was mentioned, orange for
+  a reply to you, red when you were mentioned (`@you`). The **×** next to a topic (shown when you point at it)
   unfollows it. The button at the top left hides the sidebar, and your browser remembers;
   on a phone the same button opens it, and so does a swipe to the right (a swipe to the left
   closes it).
