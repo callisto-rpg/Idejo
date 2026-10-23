@@ -184,6 +184,8 @@ defmodule IdejoWeb.TopicComponents do
   attr :topic, :map, required: true
   attr :preview, :map, required: true
 
+  @gallery_size 4
+
   # An expanded card's body (steward decision, 2026-10-23): the opening message's text, with
   # its first image at the right; "Latest messages" over a line and the last three; and the
   # avatars of who wrote there, five and "+N more" past six.
@@ -191,19 +193,38 @@ defmodule IdejoWeb.TopicComponents do
     %{participants: people, participant_count: count} = assigns.preview
     shown = if count > 6, do: Enum.take(people, 5), else: people
 
-    assigns = assign(assigns, shown: shown, more: count - length(shown))
+    images = assigns.preview.images
+    gallery = Enum.take(images, @gallery_size)
+
+    assigns =
+      assign(assigns,
+        shown: shown,
+        more: count - length(shown),
+        gallery: gallery,
+        more_images: length(images) - length(gallery)
+      )
 
     ~H"""
     <div class="topic-preview">
-      <div :if={@preview.first} class="topic-preview-first">
-        <p class="topic-preview-text">{Idejo.Forum.excerpt(@preview.first, 400)}</p>
-        <img
-          :if={@preview.image}
-          src={@preview.image}
-          alt=""
-          class="topic-preview-image"
-          loading="lazy"
-        />
+      <div :if={@preview.first || @gallery != []} class="topic-preview-first">
+        <p :if={@preview.first} class="topic-preview-text">
+          <.segments segments={Idejo.Forum.excerpt_segments(@preview.first, 400)} />
+        </p>
+        <%!-- The topic's images, at most 30% of the card; past four, "+N images". --%>
+        <div
+          :if={@gallery != []}
+          class={["topic-preview-gallery", "has-#{min(length(@gallery), 4)}"]}
+        >
+          <span class="sr-only">
+            {ngettext("%{count} image", "%{count} images", length(@preview.images))}
+          </span>
+          <span :for={src <- @gallery} class="topic-preview-tile">
+            <img src={src} alt="" loading="lazy" />
+          </span>
+          <span :if={@more_images > 0} class="topic-preview-more-images" aria-hidden="true">
+            {ngettext("+%{count} image", "+%{count} images", @more_images)}
+          </span>
+        </div>
       </div>
       <div :if={@preview.latest != []} class="topic-preview-latest">
         <%!-- Not a heading: the category page's list sits right under its h1 (AX-01). --%>
@@ -213,7 +234,9 @@ defmodule IdejoWeb.TopicComponents do
             <UserComponents.avatar user={message.author} size={:small} />
             <a href={~p"/m/#{message.id}"} class="topic-preview-message-link">
               <span class="font-medium">{message.author.display_name}</span>
-              <span class="topic-preview-message-text">{Idejo.Forum.excerpt(message, 160)}</span>
+              <span class="topic-preview-message-text">
+                <.segments segments={Idejo.Forum.excerpt_segments(message, 200)} />
+              </span>
             </a>
             <.time_ago at={message.opened_at} />
           </li>
@@ -230,6 +253,25 @@ defmodule IdejoWeb.TopicComponents do
         </span>
       </p>
     </div>
+    """
+  end
+
+  attr :segments, :list, required: true
+
+  # An excerpt's text, its uploaded images as small pills: "image:" and the picture
+  # (steward decision, 2026-10-23).
+  defp segments(assigns) do
+    ~H"""
+    <%= for segment <- @segments do %>
+      <%= case segment do %>
+        <% {:text, text} -> %>
+          {text}
+        <% {:image, src} -> %>
+          <span class="image-pill">
+            {gettext("image:")}<img src={src} alt="" loading="lazy" class="image-pill-thumb" />
+          </span>
+      <% end %>
+    <% end %>
     """
   end
 

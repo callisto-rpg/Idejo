@@ -404,10 +404,13 @@ roles or the permission grid. Every later change must keep it true:
   and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`, two links
   (`?view=compact`, the default, and `?view=expanded`) remembered in the session
   (`IdejoWeb.TopicView`). Expanded rows get `preview=` from `Forum.topic_previews/1` (a few
-  queries per page, whatever its length): the opening message's excerpt (`Forum.excerpt/2`,
-  so spoilers stay hidden) and its first `/uploads/` image at the right, "Latest messages"
-  (not a heading: AX-01) over a line with the three latest other messages, and the writers'
-  avatars, five and "+N more" past six. Deleted messages are left out.
+  queries per page, whatever its length): the opening message's excerpt and, at the right in
+  at most 30% of the card, the topic's uploaded images (`images`, the opening message's first;
+  four tiles, then "+N images" over the last), "Latest messages" (not a heading: AX-01) over
+  a line with the three latest other messages, two lines each, and the writers' avatars,
+  five and "+N more" past six. Excerpts come from `Forum.excerpt_segments/2`: text, and each
+  uploaded image as an "image:" pill with a tiny picture (spoilers stay hidden). Long words
+  wrap (`overflow-wrap: anywhere`). Deleted messages are left out.
 - **Unread** (TP-07, `Idejo.Reading`): one `read_positions` row per user and topic, holding
   the last message seen. Opening a topic (`TopicController`, and `TopicLive` on connect)
   marks it read with `Reading.mark_read/2`, and so does every new message arriving while it

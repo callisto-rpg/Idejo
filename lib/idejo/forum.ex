@@ -1581,7 +1581,7 @@ defmodule Idejo.Forum do
   @typedoc "What an expanded topic card shows (`topic_previews/1`)."
   @type preview :: %{
           first: Message.t() | nil,
-          image: String.t() | nil,
+          images: [String.t()],
           latest: [Message.t()],
           participants: [User.t()],
           participant_count: non_neg_integer()
@@ -1590,7 +1590,8 @@ defmodule Idejo.Forum do
   @doc """
   What the expanded topic cards show (steward decision, 2026-10-23), for the given topics,
   in a few queries whatever their number: `%{topic_id => preview}` with the opening message,
-  the first uploaded image in it (not for a spoiler), the three latest other messages
+  the images uploaded in the topic (TP-12; the opening message's first, none from a
+  spoiler), the three latest other messages
   (oldest first, with their authors) and everyone who wrote there, in the order they first
   did. Messages deleted by a moderator or their author are left out. The caller has checked
   the view right on the topics.
@@ -1612,6 +1613,7 @@ defmodule Idejo.Forum do
       )
       |> Repo.all()
 
+    images = topic_images(shown)
     users = Repo.all(from u in User, where: u.id in ^Enum.uniq(Enum.map(writers, &elem(&1, 1))))
     users = Map.new(users, &{&1.id, &1})
     writers = Enum.group_by(writers, &elem(&1, 0), &Map.fetch!(users, elem(&1, 1)))
@@ -1623,7 +1625,7 @@ defmodule Idejo.Forum do
       {id,
        %{
          first: first,
-         image: first && first_image(first),
+         images: Map.get(images, id, []),
          latest: others |> Enum.take(3) |> Enum.reverse(),
          participants: Map.get(writers, id, []),
          participant_count: length(Map.get(writers, id, []))
@@ -1653,14 +1655,130 @@ defmodule Idejo.Forum do
     |> Repo.all()
   end
 
-  # An image uploaded into the message (TP-12), not an emoji.
-  defp first_image(%Message{spoiler: true}), do: nil
+  # The images uploaded into the topics' messages (TP-12), not emoji, oldest first, each once;
+  # only messages that hold one are read, and none of a spoiler.
+  defp topic_images(shown) do
+    from(m in shown,
+      where: not m.spoiler and like(m.body_html, "%src=\"/uploads/%"),
+      order_by: [asc: m.opened_at, asc: m.id],
+      select: {m.topic_id, m.body_html}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {topic_id, bodies} ->
+      {topic_id, bodies |> Enum.flat_map(&uploaded_images/1) |> Enum.uniq()}
+    end)
+  end
 
-  defp first_image(%Message{body_html: html}) do
-    case Regex.run(~r{<img [^>]*\bsrc="(/uploads/[^"]+)"}, html || "") do
-      [_, src] -> src
-      nil -> nil
+  defp uploaded_images(html) do
+    for [_, src] <- Regex.scan(~r{<img [^>]*\bsrc="(/uploads/[^"]+)"}, html || ""), do: src
+  end
+
+  @typedoc "A piece of an excerpt: text, or an uploaded image (`{:image, src}`)."
+  @type segment :: {:text, String.t()} | {:image, String.t()}
+
+  @doc """
+  An excerpt of a message as text and images (steward decision, 2026-10-23), for the
+  expanded topic cards: like `excerpt/2`, but an uploaded image (TP-12) stays an
+  `{:image, src}` the page draws as a small "image:" pill; emoji read as themselves. An image
+  counts as a few characters of `length`. A spoiler gives nothing away.
+  """
+  @spec excerpt_segments(Message.t(), pos_integer()) :: [segment()]
+  def excerpt_segments(message, length \\ 140)
+
+  def excerpt_segments(%Message{spoiler: true} = message, _length),
+    do: [text: excerpt(message)]
+
+  def excerpt_segments(%Message{body_html: html}, length) do
+    Regex.split(~r{<img [^>]*>}, html || "", include_captures: true)
+    |> Enum.map(&segment/1)
+    |> merge_text()
+    |> cut_segments(length)
+  end
+
+  @image_length 6
+
+  defp segment("<img " <> _ = tag) do
+    case Regex.run(~r{\bsrc="(/uploads/[^"]+)"}, tag) do
+      [_, src] ->
+        {:image, src}
+
+      nil ->
+        # TP-17: an emoji reads as its emoji (its alt text).
+        case Regex.run(~r{\balt="([^"]*)"}, tag) do
+          [_, alt] -> {:text, unescape_html(alt)}
+          nil -> {:text, ""}
+        end
     end
+  end
+
+  defp segment(html) do
+    text =
+      html
+      |> String.replace(
+        ~r{</?(p|li|ul|ol|h[1-6]|blockquote|pre|br|hr|tr|td|th|table)\b[^>]*>},
+        " "
+      )
+      |> String.replace(~r/<[^>]*>/, "")
+      |> unescape_html()
+
+    {:text, text}
+  end
+
+  # Neighbouring texts as one, spaces folded; an image keeps a space on each side.
+  defp merge_text(segments) do
+    segments
+    |> Enum.chunk_by(&match?({:text, _}, &1))
+    |> Enum.flat_map(fn
+      [{:text, _} | _] = texts ->
+        text = texts |> Enum.map_join(&elem(&1, 1)) |> String.replace(~r/\s+/u, " ")
+        if text == "", do: [], else: [{:text, text}]
+
+      images ->
+        images
+    end)
+    |> trim_ends()
+  end
+
+  defp trim_ends(segments) do
+    segments
+    |> update_text(0, &String.trim_leading/1)
+    |> update_text(-1, &String.trim_trailing/1)
+    |> Enum.reject(&(&1 == {:text, ""}))
+  end
+
+  defp update_text([], _at, _fun), do: []
+
+  defp update_text(segments, at, fun) do
+    case Enum.at(segments, at) do
+      {:text, text} -> List.replace_at(segments, at, {:text, fun.(text)})
+      _ -> segments
+    end
+  end
+
+  # Cut at about `length` characters, on a word, with "…".
+  defp cut_segments(segments, length) do
+    {kept, _left, cut?} =
+      Enum.reduce(segments, {[], length, false}, fn
+        _segment, {kept, left, true} ->
+          {kept, left, true}
+
+        {:image, _} = image, {kept, left, false} ->
+          if left >= @image_length,
+            do: {[image | kept], left - @image_length, false},
+            else: {kept, left, true}
+
+        {:text, text}, {kept, left, false} ->
+          if String.length(text) <= left do
+            {[{:text, text} | kept], left - String.length(text), false}
+          else
+            cut = text |> String.slice(0, left) |> String.replace(~r/\s+\S*$/u, "")
+            {[{:text, cut} | kept], 0, true}
+          end
+      end)
+
+    kept = Enum.reverse(kept)
+    if cut?, do: trim_ends(kept) ++ [text: "…"], else: kept
   end
 
   @doc """

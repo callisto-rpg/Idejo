@@ -122,8 +122,9 @@ change and keeps no history.
   activity, and below them the **active topics**: the most recently active ones everywhere.
 - **View** (at the top right of the home page and of each category page): **Compact**, the
   usual one-line topics, or **Expanded**, where each topic also shows the start of its first
-  message (with its picture at the right, if it has one), its three **latest messages**, and
-  the pictures of who wrote there (five, then "+N more"). Your choice stays for the next
+  message, the pictures posted in the topic at the right (four, then "+N images"), its three
+  **latest messages** (two lines each; a picture in them shows as a small "image:" pill),
+  and the pictures of who wrote there (five, then "+N more"). Your choice stays for the next
   pages. A topic's tags sit at the right, above its number of messages.
 - The **sidebar** on the left lists the categories in the same order and groups as the home
   page, and under each one the topics you follow there, in the order you joined them. The
