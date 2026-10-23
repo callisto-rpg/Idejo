@@ -33,6 +33,8 @@ defmodule IdejoWeb.Router do
     get "/uploads/:name", UploadController, :show
     # The server's stylesheet, from Admin → Stylesheet (steward decision, 2026-10-23).
     get "/theme.css", ThemeController, :show
+    # TP-17: the + reaction picker's emoji, drawn by the browser.
+    get "/emoji-index.json", EmojiController, :index
   end
 
   scope "/", IdejoWeb do

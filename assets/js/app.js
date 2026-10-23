@@ -33,6 +33,7 @@ import {InlineLinks, InlineCard} from "./inline_cards"
 import {EditorImages} from "./editor_images"
 import {EditorTabs} from "./editor_tabs"
 import {EditorSuggest} from "./suggest"
+import {EmojiPicker} from "./emoji_picker"
 import {RoleColours} from "./role_colours"
 import "./sidebar"
 
@@ -40,7 +41,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours},
+  hooks: {...colocatedHooks, Composer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker},
 })
 
 // Show progress bar on live navigation and form submits

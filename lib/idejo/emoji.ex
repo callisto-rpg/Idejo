@@ -86,4 +86,35 @@ defmodule Idejo.Emoji do
 
     for category <- @categories, entries[category], do: {category, entries[category]}
   end
+
+  @doc "The picker's categories, in order: the server's own first."
+  @spec categories() :: [String.t()]
+  def categories, do: @categories
+
+  # The + picker's list (TP-17), built once, for the browser: each category with its emoji as
+  # `[name, alt, src, other names]`, so the browser draws and searches it on its own.
+  @index Jason.encode!(%{
+           categories:
+             for category <- @categories do
+               emoji =
+                 for e <- @own_entries ++ @standard, e.category == category do
+                   names = Map.get(e, :names, [e.name])
+                   [e.name, e.char || ":#{e.name}:", e.src, tl(names)]
+                 end
+
+               %{key: category, emoji: emoji}
+             end
+         })
+
+  @index_version :crypto.hash(:sha256, @index)
+                 |> binary_part(0, 9)
+                 |> Base.url_encode64(padding: false)
+
+  @doc "The + picker's list as JSON, served at `/emoji-index.json`."
+  @spec index_json() :: String.t()
+  def index_json, do: @index
+
+  @doc "A hash of `index_json/0`, for its address."
+  @spec index_version() :: String.t()
+  def index_version, do: @index_version
 end

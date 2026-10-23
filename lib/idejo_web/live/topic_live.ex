@@ -468,14 +468,9 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # The + picker: the server only opens and closes it; the browser draws and searches it.
   def handle_event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
-    do: {:noreply, assign(socket, :picker, %{message_id: id, query: ""})}
-
-  def handle_event("emoji_search", %{"q" => query}, %{assigns: %{picker: %{} = picker}} = socket)
-      when is_binary(query),
-      do: {:noreply, assign(socket, :picker, %{picker | query: String.slice(query, 0, 40)})}
-
-  def handle_event("emoji_search", _params, socket), do: {:noreply, socket}
+    do: {:noreply, assign(socket, :picker, %{message_id: id})}
 
   def handle_event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
 

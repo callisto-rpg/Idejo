@@ -140,11 +140,20 @@ defmodule IdejoWeb.ReactionComponents do
     """
   end
 
-  attr :picker, :map, required: true, doc: "`%{message_id: id, query: text}`"
+  attr :picker, :map, required: true, doc: "`%{message_id: id}`"
 
-  @doc "Every emoji, in groups, with a search box: the + of `add_reaction/1`."
+  @doc """
+  Every emoji, in groups, with a search box: the + of `add_reaction/1`. Only its frame is
+  rendered here; the `EmojiPicker` hook fetches the list (`/emoji-index.json`, kept by the
+  browser), draws it and searches it, so opening the picker sends nothing over the live
+  connection. A choice is pushed as `"react"`.
+  """
   def emoji_picker(assigns) do
-    assigns = assign(assigns, :groups, Emoji.groups(assigns.picker.query))
+    assigns =
+      assign(assigns,
+        labels: Jason.encode!(Map.new(Emoji.categories(), &{&1, category_name(&1)})),
+        index: "/emoji-index.json?v=#{Emoji.index_version()}"
+      )
 
     ~H"""
     <dialog
@@ -156,38 +165,29 @@ defmodule IdejoWeb.ReactionComponents do
     >
       <div class="modal-box emoji-picker">
         <h2 id="emoji-picker-title" class="inline-card-title">{gettext("Add a reaction")}</h2>
-        <form phx-change="emoji_search" phx-submit="emoji_search" id="emoji-search-form">
+        <div
+          id="emoji-picker-body"
+          class="emoji-picker-body"
+          phx-hook="EmojiPicker"
+          phx-update="ignore"
+          data-src={@index}
+          data-message-id={@picker.message_id}
+          data-labels={@labels}
+        >
           <label for="emoji-search" class="sr-only">{gettext("Search emoji")}</label>
           <input
             type="search"
             id="emoji-search"
-            name="q"
-            value={@picker.query}
             placeholder={gettext("Search emoji")}
             class="input input-sm w-full"
-            phx-debounce="150"
             autocomplete="off"
           />
-        </form>
-        <div class="emoji-groups">
-          <p :if={@groups == []} class="inline-card-meta">{gettext("No emoji by that name.")}</p>
-          <section :for={{category, emoji} <- @groups} aria-label={category_name(category)}>
-            <h3 class="emoji-group-title">{category_name(category)}</h3>
-            <div class="emoji-grid">
-              <button
-                :for={e <- emoji}
-                type="button"
-                class="add-reaction-choice"
-                aria-label={":#{e.name}:"}
-                title={":#{e.name}:"}
-                phx-click="react"
-                phx-value-id={@picker.message_id}
-                phx-value-emoji={e.name}
-              >
-                <.emoji_img emoji={e} />
-              </button>
-            </div>
-          </section>
+          <p class="inline-card-meta" data-status>{gettext("Loading emoji…")}</p>
+          <p class="inline-card-meta" data-empty hidden>{gettext("No emoji by that name.")}</p>
+          <p class="inline-card-meta" data-failed hidden>
+            {gettext("The emoji could not be loaded. Close this and try again.")}
+          </p>
+          <div class="emoji-groups" data-groups></div>
         </div>
         <div class="modal-action">
           <button type="button" class="btn btn-sm btn-ghost" phx-click="close_picker">
