@@ -364,11 +364,13 @@ roles or the permission grid. Every later change must keep it true:
   (`Search.excerpt/1`), never raw HTML. `/search` (`SearchController`, public, GET form, no
   JavaScript), linked from the header.
 - **Notifications** (NO-01, NO-02, `Idejo.Notifications`, in-app only): one `notifications`
-  row per user and message (`kind`: mention, reply, follow). A new message notifies the users
-  it mentions, the author it replies to and the topic's followers, in that priority, never
-  its author or anyone who may not view the topic (`notify_new/2`); an append or an edit
-  notifies only someone newly mentioned, turning their earlier notification for that message
-  into an unread mention (`notify_mentions/2`). Both run inside the transaction that writes
+  row per user and message (`kind`: mention, reply, role_mention, follow, and reaction). A
+  new message notifies the users it @mentions, the author it replies to, the members of the
+  roles it +mentions (`role_mention`, steward decision, 2026-10-23) and the topic's
+  followers, in that priority, never its author or anyone who may not view the topic
+  (`notify_new/2`); an append or an edit notifies only someone newly mentioned, turning
+  their earlier notification for that message into an unread mention when that ranks
+  higher (`notify_mentions/2`). Both run inside the transaction that writes
   the message; any new way of writing a message must call them. `/notifications`
   (`NotificationController`, no JavaScript) lists them unread first; `/notifications/{id}`
   marks one read and redirects to `/m/{id}`. The header link shows the unread count, counted
@@ -390,7 +392,7 @@ roles or the permission grid. Every later change must keep it true:
   any; never member or guest. Both settings are on for owner, administrator and moderator
   by migration, edited in **Admin → Roles** (audited in `role.update`). Notifications:
   `Body.mentioned_users/1` and `Body.mentioned_role_members/2` (members who may view get a
-  mention); an @mentioned user who may view the topic also follows it (`auto_follow`, so an
+  `role_mention`); an @mentioned user who may view the topic also follows it (`auto_follow`, so an
   explicit unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members.
   **Suggestions while typing**: after `@`, `+`, `#`, `/` or `$` at the start of a word, the
   composer and the message editor show a list (`assets/js/suggest.js`: the `Suggest` class,
@@ -510,7 +512,8 @@ roles or the permission grid. Every later change must keep it true:
   before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
   swipe right opens it and left closes it; followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their
-  notifications: grey new, orange a reply, red a mention; the strongest wins) and a bolder
+  notifications: grey new, blue a +role mention, orange a reply, red an @mention; the
+  strongest wins) and a bolder
   name; and (`swipe/5`: not from the left edge, not in code,
   tables, text boxes or the emoji picker; steward decision, 2026-10-23); All categories, Filter
   by tag and Rules & Roles sit above its categories. The home page shows no title (its `<h1>`

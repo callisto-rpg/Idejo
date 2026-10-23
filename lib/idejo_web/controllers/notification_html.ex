@@ -24,9 +24,20 @@ defmodule IdejoWeb.NotificationHTML do
     name = author.display_name
 
     case kind do
-      "mention" -> gettext("%{name} mentioned you in “%{topic}”", name: name, topic: topic.title)
-      "reply" -> gettext("%{name} replied to you in “%{topic}”", name: name, topic: topic.title)
-      "follow" -> gettext("%{name} posted in “%{topic}”", name: name, topic: topic.title)
+      "mention" ->
+        gettext("%{name} mentioned you in “%{topic}”", name: name, topic: topic.title)
+
+      "reply" ->
+        gettext("%{name} replied to you in “%{topic}”", name: name, topic: topic.title)
+
+      "role_mention" ->
+        gettext("%{name} mentioned one of your roles in “%{topic}”",
+          name: name,
+          topic: topic.title
+        )
+
+      "follow" ->
+        gettext("%{name} posted in “%{topic}”", name: name, topic: topic.title)
     end
   end
 end

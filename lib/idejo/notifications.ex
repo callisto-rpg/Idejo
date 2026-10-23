@@ -5,18 +5,19 @@ defmodule Idejo.Notifications do
   @moduledoc """
   In-app notifications (NO-01, NO-02; in-app only in v0.1).
 
-  A new message notifies, once each: the users it @mentions and the members of the roles it
-  +mentions (TP-10, when its author may notify them), the author of the message it replies to
-  (TP-08) and the topic's followers (TP-13, steward decision), never its author and never
-  someone who may not view the topic. Someone in several of these gets one notification, of
-  the first kind in that order. An @mentioned user who may view the topic also follows it,
+  A new message notifies, once each: the users it @mentions (`mention`), the author of the
+  message it replies to (TP-08, `reply`), the members of the roles it +mentions (TP-10, when
+  its author may notify them, `role_mention`; steward decision, 2026-10-23) and the topic's
+  followers (TP-13, steward decision, `follow`), never its author and never someone who may
+  not view the topic. Someone in several of these gets one notification, of the first kind
+  in that order. An @mentioned user who may view the topic also follows it,
   unless they unfollowed it before (steward decision, 2026-10-22).
 
   Reactions (TP-17) notify the message's author once per message (`Idejo.Reactions`).
 
   A growing message notifies once, when it opens (NO-02, GM-13): an append, or an edit,
-  notifies only someone newly mentioned. Their earlier reply or follow notification for that
-  message becomes a mention and unread again, so it stays one item.
+  notifies only someone newly mentioned. Their earlier notification for that message becomes
+  the mention, unread again, when the mention ranks higher, so it stays one item.
 
   Both are called inside the transaction that writes the message.
   """
@@ -33,12 +34,13 @@ defmodule Idejo.Notifications do
   @doc "Notifies for a message just posted or opened in `topic`."
   @spec notify_new(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_new(%Message{} = message, %Topic{} = topic) do
-    mentioned = mentioned(message, topic)
+    {mentioned, role_members} = mentioned(message, topic)
     replied = replied_author(message)
     followers = followers(topic.id)
 
     kinds =
       Map.new(followers, &{&1, "follow"})
+      |> Map.merge(Map.new(role_members, &{&1, "role_mention"}))
       |> Map.merge(Map.new(List.wrap(replied), &{&1, "reply"}))
       |> Map.merge(Map.new(mentioned, &{&1, "mention"}))
       |> Map.delete(message.author_id)
@@ -67,43 +69,52 @@ defmodule Idejo.Notifications do
   end
 
   @doc """
-  Notifies the users newly @mentioned by an append to, or an edit of, a message in `topic`.
+  Notifies the users newly @mentioned or +role mentioned by an append to, or an edit of, a
+  message in `topic`.
   """
   @spec notify_mentions(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_mentions(%Message{} = message, %Topic{} = topic) do
-    mentioned = message |> mentioned(topic) |> List.delete(message.author_id)
+    {mentioned, role_members} = mentioned(message, topic)
+    mentioned = List.delete(mentioned, message.author_id)
+    role_members = (role_members -- mentioned) |> List.delete(message.author_id)
 
+    # Already notified of this message: the mention replaces only a weaker kind.
+    {users, _} =
+      insert_mentions(mentioned, "mention", ~w(reply role_mention follow), topic, message)
+
+    {members, _} = insert_mentions(role_members, "role_mention", ~w(follow), topic, message)
+
+    {:ok, users + members}
+  end
+
+  defp insert_mentions(user_ids, kind, weaker, topic, message) do
     now = DateTime.utc_now()
 
     rows =
-      for user_id <- may_view(mentioned, topic) do
+      for user_id <- may_view(user_ids, topic) do
         %{
           id: Ecto.UUID.generate(version: 7),
           user_id: user_id,
           message_id: message.id,
-          kind: "mention",
+          kind: kind,
           created_at: now,
           updated_at: now
         }
       end
 
-    # Already mentioned: nothing changes, read or not. Notified otherwise: now a mention.
     upgrade =
       from n in Notification,
-        where: n.kind != "mention",
-        update: [set: [kind: "mention", read_at: nil, updated_at: ^now]]
+        where: n.kind in ^weaker,
+        update: [set: [kind: ^kind, read_at: nil, updated_at: ^now]]
 
-    {count, _} =
-      Repo.insert_all(Notification, rows,
-        on_conflict: upgrade,
-        conflict_target: [:user_id, :message_id]
-      )
-
-    {:ok, count}
+    Repo.insert_all(Notification, rows,
+      on_conflict: upgrade,
+      conflict_target: [:user_id, :message_id]
+    )
   end
 
-  # The users the message mentions: @users, who follow the topic when they may view it, and
-  # the members of the +roles its author may notify.
+  # The users the message mentions: `{@users, members of the +roles its author may notify}`.
+  # The @users follow the topic when they may view it.
   defp mentioned(message, topic) do
     users =
       message.body_md
@@ -113,7 +124,7 @@ defmodule Idejo.Notifications do
 
     for user_id <- may_view(users, topic), do: Idejo.Reading.auto_follow(user_id, topic.id)
 
-    Enum.uniq(users ++ Body.mentioned_role_members(message.body_md, Body.context(message)))
+    {users, Body.mentioned_role_members(message.body_md, Body.context(message))}
   end
 
   defp replied_author(%Message{reply_to_id: nil}), do: nil

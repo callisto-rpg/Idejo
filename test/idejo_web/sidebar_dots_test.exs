@@ -22,12 +22,13 @@ defmodule IdejoWeb.SidebarDotsTest do
 
   defp level(me, topic), do: Reading.activity(me, [topic.id])[topic.id]
 
-  test "a followed topic: grey for new messages, orange for a reply, red for a mention", %{
-    admin: admin,
-    me: me,
-    topic: topic,
-    mine: mine
-  } do
+  test "a followed topic: grey for new, blue for a role, orange for a reply, red for a mention",
+       %{
+         admin: admin,
+         me: me,
+         topic: topic,
+         mine: mine
+       } do
     assert level(me, topic) == nil
 
     {:ok, _} = Forum.post_message(user_fixture(), topic, %{"body" => "Count me in"})
@@ -45,7 +46,32 @@ defmodule IdejoWeb.SidebarDotsTest do
     :ok = Reading.mark_read(me, topic)
     assert level(me, topic) == nil
 
-    # A +role mention counts as a mention.
+    # A +role mention is blue: above new messages, below a reply and a mention.
+    {:ok, crew} =
+      Access.create_role(admin, %{"name" => unique_role_name("Crew"), "mentionable" => "true"})
+
+    :ok = Access.grant_role(me, crew)
+    ping = "Hey +#{Access.role_slug(crew)}"
+
+    {:ok, _} = Forum.post_message(user_fixture(), topic, %{"body" => "Count me in"})
+    {:ok, _} = Forum.post_message(user_fixture(), topic, %{"body" => ping})
+    assert level(me, topic) == :role_mention
+
+    {:ok, _} =
+      Forum.post_message(user_fixture(), topic, %{"body" => "Yes", "reply_to_id" => mine.id})
+
+    assert level(me, topic) == :reply
+
+    :ok = Reading.mark_read(me, topic)
+
+    # One message replying to me and pinging my role is a reply.
+    {:ok, _} =
+      Forum.post_message(user_fixture(), topic, %{"body" => ping, "reply_to_id" => mine.id})
+
+    assert level(me, topic) == :reply
+  end
+
+  test "a +role mention is a blue dot in the sidebar", %{admin: admin, me: me, topic: topic} do
     {:ok, crew} =
       Access.create_role(admin, %{"name" => unique_role_name("Crew"), "mentionable" => "true"})
 
@@ -54,7 +80,19 @@ defmodule IdejoWeb.SidebarDotsTest do
     {:ok, _} =
       Forum.post_message(user_fixture(), topic, %{"body" => "Hey +#{Access.role_slug(crew)}"})
 
-    assert level(me, topic) == :mention
+    doc =
+      build_conn()
+      |> log_in_user(me)
+      |> get(~p"/c/general")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    assert doc |> LazyHTML.query("#sidebar .sidebar-dot.is-role-mention") |> Enum.count() == 1
+
+    assert doc |> LazyHTML.query("#sidebar .sidebar-topic-link .sr-only") |> LazyHTML.text() =~
+             "one of your roles was mentioned"
+
+    assert File.read!("assets/css/app.css") =~ "&.is-role-mention {"
   end
 
   test "the sidebar draws the dot and a stronger name, with words for screen readers", %{

@@ -187,7 +187,10 @@ defmodule Idejo.InlineLinksTest do
     {:ok, ping} = Forum.post_message(moderator, topic, %{"body" => "Hey +#{slug}"})
     assert ping.body_html =~ ~s(href="/r/#{slug}")
     assert ping.body_html =~ ">+#{quiet.name}</a>"
-    assert Repo.get_by!(Notification, user_id: reader.id, message_id: ping.id).kind == "mention"
+
+    assert Repo.get_by!(Notification, user_id: reader.id, message_id: ping.id).kind ==
+             "role_mention"
+
     assert notified?(blind, ping)
 
     # Only those who may view the topic.

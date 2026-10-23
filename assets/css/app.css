@@ -663,7 +663,8 @@
     &:hover { background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
   }
   /* What is new in a followed topic (steward decision, 2026-10-23): grey for new messages,
-     orange for a reply to the user, red for a mention; the name bolder and darker. */
+     blue for a mention of one of the user's roles, orange for a reply to the user, red for a
+     mention of them; the name bolder and darker. */
   .sidebar-dot {
     flex: none;
     width: 0.4375rem;
@@ -671,6 +672,10 @@
     margin-left: 0.25rem;
     border-radius: 999px;
     &.is-new { background: color-mix(in oklab, var(--color-base-content) 45%, transparent); }
+    &.is-role-mention {
+      background: oklch(65% 0.17 250);
+      box-shadow: 0 0 6px oklch(65% 0.17 250 / 0.55);
+    }
     &.is-reply {
       background: oklch(72% 0.18 55);
       box-shadow: 0 0 6px oklch(72% 0.18 55 / 0.55);
