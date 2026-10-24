@@ -131,7 +131,7 @@ defmodule IdejoWeb.ComposerTest do
 
     # The account menu and the Help page turn them off.
     assert css =~
-             ~r/\[data-bubbles="off"\] \.tutorial-bubble,\s*\[data-bubbles="off"\] \.composer-hint \{ display: none; \}/
+             ~r/\[data-bubbles="off"\] \.tutorial-bubble:not\(\.is-always\),\s*\[data-bubbles="off"\] \.composer-hint \{ display: none; \}/
   end
 
   @tag req: "GM-01"
@@ -260,6 +260,50 @@ defmodule IdejoWeb.ComposerTest do
     Idejo.Messages.close(mine)
     _ = render(lv)
     refute has_element?(lv, "#composer-timer")
+  end
+
+  # Steward decision, 2026-10-25: appends by others burn in; the author typing below is told.
+  @tag req: "GM-02"
+  test "GM-02 others' appends burn in, and the composer counts the ones above it", %{
+    conn: conn,
+    topic: topic
+  } do
+    other = user_fixture()
+    {:ok, theirs} = Messages.commit(other, topic, "Their start")
+    {:ok, lv, _html} = watch(conn, topic)
+    enter(lv, "Mine below")
+    [_first, _theirs, mine] = Forum.list_messages(topic)
+
+    # Nothing in the markup tells open from closed (GM-07): the hook burns what a body gains.
+    assert has_element?(lv, "#message-#{theirs.id}-body[phx-hook=ShowAll]")
+    refute render(lv) =~ "data-growing"
+
+    # The bubble over the author's message, its labels from gettext.
+    assert has_element?(
+             lv,
+             ~s|#message-#{mine.id} #composer-appended[phx-update=ignore][aria-hidden=true][data-label-one="1 message above has been appended"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#composer-appended[data-label-other="%{count} messages above have been appended"]|
+           )
+
+    show_all = File.read!("assets/js/show_all.js")
+    assert show_all =~ "export function burnTail"
+    assert show_all =~ ~s|new CustomEvent("idejo:appended"|
+
+    js = File.read!("assets/js/composer.js")
+    # Only appends above the composer, while it has the focus; scrolling up fades it.
+    assert js =~ "Node.DOCUMENT_POSITION_FOLLOWING"
+    assert js =~ "document.activeElement !== this.input"
+    assert js =~ "if (window.scrollY < this.lastY && this.appended.size > 0) this.fadeAppended()"
+
+    # Not a tutorial bubble: turning those off leaves it; the fade lasts 2 s.
+    css = File.read!("assets/css/app.css")
+    assert js =~ ~s|bubble.className = "tutorial-bubble is-always points-up"|
+    assert css =~ ~s|[data-bubbles="off"] .tutorial-bubble:not(.is-always),|
+    assert css =~ "& .is-fading { animation: composer-appended-fade 2s ease-out forwards; }"
   end
 
   # Steward decision, 2026-10-25.

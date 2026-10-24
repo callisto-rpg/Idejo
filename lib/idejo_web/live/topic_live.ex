@@ -2108,6 +2108,17 @@ defmodule IdejoWeb.TopicLive do
 
     ~H"""
     <section aria-label={gettext("Your message")} class="message message-mine">
+      <%!-- Appends to messages above while the author types (steward decision, 2026-10-25):
+           the Composer hook fills it; decorative, like the burn it counts. --%>
+      <div
+        id="composer-appended"
+        class="composer-appended"
+        phx-update="ignore"
+        aria-hidden="true"
+        data-label-one={gettext("1 message above has been appended")}
+        data-label-other={gettext("%{count} messages above have been appended", count: "%{count}")}
+      >
+      </div>
       <p :if={@mine} class="message-head"><.author_line author={@author} roles={@roles} /></p>
       <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
         <p>
