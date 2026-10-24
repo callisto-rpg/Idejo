@@ -13,6 +13,21 @@ const isShown = () =>
 
 const sync = () => toggle()?.setAttribute("aria-expanded", String(isShown()))
 
+// The ×'s tutorial bubble on touch screens, which cannot point at it (steward decision,
+// 2026-10-25): shown for 3 s, once a page, the first time the topic on screen's entry is in
+// view (at load beside the page, or when the drawer opens), then fading out.
+const PEEK_MS = 3000
+let peeked = false
+
+const peek = () => {
+  if (peeked || !matchMedia("(hover: none)").matches || root.dataset.bubbles === "off" || !isShown()) return
+  const bubble = document.querySelector("#sidebar .sidebar-topic.is-current .sidebar-unfollow-bubble")
+  if (!bubble) return
+  peeked = true
+  bubble.classList.add("is-peek")
+  setTimeout(() => bubble.classList.remove("is-peek"), PEEK_MS)
+}
+
 const closeDrawer = () => {
   delete root.dataset.drawer
   sync()
@@ -35,6 +50,7 @@ const flip = () => {
     root.dataset.drawer = "open"
   }
   sync()
+  peek()
 }
 
 document.addEventListener("click", (e) => {
@@ -86,6 +102,7 @@ document.addEventListener("touchend", e => {
   if (gesture === "open" && !open) {
     root.dataset.drawer = "open"
     sync()
+    peek()
   } else if (gesture === "close" && open) {
     closeDrawer()
   }
@@ -97,6 +114,7 @@ wide.addEventListener("change", closeDrawer)
 // LiveView re-renders the header on navigation; keep the button's state right.
 window.addEventListener("phx:page-loading-stop", sync)
 sync()
+peek()
 
 // Folded categories (steward decision, 2026-10-23): a category's button shows only its topics
 // with something new (and the one on screen), remembered by the browser. Its topics past the

@@ -9,8 +9,9 @@
 // Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
 // The backdrop also draws the caret, thicker than the browser's (whose own is transparent),
 // and beside it, at the end of the text, a bubble (steward decision, 2026-10-25): "Enter to
-// send" while something is not sent, then "Sent!" with a faded "Continue typing to add to
-// your message" until the author types again.
+// send" while something is not sent, then "Sent!" (white, turning to the theme's colours)
+// with a faded "Continue typing to add to your message" until the author types again. The
+// account menu and the Help page turn the bubbles off (theme.js).
 //
 // Commands (steward decision, 2026-10-23), listed after ! by `Suggest`: !image picks an image
 // that lands at the end of the message; !new-topic sends, then goes to "New topic from this"
@@ -310,6 +311,7 @@ export const Composer = {
     this.input.value = body + separator
     this.sent = this.input.value
     this.justSent = true
+    this.sentAt = performance.now()
     this.burn = {marks: burnMarks(before, this.sent), sent: this.sent, start: performance.now()}
     const position = atEnd ? this.input.value.length : caret
     this.input.setSelectionRange(position, position)
@@ -352,6 +354,9 @@ export const Composer = {
     // The extra space keeps a trailing line break visible in the backdrop.
     this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt)) + " "
     this.fitHint()
+    // "Sent!" turns from white to the theme's colours once, whatever repaints it.
+    this.backdrop.querySelector(".is-sent")
+      ?.style.setProperty("--sent-delay", `-${performance.now() - this.sentAt}ms`)
     // Repaints (every keystroke) keep the animation where it was: a negative delay, set
     // through the DOM, never a style attribute (SP-05).
     if (burning) {
@@ -371,9 +376,9 @@ export const Composer = {
     const pending = value.replace(/\s+$/, "") !== this.sent.replace(/\s+$/, "")
     let bubbles = ""
     if (atEnd && value.trim() !== "") {
-      if (pending) bubbles = span("composer-bubble", labels.labelSend || "")
+      if (pending) bubbles = span("tutorial-bubble", labels.labelSend || "")
       else {
-        if (this.justSent) bubbles = span("composer-bubble", labels.labelSent || "")
+        if (this.justSent) bubbles = span("tutorial-bubble is-sent", labels.labelSent || "")
         bubbles += span("composer-hint", labels.labelContinue || "")
       }
     }
