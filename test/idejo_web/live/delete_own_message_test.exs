@@ -3,8 +3,9 @@
 
 defmodule IdejoWeb.DeleteOwnMessageTest do
   @moduledoc """
-  An author deletes their own message by emptying it in the editor (steward decision,
-  2026-10-23): asked first, then shown as "Message deleted by user".
+  An author deletes their own message by emptying it while editing it (steward decision,
+  2026-10-23; in the composer since 2026-10-24): asked first, then shown as "Message deleted
+  by user".
   """
   use IdejoWeb.ConnCase, async: true
 
@@ -39,9 +40,10 @@ defmodule IdejoWeb.DeleteOwnMessageTest do
   defp watch(conn, topic),
     do: live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
 
+  # Edit, then Enter on an emptied composer.
   defp empty(lv, message) do
     lv |> element("#message-#{message.id} button", "Edit") |> render_click()
-    lv |> form("#edit-message-#{message.id}", edit: %{body: ""}) |> render_submit()
+    lv |> element("#composer") |> render_hook("commit", %{"body" => "", "break" => false})
   end
 
   @tag req: "GM-10"
@@ -79,7 +81,8 @@ defmodule IdejoWeb.DeleteOwnMessageTest do
     lv |> element("#delete-own-dialog button", "Yes") |> render_click()
 
     refute has_element?(lv, "#delete-own-dialog")
-    refute has_element?(lv, "#edit-message-#{message.id}")
+    refute has_element?(lv, "#message-#{message.id} #composer")
+    assert has_element?(lv, "#composer-slot #composer")
     assert has_element?(lv, "#message-#{message.id}-deleted", "Message deleted by user")
     assert has_element?(reader, "#message-#{message.id}-deleted", "Message deleted by user")
     refute render(reader) =~ "Meet on Monday"
@@ -116,7 +119,10 @@ defmodule IdejoWeb.DeleteOwnMessageTest do
   } do
     {:ok, lv, _html} = watch(log_in_user(build_conn(), author), topic)
 
-    assert empty(lv, opening) =~ "can&#39;t be blank"
+    empty(lv, opening)
     refute has_element?(lv, "#delete-own-dialog")
+    # Still editing it, with its text kept.
+    assert has_element?(lv, "#message-#{opening.id} #composer[data-editing]")
+    assert Repo.reload!(opening).body_md == "Hi"
   end
 end

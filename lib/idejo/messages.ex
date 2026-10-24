@@ -371,10 +371,17 @@ defmodule Idejo.Messages do
 
   Refused with `{:error, :forbidden}` for someone else's message, an open one, or in a locked or
   archived topic; `{:error, :blank}` for empty text.
+
+  ## Options
+
+    * `:version` - `:auto` (the default) as above; `:always` keeps the previous text as a
+      version whenever the text changes, appends too; `:never` keeps none. Editing in the
+      composer (steward decision, 2026-10-24) keeps one version per edit: `:always` for
+      its first change, `:never` for the Enters after it.
   """
-  @spec edit(User.t(), Message.t(), String.t()) ::
+  @spec edit(User.t(), Message.t(), String.t(), keyword()) ::
           {:ok, Message.t()} | {:error, :forbidden | :blank | Ecto.Changeset.t()}
-  def edit(%User{} = author, %Message{} = message, text) when is_binary(text) do
+  def edit(%User{} = author, %Message{} = message, text, opts \\ []) when is_binary(text) do
     text = String.trim_trailing(text)
 
     result =
@@ -389,7 +396,7 @@ defmodule Idejo.Messages do
           not Forum.can_post?(author, topic) -> {:error, :forbidden}
           String.trim(text) == "" -> {:error, :blank}
           text == message.body_md -> {:ok, message}
-          true -> save_edit(author, message, text, topic)
+          true -> save_edit(author, message, text, topic, Keyword.get(opts, :version, :auto))
         end
       end)
 
@@ -495,9 +502,15 @@ defmodule Idejo.Messages do
     end
   end
 
-  defp save_edit(author, message, text, topic) do
+  defp save_edit(author, message, text, topic, version) do
     now = DateTime.utc_now()
-    edit? = not String.starts_with?(text, message.body_md)
+
+    edit? =
+      case version do
+        :auto -> not String.starts_with?(text, message.body_md)
+        :always -> true
+        :never -> false
+      end
 
     with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
          {:ok, message} <- update_body(message, text, true, edit?),
