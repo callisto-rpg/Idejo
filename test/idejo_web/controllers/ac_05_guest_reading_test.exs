@@ -43,9 +43,34 @@ defmodule IdejoWeb.AC05GuestReadingTest do
   end
 
   @tag req: "AC-05"
-  test "AC-05 a category visitors may not view is not found", %{conn: conn} do
-    assert_error_sent 404, fn -> get(conn, ~p"/c/team-room") end
-    assert_error_sent 404, fn -> get(conn, ~p"/c/nowhere") end
+  test "AC-05 a category visitors may not view leads to sign-in, never naming it", %{
+    conn: conn
+  } do
+    # Hidden or missing: the same answer (steward decision, 2026-10-24).
+    for path <- [~p"/c/team-room", ~p"/c/nowhere"] do
+      res = get(conn, path)
+      assert redirected_to(res) == ~p"/users/sign-in"
+      assert get_session(res, :user_return_to) == path
+    end
+  end
+
+  @tag req: "AC-05"
+  test "AC-05 a category a signed-in user may not view leads home, with a dialog" do
+    # Unverified users act as guest, who may not view the Team room.
+    conn = build_conn() |> log_in_user(unconfirmed_user_fixture())
+
+    for path <- [~p"/c/team-room", ~p"/c/nowhere"] do
+      res = get(conn, path)
+      assert redirected_to(res) == ~p"/"
+
+      page = res |> recycle() |> get(~p"/") |> html_response(200)
+      assert page =~ ~s(id="topic-unavailable")
+
+      assert page =~
+               "The category doesn&#39;t exist, was deleted, or you do not have permission to view it."
+
+      refute page =~ "Team room"
+    end
   end
 
   @tag req: "AC-05"
