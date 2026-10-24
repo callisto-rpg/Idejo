@@ -7,6 +7,10 @@
 // Enter sends the whole text and keeps it in the box; a backdrop behind a transparent
 // textarea draws sent text like any message's and highlights unsent text as temporary.
 // Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
+// The backdrop also draws the caret, thicker than the browser's (whose own is transparent),
+// and beside it, at the end of the text, a bubble (steward decision, 2026-10-25): "Enter to
+// send" while something is not sent, then "Sent!" with a faded "Continue typing to add to
+// your message" until the author types again.
 //
 // Commands (steward decision, 2026-10-23), listed after ! by `Suggest`: !image picks an image
 // that lands at the end of the message; !new-topic sends, then goes to "New topic from this"
@@ -142,19 +146,35 @@ export function burnMarks(before, after) {
 
 const escape = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
-const span = (cls, text) => `<span class="${cls}">${escape(text)}</span>`
+const span = (cls, text) => text === "" ? "" : `<span class="${cls}">${escape(text)}</span>`
 
-// The sent text as runs, the characters just sent marked to burn.
-function burnSpans(sent, marks) {
-  let html = "", run = "", burning = null
+// The sent text as runs ([class, text]), the characters just sent marked to burn.
+function burnRuns(sent, marks) {
+  const runs = []
+  let run = "", burning = null
   Array.from(sent).forEach((ch, i) => {
     const b = Boolean(marks[i])
-    if (burning !== null && b !== burning) { html += span(burning ? "composer-sent composer-burn" : "composer-sent", run); run = "" }
+    if (burning !== null && b !== burning) { runs.push([burning ? "composer-sent composer-burn" : "composer-sent", run]); run = "" }
     burning = b
     run += ch
   })
-  if (run) html += span(burning ? "composer-sent composer-burn" : "composer-sent", run)
-  return html
+  if (run) runs.push([burning ? "composer-sent composer-burn" : "composer-sent", run])
+  return runs
+}
+
+// The runs as HTML, with `caret` (HTML) at character `at` of their text, when `at` is a number.
+export function withCaret(runs, at, caret) {
+  let html = "", pos = 0, placed = at == null
+  for (const [cls, text] of runs) {
+    if (!placed && at <= pos + text.length) {
+      html += span(cls, text.slice(0, at - pos)) + caret + span(cls, text.slice(at - pos))
+      placed = true
+    } else {
+      html += span(cls, text)
+    }
+    pos += text.length
+  }
+  return placed ? html : html + caret
 }
 
 export const Composer = {
@@ -171,8 +191,15 @@ export const Composer = {
 
     this.input.addEventListener("input", () => {
       this.enters = 0
+      this.justSent = false
       this.paint()
     })
+    // The caret drawn in the backdrop follows the focus and the selection.
+    this.onSelection = () => { if (document.activeElement === this.input) this.paint() }
+    document.addEventListener("selectionchange", this.onSelection)
+    for (const event of ["focus", "blur", "select", "keyup", "mouseup"]) {
+      this.input.addEventListener(event, () => this.paint())
+    }
     // TP-10: suggestions while typing an inline link; added first, so its Enter picks.
     this.suggest = new Suggest(this.input, this.el.querySelector("[role=listbox]"),
       (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply),
@@ -206,6 +233,10 @@ export const Composer = {
       this.paint()
     })
     this.paint()
+  },
+
+  destroyed() {
+    document.removeEventListener("selectionchange", this.onSelection)
   },
 
   command(name) {
@@ -278,6 +309,7 @@ export const Composer = {
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
     this.input.value = body + separator
     this.sent = this.input.value
+    this.justSent = true
     this.burn = {marks: burnMarks(before, this.sent), sent: this.sent, start: performance.now()}
     const position = atEnd ? this.input.value.length : caret
     this.input.setSelectionRange(position, position)
@@ -310,13 +342,16 @@ export const Composer = {
     // A burn shows while it lasts and while the sent text is still the start of the box.
     const burning = elapsed < BURN_MS && this.burn.sent === this.sent && value.startsWith(this.sent)
 
-    const html = burning
-      ? burnSpans(this.sent, this.burn.marks) +
-        (value.length > this.sent.length ? span("composer-unsent", value.slice(this.sent.length)) : "")
-      : sentRuns(this.sent, value).map(([text, sent]) => span(sent ? "composer-sent" : "composer-unsent", text)).join("")
+    const runs = burning
+      ? [...burnRuns(this.sent, this.burn.marks), ["composer-unsent", value.slice(this.sent.length)]]
+      : sentRuns(this.sent, value).map(([text, sent]) => [sent ? "composer-sent" : "composer-unsent", text])
+
+    const {selectionStart: start, selectionEnd: end} = this.input
+    const caretAt = document.activeElement === this.input && start === end ? start : null
 
     // The extra space keeps a trailing line break visible in the backdrop.
-    this.backdrop.innerHTML = html + " "
+    this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt)) + " "
+    this.fitHint()
     // Repaints (every keystroke) keep the animation where it was: a negative delay, set
     // through the DOM, never a style attribute (SP-05).
     if (burning) {
@@ -326,5 +361,29 @@ export const Composer = {
     }
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
+  },
+
+  // The caret, and at the end of the text its bubble: "Enter to send" while something is not
+  // sent, "Sent!" once it is, and the hint while nothing new was typed since.
+  caret(value, at) {
+    const labels = this.el.dataset
+    const atEnd = value.slice(at).trim() === ""
+    const pending = value.replace(/\s+$/, "") !== this.sent.replace(/\s+$/, "")
+    let bubbles = ""
+    if (atEnd && value.trim() !== "") {
+      if (pending) bubbles = span("composer-bubble", labels.labelSend || "")
+      else {
+        if (this.justSent) bubbles = span("composer-bubble", labels.labelSent || "")
+        bubbles += span("composer-hint", labels.labelContinue || "")
+      }
+    }
+    return `<span class="composer-caret">${bubbles && `<span class="composer-caret-bubbles">${bubbles}</span>`}</span>`
+  },
+
+  // The hint leaves rather than run past the composer's right edge (on a phone, or late on
+  // a line).
+  fitHint() {
+    const hint = this.backdrop.querySelector(".composer-hint")
+    if (hint && hint.getBoundingClientRect().right > this.el.getBoundingClientRect().right) hint.hidden = true
   },
 }

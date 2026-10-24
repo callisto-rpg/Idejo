@@ -250,7 +250,10 @@ defmodule IdejoWeb.AccessibilityTest do
              "#{String.trim(selector)} hides the focus outline"
     end
 
-    assert css =~ ~r/\.composer:focus-within \{\s*outline: 2px solid/
+    # The composer's box has no ring (steward decision, 2026-10-25): its transparent text
+    # box's caret is drawn by the backdrop instead, 3px wide, which shows where the focus is.
+    assert css =~ ~r/\.composer-input \{[^}]*caret-color: transparent/
+    assert css =~ ~r/\.composer-caret \{[^}]*&::before \{[^}]*width: 3px/
   end
 
   @tag req: "AX-01"

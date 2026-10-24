@@ -60,6 +60,50 @@ defmodule IdejoWeb.ComposerTest do
     refute composer =~ ~r/\d+\s*s\b/
   end
 
+  # Steward decision, 2026-10-25: bubbles beside the caret and in front of the timer line.
+  @tag req: "GM-07"
+  test "GM-07 bubbles say what Enter and Ctrl+Enter do, beside the caret and the timer line", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+
+    assert has_element?(
+             lv,
+             ~s|#composer[data-label-send="Enter to send"][data-label-sent="Sent!"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#composer[data-label-continue="Continue typing to add to your message"]|
+           )
+
+    enter(lv, "Thinking aloud")
+
+    assert has_element?(
+             lv,
+             ~s|#composer-timer #composer-timer-bubble[data-label-done="Ctrl+Enter to start new message"]|,
+             "slow mode"
+           )
+
+    js = File.read!("assets/js/composer.js")
+    assert js =~ "composer-caret"
+    assert js =~ "labelSent"
+    timer = File.read!("assets/js/composer_timer.js")
+    assert timer =~ "labelDone"
+
+    # Tertiary outline, secondary text, on primary at 50% blurred 6px; the hint in primary.
+    css = File.read!("assets/css/app.css")
+    [bubble] = Regex.run(~r/^\.composer-bubble \{.*?^\}/ms, css)
+    assert bubble =~ "border: 1px solid var(--color-accent)"
+    assert bubble =~ "color: var(--color-secondary)"
+    assert bubble =~ "color-mix(in oklab, var(--color-primary) 50%, transparent)"
+    assert bubble =~ "backdrop-filter: blur(6px)"
+
+    assert css =~
+             ~r/\.composer-hint \{[^}]*monospace[^}]*font-weight: 300[^}]*var\(--color-primary\) 60%/s
+  end
+
   @tag req: "GM-01"
   test "GM-01 Enter in the composer opens a message for everyone", %{
     conn: conn,

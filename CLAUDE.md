@@ -334,12 +334,22 @@ roles or the permission grid. Every later change must keep it true:
   that fills up until Ctrl+Enter may start a new message (the window's end, or the
   unanswered message time's while nobody wrote below: `start_new_at/3`), its front glowing
   white in yellow, then burns in and goes; the hook sets its duration and negative delay
-  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Sent text is drawn like a
+  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Bubbles (steward
+  decision, 2026-10-25; `.composer-bubble`: a pill, tertiary outline, secondary text, primary
+  at 50% blurred 6px, a triangle on the left): "slow mode" rides in front of the line (which
+  stops short by `--bubble-room`, the bubble's width), and once it is full slides to the
+  middle as "Ctrl+Enter to start new message" (`#composer-timer-bubble`, `data-label-done`);
+  beside the caret, at the end of the text, "Enter to send" while something is not sent,
+  then "Sent!" and a faded monospace "Continue typing to add to your message"
+  (`.composer-hint`, dropped when it would pass the right edge) until the author types
+  (`data-label-send` / `-sent` / `-continue`, from gettext). Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every
   character under the transparent textarea), and text just sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
-  `animationDelay` set through the DOM, never a style attribute). A faint ring shows the
-  focus (AX-01). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
+  `animationDelay` set through the DOM, never a style attribute). The backdrop also draws
+  the caret, 3px and blinking (`.composer-caret`, an empty inline span at the selection; the
+  text box's own `caret-color` is transparent), which with the bubble shows the focus: the
+  box has no ring (AX-01; steward decision, 2026-10-25). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect; the text box is `autocomplete="off"`, and what a browser still puts back on

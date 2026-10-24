@@ -2126,6 +2126,9 @@ defmodule IdejoWeb.TopicLive do
         data-sent={@mine && @mine.body_md}
         data-editing={@editing?}
         data-commands={Jason.encode!(@commands)}
+        data-label-send={gettext("Enter to send")}
+        data-label-sent={gettext("Sent!")}
+        data-label-continue={gettext("Continue typing to add to your message")}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
@@ -2166,6 +2169,16 @@ defmodule IdejoWeb.TopicLive do
         phx-mounted={JS.ignore_attributes(["hidden"])}
       >
         <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
+        <%!-- In front of the line while it fills, then in the middle (steward decision,
+             2026-10-25). --%>
+        <span
+          id="composer-timer-bubble"
+          class="composer-bubble composer-timer-bubble"
+          phx-update="ignore"
+          data-label-done={gettext("Ctrl+Enter to start new message")}
+        >
+          {gettext("slow mode")}
+        </span>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
