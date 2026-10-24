@@ -9,6 +9,8 @@ defmodule IdejoWeb.Layouts do
   use IdejoWeb, :html
 
   alias Idejo.Forum.CategoryIcons
+  alias Idejo.Push
+  alias Idejo.Push.Vapid
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
@@ -735,6 +737,30 @@ defmodule IdejoWeb.Layouts do
   """
   @spec server_name() :: String.t()
   def server_name, do: Idejo.Settings.get(:server_name)
+
+  @doc """
+  The server's VAPID public key as `<meta name="push-key">`, for signed-in users while push
+  is on (PN-18, PN-19): `assets/js/push.js` subscribes the browser with it. Nothing for
+  visitors, so they never subscribe.
+  """
+  attr :current_scope, :any, default: nil
+
+  def push_key(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :key,
+        signed_in?(assigns.current_scope) && Push.enabled?() &&
+          Vapid.public_key()
+      )
+
+    ~H"""
+    <meta :if={@key} name="push-key" content={@key} />
+    """
+  end
+
+  defp signed_in?(%{user: %{}}), do: true
+  defp signed_in?(_scope), do: false
 
   @doc """
   The page title: "Page · Server name", or the server name alone.
