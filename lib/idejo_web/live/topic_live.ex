@@ -456,12 +456,27 @@ defmodule IdejoWeb.TopicLive do
 
   defp after_send(socket, _then, _message), do: assign(socket, :reply_to, nil)
 
-  # `!poll`: the dialog for a poll under the author's message, one per message.
+  # `!poll`: the dialog for a poll under the author's message, one per message; with no
+  # message, the poll is posted as one.
+  defp open_poll(socket, nil),
+    do: assign(socket, :poll_form, %{message_id: nil, params: %{}, count: 2, error: nil})
+
   defp open_poll(socket, message) do
     if Map.has_key?(socket.assigns.polls, message.id) or Polls.summary(message.id) != nil,
       do: put_flash(socket, :error, gettext("This message has a poll already.")),
       else:
         assign(socket, :poll_form, %{message_id: message.id, params: %{}, count: 2, error: nil})
+  end
+
+  # Under the author's message, or with none, posted as a message of its own.
+  defp add_poll(socket, nil, params) do
+    %{topic: topic, reply_to: reply_to} = socket.assigns
+    Polls.post(user(socket), topic, params, reply_to && reply_to.id)
+  end
+
+  defp add_poll(socket, message_id, params) do
+    message = Repo.get(Messages.Message, message_id)
+    message && Polls.create(user(socket), message, params)
   end
 
   defp poll_error(:question), do: gettext("Write the question.")
@@ -583,17 +598,16 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # `!poll` and `!spoiler` with nothing new to send: for the open message.
+  # With nothing open, `!poll` posts the poll as a message of its own (steward decision,
+  # 2026-10-24); `!spoiler` needs a message.
   def handle_event(command, _params, socket) when command in ["open_poll", "spoiler"] do
     case open_message(socket.assigns.messages, user(socket)) do
+      nil when command == "open_poll" ->
+        {:noreply, open_poll(socket, nil)}
+
       nil ->
         {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("Write your message first, then choose !%{command}.",
-             command: if(command == "spoiler", do: "spoiler", else: "poll")
-           )
-         )}
+         put_flash(socket, :error, gettext("Write your message first, then choose !spoiler."))}
 
       message when command == "spoiler" ->
         {:noreply, toggle_spoiler(socket, message)}
@@ -618,11 +632,12 @@ defmodule IdejoWeb.TopicLive do
 
   def handle_event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
       when is_map(params) and form != nil do
-    message = Repo.get(Messages.Message, form.message_id)
-
-    case message && Polls.create(user(socket), message, params) do
+    case add_poll(socket, form.message_id, params) do
       {:ok, _summary} ->
         {:noreply, assign(socket, :poll_form, nil)}
+
+      {:ok, _message, _summary} ->
+        {:noreply, socket |> assign(:poll_form, nil) |> assign(:reply_to, nil)}
 
       {:error, reason} when reason in [:question, :options, :hours, :rate_limited] ->
         {:noreply,
@@ -1646,8 +1661,9 @@ defmodule IdejoWeb.TopicLive do
           tabindex="-1"
           inert={@message.spoiler and !@revealed? and @live?}
         >
+          <%!-- A poll posted on its own: its question says it all. --%>
           <MessageComponents.collapsible_body
-            :if={!@edit_form}
+            :if={!@edit_form and !Polls.poll_only?(@message, @poll)}
             id={"message-#{@message.id}-body"}
             html={@message.body_html}
           />

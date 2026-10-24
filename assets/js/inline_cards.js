@@ -48,6 +48,9 @@ export const InlineCard = {
     const closeEvent = this.el.dataset.closeEvent || "hide_card"
     this.el.addEventListener("close", () => this.pushEvent(closeEvent, {}))
     this.el.addEventListener("click", e => { if (e.target === this.el) this.el.close() })
+    // `open` comes from showModal(), never from the server: without this, the first patch
+    // (typing in the poll dialog, a search in the move dialog) takes it away and closes it.
+    this.js().ignoreAttributes(this.el, ["open"])
     this.el.showModal()
   },
 

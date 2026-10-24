@@ -96,7 +96,8 @@ change and keeps no history.
   - **!poll** sends what you wrote, then asks for a question, its answers (**Add an answer**
     for more than two, at most ten), whether **several answers** may be chosen, and in how
     many hours it closes (decimals work; at most 168). The poll goes under your message, one
-    per message. Anyone who may post in the topic votes, and may **Change vote** until it
+    per message; with nothing written, the poll is posted on its own, its question as the
+    message. Anyone who may post in the topic votes, and may **Change vote** until it
     closes. You see the counts from the start, others once they voted, and everyone once it
     closed; nobody sees who voted for what.
   - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
