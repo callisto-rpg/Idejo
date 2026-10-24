@@ -63,8 +63,9 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
 4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
 5. A message closes only on Ctrl+Enter after the window (GM-05; with nothing below it, also
-   after the unanswered message time), lock or archive, session disconnect (GM-12) or a
-   moderator (GM-16).
+   after the unanswered message time), its author sending a new message after Reply
+   (`commit/4` with `new: true`; steward decision, 2026-10-24), lock or archive, session
+   disconnect (GM-12) or a moderator (GM-16).
 6. At most one open message per author per topic (GM-09). The first message of a topic is
    never open (GM-14).
 7. Notifications, unread counts and search treat a growing message as one item (GM-13).
@@ -301,6 +302,17 @@ roles or the permission grid. Every later change must keep it true:
   (only moving messages, TP-15, leaves replies across topics);
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
   links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
+  Reply starts a new message (steward decision, 2026-10-24): with the author's message still
+  open, `TopicLive` sets `draft_over` (that message's id), shows it like the others and puts
+  an empty composer at the end; Enter commits with `new: true`, which closes the open
+  message and opens the reply (`Messages.commit/4`). That is allowed at any time while the
+  `gm_early_reply` setting ("Allow replies even if the timer is still running", **Admin →
+  Settings**, on by default) is on, else and without a reply (after "Cancel reply") only when
+  `may_start_new?/2`; otherwise `{:error, :too_soon}`: the text stays and
+  `#too-soon-dialog` says "You cannot post a new message yet. Append your old message.",
+  with "Append to my message" (`"append_to_open"`: the composer is the open message again,
+  `"composer_sent"` keeping what was typed after it). While refused, the composer's timer
+  line runs for the open message.
 - **Live updates stay cheap** (NF-01): `Messages.broadcast/2` sends `{:message, m}` with
   `Messages.shown/0` loaded once; a topic view must do no database work per update (every
   viewer handles every Enter). Keep it so: check with `load/run.sh --hot --writers 10`

@@ -60,6 +60,10 @@ corner. It has seven tabs.
   has written below a message, its author can start a new one (Ctrl+Enter, or Enter three
   times) only once the message is this old; until then it adds a line to the same message,
   so someone writing alone keeps one message. It applies at once, to open messages too.
+- **Allow replies even if the timer is still running**: on by default. **Reply** always
+  starts a new message; with this on, sending it completes the author's open message at
+  once. Off, a reply waits like Ctrl+Enter: until the window (and, while nobody wrote below,
+  the unanswered message time) has passed.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.

@@ -95,7 +95,10 @@ defmodule IdejoWeb.TopicLive do
            polls: %{},
            poll_form: nil,
            live?: connected?(socket),
-           revealed: MapSet.new()
+           revealed: MapSet.new(),
+           draft_over: nil,
+           early_reply?: true,
+           too_soon?: false
          )}
 
       topic ->
@@ -113,7 +116,9 @@ defmodule IdejoWeb.TopicLive do
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
+         |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
          |> put_messages(Forum.list_messages(topic))
+         |> put_draft()
          |> put_first_unread(session["first_unread"])
          |> put_forks()
          |> assign(can_react?: can_react?(user, topic), picker: nil)
@@ -140,6 +145,22 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  # Reply starts a new message (steward decision, 2026-10-24): with the author's message
+  # still open, the composer leaves it for a new one at the end; `draft_over` is the open
+  # message it left. Sending closes that message first (`Messages.commit/4` with `new:`).
+  # Without the reply, or with replies waiting for the timer (`gm_early_reply` off), Enter is
+  # refused until Ctrl+Enter could start a new message.
+  defp put_draft(socket) do
+    open = socket.assigns.reply_to && open_message(socket.assigns.messages, user(socket))
+    assign(socket, :draft_over, open && open.id)
+  end
+
+  # The open message the composer left, while it is still open.
+  defp draft_over(%{draft_over: nil}), do: nil
+
+  defp draft_over(%{draft_over: id, messages: messages}),
+    do: Enum.find(messages, &(&1.id == id and &1.state == "open"))
 
   # `!schedule` (steward decision, 2026-10-23): the viewer's messages waiting to be posted
   # here, which only they see.
@@ -239,6 +260,7 @@ defmodule IdejoWeb.TopicLive do
     if connected?(socket) do
       body =
         case open_message(socket.assigns.messages, user(socket)) do
+          %{id: id} when id == socket.assigns.draft_over -> ""
           %{body_md: body} -> body
           nil -> ""
         end
@@ -553,7 +575,13 @@ defmodule IdejoWeb.TopicLive do
   @impl true
   def handle_event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
-    opts = [break: params["break"] == true, reply_to_id: reply_to && reply_to.id]
+
+    opts = [
+      break: params["break"] == true,
+      reply_to_id: reply_to && reply_to.id,
+      new: draft_over(socket.assigns) != nil
+    ]
+
     then = params["then"]
 
     case Messages.commit(user(socket), topic, body, opts) do
@@ -564,6 +592,10 @@ defmodule IdejoWeb.TopicLive do
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
          after_send(socket, then, message)}
+
+      # A new message before the open one may end: the text stays, unsent.
+      {:error, :too_soon} ->
+        {:reply, %{error: true}, assign(socket, :too_soon?, true)}
 
       {:error, :forbidden} ->
         {:reply, %{error: true},
@@ -812,8 +844,26 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # The composer stays a new message (`draft_over`), refused until it may be sent.
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
+
+  def handle_event("hide_too_soon", _params, socket),
+    do: {:noreply, assign(socket, :too_soon?, false)}
+
+  # Back to the open message: what was typed follows its text, unsent.
+  def handle_event("append_to_open", _params, socket) do
+    case draft_over(socket.assigns) do
+      nil ->
+        {:noreply, assign(socket, too_soon?: false)}
+
+      open ->
+        {:noreply,
+         socket
+         |> assign(too_soon?: false, draft_over: nil, reply_to: nil)
+         |> push_event("composer_sent", %{body: open.body_md})}
+    end
+  end
 
   # A moderator closes someone's open message (GM-16) or deletes a message (MO-02), with an
   # optional reason for the log. The changed message arrives as an event.
@@ -1122,7 +1172,7 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def render(assigns) do
-    mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+    {mine, locked} = composer_place(assigns)
     {before, after_} = split(assigns.messages, mine)
     # TP-12: allowed at mount for those who could post then; nil otherwise.
     uploads = assigns[:uploads] || %{}
@@ -1133,6 +1183,7 @@ defmodule IdejoWeb.TopicLive do
           assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
         before: before,
         mine: mine,
+        locked: locked,
         later: after_,
         deleted_runs: Map.merge(deleted_runs(before), deleted_runs(after_)),
         composer_upload: uploads[:composer_image],
@@ -1161,6 +1212,7 @@ defmodule IdejoWeb.TopicLive do
       <.delete_own_dialog :if={@confirm_delete} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
+      <.too_soon_dialog :if={@too_soon?} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -1249,13 +1301,18 @@ defmodule IdejoWeb.TopicLive do
             pending={@pending}
             commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
             reply_to={@reply_to}
+            locked={@locked}
             roles={@roles}
             author={@current_scope.user}
             now={@now}
             upload={@composer_upload}
             image_error={@image_error}
             poll={@mine && @polls[@mine.id]}
-            answered?={Enum.any?(@later, &is_nil(&1.deleted_at))}
+            answered?={
+              if @locked,
+                do: answered?(@messages, @locked),
+                else: Enum.any?(@later, &is_nil(&1.deleted_at))
+            }
             unanswered_minutes={@unanswered_minutes}
           />
         </li>
@@ -1396,6 +1453,40 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # A new message sent before the open one may end (steward decision, 2026-10-24).
+  defp too_soon_dialog(assigns) do
+    ~H"""
+    <dialog
+      id="too-soon-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="hide_too_soon"
+      aria-labelledby="too-soon-title"
+      aria-describedby="too-soon-text"
+    >
+      <div class="modal-box">
+        <h2 id="too-soon-title" class="inline-card-title">{gettext("Not yet")}</h2>
+        <p id="too-soon-text" class="mt-2">
+          {gettext("You cannot post a new message yet. Append your old message.")}
+        </p>
+        <div class="modal-action">
+          <button
+            type="button"
+            id="too-soon-append"
+            class="btn btn-sm btn-primary"
+            phx-click="append_to_open"
+          >
+            {gettext("Append to my message")}
+          </button>
+          <form method="dialog">
+            <button class="btn btn-sm btn-ghost">{gettext("OK")}</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+    """
+  end
+
   attr :message_id, :string, required: true, doc: "the message it stands above"
   attr :count, :integer, required: true
 
@@ -1478,6 +1569,19 @@ defmodule IdejoWeb.TopicLive do
       </div>
     </dialog>
     """
+  end
+
+  # Where the composer goes: in the author's open message, or after Reply a new message at
+  # the end, the open one reading like the others (steward decision, 2026-10-24). `locked`:
+  # the open message a new message waits for, refused on Enter until it may start one.
+  defp composer_place(assigns) do
+    mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+
+    cond do
+      is_nil(mine) or mine.id != assigns[:draft_over] -> {mine, nil}
+      assigns.reply_to && assigns.early_reply? -> {nil, nil}
+      true -> {nil, mine}
+    end
   end
 
   # The messages before the author's open message and the ones after it; with none open,
@@ -1877,6 +1981,11 @@ defmodule IdejoWeb.TopicLive do
   attr :pending, :list, default: [], doc: "the author's scheduled messages here"
   attr :commands, :list, default: [], doc: "the `!` commands, for the Composer hook"
   attr :reply_to, :any, required: true
+
+  attr :locked, :any,
+    default: nil,
+    doc: "the open message a new message waits for, after Reply (steward decision, 2026-10-24)"
+
   attr :roles, :map, required: true
   attr :author, :map, required: true
   attr :now, DateTime, required: true
@@ -1890,10 +1999,13 @@ defmodule IdejoWeb.TopicLive do
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
   # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
-    %{mine: mine, now: now} = assigns
+    %{now: now} = assigns
+    # The timer runs for the open message, or for the one a new message waits for.
+    mine = assigns.mine || assigns.locked
 
     assigns =
       assign(assigns,
+        timed: mine,
         left: mine && DateTime.diff(mine.closes_at, now),
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
@@ -1954,7 +2066,7 @@ defmodule IdejoWeb.TopicLive do
         id="composer-timer"
         class="composer-timer"
         phx-hook="ComposerTimer"
-        data-start={DateTime.to_unix(@mine.opened_at, :millisecond)}
+        data-start={DateTime.to_unix(@timed.opened_at, :millisecond)}
         data-end={DateTime.to_unix(@ready_at, :millisecond)}
         data-now={DateTime.to_unix(@now, :millisecond)}
         aria-hidden="true"
@@ -1965,7 +2077,11 @@ defmodule IdejoWeb.TopicLive do
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
-          <% is_nil(@mine) -> %>
+          <% @locked && @ready_at && DateTime.compare(@ready_at, @now) == :gt -> %>
+            {gettext(
+              "This is a new message. Enter sends it once your open message's timer has ended."
+            )}
+          <% is_nil(@timed) or @locked -> %>
             {gettext("Enter starts a new message.")}
           <% @lone_left && @lone_left > 0 -> %>
             {gettext("Your message is open.")}

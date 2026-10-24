@@ -62,7 +62,12 @@ change and keeps no history.
 ## Around a message
 
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
-  reply** to undo it). Your next new message is shown as a reply to theirs.
+  reply** to undo it), and the box is a new message, shown as a reply to theirs. If your
+  own message is still open, sending the reply completes it (when the server allows replies
+  while the timer runs, as it does unless an administrator turned it off). Cancel the reply
+  and the box stays a new message: Enter then says **You cannot post a new message yet**
+  until your open message could be completed with Ctrl+Enter. **Append to my message** puts
+  what you typed back after your open message instead.
 - **Inline links**, highlighted in the message:
   - **@username** mentions someone: they get a notification and follow the topic (unless
     they unfollowed it).
