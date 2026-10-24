@@ -92,16 +92,40 @@ defmodule IdejoWeb.ComposerTest do
     timer = File.read!("assets/js/composer_timer.js")
     assert timer =~ "labelDone"
 
-    # Tertiary outline, secondary text, on primary at 50% blurred 6px; the hint in primary.
+    # Theme colours only (steward decision, 2026-10-25), so a new theme recolours them. Dark
+    # theme: tertiary outline, secondary text, on primary at 50% blurred 6px, the hint in
+    # primary at 60%. Light theme: the primary's contrasting ink on primary at 75%.
     css = File.read!("assets/css/app.css")
-    [bubble] = Regex.run(~r/^\.composer-bubble \{.*?^\}/ms, css)
-    assert bubble =~ "border: 1px solid var(--color-accent)"
-    assert bubble =~ "color: var(--color-secondary)"
-    assert bubble =~ "color-mix(in oklab, var(--color-primary) 50%, transparent)"
+    [bubble] = Regex.run(~r/^\.tutorial-bubble \{.*?^\}/ms, css)
+    assert bubble =~ "border: 1px solid var(--bubble-line)"
+    assert bubble =~ "color: var(--bubble-ink)"
+    assert bubble =~ "background: var(--bubble-fill)"
     assert bubble =~ "backdrop-filter: blur(6px)"
+    [light] = Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css)
+    assert light =~ "--bubble-line: var(--color-accent)"
+    assert light =~ "--bubble-ink: var(--color-primary-content)"
+    assert light =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent)"
+    [dark] = Regex.run(~r/^\[data-theme="dark"\] \{.*?^\}/ms, css)
+    assert dark =~ "--bubble-ink: var(--color-secondary)"
+    assert dark =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent)"
+    assert dark =~ "--bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent)"
+    refute Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css) |> hd() =~ "#"
 
     assert css =~
-             ~r/\.composer-hint \{[^}]*monospace[^}]*font-weight: 300[^}]*var\(--color-primary\) 60%/s
+             ~r/\.composer-hint \{[^}]*monospace[^}]*font-weight: 300[^}]*var\(--bubble-hint\)/s
+
+    # "Sent!" starts white, text and outline, and turns to the theme's colours in a second.
+    assert bubble =~ "animation: tutorial-bubble-sent 1s"
+
+    assert css =~
+             ~r/@keyframes tutorial-bubble-sent \{\s*from \{ color: #fff; border-color: #fff; \}/
+
+    assert js =~ ~s|span("tutorial-bubble is-sent"|
+    assert js =~ ~s|setProperty("--sent-delay"|
+
+    # The account menu and the Help page turn them off.
+    assert css =~
+             ~r/\[data-bubbles="off"\] \.tutorial-bubble,\s*\[data-bubbles="off"\] \.composer-hint \{ display: none; \}/
   end
 
   @tag req: "GM-01"

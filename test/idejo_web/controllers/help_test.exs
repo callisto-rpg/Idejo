@@ -14,6 +14,33 @@ defmodule IdejoWeb.HelpTest do
              ~r/id="rules-link".*?<\/a>\s*(<!--.*?-->\s*)?<a href="\/help"[^>]*id="help-link"/s
   end
 
+  # Steward decision, 2026-10-25: at the right of the title, as in the account menu.
+  test "Help and the account menu turn the tutorial bubbles on or off" do
+    doc = build_conn() |> get(~p"/help") |> html_response(200) |> LazyHTML.from_document()
+
+    toggle =
+      LazyHTML.query(
+        doc,
+        ~s(header.page-intro .bubbles-toggle[aria-labelledby="help-bubbles-label"])
+      )
+
+    assert toggle |> LazyHTML.query("button[data-choice=on]") |> LazyHTML.text() =~ "On"
+    assert toggle |> LazyHTML.query("button[data-choice=off]") |> LazyHTML.text() =~ "Off"
+    assert doc |> LazyHTML.query("#help-bubbles-label") |> LazyHTML.text() == "Tutorial bubbles"
+
+    member = Idejo.AccountsFixtures.user_fixture()
+    html = build_conn() |> log_in_user(member) |> get(~p"/help") |> html_response(200)
+
+    assert html
+           |> LazyHTML.from_document()
+           |> LazyHTML.query("#account-menu .bubbles-toggle button")
+           |> Enum.count() == 2
+
+    theme = File.read!("assets/js/theme.js")
+    assert theme =~ ~s|localStorage.setItem("idejo:bubbles", "off")|
+    assert theme =~ "phx:set-bubbles"
+  end
+
   test "Help lists the keys that send, the signs and every ! command, without signing in" do
     html = build_conn() |> get(~p"/help") |> html_response(200)
     doc = LazyHTML.from_document(html)

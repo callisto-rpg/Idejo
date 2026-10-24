@@ -266,6 +266,10 @@ defmodule IdejoWeb.Layouts do
                 <span>{gettext("Theme")}</span>
                 <.theme_toggle />
               </li>
+              <li class="account-panel-theme bubbles-toggle-row">
+                <span id="account-bubbles-label">{gettext("Tutorial bubbles")}</span>
+                <.bubbles_toggle labelled_by="account-bubbles-label" />
+              </li>
               <li>
                 <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
                 <.form for={%{}} action={~p"/users/sign-out"} method="delete">
@@ -563,13 +567,14 @@ defmodule IdejoWeb.Layouts do
         class="sidebar-topic-action sidebar-unfollow"
       >
         <input type="hidden" name="return" value="back" />
-        <button
-          type="submit"
-          aria-label={gettext("Unfollow %{title}", title: @topic.title)}
-          title={gettext("Unfollow")}
-        >
+        <button type="submit" aria-label={gettext("Unfollow %{title}", title: @topic.title)}>
           <.icon name="hero-x-mark-micro" class="size-3.5" />
         </button>
+        <%!-- Tutorial bubble (steward decision, 2026-10-25): on hover or focus, and for a
+             moment on touch screens (assets/js/sidebar.js). --%>
+        <span class="tutorial-bubble points-right sidebar-unfollow-bubble" aria-hidden="true">
+          {gettext("close & unfollow thread")}
+        </span>
       </.form>
       <.form
         :if={@place.user? && !@following?}
@@ -958,6 +963,37 @@ defmodule IdejoWeb.Layouts do
         {gettext("Attempting to reconnect")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
+    </div>
+    """
+  end
+
+  @doc """
+  Turns the tutorial bubbles on or off (steward decision, 2026-10-25): the composer's, the
+  timer line's and the sidebar ×'s. Like the theme, theme.js applies the choice before the
+  page is drawn (`data-bubbles="off"` on `<html>`) and the browser remembers it; the
+  stylesheet highlights the current one. Hidden without JavaScript, which the bubbles need.
+  """
+  attr :labelled_by, :string, required: true
+
+  def bubbles_toggle(assigns) do
+    ~H"""
+    <div role="group" aria-labelledby={@labelled_by} class="theme-toggle bubbles-toggle">
+      <button
+        type="button"
+        phx-click={JS.dispatch("phx:set-bubbles")}
+        data-choice="on"
+        aria-label={gettext("Turn tutorial bubbles on")}
+      >
+        {gettext("On")}
+      </button>
+      <button
+        type="button"
+        phx-click={JS.dispatch("phx:set-bubbles")}
+        data-choice="off"
+        aria-label={gettext("Turn tutorial bubbles off")}
+      >
+        {gettext("Off")}
+      </button>
     </div>
     """
   end

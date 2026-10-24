@@ -23,7 +23,18 @@ export const ComposerTimer = {
     this.line.addEventListener("animationend", e => {
       if (e.animationName === "composer-timer-fill") this.burn()
     })
+    // Tutorial bubbles turned on or off (theme.js): the line makes room for the bubble, or not.
+    this.onBubbles = () => this.makeRoom()
+    window.addEventListener("idejo:bubbles", this.onBubbles)
     this.run()
+  },
+
+  destroyed() { window.removeEventListener("idejo:bubbles", this.onBubbles) },
+
+  makeRoom() {
+    // The bubble's width with its "slow mode" label, or none while bubbles are off.
+    if (this.bubble.classList.contains("is-done")) return
+    this.el.style.setProperty("--bubble-room", `${this.bubble.offsetWidth}px`)
   },
 
   // Re-rendered every second while the window runs: only a new end restarts the line.
@@ -42,7 +53,7 @@ export const ComposerTimer = {
     this.line.classList.remove("is-burning", "is-over")
     this.bubble.classList.remove("is-done", "is-still")
     this.bubble.textContent = this.slowLabel
-    this.el.style.setProperty("--bubble-room", `${this.bubble.offsetWidth}px`)
+    this.makeRoom()
     // Over already (a reload after the time, or an answer that shortened it): only the bubble
     // in the middle, still.
     if (total <= 0 || elapsed >= total) {

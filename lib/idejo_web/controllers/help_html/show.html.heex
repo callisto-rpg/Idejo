@@ -3,8 +3,13 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <Layouts.app flash={@flash} current_scope={@current_scope}>
-  <header class="page-intro">
+  <header class="page-intro page-intro-row help-intro">
     <h1>{gettext("Help")}</h1>
+    <%!-- Steward decision, 2026-10-25: at the right of the title. --%>
+    <div class="bubbles-toggle-row">
+      <span id="help-bubbles-label">{gettext("Tutorial bubbles")}</span>
+      <Layouts.bubbles_toggle labelled_by="help-bubbles-label" />
+    </div>
   </header>
   <div class="help-page">
     <section id="help-send" aria-labelledby="help-send-title">

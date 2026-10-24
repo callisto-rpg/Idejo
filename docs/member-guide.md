@@ -19,7 +19,9 @@ What is different is how you write: **your message grows as you go.**
 
 The text box below the topic is where you write. Its placeholder repeats the keys, and a
 small bubble beside the cursor says **Enter to send**; once you press it, **Sent!**, with
-"Continue typing to add to your message" until you type again.
+"Continue typing to add to your message" until you type again. These **tutorial bubbles**
+(also on the timer line below, and on the sidebar's **×**) can be turned off with
+**Tutorial bubbles**: **Off**, in the menu under your name or at the top of **Help**.
 
 ## How a message grows
 
