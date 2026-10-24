@@ -84,6 +84,7 @@ defmodule IdejoWeb.AC05GuestReadingTest do
     assert html =~ ~s(action="/continue-as-guest")
     assert html =~ ~s(href="/users/sign-in")
     assert html =~ ~s(href="/users/sign-up")
+    refute html =~ "Log in"
     # The home page only.
     refute conn |> get(~p"/c/general") |> html_response(200) =~ ~s(id="guest-notice")
 

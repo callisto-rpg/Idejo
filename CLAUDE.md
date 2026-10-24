@@ -675,7 +675,7 @@ roles or the permission grid. Every later change must keep it true:
   the logo (`Layouts.full_logo themed`: `/images/logo-dark.png` in the dark theme), what
   they miss without signing in, "Continue without signing in" (a form to
   `POST /continue-as-guest`, `GuestNoticeController`, which hides it for the session), then
-  Log in and Sign up. Dialogs a page renders `open` take `data-show-modal`, which
+  Sign in and Sign up. Dialogs a page renders `open` take `data-show-modal`, which
   `assets/js/open_dialogs.js` turns into modals.
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
