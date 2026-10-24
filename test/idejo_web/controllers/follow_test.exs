@@ -180,6 +180,18 @@ defmodule IdejoWeb.FollowTest do
            )
            |> Enum.count() == 1
 
+    # Its tutorial bubble (steward decision, 2026-10-25), shown on hover or focus, and for
+    # 3 s on touch screens (assets/js/sidebar.js).
+    assert html
+           |> LazyHTML.from_document()
+           |> LazyHTML.query(
+             ~s(#sidebar form[action="/t/#{topic.id}/follow"] .tutorial-bubble.sidebar-unfollow-bubble[aria-hidden=true])
+           )
+           |> LazyHTML.text()
+           |> String.trim() == "close & unfollow thread"
+
+    assert File.read!("assets/js/sidebar.js") =~ "const PEEK_MS = 3000"
+
     conn =
       build_conn()
       |> log_in_user(member)

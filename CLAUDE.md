@@ -334,15 +334,27 @@ roles or the permission grid. Every later change must keep it true:
   that fills up until Ctrl+Enter may start a new message (the window's end, or the
   unanswered message time's while nobody wrote below: `start_new_at/3`), its front glowing
   white in yellow, then burns in and goes; the hook sets its duration and negative delay
-  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Bubbles (steward
-  decision, 2026-10-25; `.composer-bubble`: a pill, tertiary outline, secondary text, primary
-  at 50% blurred 6px, a triangle on the left): "slow mode" rides in front of the line (which
+  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Tutorial bubbles
+  (steward decisions, 2026-10-25; `.tutorial-bubble`: a pill blurred 6px with a triangle
+  toward what it explains, `.points-right` for one on its right; theme colours only, through
+  `--bubble-line` / `-ink` / `-fill` / `-hint`: dark theme tertiary outline, secondary text,
+  primary at 50%; light theme `primary-content` on primary at 75%, the hint the primary mixed
+  into `base-content`): "slow mode" rides in front of the line (which
   stops short by `--bubble-room`, the bubble's width), and once it is full slides to the
   middle as "Ctrl+Enter to start new message" (`#composer-timer-bubble`, `data-label-done`);
   beside the caret, at the end of the text, "Enter to send" while something is not sent,
-  then "Sent!" and a faded monospace "Continue typing to add to your message"
+  then "Sent!" (`.is-sent`: white text and outline turning to the theme's in 1 s, its place
+  kept across repaints by `--sent-delay`) and a faded monospace "Continue typing to add to
+  your message"
   (`.composer-hint`, dropped when it would pass the right edge) until the author types
-  (`data-label-send` / `-sent` / `-continue`, from gettext). Sent text is drawn like a
+  (`data-label-send` / `-sent` / `-continue`, from gettext). The sidebar's × has one too,
+  "close & unfollow thread", on hover or focus, and on touch screens for 3 s once a page when
+  the topic on screen's entry shows (`.sidebar-unfollow-bubble`, `is-peek`, `peek()` in
+  `assets/js/sidebar.js`). "Tutorial bubbles" On / Off (`Layouts.bubbles_toggle/1`, in the
+  account menu under Theme and at the right of the Help page's title; hidden without
+  JavaScript) turns them all off: like the theme, theme.js applies `data-bubbles="off"` on
+  `<html>` before paint, remembered in `localStorage` (`idejo:bubbles`), and sends
+  `idejo:bubbles` so the timer line makes room again. Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every
   character under the transparent textarea), and text just sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative

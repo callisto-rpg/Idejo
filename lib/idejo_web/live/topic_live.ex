@@ -2173,7 +2173,7 @@ defmodule IdejoWeb.TopicLive do
              2026-10-25). --%>
         <span
           id="composer-timer-bubble"
-          class="composer-bubble composer-timer-bubble"
+          class="tutorial-bubble composer-timer-bubble"
           phx-update="ignore"
           data-label-done={gettext("Ctrl+Enter to start new message")}
         >

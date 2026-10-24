@@ -686,6 +686,16 @@
       &:hover { color: var(--color-base-content); }
     }
   }
+  /* Tutorial bubbles (steward decision, 2026-10-25): words, not icons; need scripts. */
+  .theme-toggle.bubbles-toggle button { padding: 0.25rem 0.625rem; font-size: 0.8125rem; font-weight: 500; }
+  html:not([data-js]) .bubbles-toggle-row { display: none; }
+  .help-intro {
+    justify-content: space-between;
+    & .bubbles-toggle-row { display: flex; align-items: center; gap: 0.625rem; color: var(--ink-soft); font-size: 0.875rem; }
+  }
+  html:not([data-js]) .help-intro .bubbles-toggle-row { display: none; }
+  :root:not([data-bubbles="off"]) .bubbles-toggle [data-choice="on"],
+  [data-bubbles="off"] .bubbles-toggle [data-choice="off"],
   [data-theme-source="system"] .theme-toggle [data-phx-theme="system"],
   [data-theme-source="user"][data-theme="light"] .theme-toggle [data-phx-theme="light"],
   [data-theme-source="user"][data-theme="dark"] .theme-toggle [data-phx-theme="dark"] {
@@ -1916,19 +1926,42 @@ html:not([data-js]) .spoiler-cover { display: none; }
   .composer-caret::before { animation: none; }
 }
 
-/* The composer's bubbles (steward decision, 2026-10-25): a small pill, tertiary outline,
-   secondary text, on primary at 50% blurred 6px, its triangle on the left pointing at the
-   caret or at the timer line's front. */
-.composer-bubble {
+/* Tutorial bubbles (steward decisions, 2026-10-25): a small pill with a triangle pointing at
+   what it explains (the caret, the timer line's front, the sidebar's ×), blurred 6px, in
+   theme colours only, so a new theme in Admin → Settings recolours them. Dark theme: a
+   tertiary outline, secondary text on primary at 50%. Light theme, where the secondary on
+   a pale primary does not read: the primary's own contrasting ink on primary at 75%, and a
+   hint mixing the primary into the text colour. The account menu and the Help page turn
+   them off (`data-bubbles="off"`, theme.js). */
+:root,
+[data-theme="light"] {
+  --bubble-line: var(--color-accent);
+  --bubble-ink: var(--color-primary-content);
+  --bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent);
+  --bubble-hint: color-mix(in oklab, var(--color-primary) 45%, var(--color-base-content));
+}
+[data-theme="dark"] {
+  --bubble-ink: var(--color-secondary);
+  --bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  --bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bubble-ink: var(--color-secondary);
+    --bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent);
+    --bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent);
+  }
+}
+.tutorial-bubble {
   position: relative;
   display: inline-block;
   padding: 0.1875rem 0.5rem;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--bubble-line);
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  background: var(--bubble-fill);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  color: var(--color-secondary);
+  color: var(--bubble-ink);
   font-family: var(--font-body);
   font-size: 0.6875rem;
   font-weight: 500;
@@ -1942,10 +1975,56 @@ html:not([data-js]) .spoiler-cover { display: none; }
     width: 0.3125rem;
     height: 0.5rem;
     translate: 0 -50%;
-    background: var(--color-accent);
+    background: var(--bubble-line);
     clip-path: polygon(100% 0, 0 50%, 100% 100%);
   }
+  /* The triangle on the right, pointing at what follows. */
+  &.points-right::before {
+    left: auto;
+    right: -0.3125rem;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  /* "Sent!": white text and outline turning to the theme's in a second; composer.js keeps
+     its place across repaints with `--sent-delay`, set through the DOM. */
+  &.is-sent {
+    animation: tutorial-bubble-sent 1s ease-out both;
+    animation-delay: var(--sent-delay, 0ms);
+    &::before {
+      animation: tutorial-bubble-sent-arrow 1s ease-out both;
+      animation-delay: var(--sent-delay, 0ms);
+    }
+  }
 }
+@keyframes tutorial-bubble-sent {
+  from { color: #fff; border-color: #fff; }
+  to { color: var(--bubble-ink); border-color: var(--bubble-line); }
+}
+@keyframes tutorial-bubble-sent-arrow {
+  from { background: #fff; }
+  to { background: var(--bubble-line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-bubble.is-sent, .tutorial-bubble.is-sent::before { animation: none; }
+}
+/* The ×'s tutorial bubble (steward decision, 2026-10-25), to its left over the name (the
+   sidebar scrolls, so nothing shows past its edge): while the × is pointed at or focused,
+   and on touch screens for 3 s when the topic opens (`is-peek`, assets/js/sidebar.js). */
+.sidebar-unfollow { position: relative; }
+.sidebar-unfollow-bubble {
+  position: absolute;
+  right: calc(100% + 0.5rem);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+.sidebar-unfollow:hover .sidebar-unfollow-bubble,
+.sidebar-unfollow:has(button:focus-visible) .sidebar-unfollow-bubble,
+.sidebar-unfollow-bubble.is-peek { opacity: 1; }
+[data-bubbles="off"] .tutorial-bubble,
+[data-bubbles="off"] .composer-hint { display: none; }
 .composer-caret-bubbles {
   position: absolute;
   left: 0.625rem;
@@ -1960,7 +2039,7 @@ html:not([data-js]) .spoiler-cover { display: none; }
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.75rem;
   font-weight: 300;
-  color: color-mix(in oklab, var(--color-primary) 60%, transparent);
+  color: var(--bubble-hint);
   &[hidden] { display: none; }
 }
 
