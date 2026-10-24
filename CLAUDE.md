@@ -410,15 +410,23 @@ roles or the permission grid. Every later change must keep it true:
   and re-measures growing messages. Its state lives in `data-collapsed` / `data-expanded`, kept
   across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows.
 - **Edits and earlier versions** (GM-10, GM-11): open messages are edited in the composer;
-  closed ones with `Messages.edit/3` (the author only, in an open topic; the text kept as
-  written, no `.` added), from an "Edit" button that opens the message editor in place.
-  Changing text already there keeps a version and sets `edited`; adding at the end does not.
+  closed ones with `Messages.edit/4` (the author only, in an open topic; the text kept as
+  written, no `.` added). The author's "Edit" (steward decision, 2026-10-24) puts the
+  composer in the message (`TopicLive`'s `composing_edit`, `data-editing`, `composer_place/1`,
+  `"composer_sent"` with its text, `"composer_focus"`): appended to like an open message, no
+  timer; Enter saves, Ctrl+Enter saves and ends the edit at any time (`commit_edit/4`, reply
+  `closed: true`; the composer goes back to the open message or the end, the focus to Edit).
+  One version per edit: `version: :always` at its first change (kept then, so a closed tab
+  loses no history), `:never` after (`edit_versioned?`). A moderator's "Edit" opens the
+  message editor in place (`edit_as_moderator/4`). Otherwise (`version: :auto`), changing
+  text already there keeps a version and sets `edited`; adding at the end does not.
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
   needed) listing each version newest first with the span it was current. `list_messages/1`
   preloads `:versions`.
-- **Deleting one's own message** (steward decision, 2026-10-23): saving an edit with no text
-  asks "Are you sure you want to delete your own message?" (`TopicLive`, `confirm_delete`;
-  "No" is a `method="dialog"` form, so the focus returns to the editor), and "Yes" calls
+- **Deleting one's own message** (steward decision, 2026-10-23): Enter on an emptied edit
+  (the composer sends `""` while `data-editing`) asks "Are you sure you want to delete your
+  own message?" (`TopicLive`, `confirm_delete`; "No" is a `method="dialog"` form, so the
+  focus returns to the composer, still editing), and "Yes" calls
   `Messages.delete_own/2`: like a moderator's delete (MO-02: `deleted_at`, the topic counts
   one less, kept for moderators) but `deleted_by_id` is the author, nothing is logged, and
   the topic's opening message is refused (it stays "can't be blank"). Readers see "Message

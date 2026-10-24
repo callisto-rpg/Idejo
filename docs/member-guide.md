@@ -46,8 +46,12 @@ topic is locked, or when a moderator closes it.
 
 - **While your message is open**, change the text right in the box and press Enter. The
   changed part shows as unsent until you do.
-- **After it is complete**, use **Edit** under it.
-- **To delete it**, use **Edit**, remove all the text and save. You are asked "Are you sure
+- **After it is complete**, use **Edit** under it: the box opens in your message with its
+  text, and you change it or add to it as while writing, Enter saving each time. There is no
+  timer: **Ctrl+Enter** (or Enter three times) saves and finishes the edit whenever you like.
+  The text from before the edit is kept once, as an earlier version, however many times you
+  pressed Enter.
+- **To delete it**, use **Edit**, remove all the text and press Enter. You are asked "Are you sure
   you want to delete your own message?"; **Yes** deletes it, and others see "Message deleted
   by user" in its place (moderators can still read it). The first message of a topic cannot
   be deleted this way.
@@ -89,7 +93,7 @@ change and keeps no history.
   several people chose the same one; click one to add yours or take it back. You may add
   several. The author is told once per message how many reactions it has.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box, or use
-  **!image** (below). In the editor for a new topic or an edit, there is also **Add image**.
+  **!image** (below). In the editor for a new topic, there is also **Add image**.
 - **Commands**: type **!** at the start of a word in the box for a list of commands. Pick one
   with a click, or type its name or use the arrow keys, then **Enter** (or **Tab**):
   - **!image** opens your files; the picture goes at the end of your message.

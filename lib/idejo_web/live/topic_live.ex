@@ -98,7 +98,9 @@ defmodule IdejoWeb.TopicLive do
            revealed: MapSet.new(),
            draft_over: nil,
            early_reply?: true,
-           too_soon?: false
+           too_soon?: false,
+           composing_edit: nil,
+           edit_versioned?: false
          )}
 
       topic ->
@@ -117,6 +119,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
+         |> assign(composing_edit: nil, edit_versioned?: false)
          |> put_messages(Forum.list_messages(topic))
          |> put_draft()
          |> put_first_unread(session["first_unread"])
@@ -573,6 +576,18 @@ defmodule IdejoWeb.TopicLive do
   end
 
   @impl true
+  def handle_event(
+        "commit",
+        %{"body" => body} = params,
+        %{assigns: %{composing_edit: id}} = socket
+      )
+      when is_binary(id) do
+    case editing_in_composer(socket.assigns) do
+      nil -> {:reply, %{error: true}, end_composer_edit(socket)}
+      message -> commit_edit(socket, message, body, params["break"] == true)
+    end
+  end
+
   def handle_event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
 
@@ -1022,7 +1037,20 @@ defmodule IdejoWeb.TopicLive do
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
+    user = user(socket)
+
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
+      # Steward decision, 2026-10-24: the author edits in the composer, as they wrote it.
+      %{state: "closed", deleted_at: nil, author_id: author_id} = message
+      when author_id == user.id ->
+        {:noreply,
+         socket
+         |> close_editor()
+         |> assign(composing_edit: id, edit_versioned?: false)
+         |> push_event("composer_sent", %{body: message.body_md})
+         # AX-01: the Edit button that had the focus is gone; the box takes it.
+         |> push_event("composer_focus", %{})}
+
       %{state: "closed", deleted_at: nil} = message ->
         form = to_form(%{"body" => message.body_md}, as: :edit)
         {:noreply, assign(socket, editing: {id, form}, editor_mode: :write, preview_html: "")}
@@ -1120,7 +1148,10 @@ defmodule IdejoWeb.TopicLive do
     case message && Messages.delete_own(user(socket), message) do
       # AX-01: the focus moves to the placeholder that replaces the editor.
       {:ok, _message} ->
-        {:noreply, assign(socket, editing: nil, refocus: id)}
+        {:noreply,
+         socket
+         |> assign(editing: nil, refocus: id)
+         |> then(&if(&1.assigns.composing_edit == id, do: end_composer_edit(&1), else: &1))}
 
       _error ->
         {:noreply,
@@ -1142,6 +1173,58 @@ defmodule IdejoWeb.TopicLive do
     do: assign(socket, editing: nil, refocus: id)
 
   defp close_editor(socket), do: assign(socket, :editing, nil)
+
+  # Editing in the composer (steward decision, 2026-10-24): the author's closed message, in
+  # place, appended to like an open one. Enter saves; Ctrl+Enter saves and ends the edit, at
+  # any time. One version per edit: the text from before it, kept at its first change.
+  defp editing_in_composer(%{composing_edit: nil}), do: nil
+
+  defp editing_in_composer(%{composing_edit: id, messages: messages}),
+    do: Enum.find(messages, &(&1.id == id and &1.state == "closed" and is_nil(&1.deleted_at)))
+
+  defp commit_edit(socket, message, "", _break?) do
+    # Emptied: ask whether to delete it, as the editor does (not the opening message).
+    if message.id != hd(socket.assigns.messages).id,
+      do: {:reply, %{error: true}, assign(socket, :confirm_delete, message.id)},
+      else: {:reply, %{error: true}, socket}
+  end
+
+  defp commit_edit(socket, message, body, break?) do
+    version = if socket.assigns.edit_versioned?, do: :never, else: :always
+
+    case Messages.edit(user(socket), message, body, version: version) do
+      {:ok, edited} ->
+        socket =
+          assign(socket, :edit_versioned?, socket.assigns.edit_versioned? or edited != message)
+
+        if break?,
+          do: {:reply, %{closed: true, body: edited.body_md}, end_composer_edit(socket)},
+          else: {:reply, %{closed: false, body: edited.body_md}, socket}
+
+      {:error, :blank} ->
+        commit_edit(socket, message, "", break?)
+
+      {:error, _} ->
+        {:reply, %{error: true},
+         socket
+         |> end_composer_edit()
+         |> put_flash(:error, gettext("This message cannot be edited."))}
+    end
+  end
+
+  # The composer goes back to the author's open message, or to the end.
+  defp end_composer_edit(socket) do
+    id = socket.assigns.composing_edit
+    socket = assign(socket, composing_edit: nil, edit_versioned?: false, refocus: id)
+
+    case open_message(socket.assigns.messages, user(socket)) do
+      %{id: open_id, body_md: body} when open_id != socket.assigns.draft_over ->
+        push_event(socket, "composer_sent", %{body: body})
+
+      _ ->
+        push_event(socket, "composer_sent", %{body: ""})
+    end
+  end
 
   defp selectable?(socket, id) do
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
@@ -1302,6 +1385,7 @@ defmodule IdejoWeb.TopicLive do
             commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
             reply_to={@reply_to}
             locked={@locked}
+            editing?={@mine != nil and @mine.id == @composing_edit}
             roles={@roles}
             author={@current_scope.user}
             now={@now}
@@ -1576,8 +1660,10 @@ defmodule IdejoWeb.TopicLive do
   # the open message a new message waits for, refused on Enter until it may start one.
   defp composer_place(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+    editing = assigns[:composing_edit] && editing_in_composer(assigns)
 
     cond do
+      editing -> {editing, nil}
       is_nil(mine) or mine.id != assigns[:draft_over] -> {mine, nil}
       assigns.reply_to && assigns.early_reply? -> {nil, nil}
       true -> {nil, mine}
@@ -1986,6 +2072,10 @@ defmodule IdejoWeb.TopicLive do
     default: nil,
     doc: "the open message a new message waits for, after Reply (steward decision, 2026-10-24)"
 
+  attr :editing?, :boolean,
+    default: false,
+    doc: "`mine` is a closed message the author edits (steward decision, 2026-10-24)"
+
   attr :roles, :map, required: true
   attr :author, :map, required: true
   attr :now, DateTime, required: true
@@ -2000,8 +2090,9 @@ defmodule IdejoWeb.TopicLive do
   # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
     %{now: now} = assigns
-    # The timer runs for the open message, or for the one a new message waits for.
-    mine = assigns.mine || assigns.locked
+    # The timer runs for the open message, or for the one a new message waits for; an edit
+    # has none (Ctrl+Enter ends it at any time).
+    mine = if assigns.editing?, do: nil, else: assigns.mine || assigns.locked
 
     assigns =
       assign(assigns,
@@ -2018,7 +2109,7 @@ defmodule IdejoWeb.TopicLive do
     ~H"""
     <section aria-label={gettext("Your message")} class="message message-mine">
       <p :if={@mine} class="message-head"><.author_line author={@author} roles={@roles} /></p>
-      <div :if={@reply_to} id="replying-to" class="message-quote">
+      <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
           <button type="button" class="link ml-2" phx-click="cancel_reply">
@@ -2033,6 +2124,7 @@ defmodule IdejoWeb.TopicLive do
         phx-hook="Composer"
         phx-update="ignore"
         data-sent={@mine && @mine.body_md}
+        data-editing={@editing?}
         data-commands={Jason.encode!(@commands)}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
@@ -2077,6 +2169,10 @@ defmodule IdejoWeb.TopicLive do
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
+          <% @editing? -> %>
+            {gettext(
+              "You are editing your message. Enter saves it; Ctrl+Enter, or Enter three times, saves it and ends the edit."
+            )}
           <% @locked && @ready_at && DateTime.compare(@ready_at, @now) == :gt -> %>
             {gettext(
               "This is a new message. Enter sends it once your open message's timer has ended."

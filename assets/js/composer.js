@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10).
+// Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10), or
+// a closed message of theirs they chose to Edit (data-editing; steward decision, 2026-10-24):
+// Enter saves it, Ctrl+Enter saves it and ends the edit, with no timer.
 // Enter sends the whole text and keeps it in the box; a backdrop behind a transparent
 // textarea draws sent text like any message's and highlights unsent text as temporary.
 // Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
@@ -182,6 +184,11 @@ export const Composer = {
     })
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
+    // Edit (steward decision, 2026-10-24): the box takes the focus, the caret at the end.
+    this.handleEvent("composer_focus", () => {
+      this.input.focus()
+      this.input.setSelectionRange(this.input.value.length, this.input.value.length)
+    })
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
     // unsent, like anything typed.
     onImages(this.input, files => this.upload("composer_image", files))
@@ -256,6 +263,12 @@ export const Composer = {
   send(isBreak, then) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value)
+    // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
+    // delete it.
+    if (body === "" && this.el.hasAttribute("data-editing")) {
+      if (this.sent !== "") this.pushEvent("commit", {body: "", break: isBreak})
+      return
+    }
     if (body === "") return
     if (!isBreak && body === this.sent.replace(/\s+$/, "")) return
 
