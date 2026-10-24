@@ -6,6 +6,9 @@ defmodule IdejoWeb.Admin.SettingsLive do
   Admin panel: server-wide settings (AD-02), with the growing-message window (AD-04,
   GM-15). A new window applies to messages opened after the change; open messages keep the
   `closes_at` fixed at their first commit (GM-03).
+
+  The website theme's colours (steward decision, 2026-10-24) are typed or picked with the
+  browser's colour picker; the page loads again after they change, so the panel shows them.
   """
   use IdejoWeb, :live_view
 
@@ -20,23 +23,41 @@ defmodule IdejoWeb.Admin.SettingsLive do
   end
 
   @impl true
-  def handle_event("validate", %{"settings" => params}, socket) do
-    changeset = params |> Settings.change_settings() |> Map.put(:action, :validate)
+  def handle_event("validate", %{"settings" => params} = all, socket) do
+    changeset =
+      params |> picked_colour(all) |> Settings.change_settings() |> Map.put(:action, :validate)
+
     {:noreply, assign(socket, :form, to_form(changeset, as: :settings))}
   end
 
   def handle_event("save", %{"settings" => params}, socket) do
+    theme = Settings.theme()
+
     case Settings.update_settings(socket.assigns.current_scope.user, params) do
       {:ok, _settings} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Settings saved."))
-         |> assign(:form, to_form(Settings.change_settings(), as: :settings))}
+        socket = put_flash(socket, :info, gettext("Settings saved."))
+
+        # The theme is in the root layout, which only a page load renders again.
+        if Settings.theme() == theme do
+          {:noreply, assign(socket, :form, to_form(Settings.change_settings(), as: :settings))}
+        else
+          {:noreply, redirect(socket, to: ~p"/admin")}
+        end
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset, as: :settings))}
     end
   end
+
+  # The colour picker fills in its hex field.
+  defp picked_colour(params, %{"_target" => [_, target]}) do
+    case String.replace_suffix(target, "_picker", "") do
+      ^target -> params
+      key -> Map.put(params, key, params[target])
+    end
+  end
+
+  defp picked_colour(params, _all), do: params
 
   @impl true
   def render(assigns) do
@@ -115,11 +136,64 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "Shown to new members on their first visit, with the roles they may choose, and at any time under Rules & Roles."
           )}
         </p>
+        <%!-- The website theme (steward decision, 2026-10-24). --%>
+        <fieldset class="theme-settings" aria-describedby="theme-help">
+          <legend class="theme-settings-title">{gettext("Theme")}</legend>
+          <p id="theme-help" class="text-sm opacity-70 mb-3">
+            {gettext(
+              "Buttons, toggles and links use the primary colour; the secondary and tertiary colours appear only where a second colour is needed. The backgrounds are the page's in the light and dark themes. As #rrggbb, or #rrggbbaa with transparency."
+            )}
+          </p>
+          <.colour_setting
+            :for={{key, label} <- theme_labels()}
+            field={@form[key]}
+            picker={@form[:"#{key}_picker"]}
+            label={label}
+          />
+        </fieldset>
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>
       </.form>
     </Layouts.admin>
+    """
+  end
+
+  defp theme_labels do
+    [
+      theme_primary: gettext("Primary colour"),
+      theme_secondary: gettext("Secondary colour"),
+      theme_tertiary: gettext("Tertiary colour"),
+      theme_light_bg: gettext("Light background"),
+      theme_dark_bg: gettext("Dark background")
+    ]
+  end
+
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :picker, Phoenix.HTML.FormField, required: true
+  attr :label, :string, required: true
+
+  # A hex field with the browser's colour picker beside it (which knows no transparency).
+  defp colour_setting(assigns) do
+    value = to_string(assigns.field.value)
+
+    assigns =
+      assign(assigns,
+        swatch:
+          if(Regex.match?(~r/^#[0-9a-fA-F]{6}/, value),
+            do: String.downcase(String.slice(value, 0, 7)),
+            else: "#000000"
+          )
+      )
+
+    ~H"""
+    <div class="theme-colour">
+      <.input field={@field} type="text" label={@label} spellcheck="false" required />
+      <label class="category-look-picker">
+        <span class="sr-only">{gettext("Pick the %{colour}", colour: @label)}</span>
+        <input type="color" name={@picker.name} id={@picker.id} value={@swatch} />
+      </label>
+    </div>
     """
   end
 end

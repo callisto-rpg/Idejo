@@ -195,6 +195,19 @@ roles or the permission grid. Every later change must keep it true:
   title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
   `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
   credited in `NOTICE` and `REUSE.toml`). Small uppercase labels stay in Rubik.
+- **Website theme** (steward decision, 2026-10-24): five settings in **Admin → Settings**
+  (`theme_primary`, `theme_secondary`, `theme_tertiary`, `theme_light_bg`, `theme_dark_bg`;
+  `#rrggbb` or `#rrggbbaa`; defaults gold `#daa304ff`, `#f2c94c`, `#b8860b`, `#fdfcf6`,
+  `#1d1a00`), read in one query by `Settings.theme/0`. `Layouts.theme_colours/1` (root
+  layout, a nonce `<style>` after `app.css` and before `/theme.css`) sets daisyUI's
+  variables for both themes with daisyUI's own selectors: primary, secondary and accent
+  (the tertiary) with their `-content` (white or `#111111`, `CategoryIcons.contrast/1`),
+  `base-200` the background (the page), `base-100` a little lighter (cards), `base-300` a
+  little darker, `base-content` the other background. So use theme classes and variables
+  (`btn-primary`, `var(--color-primary)`), never fixed colours, for anything the theme
+  should colour: primary by default, secondary or accent only to distinguish or to
+  unemphasise. The daisyUI themes in `app.css` are the fallback when no nonce is set.
+  Saving a theme change reloads the admin page (the root layout only renders on a load).
 - **Server stylesheet** (steward decision, 2026-10-23): the `custom_css` setting, default
   `priv/theme/default.css` (`Settings.default/1`), edited in **Admin → Stylesheet**
   (`Admin.StylesheetLive`: save, reset to default; audited like any setting) and served at
@@ -672,7 +685,7 @@ roles or the permission grid. Every later change must keep it true:
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor
   may not view is never named: it leads to sign-in, or home with a dialog (see Permalinks).
   Visitors see a card over the home page (`#guest-notice`; steward decision, 2026-10-24):
-  the logo (`Layouts.full_logo themed`: `/images/logo-dark.png` in the dark theme), what
+  the logo (`Layouts.full_logo/1`), what
   they miss without signing in, "Continue without signing in" (a form to
   `POST /continue-as-guest`, `GuestNoticeController`, which hides it for the session), then
   Sign in and Sign up. Dialogs a page renders `open` take `data-show-modal`, which
@@ -751,10 +764,13 @@ roles or the permission grid. Every later change must keep it true:
   server.
 - **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
   falling back to "Idejo". The Idejo logos (steward decision, 2026-10-23; © Mariano Pictet,
-  CC-BY-4.0, in NOTICE and REUSE.toml): the small one (`/images/logo-small.png`, also
-  `/favicon.ico` and the `rel="icon"`) before the server name in the header; the full one
+  CC-BY-4.0, in NOTICE and REUSE.toml): the small one (`/images/logo-small.svg`, with
+  `logo-small.png` as a raster copy) before the server name in the header; the favicon
+  (`/images/favicon.png`, the `rel="icon"`, and the same bytes at `/favicon.ico`; steward
+  decision, 2026-10-24); the full one
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
-  sign-in, sign-up and setup pages, inverted by the dark theme. Pages set `page_title`; the title reads "Page · Server name". No
+  sign-in, sign-up and setup pages and on the visitors' card, in colour in both themes
+  (steward decision, 2026-10-24). Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.

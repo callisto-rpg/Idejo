@@ -63,6 +63,12 @@ corner. It has seven tabs.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
+- **Theme**: the website's colours, as `#rrggbb` (or `#rrggbbaa` with transparency), typed
+  or chosen with the colour button beside each. **Primary colour** fills buttons, toggles and
+  links; **Secondary colour** and **Tertiary colour** appear only where a second colour is
+  needed. **Light background** and **Dark background** are the page's in the light and dark
+  themes. Text on a colour turns white or near-black, whichever reads better. The page loads
+  again when you save a change, to show it. **Stylesheet** can still override them.
 
 ### Email
 

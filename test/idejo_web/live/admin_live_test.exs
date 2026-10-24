@@ -95,6 +95,33 @@ defmodule IdejoWeb.AdminLiveTest do
     end
 
     @tag req: "AD-02"
+    test "AD-02 an administrator sets the website theme", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin")
+      assert html =~ ~s(value="#daa304ff")
+      assert html =~ ~s(value="#daa304")
+
+      # The colour picker fills in the hex field.
+      html =
+        lv
+        |> form("#settings-form")
+        |> render_change(%{
+          "_target" => ["settings", "theme_secondary_picker"],
+          "settings" => %{"theme_secondary_picker" => "#112233"}
+        })
+
+      assert html =~ ~s(value="#112233")
+
+      # A theme change loads the page again, so the panel shows it.
+      assert {:error, {:redirect, %{to: "/admin"}}} =
+               lv
+               |> form("#settings-form", settings: %{theme_primary: "#3366ff"})
+               |> render_submit()
+
+      assert Settings.theme().primary == "#3366ff"
+      assert conn |> get(~p"/") |> html_response(200) =~ "--color-primary:#3366ff;"
+    end
+
+    @tag req: "AD-02"
     test "AD-02 invalid settings show errors and save nothing", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin")
 

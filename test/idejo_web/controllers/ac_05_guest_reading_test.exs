@@ -80,7 +80,7 @@ defmodule IdejoWeb.AC05GuestReadingTest do
     assert html =~ ~s(id="guest-notice")
     assert html =~ "You are not signed in."
     assert html =~ "You will not be able to post and won&#39;t see any hidden categories."
-    assert html =~ ~s(src="/images/logo-dark.png")
+    assert html =~ ~s(src="/images/logo.svg" alt="Idejo" class="full-logo")
     assert html =~ ~s(action="/continue-as-guest")
     assert html =~ ~s(href="/users/sign-in")
     assert html =~ ~s(href="/users/sign-up")

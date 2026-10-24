@@ -355,16 +355,12 @@
     border-radius: 0.5rem;
     box-shadow: var(--shadow-soft);
   }
-  /* The full logo on the sign-in, sign-up and setup pages: black, white in the dark theme. */
+  /* The full logo on the sign-in, sign-up and setup pages: in colour, in both themes. */
   .full-logo {
     display: inline-block;
     width: 10rem;
     height: auto;
     margin-bottom: 1.5rem;
-  }
-  [data-theme="dark"] .full-logo { filter: invert(1); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .full-logo { filter: invert(1); }
   }
   .brand-name {
     display: none;
@@ -1040,6 +1036,10 @@
     & input { width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid var(--hairline); border-radius: var(--radius-field); background: none; cursor: pointer; }
   }
   .icon-picker { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+  /* Admin → Settings: the website theme (steward decision, 2026-10-24). */
+  .theme-settings { margin: 0.5rem 0 1rem; }
+  .theme-settings-title { margin-bottom: 0.25rem; font-family: var(--font-title); font-size: 1.125rem; font-weight: 650; }
+  .theme-colour { display: flex; align-items: flex-end; gap: 0.5rem; max-width: 22rem; }
   .icon-group legend { margin-bottom: 0.375rem; color: var(--ink-faint); font-size: 0.75rem; font-weight: 600; }
   .icon-choices { display: flex; flex-wrap: wrap; gap: 0.25rem; }
   .icon-choice {
@@ -2294,24 +2294,13 @@ html:not([data-js]) .spoiler-cover { display: none; }
   .unread-line { animation-duration: 1ms; }
 }
 
-/* The visitors' card on the home page (steward decision, 2026-10-24): the logo (the white
-   one in the dark theme), what signing in gives, continue, then sign in or up. */
+/* The visitors' card on the home page (steward decision, 2026-10-24): the logo, what signing
+   in gives, continue, then sign in or up. */
 .guest-notice { max-width: 26rem; display: grid; gap: 1rem; text-align: center; }
 .guest-notice-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
 .guest-notice-account { display: flex; justify-content: center; gap: 0.5rem; }
 .guest-notice-account > .btn { flex: 1; }
-.full-logo-themed img { display: inline-block; width: 10rem; height: auto; }
-.full-logo-themed .full-logo-dark { display: none; }
-[data-theme="dark"] .full-logo-themed {
-  & .full-logo-light { display: none; }
-  & .full-logo-dark { display: inline-block; }
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .full-logo-themed {
-    & .full-logo-light { display: none; }
-    & .full-logo-dark { display: inline-block; }
-  }
-}
+.guest-notice .full-logo { margin: 0 auto; }
 
 /* TP-10: the card an inline link opens in a topic (IdejoWeb.CardComponents): small. */
 .inline-card { max-width: 24rem; display: grid; gap: 0.5rem; }
