@@ -138,4 +138,64 @@ defmodule IdejoWeb.InlineRepliesTest do
     refute html =~ "data-phx-main"
     assert html =~ "In reply to Sam Starter"
   end
+
+  # Steward decision, 2026-10-24: Reply starts a new message, not an append.
+  @tag req: "TP-08"
+  test "TP-08 Reply with a message still open starts a new message", %{
+    conn: conn,
+    topic: topic,
+    first: first,
+    member: member
+  } do
+    {:ok, open} = Idejo.Messages.commit(member, topic, "Still talking")
+
+    {:ok, lv, _html} = form_live(conn, topic, first)
+    # The open message reads like the others; the composer is a new one at the end.
+    assert has_element?(lv, "#message-#{open.id} .message-body", "Still talking.")
+    assert has_element?(lv, "#composer-slot #composer")
+    refute has_element?(lv, "#composer[data-sent]")
+
+    enter(lv, "About that")
+
+    [_, closed, reply] = Forum.list_messages(topic)
+    assert closed.id == open.id
+    assert closed.state == "closed"
+    assert closed.body_md == "Still talking."
+    assert reply.reply_to_id == first.id
+    assert reply.body_md == "About that."
+    assert reply.state == "open"
+    assert has_element?(lv, "#message-#{reply.id} #composer")
+  end
+
+  @tag req: "TP-08"
+  test "TP-08 removing the reply before the timer ends refuses Enter with a dialog", %{
+    conn: conn,
+    topic: topic,
+    first: first,
+    member: member
+  } do
+    {:ok, open} = Idejo.Messages.commit(member, topic, "Still talking")
+    {:ok, lv, _html} = form_live(conn, topic, first)
+
+    lv |> element("#replying-to button", "Cancel reply") |> render_click()
+    # Still a new message, waiting on the open one's timer.
+    assert has_element?(lv, "#composer-slot #composer")
+    assert has_element?(lv, "#composer-timer")
+
+    assert lv |> element("#composer") |> render_hook("commit", %{"body" => "Other thing"}) =~
+             "You cannot post a new message yet. Append your old message."
+
+    assert has_element?(lv, "#too-soon-dialog")
+    assert [_, %{id: id, state: "open"}] = Forum.list_messages(topic)
+    assert id == open.id
+
+    # "Append to my message": the composer is the open message again.
+    lv |> element("#too-soon-append") |> render_click()
+    refute has_element?(lv, "#too-soon-dialog")
+    assert_push_event(lv, "composer_sent", %{body: "Still talking."})
+    assert has_element?(lv, "#message-#{open.id} #composer")
+
+    enter(lv, "Still talking. More")
+    assert [_, %{id: ^id, body_md: "Still talking. More."}] = Forum.list_messages(topic)
+  end
 end

@@ -107,6 +107,18 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "While nobody has written below a message, Ctrl+Enter starts a new one only once the message is this old; until then it adds a line to the same message, so someone writing alone keeps one message. From 1 to 1440 (a day)."
           )}
         </p>
+        <%!-- Steward decision, 2026-10-24. --%>
+        <.input
+          field={@form[:gm_early_reply]}
+          type="checkbox"
+          label={gettext("Allow replies even if the timer is still running")}
+          aria-describedby="gm-early-reply-help"
+        />
+        <p id="gm-early-reply-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "Reply then starts a new message at any time, completing the author's open message. When off, a reply waits like Ctrl+Enter."
+          )}
+        </p>
         <.input
           field={@form[:upload_max_mb]}
           type="number"

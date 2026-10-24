@@ -128,4 +128,27 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     assert [%{admin_id: admin_id, after: %{"gm_unanswered_minutes" => 30}}] = settings_entries()
     assert admin_id == admin.id
   end
+
+  # Steward decision, 2026-10-24: Reply starts a new message at any time, unless turned off.
+  @tag req: "AD-04"
+  test "AD-04 \"Allow replies even if the timer is still running\": on by default, audited", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, lv, html} = live(conn, ~p"/admin")
+    assert html =~ "Allow replies even if the timer is still running"
+
+    assert has_element?(
+             lv,
+             ~s(#settings-form input[type="checkbox"][name="settings[gm_early_reply]"][checked])
+           )
+
+    assert lv
+           |> form("#settings-form", settings: %{gm_early_reply: "false"})
+           |> render_submit() =~ "Settings saved."
+
+    assert Settings.get(:gm_early_reply) == false
+    assert [%{admin_id: admin_id, after: %{"gm_early_reply" => false}}] = settings_entries()
+    assert admin_id == admin.id
+  end
 end

@@ -58,6 +58,9 @@ defmodule Idejo.Settings do
     # GM-05 (steward decision, 2026-10-23): while nobody has written below a message, its
     # author may start a new one only once it is this many minutes old. Admin → Settings.
     gm_unanswered_minutes: %{type: :integer, default: 10, required: true, range: 1..1440},
+    # Reply starts a new message at any time (steward decision, 2026-10-24): sending it
+    # completes the author's open message even while its timer runs. Admin → Settings.
+    gm_early_reply: %{type: :boolean, default: true},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
@@ -96,6 +99,7 @@ defmodule Idejo.Settings do
           | :smtp_password
           | :gm_window_seconds
           | :gm_unanswered_minutes
+          | :gm_early_reply
           | :upload_max_mb
           | :server_about
           | :server_rules
@@ -123,7 +127,7 @@ defmodule Idejo.Settings do
   decrypted, or `""` when none is saved or it can no longer be read (e.g. after
   `SECRET_KEY_BASE` changed).
   """
-  @spec get(key()) :: String.t() | integer()
+  @spec get(key()) :: String.t() | integer() | boolean()
   def get(key) when is_map_key(@definitions, key) do
     stored = Repo.get(Setting, Atom.to_string(key))
     decode(key, stored && stored.value)
@@ -132,7 +136,7 @@ defmodule Idejo.Settings do
   @doc """
   Returns every setting with its current value. Secrets are decrypted.
   """
-  @spec all() :: %{key() => String.t() | integer()}
+  @spec all() :: %{key() => String.t() | integer() | boolean()}
   def all do
     stored = Map.new(Repo.all(Setting), &{&1.key, &1.value})
     Map.new(@definitions, fn {key, _} -> {key, decode(key, stored[Atom.to_string(key)])} end)
@@ -181,7 +185,7 @@ defmodule Idejo.Settings do
   changed.
   """
   @spec update_settings(User.t(), map()) ::
-          {:ok, %{key() => String.t() | integer()}} | {:error, Ecto.Changeset.t()}
+          {:ok, %{key() => String.t() | integer() | boolean()}} | {:error, Ecto.Changeset.t()}
   def update_settings(%User{} = admin, attrs) do
     changeset = change_settings(attrs)
 
@@ -307,6 +311,7 @@ defmodule Idejo.Settings do
     case @definitions[key] do
       %{secret: true} -> Secret.decrypt(value) || ""
       %{type: :integer} -> String.to_integer(value)
+      %{type: :boolean} -> value == "true"
       %{type: :string} -> value
     end
   end
@@ -319,7 +324,7 @@ defmodule Idejo.Settings do
   end
 
   @doc "A setting's default value: what it is until an administrator changes it."
-  @spec default(key()) :: String.t() | integer()
+  @spec default(key()) :: String.t() | integer() | boolean()
   def default(key) when is_map_key(@definitions, key) do
     case @definitions[key].default do
       :noreply ->
