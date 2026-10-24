@@ -306,6 +306,21 @@ defmodule IdejoWeb.ComposerTest do
     assert css =~ "& .is-fading { animation: composer-appended-fade 2s ease-out forwards; }"
   end
 
+  # Steward decision, 2026-10-25: on phones the page pulled up at each send, hiding the box
+  # under the keyboard.
+  @tag req: "GM-02"
+  test "GM-02 a send keeps the composer where it was, above the on-screen keyboard" do
+    js = File.read!("assets/js/composer.js")
+    # Measuring the box's height must not leave the page scrolled elsewhere.
+    assert js =~
+             ~r/const y = window\.scrollY\s*this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
+
+    # The visible band excludes the keyboard; only a box seen when sent is kept in sight.
+    assert js =~ "window.visualViewport"
+    assert js =~ "const shown = this.inView()"
+    assert length(Regex.scan(~r/if \(shown\) this\.reveal\(\)/, js)) == 2
+  end
+
   # Steward decision, 2026-10-25.
   @tag req: "GM-05"
   test "GM-05 Ctrl+Enter outside the box starts a new message when it may, else goes to the box" do

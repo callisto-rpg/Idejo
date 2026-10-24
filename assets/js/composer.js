@@ -138,6 +138,9 @@ const BURN_MS = 2200
 
 // Enter three times in a row, nothing typed between and each within this of the last, works
 // as Ctrl+Enter (steward decision, 2026-10-23), so phones, which have no Ctrl, can do it too.
+// Room kept between the end of the box and the keyboard (or the bottom of the screen).
+const REVEAL_MARGIN = 48
+
 const ENTER_RUN = 3
 const ENTER_RUN_MS = 1000
 
@@ -371,6 +374,9 @@ export const Composer = {
     if (!isBreak && body === this.sent.replace(/\s+$/, "")) return
 
     const before = this.sent
+    // Seen when sent (steward decision, 2026-10-25): it stays in sight, unless the author had
+    // scrolled away from it.
+    const shown = this.inView()
     const separator = isBreak ? "\n" : " "
     // Keep the caret where it was unless it was at the end of the text (GM-02).
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
@@ -382,6 +388,7 @@ export const Composer = {
     const position = atEnd ? this.input.value.length : caret
     this.input.setSelectionRange(position, position)
     this.paint()
+    if (shown) this.reveal()
 
     this.pushEvent("commit", then ? {body, break: isBreak, then} : {body, break: isBreak}, reply => {
       const typed = this.input.value.startsWith(this.sent) ? this.input.value.slice(this.sent.length) : ""
@@ -401,6 +408,9 @@ export const Composer = {
         this.sent = reply.body + separator
       }
       this.paint()
+      // The page has the server's answer by now (the first Enter moves the box into the
+      // message, under the author's name).
+      if (shown) this.reveal()
     })
   },
 
@@ -430,8 +440,34 @@ export const Composer = {
       clearTimeout(this.burnTimer)
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
+    // Measuring shrinks the box for a moment, and the page with it: scrolled to its end (a
+    // phone with its keyboard open), the browser would pull the page up and leave it there,
+    // the box sliding under the keyboard. The scroll goes back where it was.
+    const y = window.scrollY
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
+    if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
+  },
+
+  // The part of the page the reader sees: the visual viewport, without an on-screen keyboard.
+  visibleBand() {
+    const vv = window.visualViewport
+    return vv ? {top: vv.offsetTop, bottom: vv.offsetTop + vv.height} : {top: 0, bottom: window.innerHeight}
+  },
+
+  inView() {
+    const r = this.input.getBoundingClientRect()
+    const {top, bottom} = this.visibleBand()
+    return r.bottom > top && r.top < bottom
+  },
+
+  // After a send the box can grow a line, or move down under the author's name (the first
+  // Enter): scrolls just enough to keep its end above the keyboard.
+  reveal() {
+    const r = this.input.getBoundingClientRect()
+    const {bottom} = this.visibleBand()
+    const below = r.bottom + REVEAL_MARGIN - bottom
+    if (below > 0) window.scrollBy(0, below)
   },
 
   // The caret, and at the end of the text its bubble: "Enter to send" while something is not
