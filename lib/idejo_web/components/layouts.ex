@@ -69,7 +69,7 @@ defmodule IdejoWeb.Layouts do
 
       <a href={~p"/"} class="brand" id="brand">
         <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23). --%>
-        <img src={~p"/images/logo-small.png"} alt="" class="brand-mark" width="32" height="32" />
+        <img src={~p"/images/logo-small.svg"} alt="" class="brand-mark" width="32" height="32" />
         <span class="brand-name">{server_name()}</span>
       </a>
 
@@ -623,6 +623,62 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
+  The website theme (steward decision, 2026-10-24; Admin → Settings): the daisyUI colour
+  variables of both themes from `Idejo.Settings.theme/0`, in one `<style>` with the
+  request's nonce, before the server stylesheet so Admin → Stylesheet can still override it.
+  Primary drives buttons, toggles and links; secondary and tertiary (daisyUI's secondary and
+  accent) only where a second colour distinguishes or unemphasises. The page background is
+  the light or dark background, cards a little lighter, and text the other background. Text
+  on a colour is white or near-black, whichever contrasts better. The colours are checked
+  `#rrggbb` or `#rrggbbaa`, so the rules hold nothing else.
+  """
+  attr :nonce, :string, default: nil
+
+  def theme_colours(assigns) do
+    assigns = assign(assigns, :rules, theme_rules(Idejo.Settings.theme()))
+
+    ~H"""
+    <style :if={@nonce} nonce={@nonce}>
+      <%= @rules %>
+    </style>
+    """
+  end
+
+  @doc false
+  def theme_rules(%{light_bg: light, dark_bg: dark} = theme) do
+    accents = accent_variables(theme)
+
+    light_vars =
+      accents <>
+        "--color-base-100:color-mix(in oklab,#{light} 35%,#fff);" <>
+        "--color-base-200:#{light};" <>
+        "--color-base-300:color-mix(in oklab,#{light} 91%,#000);" <>
+        "--color-base-content:#{dark};"
+
+    dark_vars =
+      accents <>
+        "--color-base-100:color-mix(in oklab,#{dark} 92%,#fff);" <>
+        "--color-base-200:#{dark};" <>
+        "--color-base-300:color-mix(in oklab,#{dark} 82%,#fff);" <>
+        "--color-base-content:color-mix(in oklab,#{light} 92%,#{dark});"
+
+    # The selectors match daisyUI's own (light by default, dark when chosen or, with no
+    # choice, when the system prefers it), so these come after them and win.
+    ":root,[data-theme=light]{#{light_vars}}" <>
+      "@media (prefers-color-scheme:dark){:root:not([data-theme]){#{dark_vars}}}" <>
+      "[data-theme=dark]{#{dark_vars}}"
+  end
+
+  defp accent_variables(%{primary: primary, secondary: secondary, tertiary: tertiary}) do
+    for {name, colour} <- [primary: primary, secondary: secondary, accent: tertiary], into: "" do
+      "--color-#{name}:#{colour};--color-#{name}-content:#{on_colour(colour)};"
+    end
+  end
+
+  # White or near-black text on a colour; any alpha is ignored for the choice.
+  defp on_colour(colour), do: CategoryIcons.contrast(String.slice(colour, 0, 7))
+
+  @doc """
   The roles' colours (steward decision, 2026-10-23): `--role` on each `role-{id}` class, in
   one `<style>` carrying the request's nonce, for `IdejoWeb.Admin.role_label/1`. Roles are
   public (`/r/{slug}`), so every role with a colour is listed.
@@ -719,29 +775,10 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The full Idejo logo (steward decision, 2026-10-23), above the sign-in, sign-up and setup
-  pages. Black, turned white by the dark theme's stylesheet (`.full-logo`). CC-BY-4.0, ©
-  Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
+  The full Idejo logo (steward decisions, 2026-10-23 and 2026-10-24), above the sign-in,
+  sign-up and setup pages and on the visitors' card: in colour, the same in both themes.
+  CC-BY-4.0, © Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
   """
-  attr :themed, :boolean,
-    default: false,
-    doc: "the dark theme shows the white logo instead of inverting the black one"
-
-  def full_logo(%{themed: true} = assigns) do
-    ~H"""
-    <span class="full-logo-themed">
-      <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo-light" width="199" height="105" />
-      <img
-        src={~p"/images/logo-dark.png"}
-        alt="Idejo"
-        class="full-logo-dark"
-        width="199"
-        height="105"
-      />
-    </span>
-    """
-  end
-
   def full_logo(assigns) do
     ~H"""
     <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo" width="199" height="105" />

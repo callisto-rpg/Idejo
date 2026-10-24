@@ -15,7 +15,8 @@ defmodule Idejo.Settings do
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
   email (AD-08), the growing-message window (GM-15, AD-04), the image size limit (TP-12), and
-  the About and Rules texts of the welcome card (Markdown), and the server's stylesheet.
+  the About and Rules texts of the welcome card (Markdown), the server's stylesheet, and the
+  website theme's colours.
   """
 
   import Ecto.Changeset
@@ -65,8 +66,24 @@ defmodule Idejo.Settings do
     server_rules: %{type: :string, default: "", max: 20_000},
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
-    custom_css: %{type: :string, default: @default_css, max: 100_000}
+    custom_css: %{type: :string, default: @default_css, max: 100_000},
+    # The website theme (steward decision, 2026-10-24): buttons, toggles, links and the page
+    # backgrounds, as #rrggbb or #rrggbbaa. Admin → Settings.
+    theme_primary: %{type: :string, default: "#daa304ff", required: true, format: :colour},
+    theme_secondary: %{type: :string, default: "#f2c94c", required: true, format: :colour},
+    theme_tertiary: %{type: :string, default: "#b8860b", required: true, format: :colour},
+    theme_light_bg: %{type: :string, default: "#fdfcf6", required: true, format: :colour},
+    theme_dark_bg: %{type: :string, default: "#1d1a00", required: true, format: :colour}
   }
+
+  @theme_names [
+    theme_primary: :primary,
+    theme_secondary: :secondary,
+    theme_tertiary: :tertiary,
+    theme_light_bg: :light_bg,
+    theme_dark_bg: :dark_bg
+  ]
+  @theme_keys Keyword.keys(@theme_names)
 
   @type key ::
           :server_name
@@ -83,6 +100,11 @@ defmodule Idejo.Settings do
           | :server_about
           | :server_rules
           | :custom_css
+          | :theme_primary
+          | :theme_secondary
+          | :theme_tertiary
+          | :theme_light_bg
+          | :theme_dark_bg
 
   @doc """
   The allowed values of `:registration_mode`: open, or invite-only (AC-02).
@@ -115,6 +137,22 @@ defmodule Idejo.Settings do
     stored = Map.new(Repo.all(Setting), &{&1.key, &1.value})
     Map.new(@definitions, fn {key, _} -> {key, decode(key, stored[Atom.to_string(key)])} end)
   end
+
+  @doc """
+  The website theme's colours (steward decision, 2026-10-24), keyed by `:primary`,
+  `:secondary`, `:tertiary`, `:light_bg` and `:dark_bg`, in one query: every page reads them.
+  """
+  @spec theme() :: %{atom() => String.t()}
+  def theme do
+    names = Enum.map(@theme_keys, &Atom.to_string/1)
+    stored = Map.new(Repo.all(from s in Setting, where: s.key in ^names), &{&1.key, &1.value})
+
+    Map.new(@theme_names, fn {key, name} -> {name, decode(key, stored[Atom.to_string(key)])} end)
+  end
+
+  @doc "The theme's setting keys, in the order Admin → Settings shows them."
+  @spec theme_keys() :: [key()]
+  def theme_keys, do: @theme_keys
 
   @doc """
   Returns true when a secret setting holds a value, so a form can say it is saved.
@@ -250,6 +288,14 @@ defmodule Idejo.Settings do
   defp validate_format_of(changeset, key, :hostname) do
     validate_format(changeset, key, ~r/^([A-Za-z0-9-]+\.)*[A-Za-z0-9-]+$|^$/,
       message: "must be a host name such as smtp.example.org"
+    )
+  end
+
+  defp validate_format_of(changeset, key, :colour) do
+    changeset
+    |> update_change(key, &(&1 && String.downcase(&1)))
+    |> validate_format(key, ~r/^#[0-9a-f]{6}([0-9a-f]{2})?$/,
+      message: "must look like #daa304 or #daa304ff"
     )
   end
 
