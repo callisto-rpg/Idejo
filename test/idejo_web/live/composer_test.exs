@@ -89,6 +89,12 @@ defmodule IdejoWeb.ComposerTest do
     js = File.read!("assets/js/composer.js")
     assert js =~ "composer-caret"
     assert js =~ "labelSent"
+    # No room beside the bubble for the hint: it goes below.
+    assert js =~ ~s|hint.classList.add("is-below")|
+
+    assert File.read!("assets/css/app.css") =~
+             ~r/&\.is-below \{\s*position: absolute;\s*top: calc\(100% \+ 0\.375rem\)/
+
     timer = File.read!("assets/js/composer_timer.js")
     assert timer =~ "labelDone"
 
