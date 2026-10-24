@@ -894,6 +894,20 @@ roles or the permission grid. Every later change must keep it true:
   browser posts `PushSubscription.toJSON()` to `POST /push/subscriptions` and removes it with
   `DELETE` (`PushSubscriptionController`, signed in, CSRF header; 204, or 422/429/404 with
   `{"error": reason}`).
+- **Service worker and sync** (PN-17, PN-18): `priv/push/sw.js`, embedded at compile time by
+  `ServiceWorkerController` and served at `/sw.js` (no session, `no-cache`,
+  `Service-Worker-Allowed: /`); not bundled, it imports nothing. It shows declarative push
+  JSON where the browser does not (tag, renotify, `app_badge` through `setAppBadge`), opens
+  only same-origin links on click (focus a tab and `navigate`, else `postMessage`
+  `idejo:navigate` to it, else `openWindow`), and on `pushsubscriptionchange` subscribes
+  again (key from the old subscription or `/push/key`) and posts to
+  `POST /push/subscriptions/renew` (`Push.renew/2`, no session or CSRF: the old endpoint is
+  the authority; same user and session, new endpoint checked). The root layout gives
+  signed-in users `<meta name="push-key">` while push is on (`Layouts.push_key/1`);
+  `assets/js/push.js` then, on every page load with permission `granted`, registers the
+  worker, takes the subscription from `window.pushManager` or the worker's (made again if
+  missing or made with another key) and posts it. Its `enablePush()` is the only caller of
+  `Notification.requestPermission()`, from a click. The JS is checked by hand.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

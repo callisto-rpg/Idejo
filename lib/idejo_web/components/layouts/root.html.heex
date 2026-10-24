@@ -8,6 +8,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <%!-- PN-18, PN-19: push.js subscribes signed-in users' browsers with this key. --%>
+    <IdejoWeb.Layouts.push_key current_scope={assigns[:current_scope]} />
     <IdejoWeb.Layouts.page_title page_title={assigns[:page_title]} />
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />

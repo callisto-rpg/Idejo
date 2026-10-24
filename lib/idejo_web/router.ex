@@ -33,6 +33,13 @@ defmodule IdejoWeb.Router do
     get "/uploads/:name", UploadController, :show
     # The server's stylesheet, from Admin → Stylesheet (steward decision, 2026-10-23).
     get "/theme.css", ThemeController, :show
+    # PN-17: the service worker, from the root so its scope is the whole site, and the key
+    # it subscribes with.
+    get "/sw.js", ServiceWorkerController, :show
+    get "/push/key", ServiceWorkerController, :key
+    # PN-17: the service worker saves a subscription its push service replaced. The old
+    # endpoint is the authority: a worker has no session cookie or CSRF token to give.
+    post "/push/subscriptions/renew", PushSubscriptionController, :renew
     # TP-17: the + reaction picker's emoji, drawn by the browser.
     get "/emoji-index.json", EmojiController, :index
     # NO-04: the email summary's one-click unsubscribe (RFC 8058). The token in the address
