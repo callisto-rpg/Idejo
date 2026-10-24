@@ -49,7 +49,9 @@ defmodule IdejoWeb.TopicMoveTest do
 
     assert has_element?(visitor, "#topic-gone")
     refute has_element?(visitor, "#messages li")
-    assert_error_sent 404, fn -> get(build_conn(), ~p"/t/#{topic.id}/#{topic.slug}") end
+
+    assert redirected_to(get(build_conn(), ~p"/t/#{topic.id}/#{topic.slug}")) ==
+             ~p"/users/sign-in"
 
     assert_error_sent 404, fn ->
       post(moderator, ~p"/t/#{topic.id}/moderate", %{

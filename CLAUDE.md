@@ -275,6 +275,12 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
   renames and moves. Each message's time links to its permalink. When topic pages are paged,
   `/m/{id}` must lead to the right page.
+  A topic or message link the reader may not view (missing, deleted or hidden: the same
+  answer, AC-05; steward decision, 2026-10-24) is never a 404: `IdejoWeb.TopicUnavailable`
+  sends a visitor to sign-in with the link as `:user_return_to` (signing in or up leads
+  back), and a signed-in user home, where the `:unavailable` flash opens the "Unavailable"
+  `<dialog id="topic-unavailable">` (rendered `open`, closed by a `method="dialog"` form
+  without JavaScript; `assets/js/unavailable.js` reopens it as a modal).
 - **Posting and inline replies** (TP-08): members post with the composer (`Messages.commit/4`);
   `Forum.post_message/3` still posts one closed message (tests use it). Both need
   `Forum.can_post?/2` (the `:post` right and an open topic; locked and archived take nothing).
@@ -664,7 +670,7 @@ roles or the permission grid. Every later change must keep it true:
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor
-  may not view answers 404, so its name is not given away.
+  may not view answers 404, so its name is not given away (topics: see Permalinks).
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use

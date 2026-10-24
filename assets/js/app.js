@@ -43,6 +43,7 @@ import "./title_edit"
 import "./topic_menu"
 import "./dropdown"
 import "./account_menu"
+import "./unavailable"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

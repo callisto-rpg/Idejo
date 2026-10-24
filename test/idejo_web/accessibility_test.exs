@@ -134,6 +134,19 @@ defmodule IdejoWeb.AccessibilityTest do
   end
 
   @tag req: "AX-01"
+  test "AX-01 the dialog over the home page after a topic link one may not view", %{
+    conn: conn,
+    reader: reader
+  } do
+    conn = log_in_user(conn, reader)
+    res = get(conn, ~p"/t/#{Ecto.UUID.generate()}")
+    page = res |> recycle() |> get(~p"/") |> html_response(200)
+
+    assert page =~ ~s(id="topic-unavailable")
+    assert Accessibility.audit(page) == []
+  end
+
+  @tag req: "AX-01"
   test "AX-01 signed-in pages", %{
     conn: conn,
     general: general,

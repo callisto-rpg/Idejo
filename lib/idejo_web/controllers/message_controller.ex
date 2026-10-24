@@ -14,10 +14,11 @@ defmodule IdejoWeb.MessageController do
   def show(conn, %{"id" => id}) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
 
-    # A message in a category the visitor may not view is not found, like its topic.
+    # A message the reader may not view is treated like its topic (steward decision,
+    # 2026-10-24): sign-in, or home with a dialog.
     case Forum.get_viewable_message(user, id) do
       nil ->
-        raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
+        IdejoWeb.TopicUnavailable.redirect_away(conn)
 
       %{topic: topic} = message ->
         redirect(conn, to: ~p"/t/#{topic.id}/#{topic.slug}" <> "#message-#{message.id}")
