@@ -256,6 +256,25 @@ defmodule IdejoWeb.ComposerTest do
     refute has_element?(lv, "#composer-timer")
   end
 
+  # Steward decision, 2026-10-25.
+  @tag req: "GM-05"
+  test "GM-05 Ctrl+Enter outside the box starts a new message when it may, else goes to the box" do
+    js = File.read!("assets/js/composer.js")
+    assert js =~ ~s|document.addEventListener("keydown", this.onPageKey)|
+    assert js =~ ~s|document.removeEventListener("keydown", this.onPageKey)|
+    # Never from other text fields, links or dialogs, which keep their own Ctrl+Enter.
+    assert js =~
+             ~s|const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dialog[open]"|
+
+    # A new message only when the timer line allows it (or in an edit); the caret in any case.
+    assert js =~
+             ~s|if (this.sent !== "" && (this.el.hasAttribute("data-editing") \|\| mayStartNew())) this.send(true)\n      this.focusEnd()|
+
+    timer = File.read!("assets/js/composer_timer.js")
+    assert timer =~ "export const mayStartNew = () => readyAt === null || Date.now() >= readyAt"
+    assert timer =~ "readyAt = end + skew"
+  end
+
   # Steward decision, 2026-10-23: the unanswered message time.
   @tag req: "GM-05"
   test "GM-05 alone below the last message, Ctrl+Enter after the window keeps it open", %{

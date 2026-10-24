@@ -127,6 +127,11 @@ export function keptAfterReload(value, sent) {
 
 import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
+import {mayStartNew} from "./composer_timer"
+
+// Where Ctrl+Enter keeps its own meaning (typing elsewhere, a link opening in a new tab), so
+// it never reaches the composer from there.
+const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dialog[open]"
 
 // How long text just sent glows before it reads like the rest (matches .composer-burn).
 const BURN_MS = 2200
@@ -210,13 +215,22 @@ export const Composer = {
       e.preventDefault()
       this.send(e.ctrlKey || e.metaKey || this.enterRun())
     })
+    // Ctrl+Enter from anywhere else on the page (steward decision, 2026-10-25): starts a new
+    // message when it may, sending what is not sent yet, and puts the caret at the end of the
+    // box; when it may not yet, only the caret goes there, so the author goes on writing.
+    this.onPageKey = e => {
+      if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || e.isComposing || e.defaultPrevented) return
+      if (e.target === this.input || e.target.closest?.(OWN_CTRL_ENTER)) return
+      if (document.querySelector("dialog[open]")) return
+      e.preventDefault()
+      if (this.sent !== "" && (this.el.hasAttribute("data-editing") || mayStartNew())) this.send(true)
+      this.focusEnd()
+    }
+    document.addEventListener("keydown", this.onPageKey)
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
     // Edit (steward decision, 2026-10-24): the box takes the focus, the caret at the end.
-    this.handleEvent("composer_focus", () => {
-      this.input.focus()
-      this.input.setSelectionRange(this.input.value.length, this.input.value.length)
-    })
+    this.handleEvent("composer_focus", () => this.focusEnd())
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
     // unsent, like anything typed.
     onImages(this.input, files => this.upload("composer_image", files))
@@ -238,6 +252,13 @@ export const Composer = {
 
   destroyed() {
     document.removeEventListener("selectionchange", this.onSelection)
+    document.removeEventListener("keydown", this.onPageKey)
+  },
+
+  // The caret at the end of the box, which takes the focus.
+  focusEnd() {
+    this.input.focus()
+    this.input.setSelectionRange(this.input.value.length, this.input.value.length)
   },
 
   command(name) {
