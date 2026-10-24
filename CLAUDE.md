@@ -434,7 +434,14 @@ roles or the permission grid. Every later change must keep it true:
   `TopicLive` bodies use `MessageComponents.collapsible_body/1`: the `ShowAll` hook
   (`assets/js/show_all.js`) collapses a body taller than the window, with a "Show all" button,
   and re-measures growing messages. Its state lives in `data-collapsed` / `data-expanded`, kept
-  across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows.
+  across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows. Text a
+  body gains at its end (another user's append, or an edit adding to it) burns in like the
+  composer's (`burnTail/2`, `.composer-burn`; steward decision, 2026-10-25; nothing in the
+  markup marks open messages, GM-07), and `ShowAll` sends `idejo:appended`: while the
+  composer has the focus, appends to messages above it are counted in a bubble over the
+  author's message (`#composer-appended`, `phx-update="ignore"`, "N messages above have been
+  appended"; `.tutorial-bubble.is-always.points-up`, so the Tutorial bubbles toggle leaves
+  it), fading out in 2 s when the author scrolls up.
 - **Edits and earlier versions** (GM-10, GM-11): open messages are edited in the composer;
   closed ones with `Messages.edit/4` (the author only, in an open topic; the text kept as
   written, no `.` added). The author's "Edit" (steward decision, 2026-10-24) puts the

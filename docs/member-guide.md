@@ -32,6 +32,9 @@ small bubble beside the cursor says **Enter to send**; once you press it, **Sent
    message. If your sentence had no punctuation, Idejo adds a full stop.
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
+   What others add to their messages glows the same way. While you type, a bubble over your
+   message counts the messages above it that grew ("2 messages above have been appended");
+   it fades when you scroll up to read them.
 3. For a short while after your message starts (15 seconds, unless your server changed it),
    you can only add to it. Nothing shows this to others; it only means that one quick
    thought stays one message. While nobody has written below it, that lasts longer: until

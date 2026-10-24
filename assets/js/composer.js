@@ -227,6 +227,25 @@ export const Composer = {
       this.focusEnd()
     }
     document.addEventListener("keydown", this.onPageKey)
+    // Appends to other messages above while the author types here (steward decision,
+    // 2026-10-25): a bubble over the message counts them, until the author scrolls up.
+    this.appended = new Set()
+    this.appendedBox = document.getElementById("composer-appended")
+    this.onAppended = e => {
+      if (document.activeElement !== this.input || !this.appendedBox) return
+      const message = e.detail.closest("#messages > li")
+      if (!message || message.contains(this.el)) return
+      if (!(message.compareDocumentPosition(this.el) & Node.DOCUMENT_POSITION_FOLLOWING)) return
+      this.appended.add(message.id)
+      this.showAppended()
+    }
+    window.addEventListener("idejo:appended", this.onAppended)
+    this.lastY = window.scrollY
+    this.onScroll = () => {
+      if (window.scrollY < this.lastY && this.appended.size > 0) this.fadeAppended()
+      this.lastY = window.scrollY
+    }
+    window.addEventListener("scroll", this.onScroll, {passive: true})
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
     // Edit (steward decision, 2026-10-24): the box takes the focus, the caret at the end.
@@ -253,6 +272,32 @@ export const Composer = {
   destroyed() {
     document.removeEventListener("selectionchange", this.onSelection)
     document.removeEventListener("keydown", this.onPageKey)
+    window.removeEventListener("idejo:appended", this.onAppended)
+    window.removeEventListener("scroll", this.onScroll)
+  },
+
+  showAppended() {
+    const box = this.appendedBox
+    const n = this.appended.size
+    const label = n === 1 ? box.dataset.labelOne : box.dataset.labelOther.replace("%{count}", n)
+    let bubble = box.querySelector(".tutorial-bubble")
+    if (!bubble) {
+      bubble = document.createElement("span")
+      bubble.className = "tutorial-bubble is-always points-up"
+      bubble.addEventListener("animationend", e => {
+        if (e.animationName !== "composer-appended-fade") return
+        bubble.remove()
+        this.appended.clear()
+      })
+      box.appendChild(bubble)
+    }
+    bubble.classList.remove("is-fading")
+    bubble.textContent = label
+  },
+
+  // Scrolling up: the author is looking; the count fades out (2 s) and starts again.
+  fadeAppended() {
+    this.appendedBox?.querySelector(".tutorial-bubble")?.classList.add("is-fading")
   },
 
   // The caret at the end of the box, which takes the focus.

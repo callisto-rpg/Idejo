@@ -2023,7 +2023,33 @@ html:not([data-js]) .spoiler-cover { display: none; }
 .sidebar-unfollow:hover .sidebar-unfollow-bubble,
 .sidebar-unfollow:has(button:focus-visible) .sidebar-unfollow-bubble,
 .sidebar-unfollow-bubble.is-peek { opacity: 1; }
-[data-bubbles="off"] .tutorial-bubble,
+/* Appends above the author's message while they type (steward decision, 2026-10-25): the
+   same pill, on the line above their message, its triangle up; not a tutorial bubble, so
+   it stays when those are off. Scrolling up fades it out in 2 s (composer.js). */
+.tutorial-bubble.points-up::before {
+  left: 50%;
+  top: -0.3125rem;
+  width: 0.5rem;
+  height: 0.3125rem;
+  translate: -50% 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.message-mine { position: relative; }
+.composer-appended {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  translate: -50% -50%;
+  pointer-events: none;
+  & .is-fading { animation: composer-appended-fade 2s ease-out forwards; }
+}
+@keyframes composer-appended-fade { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .composer-appended .is-fading { animation-duration: 1ms; }
+}
+[data-bubbles="off"] .tutorial-bubble:not(.is-always),
 [data-bubbles="off"] .composer-hint { display: none; }
 .composer-caret-bubbles {
   position: absolute;
