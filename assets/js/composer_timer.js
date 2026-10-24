@@ -7,15 +7,21 @@
 // server's times come with its `data-now`, so the browser's clock does not matter. The fill
 // is a CSS animation whose duration and (negative) delay are set through the DOM, never a
 // style attribute (SP-05); a new end, when someone writes below, starts it again.
+//
+// A bubble (steward decision, 2026-10-25) rides in front of the line saying "slow mode"; when
+// the line is full it slides to the middle and says "Ctrl+Enter to start new message", and
+// stays there while the line burns away. The line stops short by the bubble's width
+// (`--bubble-room`), so the bubble never runs past the composer.
 
 const SAME_END_MS = 1000
 
 export const ComposerTimer = {
   mounted() {
     this.line = this.el.querySelector(".composer-timer-line")
+    this.bubble = this.el.querySelector(".composer-timer-bubble")
+    this.slowLabel = this.bubble.textContent.trim()
     this.line.addEventListener("animationend", e => {
       if (e.animationName === "composer-timer-fill") this.burn()
-      else if (e.animationName === "composer-timer-burn") this.el.hidden = true
     })
     this.run()
   },
@@ -33,24 +39,42 @@ export const ComposerTimer = {
     const total = end - start
     const elapsed = Date.now() - skew - start
     this.el.hidden = false
-    this.line.classList.remove("is-burning")
-    // Over already (a reload after the time, or an answer that shortened it): nothing to show.
+    this.line.classList.remove("is-burning", "is-over")
+    this.bubble.classList.remove("is-done", "is-still")
+    this.bubble.textContent = this.slowLabel
+    this.el.style.setProperty("--bubble-room", `${this.bubble.offsetWidth}px`)
+    // Over already (a reload after the time, or an answer that shortened it): only the bubble
+    // in the middle, still.
     if (total <= 0 || elapsed >= total) {
       if (this.started) this.burn()
-      else this.el.hidden = true
+      else this.done(true)
       return
     }
     this.started = true
-    this.line.style.animation = "none"
-    void this.line.offsetWidth
-    this.line.style.animation = ""
-    this.line.style.animationDuration = `${total}ms`
-    this.line.style.animationDelay = `-${Math.max(0, elapsed)}ms`
+    for (const el of [this.line, this.bubble]) {
+      el.style.animation = "none"
+      void el.offsetWidth
+      el.style.animation = ""
+      el.style.animationDuration = `${total}ms`
+      el.style.animationDelay = `-${Math.max(0, elapsed)}ms`
+    }
   },
 
   burn() {
     this.line.style.animationDelay = "0ms"
     this.line.style.animationDuration = ""
     this.line.classList.add("is-burning")
+    this.done(false)
+  },
+
+  done(still) {
+    this.bubble.style.animationDelay = "0ms"
+    this.bubble.style.animationDuration = ""
+    this.bubble.textContent = this.bubble.dataset.labelDone
+    this.bubble.classList.add("is-done")
+    if (still) {
+      this.line.classList.add("is-over")
+      this.bubble.classList.add("is-still")
+    }
   },
 }

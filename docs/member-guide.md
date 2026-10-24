@@ -17,7 +17,9 @@ What is different is how you write: **your message grows as you go.**
 | **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
 | **Enter** three times | The same as Ctrl+Enter: press Enter three times in a row, quickly, without typing in between. This is how it works on a phone or tablet, which has no Ctrl. |
 
-The text box below the topic is where you write. Its placeholder repeats the keys.
+The text box below the topic is where you write. Its placeholder repeats the keys, and a
+small bubble beside the cursor says **Enter to send**; once you press it, **Sent!**, with
+"Continue typing to add to your message" until you type again.
 
 ## How a message grows
 
@@ -32,8 +34,9 @@ The text box below the topic is where you write. Its placeholder repeats the key
    thought stays one message. While nobody has written below it, that lasts longer: until
    your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
    line, so when you write alone your thoughts stay one message. A thin orange line under
-   the box fills up meanwhile; when it reaches the end it flashes and goes, and Ctrl+Enter
-   starts a new message. If someone writes below you, it jumps to the shorter wait.
+   the box fills up meanwhile, a **slow mode** bubble in front of it; when it reaches the
+   end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start
+   new message**, and Ctrl+Enter starts a new message. If someone writes below you, it jumps to the shorter wait.
 4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is
    complete, and your next line starts a new message.
 
