@@ -368,7 +368,11 @@ roles or the permission grid. Every later change must keep it true:
   reload is cut to what followed the sent text (`keptAfterReload/2`), so the message never
   shows twice. Three Enters in a row, nothing typed between and each within 1 s of the last,
   work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
-  screens too, which have no Ctrl.
+  screens too, which have no Ctrl. Ctrl+Enter from anywhere else on the page (steward
+  decision, 2026-10-25; `onPageKey`, not from `OWN_CTRL_ENTER`: other text fields, links,
+  open dialogs) sends with `break` when a new message may start (an edit, or
+  `mayStartNew()` from `composer_timer.js`: the line's end has passed, or there is none),
+  then puts the caret at the end of the box (`focusEnd()`); otherwise only the caret.
 - **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the
   `Suggest` list shows the composer's commands (`data-commands` from `TopicLive.commands/2`:
   only those the author may use; no server question; Enter picks one only once a letter

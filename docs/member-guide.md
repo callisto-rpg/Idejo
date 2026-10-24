@@ -15,6 +15,7 @@ What is different is how you write: **your message grows as you go.**
 | **Enter** | Sends what you wrote. Everyone sees it at once. Keep typing and press Enter again: it joins the **same message**, on the same line. |
 | **Shift+Enter** | A line break, as in any text box. Nothing is sent. |
 | **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
+| **Ctrl+Enter** outside the box | Anywhere on the topic's page (not in another text box): starts a new message, sending what you had not sent yet, and puts the cursor in the box. While you cannot start one yet, it only puts the cursor at the end of your message, to go on writing. |
 | **Enter** three times | The same as Ctrl+Enter: press Enter three times in a row, quickly, without typing in between. This is how it works on a phone or tablet, which has no Ctrl. |
 
 The text box below the topic is where you write. Its placeholder repeats the keys, and a

@@ -15,6 +15,13 @@
 
 const SAME_END_MS = 1000
 
+// When, on this browser's clock, Ctrl+Enter may start a new message; null without a line
+// (nothing open, or an edit).
+let readyAt = null
+
+// Whether Ctrl+Enter may start a new message now (the composer's Ctrl+Enter from anywhere).
+export const mayStartNew = () => readyAt === null || Date.now() >= readyAt
+
 export const ComposerTimer = {
   mounted() {
     this.line = this.el.querySelector(".composer-timer-line")
@@ -29,7 +36,10 @@ export const ComposerTimer = {
     this.run()
   },
 
-  destroyed() { window.removeEventListener("idejo:bubbles", this.onBubbles) },
+  destroyed() {
+    window.removeEventListener("idejo:bubbles", this.onBubbles)
+    readyAt = null
+  },
 
   makeRoom() {
     // The bubble's width with its "slow mode" label, or none while bubbles are off.
@@ -46,6 +56,7 @@ export const ComposerTimer = {
     const skew = Date.now() - Number(this.el.dataset.now)
     if (this.end !== undefined && Math.abs(this.end - end) < SAME_END_MS) return
     this.end = end
+    readyAt = end + skew
 
     const total = end - start
     const elapsed = Date.now() - skew - start
