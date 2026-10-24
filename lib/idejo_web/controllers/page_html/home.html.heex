@@ -9,11 +9,12 @@
 
   <%!-- A link to a topic or category the user may not view led here (steward decision,
        2026-10-24, `IdejoWeb.Unavailable`). Open without JavaScript, closed by its form;
-       with it, `unavailable.js` makes it modal. --%>
+       with it, `open_dialogs.js` makes it modal. --%>
   <dialog
     :if={kind = Phoenix.Flash.get(@flash, :unavailable)}
     id="topic-unavailable"
     class="modal"
+    data-show-modal
     aria-labelledby="topic-unavailable-title"
     aria-describedby="topic-unavailable-text"
     open
@@ -26,6 +27,35 @@
       <form method="dialog" class="modal-action">
         <button class="btn btn-primary btn-sm">{gettext("OK")}</button>
       </form>
+    </div>
+  </dialog>
+
+  <%!-- Visitors who are not signed in (steward decision, 2026-10-24), until they continue
+       without signing in (`GuestNoticeController`, a plain form). --%>
+  <dialog
+    :if={@guest_notice?}
+    id="guest-notice"
+    class="modal"
+    aria-labelledby="guest-notice-title"
+    aria-describedby="guest-notice-text"
+    data-show-modal
+    open
+  >
+    <div class="modal-box guest-notice">
+      <Layouts.full_logo themed />
+      <h2 id="guest-notice-title" class="guest-notice-title">
+        {gettext("You are not signed in.")}
+      </h2>
+      <p id="guest-notice-text">
+        {gettext("You will not be able to post and won't see any hidden categories.")}
+      </p>
+      <.form for={%{}} action={~p"/continue-as-guest"} id="guest-notice-continue">
+        <button class="btn btn-primary w-full">{gettext("Continue without signing in")}</button>
+      </.form>
+      <div class="guest-notice-account">
+        <.link href={~p"/users/sign-in"} class="btn btn-ghost">{gettext("Log in")}</.link>
+        <.link href={~p"/users/sign-up"} class="btn btn-ghost">{gettext("Sign up")}</.link>
+      </div>
     </div>
   </dialog>
 

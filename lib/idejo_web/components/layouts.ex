@@ -723,6 +723,25 @@ defmodule IdejoWeb.Layouts do
   pages. Black, turned white by the dark theme's stylesheet (`.full-logo`). CC-BY-4.0, ©
   Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
   """
+  attr :themed, :boolean,
+    default: false,
+    doc: "the dark theme shows the white logo instead of inverting the black one"
+
+  def full_logo(%{themed: true} = assigns) do
+    ~H"""
+    <span class="full-logo-themed">
+      <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo-light" width="199" height="105" />
+      <img
+        src={~p"/images/logo-dark.png"}
+        alt="Idejo"
+        class="full-logo-dark"
+        width="199"
+        height="105"
+      />
+    </span>
+    """
+  end
+
   def full_logo(assigns) do
     ~H"""
     <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo" width="199" height="105" />

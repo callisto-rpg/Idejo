@@ -8,7 +8,8 @@ defmodule IdejoWeb.PageController do
 
   @doc """
   The home page: the categories the visitor or user may view (AC-05), in their order, with
-  their topic count and last activity, then the most recently active topics.
+  their topic count and last activity, then the most recently active topics. Visitors who
+  are not signed in first see a card offering to sign in (steward decision, 2026-10-24).
   """
   def home(conn, params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
@@ -23,6 +24,9 @@ defmodule IdejoWeb.PageController do
       active_topics: active_topics,
       view: view,
       previews: IdejoWeb.TopicView.previews(view, active_topics),
+      # Visitors are told what signing in gives, until they continue without it.
+      guest_notice?:
+        is_nil(user) and !get_session(conn, IdejoWeb.GuestNoticeController.session_key()),
       canonical_url: url(~p"/")
     )
   end
