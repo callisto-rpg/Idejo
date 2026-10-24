@@ -347,12 +347,17 @@ roles or the permission grid. Every later change must keep it true:
   with the text not sent yet (never sent text: nothing when sent text was changed), and the
   dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours; `!poll` and `!spoiler`
   send what is new with `then: "poll"` / `"spoiler"` (or push `"open_poll"` / `"spoiler"`
-  for the open message; nothing open asks for the message first). The commands are defined
+  for the open message; with nothing open, `!poll` opens the dialog alone and `!spoiler`
+  asks for the message first). The commands are defined
   once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
 - **Polls** (steward decision, 2026-10-23; `Idejo.Messages.Polls`, `polls`, `poll_options`,
   `poll_votes`): `!poll`'s dialog (`PollComponents.poll_dialog/1`, `#poll-dialog`) takes a
   question, 2 to 10 answers, "Allow several answers" and hours like `!schedule` (required,
-  at most 168), for the author's message (one poll each, `create/3`). `PollComponents.poll/1`
+  at most 168), for the author's message (one poll each, `create/3`), or with nothing to
+  go under (steward decision, 2026-10-24) as a closed message of its own whose text is the
+  question (`post/4`, checked before posting; `poll_only?/2`: the body is not shown twice).
+  Dialogs of the `InlineCard` hook keep the `open` that `showModal()` set
+  (`ignoreAttributes`), or a patch would close them. `PollComponents.poll/1`
   shows it under the message (under the composer for the author's open message): a form
   posting `"vote"`; anyone with the post right votes (`Forum.can_post?/2`, not on deleted
   messages), changes or takes back their vote until `closes_at`. Votes are anonymous; counts

@@ -182,9 +182,6 @@ defmodule IdejoWeb.ComposerCommandsTest do
   } do
     {:ok, view, _html} = watch(conn, topic)
 
-    # Nothing sent yet: the poll needs a message to go under.
-    assert render_hook(view, "open_poll", %{}) =~ "Write your message first, then choose !poll."
-
     render_hook(view, "commit", %{
       "body" => "Where shall we meet",
       "break" => false,
@@ -236,6 +233,41 @@ defmodule IdejoWeb.ComposerCommandsTest do
     # One poll per message.
     assert render_hook(view, "open_poll", %{}) =~ "This message has a poll already."
     assert member.id == sent.author_id
+  end
+
+  test "!poll with nothing written posts the poll as a message of its own", %{
+    conn: conn,
+    member: member,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+
+    render_hook(view, "open_poll", %{})
+    assert has_element?(view, "#poll-dialog")
+
+    # Nothing is posted while the poll is incomplete.
+    assert view
+           |> form("#poll-form", poll: %{question: "", options: ["Park", "Café"], hours: "24"})
+           |> render_submit() =~ "Write the question."
+
+    assert [_opening] = Forum.list_messages(topic)
+
+    view
+    |> form("#poll-form",
+      poll: %{question: "Where?", options: ["Park", "Café"], multiple: "false", hours: "24"}
+    )
+    |> render_submit()
+
+    refute has_element?(view, "#poll-dialog")
+    [_, posted] = Forum.list_messages(topic)
+    assert posted.author_id == member.id
+    assert posted.body_md == "Where?"
+    assert posted.closed_at
+    assert %{question: "Where?"} = Polls.summary(posted.id)
+
+    # The question shows once, as the poll's.
+    assert has_element?(view, "#message-#{posted.id} #poll-#{posted.id}", "Where?")
+    refute has_element?(view, "#message-#{posted.id}-body")
   end
 
   test "a poll closes at its time and shows everyone its counts", %{conn: conn, topic: topic} do
