@@ -455,10 +455,13 @@ roles or the permission grid. Every later change must keep it true:
   (`#unread-line`, `.unread-line`; not `.unread-marker`, the lists' "N new") in that
   message's `<li>`; the `UnreadLine` hook (`assets/js/topic_nav.js`) centres the page on it
   unless the address has a `#`, CSS fades it after 4 s and `"unread_line_done"` drops it.
+  With nothing unread (and no `#`), the `TopicNav` hook opens the page at its end (steward
+  decision, 2026-10-24).
 - **Topic navigator** (steward decision, 2026-10-23): `TopicLive`'s `#topic-nav` (named
   `<nav>`), links to `#message-{id}` of the first message, the first unread, the last and the
   reader's last (not deleted). The `TopicNav` hook shows it once the page's `<h1>` is under
-  the header: a card at the right when the space beside `#main > div` fits it, else a pill
+  the header: a card at the right, half way down the space under the header (steward
+  decision, 2026-10-24), when the space beside `#main > div` fits it, else a pill
   at the top right that opens it (`data-shown`, `data-mode`, `data-open`, kept by
   `JS.ignore_attributes`); a jump centres the message and focuses its first control.
   Hidden without JavaScript.
