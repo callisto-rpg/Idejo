@@ -74,6 +74,31 @@ defmodule IdejoWeb.AC05GuestReadingTest do
   end
 
   @tag req: "AC-05"
+  test "AC-05 visitors are offered to sign in until they continue without it", %{conn: conn} do
+    html = conn |> get(~p"/") |> html_response(200)
+
+    assert html =~ ~s(id="guest-notice")
+    assert html =~ "You are not signed in."
+    assert html =~ "You will not be able to post and won&#39;t see any hidden categories."
+    assert html =~ ~s(src="/images/logo-dark.png")
+    assert html =~ ~s(action="/continue-as-guest")
+    assert html =~ ~s(href="/users/sign-in")
+    assert html =~ ~s(href="/users/sign-up")
+    refute html =~ "Log in"
+    # The home page only.
+    refute conn |> get(~p"/c/general") |> html_response(200) =~ ~s(id="guest-notice")
+
+    res = post(conn, ~p"/continue-as-guest")
+    assert redirected_to(res) == ~p"/"
+    refute res |> recycle() |> get(~p"/") |> html_response(200) =~ ~s(id="guest-notice")
+
+    refute build_conn()
+           |> log_in_user(user_fixture())
+           |> get(~p"/")
+           |> html_response(200) =~ ~s(id="guest-notice")
+  end
+
+  @tag req: "AC-05"
   test "AC-05 members see what their roles allow", %{conn: conn, admin: admin} do
     # Unverified users act as guest.
     html = conn |> log_in_user(unconfirmed_user_fixture()) |> get(~p"/") |> html_response(200)

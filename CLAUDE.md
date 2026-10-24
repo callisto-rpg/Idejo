@@ -280,7 +280,7 @@ roles or the permission grid. Every later change must keep it true:
   sends a visitor to sign-in with the link as `:user_return_to` (signing in or up leads
   back), and a signed-in user home, where the `:unavailable` flash (`"topic"` or
   `"category"`, `Unavailable.message/1`) opens the "Unavailable" `<dialog id="topic-unavailable">` (rendered `open`, closed by a `method="dialog"` form
-  without JavaScript; `assets/js/unavailable.js` reopens it as a modal).
+  without JavaScript; `data-show-modal` reopens it as a modal).
 - **Posting and inline replies** (TP-08): members post with the composer (`Messages.commit/4`);
   `Forum.post_message/3` still posts one closed message (tests use it). Both need
   `Forum.can_post?/2` (the `:post` right and an open topic; locked and archived take nothing).
@@ -671,6 +671,12 @@ roles or the permission grid. Every later change must keep it true:
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor
   may not view is never named: it leads to sign-in, or home with a dialog (see Permalinks).
+  Visitors see a card over the home page (`#guest-notice`; steward decision, 2026-10-24):
+  the logo (`Layouts.full_logo themed`: `/images/logo-dark.png` in the dark theme), what
+  they miss without signing in, "Continue without signing in" (a form to
+  `POST /continue-as-guest`, `GuestNoticeController`, which hides it for the session), then
+  Sign in and Sign up. Dialogs a page renders `open` take `data-show-modal`, which
+  `assets/js/open_dialogs.js` turns into modals.
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
