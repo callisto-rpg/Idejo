@@ -26,7 +26,7 @@ defmodule IdejoWeb.TopicController do
     # (steward decision, 2026-10-24).
     case Forum.get_viewable_topic(user, id) do
       nil ->
-        IdejoWeb.TopicUnavailable.redirect_away(conn)
+        IdejoWeb.Unavailable.redirect_away(conn, :topic)
 
       topic ->
         if params["slug"] == topic.slug do

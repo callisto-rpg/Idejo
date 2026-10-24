@@ -18,7 +18,7 @@ defmodule IdejoWeb.MessageController do
     # 2026-10-24): sign-in, or home with a dialog.
     case Forum.get_viewable_message(user, id) do
       nil ->
-        IdejoWeb.TopicUnavailable.redirect_away(conn)
+        IdejoWeb.Unavailable.redirect_away(conn, :topic)
 
       %{topic: topic} = message ->
         redirect(conn, to: ~p"/t/#{topic.id}/#{topic.slug}" <> "#message-#{message.id}")
