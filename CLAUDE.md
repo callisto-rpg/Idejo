@@ -338,7 +338,7 @@ roles or the permission grid. Every later change must keep it true:
   (steward decisions, 2026-10-25; `.tutorial-bubble`: a pill blurred 6px with a triangle
   toward what it explains, `.points-right` for one on its right; theme colours only, through
   `--bubble-line` / `-ink` / `-fill` / `-hint`: dark theme tertiary outline, secondary text,
-  primary at 50%; light theme `primary-content` on primary at 75%, the hint the primary mixed
+  primary at 50%; light theme white text on primary at 75%, the hint the primary mixed
   into `base-content`): "slow mode" rides in front of the line (which
   stops short by `--bubble-room`, the bubble's width), and once it is full slides to the
   middle as "Ctrl+Enter to start new message" (`#composer-timer-bubble`, `data-label-done`);

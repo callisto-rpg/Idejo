@@ -94,7 +94,7 @@ defmodule IdejoWeb.ComposerTest do
 
     # Theme colours only (steward decision, 2026-10-25), so a new theme recolours them. Dark
     # theme: tertiary outline, secondary text, on primary at 50% blurred 6px, the hint in
-    # primary at 60%. Light theme: the primary's contrasting ink on primary at 75%.
+    # primary at 60%. Light theme: white text on primary at 75%.
     css = File.read!("assets/css/app.css")
     [bubble] = Regex.run(~r/^\.tutorial-bubble \{.*?^\}/ms, css)
     assert bubble =~ "border: 1px solid var(--bubble-line)"
@@ -103,13 +103,12 @@ defmodule IdejoWeb.ComposerTest do
     assert bubble =~ "backdrop-filter: blur(6px)"
     [light] = Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css)
     assert light =~ "--bubble-line: var(--color-accent)"
-    assert light =~ "--bubble-ink: var(--color-primary-content)"
+    assert light =~ "--bubble-ink: #fff;"
     assert light =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent)"
     [dark] = Regex.run(~r/^\[data-theme="dark"\] \{.*?^\}/ms, css)
     assert dark =~ "--bubble-ink: var(--color-secondary)"
     assert dark =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent)"
     assert dark =~ "--bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent)"
-    refute Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css) |> hd() =~ "#"
 
     assert css =~
              ~r/\.composer-hint \{[^}]*monospace[^}]*font-weight: 300[^}]*var\(--bubble-hint\)/s

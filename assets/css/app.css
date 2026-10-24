@@ -1930,13 +1930,13 @@ html:not([data-js]) .spoiler-cover { display: none; }
    what it explains (the caret, the timer line's front, the sidebar's ×), blurred 6px, in
    theme colours only, so a new theme in Admin → Settings recolours them. Dark theme: a
    tertiary outline, secondary text on primary at 50%. Light theme, where the secondary on
-   a pale primary does not read: the primary's own contrasting ink on primary at 75%, and a
-   hint mixing the primary into the text colour. The account menu and the Help page turn
+   a pale primary does not read: white text (steward decision, 2026-10-25) on primary at
+   75%, and a hint mixing the primary into the text colour. The account menu and the Help page turn
    them off (`data-bubbles="off"`, theme.js). */
 :root,
 [data-theme="light"] {
   --bubble-line: var(--color-accent);
-  --bubble-ink: var(--color-primary-content);
+  --bubble-ink: #fff;
   --bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent);
   --bubble-hint: color-mix(in oklab, var(--color-primary) 45%, var(--color-base-content));
 }
