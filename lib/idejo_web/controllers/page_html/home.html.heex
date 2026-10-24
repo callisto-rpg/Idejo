@@ -7,11 +7,11 @@
        screen readers only. --%>
   <h1 class="sr-only">{Layouts.server_name()}</h1>
 
-  <%!-- A link to a topic the user may not view led here (steward decision, 2026-10-24,
-       `IdejoWeb.TopicUnavailable`). Open without JavaScript, closed by its form; with it,
-       `unavailable.js` makes it modal. --%>
+  <%!-- A link to a topic or category the user may not view led here (steward decision,
+       2026-10-24, `IdejoWeb.Unavailable`). Open without JavaScript, closed by its form;
+       with it, `unavailable.js` makes it modal. --%>
   <dialog
-    :if={Phoenix.Flash.get(@flash, :unavailable)}
+    :if={kind = Phoenix.Flash.get(@flash, :unavailable)}
     id="topic-unavailable"
     class="modal"
     aria-labelledby="topic-unavailable-title"
@@ -22,11 +22,7 @@
       <h2 id="topic-unavailable-title" class="text-lg font-semibold">
         {gettext("Unavailable")}
       </h2>
-      <p id="topic-unavailable-text" class="mt-2">
-        {gettext(
-          "The topic doesn't exist, was deleted, or you do not have permission to view it."
-        )}
-      </p>
+      <p id="topic-unavailable-text" class="mt-2">{IdejoWeb.Unavailable.message(kind)}</p>
       <form method="dialog" class="modal-action">
         <button class="btn btn-primary btn-sm">{gettext("OK")}</button>
       </form>
