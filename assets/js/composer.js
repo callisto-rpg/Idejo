@@ -406,10 +406,17 @@ export const Composer = {
     return `<span class="composer-caret">${bubbles && `<span class="composer-caret-bubbles">${bubbles}</span>`}</span>`
   },
 
-  // The hint leaves rather than run past the composer's right edge (on a phone, or late on
-  // a line).
+  // With no room for the hint beside the bubble (on a phone, or late on a line), it goes
+  // below, moved left as far as it must to stay inside the composer, which grows to hold it.
   fitHint() {
+    this.el.style.paddingBottom = ""
     const hint = this.backdrop.querySelector(".composer-hint")
-    if (hint && hint.getBoundingClientRect().right > this.el.getBoundingClientRect().right) hint.hidden = true
+    const box = this.el.getBoundingClientRect()
+    if (!hint || hint.getBoundingClientRect().right <= box.right) return
+    hint.classList.add("is-below")
+    hint.style.maxWidth = `${box.width}px`
+    const r = hint.getBoundingClientRect()
+    if (r.right > box.right) hint.style.translate = `${Math.max(box.right - r.right, box.left - r.left)}px 0`
+    this.el.style.paddingBottom = `${Math.max(0, r.bottom - box.bottom) + 4}px`
   },
 }

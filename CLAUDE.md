@@ -346,7 +346,8 @@ roles or the permission grid. Every later change must keep it true:
   then "Sent!" (`.is-sent`: white text and outline turning to the theme's in 1 s, its place
   kept across repaints by `--sent-delay`) and a faded monospace "Continue typing to add to
   your message"
-  (`.composer-hint`, dropped when it would pass the right edge) until the author types
+  (`.composer-hint`; with no room beside the bubble, `is-below`: under it, kept inside the
+  composer, which grows to hold it) until the author types
   (`data-label-send` / `-sent` / `-continue`, from gettext). The sidebar's × has one too,
   "close & unfollow thread", on hover or focus, and on touch screens for 3 s once a page when
   the topic on screen's entry shows (`.sidebar-unfollow-bubble`, `is-peek`, `peek()` in
