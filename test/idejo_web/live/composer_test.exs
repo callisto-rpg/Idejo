@@ -98,6 +98,25 @@ defmodule IdejoWeb.ComposerTest do
     timer = File.read!("assets/js/composer_timer.js")
     assert timer =~ "labelDone"
 
+    # Beside "slow mode", three lines in turn every 1.5 s, monospace like the hint (steward
+    # decision, 2026-10-25); at the bubble's left, or under the line, without room.
+    assert has_element?(
+             lv,
+             ~s|#composer-timer #composer-timer-hint.composer-hint[phx-update=ignore]|
+           )
+
+    assert lv |> element("#composer-timer-hint") |> render() =~
+             ~s|data-labels="[&quot;You cannot start a new message...&quot;,&quot;...but you can continue the one above.&quot;,&quot;[Enter] to send always works.&quot;]"|
+
+    assert timer =~ "const HINT_MS = 1500"
+    assert timer =~ ~s|"is-left" : "is-under"|
+    assert timer =~ "for (const el of [this.line, this.bubble, this.hint])"
+
+    # After a send the hint first says the message is visible to all, for 2 s.
+    assert has_element?(lv, ~s|#composer[data-label-visible="Message now visible to all!"]|)
+    assert js =~ "const VISIBLE_MS = 2000"
+    assert js =~ ~s|span("composer-hint", this.hintLabel())|
+
     # Theme colours only (steward decision, 2026-10-25), so a new theme recolours them. Dark
     # theme: tertiary outline, secondary text, on primary at 50% blurred 6px, the hint in
     # primary at 60%. Light theme: the primary's contrasting ink on primary at 75%.

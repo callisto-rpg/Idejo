@@ -20,7 +20,8 @@ What is different is how you write: **your message grows as you go.**
 
 The text box below the topic is where you write. Its placeholder repeats the keys, and a
 small bubble beside the cursor says **Enter to send**; once you press it, **Sent!**, with
-"Continue typing to add to your message" until you type again. These **tutorial bubbles**
+"Message now visible to all!" for two seconds, then "Continue typing to add to your
+message" until you type again. These **tutorial bubbles**
 (also on the timer line below, and on the sidebar's **×**) can be turned off with
 **Tutorial bubbles**: **Off**, in the menu under your name or at the top of **Help**.
 
@@ -40,7 +41,9 @@ small bubble beside the cursor says **Enter to send**; once you press it, **Sent
    thought stays one message. While nobody has written below it, that lasts longer: until
    your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
    line, so when you write alone your thoughts stay one message. A thin orange line under
-   the box fills up meanwhile, a **slow mode** bubble in front of it; when it reaches the
+   the box fills up meanwhile, a **slow mode** bubble in front of it, next to which "You
+   cannot start a new message...", "...but you can continue the one above." and "[Enter] to
+   send always works." take turns; when it reaches the
    end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start
    new message**, and Ctrl+Enter starts a new message. If someone writes below you, it jumps to the shorter wait.
 4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is

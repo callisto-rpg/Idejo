@@ -2141,6 +2141,7 @@ defmodule IdejoWeb.TopicLive do
         data-label-send={gettext("Enter to send")}
         data-label-sent={gettext("Sent!")}
         data-label-continue={gettext("Continue typing to add to your message")}
+        data-label-visible={gettext("Message now visible to all!")}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
@@ -2191,6 +2192,20 @@ defmodule IdejoWeb.TopicLive do
         >
           {gettext("slow mode")}
         </span>
+        <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
+             decision, 2026-10-25). --%>
+        <span
+          id="composer-timer-hint"
+          class="composer-hint composer-timer-hint"
+          phx-update="ignore"
+          data-labels={
+            Jason.encode!([
+              gettext("You cannot start a new message..."),
+              gettext("...but you can continue the one above."),
+              gettext("[Enter] to send always works.")
+            ])
+          }
+        ></span>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
