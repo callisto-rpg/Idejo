@@ -2181,12 +2181,13 @@ html:not([data-js]) .spoiler-cover { display: none; }
   animation: composer-timer-bubble linear both;
   &.is-left { translate: calc(0.4375rem - 100% - var(--hint-gap)) calc(-100% - 0.25rem); }
   /* No room on either side (a phone): under the line, from its start. */
+  /* The animation keeps running (stopping it would restart it out of step); `!important`
+     wins over it. */
   &.is-under {
-    left: 0;
+    left: 0 !important;
     translate: 0 0.625rem;
     white-space: normal;
     width: calc(100% + var(--bubble-room, 0px));
-    animation: none;
   }
   &[hidden] { display: none; }
 }
