@@ -49,6 +49,7 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 | MO | `lib/idejo/moderation/` | Reports, mod actions, bans |
 | SE | `lib/idejo/search/` | Postgres full-text, permission-aware |
 | NO | `lib/idejo/notifications/` | In-app only in v0.1 |
+| PN | `lib/idejo/push/` | Web push (refines NO-05) |
 | FD | `lib/idejo/federation/` | URIs, activities outbox |
 | AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard, backup, CLI recovery |
 | SP | `lib/idejo/audit/`, `lib/idejo_web/plugs/` | Audit log, CSP, rate limits |
@@ -495,6 +496,18 @@ roles or the permission grid. Every later change must keep it true:
   `/email/unsubscribe/{token}` (`EmailUnsubscribeController`: GET page in `:browser`, POST
   outside it, no session or CSRF: the random token is the authority), which turns every
   option off.
+- **Web push** (NO-05, PN-01 to PN-24 in the v1 sheet; steward decision, 2026-10-24, built
+  ahead of the MVP): standard Web Push with our own RFC 8291/8292 code on OTP `:crypto` (no Hex
+  library qualified: the maintained one encrypts with the old `aesgcm`). Driven by the rows
+  `notify_new/2` and `notify_mentions/2` write, so their kind order is PN-05's precedence and
+  NO-02 holds; a `follow` row only feeds the debounced PN-04. "Unread" counts come from read
+  positions (as `Reading.for_you/1`), never `read_at`; "several mentions" and PN-04 open
+  `/unread`. Until NO-03 and NO-06 exist, `Idejo.Push.allowed?/3` treats a muted topic as
+  "none" and every other as "all"; there are no category follows. `+role`, not `@role`, in
+  PN-03. Subscriptions end wherever their session's tokens are deleted (AC-08 is not built).
+  Built in the order: manifest (CL-01), `/privacy`, VAPID keys and switch, crypto,
+  subscriptions, sending, service worker, dispatch, PN-04, banner, settings; each PR adds
+  its own details here.
 - **Live notifications** (steward decision, 2026-10-23): what `notify_new/2` and
   `notify_mentions/2` insert waits in the writing process (process dictionary) until
   `Notifications.announce/1` after commit: `Messages.broadcast/2` calls it for every
