@@ -186,7 +186,9 @@ goes away when you tap elsewhere or scroll.
   mention you or one of your roles; its colour is that of the strongest, as for the
   sidebar's dots. It updates by itself.
 - **Back in a topic** you opened before, the page opens on the oldest message you have not
-  seen, under a red **N unread messages** line that fades after a few seconds.
+  seen, under a red **N unread messages** line that fades after a few seconds. An unread
+  message that mentions you (red) or one of your roles (blue) glows in that colour as you
+  reach it, and the mention in it pulses.
 - **Jump to a message**: once you scroll past a topic's title, a card at the right shows the
   title with **First message**, **First unread**, **Last message** and **My last message**.
   Where there is no room beside the conversation (on a phone), it is a small round button at

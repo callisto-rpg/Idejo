@@ -546,6 +546,14 @@ roles or the permission grid. Every later change must keep it true:
   unless the address has a `#`, CSS fades it after 4 s and `"unread_line_done"` drops it.
   With nothing unread (and no `#`), the `TopicNav` hook opens the page at its end (steward
   decision, 2026-10-24).
+  Unread messages from there on that @mention the reader or +mention one of their roles
+  (`put_mention_glows/1`: links to `/u/{id}` or `/r/{slug}` in the stored HTML, no query
+  but the reader's roles; steward decision, 2026-10-25) carry `data-mention-glow`
+  (`mention` / `role-mention`); the `MentionGlow` hook (`assets/js/mention_glow.js`, on
+  `#messages`, tags in `data-mention-tags`) glows each once, when scrolled to, in its
+  sidebar dot's colour (`data-glowing`, kept by `JS.ignore_attributes`; medium, bigger in
+  0.3 s, held 1 s, faded in 3 s) and pulses the tags naming the reader three times
+  (`.mention-pulse`, 0.5 s each).
 - **Topic navigator** (steward decision, 2026-10-23): `TopicLive`'s `#topic-nav` (named
   `<nav>`), links to `#message-{id}` of the first message, the first unread, the last and the
   reader's last (not deleted). The `TopicNav` hook shows it once the page's `<h1>` is under

@@ -2143,6 +2143,48 @@ html:not([data-js]) .spoiler-cover { display: none; }
   .composer-burn { animation: none; }
 }
 
+/* An unread message mentioning the reader, once scrolled to (steward decision, 2026-10-25;
+   assets/js/mention_glow.js): it glows in its notification dot's colour, red for an
+   @mention, blue for a +role, medium, bigger in 0.3 s, held 1 s, faded in 3 s (4.3 s in
+   all); the tag naming the reader pulses three times, 0.5 s each. */
+[data-glowing="mention"] { --mention-glow: var(--color-error); }
+[data-glowing="role-mention"] { --mention-glow: oklch(65% 0.17 250); }
+[data-glowing] > .message {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-box);
+  animation: mention-glow 4.3s ease-out both;
+}
+[data-glowing] .mention-pulse {
+  border-radius: 0.25rem;
+  animation: mention-pulse 0.5s ease-in-out 3;
+}
+@keyframes mention-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--mention-glow) 55%, transparent),
+      0 0 12px 2px color-mix(in oklab, var(--mention-glow) 35%, transparent);
+  }
+  7%, 30.2% {
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--mention-glow) 85%, transparent),
+      0 0 30px 8px color-mix(in oklab, var(--mention-glow) 55%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 transparent,
+      0 0 0 0 transparent;
+  }
+}
+@keyframes mention-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--mention-glow) 80%, transparent),
+      0 0 12px 3px color-mix(in oklab, var(--mention-glow) 65%, transparent);
+  }
+}
+
 /* The line under the composer until Ctrl+Enter may start a new message (steward decision,
    2026-10-23; assets/js/composer_timer.js sets the fill's duration and delay). Thin and
    orange, its front a small bright white glow inside a fainter, larger yellow one; at the end
