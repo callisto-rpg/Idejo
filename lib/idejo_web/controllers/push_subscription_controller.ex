@@ -6,7 +6,7 @@ defmodule IdejoWeb.PushSubscriptionController do
   The browser's push subscription (PN-13, PN-16), saved or removed by `assets/js/push.js`
   with `fetch`: JSON as `PushSubscription.toJSON()` gives it, the CSRF token in
   `x-csrf-token`. Signed-in users only; the subscription belongs to this sign-in session, so
-  it ends with it. Answers 204, or 422 with `{"error": reason}` (429 when rate-limited, 404
+  it ends with it. The service worker renews one without a session (`renew/2`). Answers 204, or 422 with `{"error": reason}` (429 when rate-limited, 404
   when push is off).
 
   Changes to this module get an extra careful human review (DV-06).
@@ -29,6 +29,24 @@ defmodule IdejoWeb.PushSubscriptionController do
       {:error, reason} -> error(conn, 422, reason)
     end
   end
+
+  @doc """
+  `POST /push/subscriptions/renew` (PN-17), from the service worker's
+  `pushsubscriptionchange`: `{"old_endpoint": …, "subscription": …}`. No session or CSRF
+  token: knowing a saved endpoint, which only the browser, its push service and this server
+  do, is the authority; the new subscription keeps the old one's user and session.
+  """
+  def renew(conn, %{"old_endpoint" => old, "subscription" => %{} = attrs}) when is_binary(old) do
+    case Push.renew(old, attrs) do
+      {:ok, _subscription} -> send_resp(conn, 204, "")
+      {:error, :not_found} -> error(conn, 404, :not_found)
+      {:error, :disabled} -> error(conn, 404, :disabled)
+      {:error, %Ecto.Changeset{}} -> error(conn, 422, :invalid)
+      {:error, reason} -> error(conn, 422, reason)
+    end
+  end
+
+  def renew(conn, _params), do: error(conn, 422, :invalid)
 
   def delete(conn, %{"endpoint" => endpoint}) when is_binary(endpoint) do
     :ok = Push.unsubscribe(conn.assigns.current_scope.user, endpoint)
