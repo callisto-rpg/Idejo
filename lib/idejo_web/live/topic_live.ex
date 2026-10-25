@@ -90,6 +90,8 @@ defmodule IdejoWeb.TopicLive do
            move_error: nil,
            first_unread: nil,
            unread_line?: false,
+           mention_glows: %{},
+           mention_tags: [],
            pending: [],
            schedule: nil,
            polls: %{},
@@ -123,6 +125,7 @@ defmodule IdejoWeb.TopicLive do
          |> put_messages(Forum.list_messages(topic))
          |> put_draft()
          |> put_first_unread(session["first_unread"])
+         |> put_mention_glows()
          |> put_forks()
          |> assign(can_react?: can_react?(user, topic), picker: nil)
          |> assign(
@@ -183,6 +186,40 @@ defmodule IdejoWeb.TopicLive do
 
   defp put_first_unread(socket, _none),
     do: assign(socket, first_unread: nil, unread_line?: false)
+
+  # Unread messages that @mention the reader or +mention one of their roles (steward
+  # decision, 2026-10-25): the `MentionGlow` hook makes each glow once it is scrolled to, in
+  # its notification dot's colour, and the tag naming the reader pulse. Read from the stored
+  # HTML's links (`/u/{id}`, `/r/{slug}`), with no query but the reader's roles.
+  defp put_mention_glows(%{assigns: %{first_unread: %{id: first_id}}} = socket) do
+    user = user(socket)
+
+    roles =
+      for role <- Access.roles_of(user),
+          not (role.built_in and role.name in ~w(member guest)),
+          do: "/r/" <> Access.role_slug(role)
+
+    mention = "/u/" <> user.id
+
+    glows =
+      socket.assigns.messages
+      |> Enum.drop_while(&(&1.id != first_id))
+      |> Enum.filter(&(&1.author_id != user.id and is_nil(&1.deleted_at)))
+      |> Enum.flat_map(fn message ->
+        cond do
+          links_to?(message.body_html, [mention]) -> [{message.id, "mention"}]
+          links_to?(message.body_html, roles) -> [{message.id, "role-mention"}]
+          true -> []
+        end
+      end)
+      |> Map.new()
+
+    assign(socket, mention_glows: glows, mention_tags: [mention | roles])
+  end
+
+  defp put_mention_glows(socket), do: assign(socket, mention_glows: %{}, mention_tags: [])
+
+  defp links_to?(html, hrefs), do: Enum.any?(hrefs, &String.contains?(html, ~s(href="#{&1}")))
 
   defp subscribe(topic, user) do
     Messages.subscribe(topic.id)
@@ -1339,12 +1376,19 @@ defmodule IdejoWeb.TopicLive do
         {gettext("You can no longer view this topic.")}
       </p>
 
-      <ol id="messages" class={["message-list", @topic && "cat-#{@topic.category_id}"]}>
+      <ol
+        id="messages"
+        class={["message-list", @topic && "cat-#{@topic.category_id}"]}
+        phx-hook="MentionGlow"
+        data-mention-tags={@mention_glows != %{} && Jason.encode!(@mention_tags)}
+      >
         <li
           :for={message <- @before}
           :key={message.id}
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+          data-mention-glow={@mention_glows[message.id]}
+          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
         >
           <.unread_line
             :if={@unread_line? and @first_unread.id == message.id}
@@ -1405,6 +1449,8 @@ defmodule IdejoWeb.TopicLive do
           :key={message.id}
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+          data-mention-glow={@mention_glows[message.id]}
+          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
         >
           <.unread_line
             :if={@unread_line? and @first_unread.id == message.id}

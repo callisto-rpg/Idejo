@@ -29,6 +29,7 @@ import {hooks as colocatedHooks} from "phoenix-colocated/idejo"
 import topbar from "../vendor/topbar"
 import {Composer} from "./composer"
 import {ComposerTimer} from "./composer_timer"
+import {MentionGlow} from "./mention_glow"
 import {ShowAll} from "./show_all"
 import {InlineLinks, InlineCard} from "./inline_cards"
 import {EditorImages} from "./editor_images"
@@ -50,7 +51,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine},
+  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine, MentionGlow},
 })
 
 // Show progress bar on live navigation and form submits
