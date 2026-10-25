@@ -74,6 +74,13 @@ defmodule Idejo.Settings do
     # PN-19: web push notifications, on by default; "off" means no banner, no subscribing
     # and no sending.
     push_enabled: %{type: :string, default: "on", required: true, in: ~w(on off)},
+    # PN-04: at most one "new messages in topics you follow" push per user in this time.
+    push_followed_interval_minutes: %{
+      type: :integer,
+      default: 30,
+      required: true,
+      range: 1..1440
+    },
     # PN-16: the push services the server sends to, one host per line; "*.example.com"
     # allows any name under example.com.
     push_services: %{
@@ -104,6 +111,7 @@ defmodule Idejo.Settings do
           | :server_rules
           | :privacy_notice
           | :push_enabled
+          | :push_followed_interval_minutes
           | :push_services
           | :custom_css
 

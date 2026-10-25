@@ -54,9 +54,53 @@ const subscription = async key => {
   return current || pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyBytes(key)})
 }
 
+// "Remove" on this browser in the settings (PN-24) turns it off here until "Turn on": else
+// the next page load would subscribe it again.
+const OFF_HERE = "idejo:push-off"
+
+const offHere = () => {
+  try {
+    return localStorage.getItem(OFF_HERE) === "true"
+  } catch (_e) {
+    return false
+  }
+}
+
+const setOffHere = off => {
+  try {
+    if (off) localStorage.setItem(OFF_HERE, "true")
+    else localStorage.removeItem(OFF_HERE)
+  } catch (_e) {
+    // Storage refused (private window): this page only.
+  }
+}
+
+// iPhone and iPad take notifications only from a site added to the Home Screen (PN-22).
+export const appleTouch = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+
+export const fromHomeScreen = () =>
+  navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches
+
+// This browser's subscription endpoint, or null (none, or not allowed).
+export async function currentEndpoint() {
+  if (!pushKey() || !pushSupported() || Notification.permission !== "granted" || offHere()) return null
+  const subscription = await (await manager()).getSubscription()
+  return subscription ? subscription.endpoint : null
+}
+
+// Ends this browser's subscription and keeps it off here (the server row is already gone).
+export async function disablePush() {
+  setOffHere(true)
+  if (!pushSupported()) return
+  const subscription = await (await manager()).getSubscription()
+  if (subscription) await subscription.unsubscribe()
+}
+
 export async function syncPush() {
   const key = pushKey()
-  if (!key || !pushSupported() || Notification.permission !== "granted") return
+  if (!key || !pushSupported() || Notification.permission !== "granted" || offHere()) return
   // The service worker shows pushes where declarative push is missing, and opens their links.
   await registration()
   await save(await subscription(key))
@@ -68,6 +112,7 @@ export async function enablePush() {
   if (!key || !pushSupported()) return "unsupported"
   const permission = await Notification.requestPermission()
   if (permission === "granted") {
+    setOffHere(false)
     await registration()
     const response = await save(await subscription(key))
     if (!response.ok) throw new Error(`push subscription refused: ${response.status}`)

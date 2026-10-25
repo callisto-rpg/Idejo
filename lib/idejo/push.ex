@@ -19,14 +19,22 @@ defmodule Idejo.Push do
   `deliver/3` sends a payload to every browser of a user: one `Idejo.Push.Worker` job each,
   in the `push` queue (PN-15).
 
+  `dispatch/1` takes the in-app notifications of a message once they are committed
+  (`Idejo.Notifications.announce/1`) and queues an `Idejo.Push.Dispatch` job for each reply,
+  @mention or +role mention of a user with a browser taking pushes (PN-01 to PN-03). That job
+  checks everything again when it runs, then builds the payload (`Idejo.Push.Payload`).
+  Each user switches each type on or off (PN-11, `preferences/1`).
+
   Changes to this module get an extra careful human review (DV-06).
   """
   import Ecto.Query
 
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
-  alias Idejo.Push.{Endpoint, Subscription, Worker}
+  alias Idejo.Forum.Topic
+  alias Idejo.Push.{Dispatch, Endpoint, FollowedWorker, Payload, Preference, Subscription, Worker}
   alias Idejo.RateLimit
+  alias Idejo.Reading.Follow
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -201,6 +209,184 @@ defmodule Idejo.Push do
       )
 
     "mailto:" <> (owner || Settings.get(:mail_from))
+  end
+
+  @pushed ~w(reply mention role_mention)
+
+  @doc """
+  Queues the pushes a message's notifications call for, only for users with a browser
+  taking pushes and nothing while push is off. Takes the entries
+  `Idejo.Notifications.announce/1` has: `%{user_id, kind, message_id}`.
+
+    * reply, mention, role_mention (PN-01 to PN-03): one `Idejo.Push.Dispatch` job per user
+      and message;
+    * follow (PN-04): one `Idejo.Push.FollowedWorker` job per user, at most one waiting,
+      due when the last one went `push_followed_interval_minutes` ago (now, if it is longer).
+  """
+  @spec dispatch([%{user_id: Ecto.UUID.t(), kind: String.t(), message_id: Ecto.UUID.t()}]) ::
+          :ok
+  def dispatch(entries) do
+    entries = Enum.filter(entries, &(&1.kind in ["follow" | @pushed]))
+
+    if entries != [] and enabled?() do
+      subscribed = subscribed(entries |> Enum.map(& &1.user_id) |> Enum.uniq())
+      {followed, pushed} = Enum.split_with(entries, &(&1.kind == "follow"))
+
+      for entry <- pushed, MapSet.member?(subscribed, entry.user_id) do
+        Oban.insert!(
+          Dispatch.new(%{"user_id" => entry.user_id, "message_id" => entry.message_id})
+        )
+      end
+
+      followed
+      |> Enum.map(& &1.user_id)
+      |> Enum.uniq()
+      |> Enum.filter(&MapSet.member?(subscribed, &1))
+      |> queue_followed()
+    end
+
+    :ok
+  end
+
+  defp subscribed(user_ids) do
+    Repo.all(
+      from s in Subscription, where: s.user_id in ^user_ids, distinct: true, select: s.user_id
+    )
+    |> MapSet.new()
+  end
+
+  defp queue_followed([]), do: :ok
+
+  defp queue_followed(user_ids) do
+    sent =
+      Repo.all(
+        from p in Preference,
+          where: p.user_id in ^user_ids,
+          select: {p.user_id, p.followed_sent_at}
+      )
+      |> Map.new()
+
+    for user_id <- user_ids do
+      Oban.insert!(
+        FollowedWorker.new(%{"user_id" => user_id}, scheduled_at: followed_due(sent[user_id]))
+      )
+    end
+
+    :ok
+  end
+
+  @doc """
+  When the next followed-activity push (PN-04) may go, after one sent at `sent_at` (nil:
+  never): `push_followed_interval_minutes` later, or now when that has passed.
+  """
+  @spec followed_due(DateTime.t() | nil, DateTime.t()) :: DateTime.t()
+  def followed_due(sent_at, now \\ DateTime.utc_now())
+  def followed_due(nil, now), do: now
+
+  def followed_due(%DateTime{} = sent_at, now) do
+    due = DateTime.add(sent_at, Settings.get(:push_followed_interval_minutes), :minute)
+    if DateTime.after?(due, now), do: due, else: now
+  end
+
+  @doc """
+  Whether a push of `kind` about `topic` may reach `user` (PN-09): one check for notification
+  levels and quiet hours. Until NO-03 is built, a muted topic is "none" (nothing) and every
+  other topic "all".
+  """
+  @spec allowed?(User.t(), Topic.t(), String.t()) :: boolean()
+  def allowed?(%User{id: user_id}, %Topic{id: topic_id}, _kind) do
+    not Repo.exists?(
+      from f in Follow, where: f.user_id == ^user_id and f.topic_id == ^topic_id and f.muted
+    )
+  end
+
+  @banner_quiet_days 14
+
+  @doc """
+  Whether the notifications banner (PN-20) is offered to `user` on category and topic pages:
+  push on (PN-19); the welcome card seen (`welcomed_at`: never on the first page view after
+  sign-up); "Not now" not said in the last #{@banner_quiet_days} days; and the user has
+  posted or follows a topic. The browser decides the rest (`assets/js/push_banner.js`:
+  permission still undecided, push supported, or an iPhone or iPad Safari tab).
+  """
+  @spec banner?(User.t() | nil) :: boolean()
+  def banner?(nil), do: false
+
+  def banner?(%User{} = user) do
+    enabled?() and user.welcomed_at != nil and not dismissed_recently?(user) and
+      (Repo.exists?(from m in Idejo.Messages.Message, where: m.author_id == ^user.id) or
+         Repo.exists?(from f in Follow, where: f.user_id == ^user.id and f.following))
+  end
+
+  defp dismissed_recently?(user) do
+    case preferences(user).banner_dismissed_at do
+      nil -> false
+      at -> DateTime.diff(DateTime.utc_now(), at, :day) < @banner_quiet_days
+    end
+  end
+
+  @doc "Records \"Not now\" on the notifications banner (PN-21): hidden for #{@banner_quiet_days} days."
+  @spec dismiss_banner(User.t()) :: {:ok, Preference.t()} | {:error, Ecto.Changeset.t()}
+  def dismiss_banner(%User{} = user) do
+    user
+    |> preferences()
+    |> Ecto.Changeset.change(banner_dismissed_at: DateTime.utc_now())
+    |> Repo.insert_or_update()
+  end
+
+  @doc "The user's push types (PN-11): their row, or the defaults (all on)."
+  @spec preferences(User.t()) :: Preference.t()
+  def preferences(%User{id: id}),
+    do: Repo.get(Preference, id) || %Preference{user_id: id}
+
+  @doc "A changeset for the user's push types."
+  @spec change_preferences(User.t(), map()) :: Ecto.Changeset.t()
+  def change_preferences(%User{} = user, attrs \\ %{}),
+    do: Preference.changeset(preferences(user), attrs)
+
+  @doc "Saves the user's push types (PN-11), for all their browsers."
+  @spec update_preferences(User.t(), map()) ::
+          {:ok, Preference.t()} | {:error, Ecto.Changeset.t()}
+  def update_preferences(%User{} = user, attrs),
+    do: user |> change_preferences(attrs) |> Repo.insert_or_update()
+
+  @doc "Whether the user takes pushes of `kind` (PN-11)."
+  @spec wants?(Preference.t(), String.t()) :: boolean()
+  def wants?(%Preference{} = preference, "reply"), do: preference.reply
+  def wants?(%Preference{} = preference, "mention"), do: preference.mention
+  def wants?(%Preference{} = preference, "role_mention"), do: preference.role_mention
+  def wants?(%Preference{} = preference, "follow"), do: preference.followed
+
+  @doc """
+  Removes one of `user`'s browsers (PN-24, "Remove"): its endpoint, so the page can end that
+  browser's own subscription when it is this one, or `{:error, :not_found}`.
+  """
+  @spec remove_subscription(User.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def remove_subscription(%User{id: user_id}, id) when is_binary(id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         {1, [endpoint]} <-
+           Repo.delete_all(
+             from s in Subscription,
+               where: s.id == ^uuid and s.user_id == ^user_id,
+               select: s.endpoint
+           ) do
+      {:ok, endpoint}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Sends a test notification to every browser of `user` (PN-24): how many were queued.
+  Rate-limited (`:push_test`).
+  """
+  @spec send_test(User.t()) ::
+          {:ok, non_neg_integer()} | {:error, :disabled | :rate_limited | :too_large}
+  def send_test(%User{} = user) do
+    with :ok <- if(enabled?(), do: :ok, else: {:error, :disabled}),
+         :ok <- RateLimit.check(:push_test, user.id) do
+      deliver(user, Payload.test(user))
+    end
   end
 
   @doc "Deletes `user`'s subscription with `endpoint`, if there is one."

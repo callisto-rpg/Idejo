@@ -938,6 +938,25 @@
     font-size: 0.875rem;
   }
 
+  /* The notifications banner (PN-21): slim, in the page's flow under the header, never over
+     the composer; theme colours. */
+  .push-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 1rem 1rem 0;
+    padding: 0.5rem 0.75rem 0.5rem 1rem;
+    border-radius: var(--radius-box);
+    background: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-100));
+    border: 1px solid color-mix(in oklab, var(--color-primary) 35%, transparent);
+    font-size: 0.875rem;
+    &[hidden] { display: none; }
+    & p[hidden], & button[hidden], & .push-banner-actions[hidden] { display: none; }
+  }
+  .push-banner-actions { display: flex; gap: 0.5rem; }
+  .push-browser [hidden] { display: none; }
+
   .site-footer {
     display: flex;
     flex-wrap: wrap;

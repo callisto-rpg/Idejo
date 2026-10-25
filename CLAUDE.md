@@ -905,6 +905,71 @@ roles or the permission grid. Every later change must keep it true:
   browser posts `PushSubscription.toJSON()` to `POST /push/subscriptions` and removes it with
   `DELETE` (`PushSubscriptionController`, signed in, CSRF header; 204, or 422/429/404 with
   `{"error": reason}`).
+- **Push sending** (PN-15; extra review: DV-06): `Push.deliver(user, payload, urgency:)`
+  queues one `Idejo.Push.Worker` job per browser (queue `push`, TTL 24 h), refusing payloads
+  over `Push.max_payload/0` (3 KB encrypted, PN-12). The worker re-checks the switch, the
+  subscription and the endpoint; `Idejo.Push.Sender` encrypts, signs (`sub`:
+  `Push.contact/0`, the first owner's email) and posts to the checked address with the host
+  name in `connect_options: [hostname:]` and `Host`, no redirects. 2xx resets
+  `failure_count`; 404/410 delete; 429, 5xx and no answer snooze (`Retry-After`, seconds or
+  date, else 30 s doubling to an hour: `Worker.delay/2`); other statuses cancel; 5 failures
+  in a row delete the subscription. Tests use `Idejo.FakePushService` (Bandit on a free
+  port, set as `config :idejo, :push_target`; Bypass needs ranch 1, the lock has ranch 2)
+  and read payloads with `Crypto.decrypt/4`.
+- **Push dispatch** (PN-01 to PN-03, PN-05 to PN-12; extra review: DV-06):
+  `Notifications.announce/1`, after the commit, hands its entries to `Push.dispatch/1`, which
+  queues one `Idejo.Push.Dispatch` job per user and message (unique while incomplete) for
+  reply, mention and role_mention rows of users with a browser, nothing while push is off.
+  The job reads the row's kind when it runs (an upgrade meanwhile wins) and pushes nothing
+  when: off; `notifications.pushed_at` already set (PN-05: once per user and message; set
+  just before sending) or another kind; the message deleted; the account not active or
+  banned; no view right (PN-10); `Push.allowed?/3` false (PN-09: muted); the type switched
+  off (PN-11: `push_preferences`, `Push.preferences/1`, `update_preferences/2`,
+  `wants?/2`; no row = all on); a live view of the topic (PN-08, `Authors.present?/2`);
+  nothing of that kind unread any more. `Idejo.Push.Payload.build/3` (PN-12) makes the
+  declarative JSON the service worker reads: title, body (`Payload.excerpt/1`, 120
+  characters), `navigate` (the permalink `Federation.uri(:message, id)`, or `/unread` for
+  several mentions), tag (`reply-{topic id}`, `mentions`, `role-mentions`), `lang` (the
+  server's locale), top-level `app_badge` (`Reading.for_you/1`); urgency `high` for a
+  mention. N comes from `Reading.unread_notified/3` (unread rows of that kind, viewable,
+  not muted; the reply count in the topic). The role in a PN-03 title is the user's
+  highest-ranked +mentioned role, as its slug.
+- **Followed activity** (PN-04; extra review: DV-06): a `follow` row makes `Push.dispatch/1`
+  queue one `Idejo.Push.FollowedWorker` per user (unique while waiting), `scheduled_at`
+  `Push.followed_due/2`: the last one's `push_preferences.followed_sent_at` plus
+  `push_followed_interval_minutes` (default 30, 1–1440, **Admin → Settings**), or now; run
+  early it snoozes. N = `Reading.unread_followed/1` (topics with unread `follow`-kind
+  notifications, so mentions and replies never count again, PN-05; viewable, not muted)
+  minus topics on screen (PN-08); sent only when one has a notification newer than the last
+  push (N has grown), then `followed_sent_at` and `followed_count` are kept.
+  `Payload.followed/2`: "There are new messages in N topics you follow", empty body,
+  `/unread`, tag `followed`.
+- **Notifications banner** (PN-20 to PN-23; extra review: DV-06): category and topic pages
+  pass `push_banner={@push_banner?}` to `Layouts.app` (their controllers ask
+  `Push.banner?/1`: push on, the welcome card seen (`welcomed_at`), no "Not now" within 14
+  days (`push_preferences.banner_dismissed_at`, `Push.dismiss_banner/1`), and the user has
+  posted or follows a topic). `Layouts.push_banner/1` renders `#push-banner` `hidden` in
+  the column's flow before `<main>` (never over the composer): `role="region"`,
+  `aria-label`, `aria-live="polite"`, never an alert, never focused.
+  `assets/js/push_banner.js` shows it only with a push key, and either in an iPhone or iPad
+  Safari tab (`.push-banner-ios`, no "Turn on", PN-22) or where push is supported and the
+  permission is `default`. "Turn on" calls `enablePush()` (push.js, the only permission
+  request): granted says "Notifications are on" for 4 s, denied hides; "Not now" hides and
+  `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus left on its buttons goes
+  to `#main`.
+- **Push settings** (PN-11, PN-24; extra review: DV-06): **Profile and account** has a
+  "Push notifications" section while push is on: `#push-browser` (`PushSettings` hook,
+  `assets/js/push_settings.js`, `phx-update="ignore"`) shows this browser's state (on, off
+  with "Turn on", blocked with how to allow it, the iPhone/iPad Home Screen steps,
+  unsupported) and tells the view `"push_endpoint"` (marks "This browser") and
+  `"push_changed"`; the four switches (`Push.update_preferences/2`); the devices
+  (`Push.list_subscriptions/1`, named by `UserSettingsLive.device_name/1` from the user
+  agent, with the date) with Remove (`Push.remove_subscription/2`; this browser's also
+  gets `"push_unsubscribe"`, and push.js keeps it off here with `localStorage`
+  `idejo:push-off` until "Turn on", or `syncPush()` would subscribe it again); "Send test
+  notification" (`Push.send_test/1`, `Payload.test/1`, rate-limited `:push_test`).
+  `appleTouch()`, `fromHomeScreen()`, `currentEndpoint()` and `disablePush()` live in
+  push.js.
 - **Service worker and sync** (PN-17, PN-18): `priv/push/sw.js`, embedded at compile time by
   `ServiceWorkerController` and served at `/sw.js` (no session, `no-cache`,
   `Service-Worker-Allowed: /`); not bundled, it imports nothing. It shows declarative push
@@ -919,17 +984,6 @@ roles or the permission grid. Every later change must keep it true:
   worker, takes the subscription from `window.pushManager` or the worker's (made again if
   missing or made with another key) and posts it. Its `enablePush()` is the only caller of
   `Notification.requestPermission()`, from a click. The JS is checked by hand.
-- **Push sending** (PN-15; extra review: DV-06): `Push.deliver(user, payload, urgency:)`
-  queues one `Idejo.Push.Worker` job per browser (queue `push`, TTL 24 h), refusing payloads
-  over `Push.max_payload/0` (3 KB encrypted, PN-12). The worker re-checks the switch, the
-  subscription and the endpoint; `Idejo.Push.Sender` encrypts, signs (`sub`:
-  `Push.contact/0`, the first owner's email) and posts to the checked address with the host
-  name in `connect_options: [hostname:]` and `Host`, no redirects. 2xx resets
-  `failure_count`; 404/410 delete; 429, 5xx and no answer snooze (`Retry-After`, seconds or
-  date, else 30 s doubling to an hour: `Worker.delay/2`); other statuses cancel; 5 failures
-  in a row delete the subscription. Tests use `Idejo.FakePushService` (Bandit on a free
-  port, set as `config :idejo, :push_target`; Bypass needs ranch 1, the lock has ranch 2)
-  and read payloads with `Crypto.decrypt/4`.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),
