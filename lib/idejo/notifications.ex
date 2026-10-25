@@ -226,8 +226,13 @@ defmodule Idejo.Notifications do
     Process.delete(@pending)
 
     case mine do
-      [] -> :ok
-      [first | _] -> broadcast_all(mine, Repo.get(Message, first.message_id))
+      [] ->
+        :ok
+
+      [first | _] ->
+        # Web push (PN-01 to PN-03): queued now that the notifications are committed.
+        Idejo.Push.dispatch(mine)
+        broadcast_all(mine, Repo.get(Message, first.message_id))
     end
   end
 

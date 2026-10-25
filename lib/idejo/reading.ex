@@ -399,6 +399,44 @@ defmodule Idejo.Reading do
     %{count: count, level: level && Enum.at([:role_mention, :reply, :mention], level - 1)}
   end
 
+  @doc """
+  The user's unread notifications of `kind` ("reply", "mention" or "role_mention"), as
+  `Idejo.Push.Payload` counts them (PN-01 to PN-03): on unread messages, in categories they
+  may view, not in muted topics; only in `topic_id` when given. `%{count: n, titles: [...]}`,
+  with the titles of up to three of their topics, the latest first.
+  """
+  @spec unread_notified(User.t(), String.t(), Ecto.UUID.t() | nil) :: %{
+          count: non_neg_integer(),
+          titles: [String.t()]
+        }
+  def unread_notified(%User{id: user_id} = user, kind, topic_id \\ nil) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    query =
+      user
+      |> unread_messages()
+      |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
+      |> where([topic: t], t.category_id in subquery(viewable))
+      |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
+      |> join(:inner, [m], n in Idejo.Notifications.Notification,
+        as: :notification,
+        on: n.message_id == m.id and n.user_id == ^user_id and n.kind == ^kind
+      )
+      |> then(&if(topic_id, do: where(&1, [m], m.topic_id == ^topic_id), else: &1))
+
+    count = query |> select([notification: n], count(n.id)) |> Repo.one()
+
+    titles =
+      query
+      |> group_by([topic: t], [t.id, t.title])
+      |> order_by([m], desc: max(m.opened_at))
+      |> limit(3)
+      |> select([topic: t], t.title)
+      |> Repo.all()
+
+    %{count: count, titles: titles}
+  end
+
   # Messages by others opened after the user's read position in their topic, or after the
   # user signed up where they have none.
   defp unread_messages(%User{id: user_id, created_at: signed_up}) do

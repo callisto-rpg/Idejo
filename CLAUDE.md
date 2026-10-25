@@ -916,6 +916,24 @@ roles or the permission grid. Every later change must keep it true:
   in a row delete the subscription. Tests use `Idejo.FakePushService` (Bandit on a free
   port, set as `config :idejo, :push_target`; Bypass needs ranch 1, the lock has ranch 2)
   and read payloads with `Crypto.decrypt/4`.
+- **Push dispatch** (PN-01 to PN-03, PN-05 to PN-12; extra review: DV-06):
+  `Notifications.announce/1`, after the commit, hands its entries to `Push.dispatch/1`, which
+  queues one `Idejo.Push.Dispatch` job per user and message (unique while incomplete) for
+  reply, mention and role_mention rows of users with a browser, nothing while push is off.
+  The job reads the row's kind when it runs (an upgrade meanwhile wins) and pushes nothing
+  when: off; `notifications.pushed_at` already set (PN-05: once per user and message; set
+  just before sending) or another kind; the message deleted; the account not active or
+  banned; no view right (PN-10); `Push.allowed?/3` false (PN-09: muted); the type switched
+  off (PN-11: `push_preferences`, `Push.preferences/1`, `update_preferences/2`,
+  `wants?/2`; no row = all on); a live view of the topic (PN-08, `Authors.present?/2`);
+  nothing of that kind unread any more. `Idejo.Push.Payload.build/3` (PN-12) makes the
+  declarative JSON the service worker reads: title, body (`Payload.excerpt/1`, 120
+  characters), `navigate` (the permalink `Federation.uri(:message, id)`, or `/unread` for
+  several mentions), tag (`reply-{topic id}`, `mentions`, `role-mentions`), `lang` (the
+  server's locale), top-level `app_badge` (`Reading.for_you/1`); urgency `high` for a
+  mention. N comes from `Reading.unread_notified/3` (unread rows of that kind, viewable,
+  not muted; the reply count in the topic). The role in a PN-03 title is the user's
+  highest-ranked +mentioned role, as its slug.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

@@ -17,6 +17,8 @@ defmodule Idejo.Notifications.Notification do
   schema "notifications" do
     field :kind, :string
     field :read_at, :utc_datetime_usec
+    # PN-05: when it was pushed; a notification is pushed at most once.
+    field :pushed_at, :utc_datetime_usec
     belongs_to :user, Idejo.Accounts.User
     belongs_to :message, Idejo.Messages.Message
 
