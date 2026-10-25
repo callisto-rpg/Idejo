@@ -48,7 +48,7 @@ have every right, whatever the settings say.
 ## The admin panel
 
 Owners and administrators find **Admin** in the menu under their name, in the top right
-corner. It has seven tabs.
+corner. It has ten tabs.
 
 ### Settings
 
@@ -73,6 +73,14 @@ corner. It has seven tabs.
   needed. **Light background** and **Dark background** are the page's in the light and dark
   themes. Text on a colour turns white or near-black, whichever reads better. The page loads
   again when you save a change, to show it. **Stylesheet** can still override them.
+
+### Info boxes
+
+Cards shown to everyone on the home page, before the categories and drawn like them, with
+your own text: a welcome, links, the next event. **Create info box** takes a **Title**, an
+**Icon** and **Colour** (the same choices as a category's) and a **Text (Markdown)** written
+in the message editor, with its **Preview**. **Edit** changes one, the arrows change their
+order, **Delete** removes one.
 
 ### Email
 

@@ -176,6 +176,7 @@ defmodule IdejoWeb.Router do
 
     live_session :admin, on_mount: [{IdejoWeb.UserAuth, :require_administrator}] do
       live "/", SettingsLive
+      live "/info-boxes", InfoBoxesLive
       live "/email", EmailLive
       live "/users", UsersLive
       live "/invites", InvitesLive

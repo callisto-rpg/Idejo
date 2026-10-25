@@ -487,6 +487,17 @@ roles or the permission grid. Every later change must keep it true:
   `Recovery` starts that grace for every open message at boot. Moderators close others' open
   messages (`Messages.close_as_moderator/3`, a "Close message" button; logged, MO-03). Tests run with a
   one-hour grace and pass `grace_ms:` when they need one.
+- **Info boxes** (steward decision, 2026-10-25; `Idejo.Settings.InfoBoxes`, `info_boxes`):
+  cards of the administrators' own Markdown (`body_md` and its `body_html`, FD-03, rendered
+  with `Body.to_html/2` as the admin), each with a title, an icon and a `#rrggbb` colour,
+  ordered, made in **Admin → Info boxes** (`Admin.InfoBoxesLive`: one form for new or
+  edited, the message editor with Write / Preview; audited `info_box.create|update|reorder|
+  delete`). The home page shows them to everyone first in the first section's
+  `.category-grid`, as `.category-card.info-box` (no card link, so links in the text work;
+  the mark from `PageHTML.info_box_mark/1`); `--cat` comes from `Layouts.category_colours/1`
+  (`info_boxes` assign, `.info-box-{id}`). The icon and colour picker is
+  `IdejoWeb.Admin.look/1`, shared with Admin → Categories. `Uploads.delete_unused/1` reads
+  their Markdown.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count, last activity and,
   for signed-in users, the unread marker ("N new"). Every topic list (category, home,

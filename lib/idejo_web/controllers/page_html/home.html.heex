@@ -59,11 +59,13 @@
     </div>
   </dialog>
 
-  <p :if={@categories == []} id="no-categories" class="empty-state">
+  <p :if={@categories == [] and @info_boxes == []} id="no-categories" class="empty-state">
     {gettext("Nothing to read here yet.")}
   </p>
 
-  <%!-- RP-03: one "Categories" section, or one per group (ungrouped last, as "Other"). --%>
+  <%!-- RP-03: one "Categories" section, or one per group (ungrouped last, as "Other"). The
+       info boxes lead the first (steward decision, 2026-10-25): cards like the categories',
+       the administrators' own Markdown in place of a description and counts. --%>
   <div :if={@sections != []} class="category-sections">
     <section
       :for={{{group, summaries}, index} <- Enum.with_index(@sections)}
@@ -73,6 +75,19 @@
         {section_title(group, length(@sections))}
       </h2>
       <ul id={if index == 0, do: "categories", else: "categories-#{index}"} class="category-grid">
+        <li
+          :for={box <- if(index == 0, do: @info_boxes, else: [])}
+          id={"info-box-#{box.id}"}
+          class={["category-card info-box", "info-box-#{box.id}"]}
+        >
+          <div class="category-card-head">
+            <TopicComponents.category_mark category={info_box_mark(box)} size={:large} />
+            <h3>{box.title}</h3>
+          </div>
+          <div :if={String.trim(box.body_html) != ""} class="info-box-body">
+            <MessageComponents.body html={box.body_html} />
+          </div>
+        </li>
         <li
           :for={%{category: category} = summary <- summaries}
           id={"category-#{category.id}"}
