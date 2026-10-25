@@ -74,6 +74,10 @@ change and keeps no history.
 
 ## Around a message
 
+A message's actions (**React**, **Edit**, **Reply** and the others) show when you point at
+the message. On a phone or tablet, tap the message: they open in a bubble under it, which
+goes away when you tap elsewhere or scroll.
+
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
   reply** to undo it), and the box is a new message, shown as a reply to theirs. If your
   own message is still open, sending the reply completes it (when the server allows replies

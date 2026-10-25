@@ -1745,6 +1745,7 @@ defmodule IdejoWeb.TopicLive do
       :if={is_nil(@message.deleted_at) or @can_moderate?}
       aria-labelledby={"message-#{@message.id}-author"}
       class="message"
+      phx-mounted={JS.ignore_attributes(["data-acting"])}
     >
       <p id={"message-#{@message.id}-author"} class="message-head">
         <%!-- Choosing messages to move (TP-15) or delete (MO-02). --%>

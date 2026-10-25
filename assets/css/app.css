@@ -1537,11 +1537,41 @@
     &::-webkit-details-marker { display: none; }
     &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
   }
+  /* Message actions (steward decision, 2026-10-25). Screens that point: hidden until the
+     message is hovered or has the focus (keyboard). Touch screens, with scripts: a pill
+     floating under the message once it is tapped (assets/js/message_actions.js), gone at
+     any other action; hidden, not removed, so screen readers still reach them. Without
+     scripts they stay in place. */
   @media (hover: hover) {
-    .message .message-actions { opacity: 0.6; }
+    .message .message-actions { opacity: 0; }
     .message:hover .message-actions,
     .message:focus-within .message-actions,
     .message-actions:has([open]) { opacity: 1; }
+  }
+  @media (hover: none) {
+    [data-js] .message { position: relative; }
+    [data-js] .message .message-actions {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% - 0.75rem);
+      left: 0.75rem;
+      max-width: calc(100% - 1.5rem);
+      margin: 0 !important;
+      padding: 0.25rem;
+      border: 1px solid var(--overlay-line);
+      border-radius: 1.25rem;
+      background: color-mix(in oklab, var(--color-base-100) var(--menu-opacity, 70%), transparent);
+      -webkit-backdrop-filter: blur(var(--menu-blur, 4px));
+      backdrop-filter: blur(var(--menu-blur, 4px));
+      box-shadow: var(--shadow-lift);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+    [data-js] .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
+    [data-js] .message[data-acting] .message-actions,
+    [data-js] .message .message-actions:focus-within,
+    [data-js] .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   .reactions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }

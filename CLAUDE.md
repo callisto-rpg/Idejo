@@ -326,6 +326,12 @@ roles or the permission grid. Every later change must keep it true:
   Rights are checked at mount and again on `:permissions_changed`, which
   `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
+- **Message actions** (React, Edit, Reply…; steward decision, 2026-10-25): on screens that
+  point, hidden until the message is hovered or has the focus; on touch screens, with
+  scripts, a pill floating under the message once it is tapped (`data-acting`, set by
+  `assets/js/message_actions.js` and kept across patches by `JS.ignore_attributes`), closed
+  by a tap anywhere but on the pill or by a scroll. Hidden with opacity, never removed, so
+  screen readers reach them; without scripts they stay in place.
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or

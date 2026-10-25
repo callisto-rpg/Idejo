@@ -43,6 +43,7 @@ import "./title_edit"
 import "./topic_menu"
 import "./dropdown"
 import "./account_menu"
+import "./message_actions"
 import "./open_dialogs"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
