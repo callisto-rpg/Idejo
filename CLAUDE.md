@@ -905,6 +905,17 @@ roles or the permission grid. Every later change must keep it true:
   browser posts `PushSubscription.toJSON()` to `POST /push/subscriptions` and removes it with
   `DELETE` (`PushSubscriptionController`, signed in, CSRF header; 204, or 422/429/404 with
   `{"error": reason}`).
+- **Push sending** (PN-15; extra review: DV-06): `Push.deliver(user, payload, urgency:)`
+  queues one `Idejo.Push.Worker` job per browser (queue `push`, TTL 24 h), refusing payloads
+  over `Push.max_payload/0` (3 KB encrypted, PN-12). The worker re-checks the switch, the
+  subscription and the endpoint; `Idejo.Push.Sender` encrypts, signs (`sub`:
+  `Push.contact/0`, the first owner's email) and posts to the checked address with the host
+  name in `connect_options: [hostname:]` and `Host`, no redirects. 2xx resets
+  `failure_count`; 404/410 delete; 429, 5xx and no answer snooze (`Retry-After`, seconds or
+  date, else 30 s doubling to an hour: `Worker.delay/2`); other statuses cancel; 5 failures
+  in a row delete the subscription. Tests use `Idejo.FakePushService` (Bandit on a free
+  port, set as `config :idejo, :push_target`; Bypass needs ranch 1, the lock has ranch 2)
+  and read payloads with `Crypto.decrypt/4`.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),
@@ -919,7 +930,7 @@ roles or the permission grid. Every later change must keep it true:
   needing them are tagged `pg_tools` (skipped with a note when missing, never on CI); the
   restore test uses a database of its own through a dynamic repo, outside the sandbox.
 - **Background jobs**: Oban (`config :idejo, Oban`, `oban_jobs` migration pinned to
-  version 14; queues `maintenance` and `messages`), `testing: :manual` in tests (use
+  version 14; queues `maintenance`, `messages` and `push`), `testing: :manual` in tests (use
   `Oban.Testing`).
 - **Admin changes** to settings, roles, role assignments, categories or permissions write an
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
