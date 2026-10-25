@@ -701,8 +701,8 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The footer on every page: the attribution notice (LI-02) and the "Source code" link
-  (LI-03).
+  The footer on every page: the attribution notice (LI-02), the "Source code" link (LI-03)
+  and the privacy notice (AD-02).
 
   The notice is kept word for word as NOTICE gives it, and is not translated: section 7(b)
   of the licence requires it to be preserved.
@@ -714,6 +714,7 @@ defmodule IdejoWeb.Layouts do
         Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
       </a>
       <a href={Idejo.Source.url()} id="source-code">{gettext("Source code")}</a>
+      <a href={~p"/privacy"} id="privacy-link">{gettext("Privacy")}</a>
     </footer>
     """
   end
