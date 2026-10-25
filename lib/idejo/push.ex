@@ -19,14 +19,22 @@ defmodule Idejo.Push do
   `deliver/3` sends a payload to every browser of a user: one `Idejo.Push.Worker` job each,
   in the `push` queue (PN-15).
 
+  `dispatch/1` takes the in-app notifications of a message once they are committed
+  (`Idejo.Notifications.announce/1`) and queues an `Idejo.Push.Dispatch` job for each reply,
+  @mention or +role mention of a user with a browser taking pushes (PN-01 to PN-03). That job
+  checks everything again when it runs, then builds the payload (`Idejo.Push.Payload`).
+  Each user switches each type on or off (PN-11, `preferences/1`).
+
   Changes to this module get an extra careful human review (DV-06).
   """
   import Ecto.Query
 
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
-  alias Idejo.Push.{Endpoint, Subscription, Worker}
+  alias Idejo.Forum.Topic
+  alias Idejo.Push.{Dispatch, Endpoint, Preference, Subscription, Worker}
   alias Idejo.RateLimit
+  alias Idejo.Reading.Follow
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -169,6 +177,73 @@ defmodule Idejo.Push do
 
     "mailto:" <> (owner || Settings.get(:mail_from))
   end
+
+  @pushed ~w(reply mention role_mention)
+
+  @doc """
+  Queues a push for each of a message's notifications that may be pushed (PN-01 to PN-03;
+  `follow` waits for PN-04): one `Idejo.Push.Dispatch` job per user and message, only for
+  users with a browser taking pushes, nothing while push is off. Takes the entries
+  `Idejo.Notifications.announce/1` has: `%{user_id, kind, message_id}`.
+  """
+  @spec dispatch([%{user_id: Ecto.UUID.t(), kind: String.t(), message_id: Ecto.UUID.t()}]) ::
+          :ok
+  def dispatch(entries) do
+    entries = Enum.filter(entries, &(&1.kind in @pushed))
+
+    if entries != [] and enabled?() do
+      ids = entries |> Enum.map(& &1.user_id) |> Enum.uniq()
+
+      subscribed =
+        Repo.all(
+          from s in Subscription, where: s.user_id in ^ids, distinct: true, select: s.user_id
+        )
+        |> MapSet.new()
+
+      for entry <- entries, MapSet.member?(subscribed, entry.user_id) do
+        Oban.insert!(
+          Dispatch.new(%{"user_id" => entry.user_id, "message_id" => entry.message_id})
+        )
+      end
+    end
+
+    :ok
+  end
+
+  @doc """
+  Whether a push of `kind` about `topic` may reach `user` (PN-09): one check for notification
+  levels and quiet hours. Until NO-03 is built, a muted topic is "none" (nothing) and every
+  other topic "all".
+  """
+  @spec allowed?(User.t(), Topic.t(), String.t()) :: boolean()
+  def allowed?(%User{id: user_id}, %Topic{id: topic_id}, _kind) do
+    not Repo.exists?(
+      from f in Follow, where: f.user_id == ^user_id and f.topic_id == ^topic_id and f.muted
+    )
+  end
+
+  @doc "The user's push types (PN-11): their row, or the defaults (all on)."
+  @spec preferences(User.t()) :: Preference.t()
+  def preferences(%User{id: id}),
+    do: Repo.get(Preference, id) || %Preference{user_id: id}
+
+  @doc "A changeset for the user's push types."
+  @spec change_preferences(User.t(), map()) :: Ecto.Changeset.t()
+  def change_preferences(%User{} = user, attrs \\ %{}),
+    do: Preference.changeset(preferences(user), attrs)
+
+  @doc "Saves the user's push types (PN-11), for all their browsers."
+  @spec update_preferences(User.t(), map()) ::
+          {:ok, Preference.t()} | {:error, Ecto.Changeset.t()}
+  def update_preferences(%User{} = user, attrs),
+    do: user |> change_preferences(attrs) |> Repo.insert_or_update()
+
+  @doc "Whether the user takes pushes of `kind` (PN-11)."
+  @spec wants?(Preference.t(), String.t()) :: boolean()
+  def wants?(%Preference{} = preference, "reply"), do: preference.reply
+  def wants?(%Preference{} = preference, "mention"), do: preference.mention
+  def wants?(%Preference{} = preference, "role_mention"), do: preference.role_mention
+  def wants?(%Preference{} = preference, "follow"), do: preference.followed
 
   @doc "Deletes `user`'s subscription with `endpoint`, if there is one."
   @spec unsubscribe(User.t(), String.t()) :: :ok
