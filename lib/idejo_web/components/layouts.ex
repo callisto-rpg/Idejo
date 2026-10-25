@@ -9,6 +9,8 @@ defmodule IdejoWeb.Layouts do
   use IdejoWeb, :html
 
   alias Idejo.Forum.CategoryIcons
+  alias Idejo.Push
+  alias Idejo.Push.Vapid
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
@@ -46,6 +48,10 @@ defmodule IdejoWeb.Layouts do
   attr :topic, :any,
     default: nil,
     doc: "the topic shown: highlighted in the sidebar, and listed there even when not followed"
+
+  attr :push_banner, :boolean,
+    default: false,
+    doc: "offer browser notifications (PN-20: category and topic pages, `Push.banner?/1`)"
 
   slot :inner_block, required: true
 
@@ -118,6 +124,8 @@ defmodule IdejoWeb.Layouts do
             <button class="btn btn-sm">{gettext("Send the link again")}</button>
           </.form>
         </div>
+
+        <.push_banner :if={@push_banner} />
 
         <%!-- AX-01: the skip link's target; tabindex lets it take the focus in every browser. --%>
         <main id="main" tabindex="-1" class="app-main focus:outline-none">
@@ -736,6 +744,71 @@ defmodule IdejoWeb.Layouts do
   """
   @spec server_name() :: String.t()
   def server_name, do: Idejo.Settings.get(:server_name)
+
+  @doc """
+  The server's VAPID public key as `<meta name="push-key">`, for signed-in users while push
+  is on (PN-18, PN-19): `assets/js/push.js` subscribes the browser with it. Nothing for
+  visitors, so they never subscribe.
+  """
+  attr :current_scope, :any, default: nil
+
+  def push_key(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :key,
+        signed_in?(assigns.current_scope) && Push.enabled?() &&
+          Vapid.public_key()
+      )
+
+    ~H"""
+    <meta :if={@key} name="push-key" content={@key} />
+    """
+  end
+
+  defp signed_in?(%{user: %{}}), do: true
+  defp signed_in?(_scope), do: false
+
+  @doc """
+  The notifications banner (PN-20 to PN-23): a slim bar in the page's flow under the header,
+  so it never covers the composer. Rendered `hidden`; `assets/js/push_banner.js` shows it
+  only where the browser can still be asked (or, in an iPhone or iPad Safari tab, with how to
+  add the site to the Home Screen instead of "Turn on"). A named region, announced politely,
+  never an alert; it never takes the focus.
+  """
+  def push_banner(assigns) do
+    ~H"""
+    <section
+      id="push-banner"
+      class="push-banner"
+      role="region"
+      aria-label={gettext("Notifications")}
+      aria-live="polite"
+      hidden
+    >
+      <.icon name="hero-bell" class="size-5 shrink-0" />
+      <p class="push-banner-offer grow">
+        {gettext(
+          "Get a notification when someone replies to you, mentions you or your role, or posts in topics you follow."
+        )}
+      </p>
+      <p class="push-banner-ios grow" hidden>
+        {gettext(
+          "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+        )}
+      </p>
+      <p class="push-banner-on grow" hidden>{gettext("Notifications are on")}</p>
+      <div class="push-banner-actions">
+        <button type="button" class="btn btn-sm btn-primary push-banner-turn-on">
+          {gettext("Turn on")}
+        </button>
+        <button type="button" class="btn btn-sm btn-ghost push-banner-not-now">
+          {gettext("Not now")}
+        </button>
+      </div>
+    </section>
+    """
+  end
 
   @doc """
   The page title: "Page · Server name", or the server name alone.

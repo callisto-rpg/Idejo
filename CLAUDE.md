@@ -944,6 +944,33 @@ roles or the permission grid. Every later change must keep it true:
   push (N has grown), then `followed_sent_at` and `followed_count` are kept.
   `Payload.followed/2`: "There are new messages in N topics you follow", empty body,
   `/unread`, tag `followed`.
+- **Notifications banner** (PN-20 to PN-23; extra review: DV-06): category and topic pages
+  pass `push_banner={@push_banner?}` to `Layouts.app` (their controllers ask
+  `Push.banner?/1`: push on, the welcome card seen (`welcomed_at`), no "Not now" within 14
+  days (`push_preferences.banner_dismissed_at`, `Push.dismiss_banner/1`), and the user has
+  posted or follows a topic). `Layouts.push_banner/1` renders `#push-banner` `hidden` in
+  the column's flow before `<main>` (never over the composer): `role="region"`,
+  `aria-label`, `aria-live="polite"`, never an alert, never focused.
+  `assets/js/push_banner.js` shows it only with a push key, and either in an iPhone or iPad
+  Safari tab (`.push-banner-ios`, no "Turn on", PN-22) or where push is supported and the
+  permission is `default`. "Turn on" calls `enablePush()` (push.js, the only permission
+  request): granted says "Notifications are on" for 4 s, denied hides; "Not now" hides and
+  `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus left on its buttons goes
+  to `#main`.
+- **Service worker and sync** (PN-17, PN-18): `priv/push/sw.js`, embedded at compile time by
+  `ServiceWorkerController` and served at `/sw.js` (no session, `no-cache`,
+  `Service-Worker-Allowed: /`); not bundled, it imports nothing. It shows declarative push
+  JSON where the browser does not (tag, renotify, `app_badge` through `setAppBadge`), opens
+  only same-origin links on click (focus a tab and `navigate`, else `postMessage`
+  `idejo:navigate` to it, else `openWindow`), and on `pushsubscriptionchange` subscribes
+  again (key from the old subscription or `/push/key`) and posts to
+  `POST /push/subscriptions/renew` (`Push.renew/2`, no session or CSRF: the old endpoint is
+  the authority; same user and session, new endpoint checked). The root layout gives
+  signed-in users `<meta name="push-key">` while push is on (`Layouts.push_key/1`);
+  `assets/js/push.js` then, on every page load with permission `granted`, registers the
+  worker, takes the subscription from `window.pushManager` or the worker's (made again if
+  missing or made with another key) and posts it. Its `enablePush()` is the only caller of
+  `Notification.requestPermission()`, from a click. The JS is checked by hand.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

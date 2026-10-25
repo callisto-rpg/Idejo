@@ -120,6 +120,39 @@ defmodule Idejo.Push do
   end
 
   @doc """
+  Replaces the subscription saved with `old_endpoint` by the new one in `attrs` (PN-17: the
+  push service replaced it), keeping its user and session. The new endpoint is checked like
+  any other (PN-16); a row that already had it gives way.
+  """
+  @spec renew(String.t(), map()) ::
+          {:ok, Subscription.t()}
+          | {:error, :not_found | :disabled | Endpoint.reason() | Ecto.Changeset.t()}
+  def renew(old_endpoint, attrs) when is_binary(old_endpoint) and is_map(attrs) do
+    keys = if is_map(attrs["keys"]), do: attrs["keys"], else: %{}
+
+    fields = %{
+      "endpoint" => attrs["endpoint"],
+      "p256dh" => keys["p256dh"],
+      "auth" => keys["auth"]
+    }
+
+    with :ok <- if(enabled?(), do: :ok, else: {:error, :disabled}),
+         %Subscription{} = old <-
+           Repo.get_by(Subscription, endpoint: old_endpoint) || {:error, :not_found},
+         changeset = Subscription.changeset(old, fields),
+         {:ok, valid} <- Ecto.Changeset.apply_action(changeset, :update),
+         {:ok, _uri, _addresses} <- Endpoint.check(valid.endpoint) do
+      Repo.transact(fn ->
+        Repo.delete_all(
+          from s in Subscription, where: s.endpoint == ^valid.endpoint and s.id != ^old.id
+        )
+
+        changeset |> Ecto.Changeset.change(failure_count: 0) |> Repo.update()
+      end)
+    end
+  end
+
+  @doc """
   Sends `payload` (the declarative JSON map, PN-12) to every browser of `user`: one job each
   in the `push` queue, sent with a TTL of 24 hours and `urgency` (`"normal"` by default, or
   `"high"`). Returns how many were queued; `{:error, :too_large}` when the payload would not
@@ -265,6 +298,40 @@ defmodule Idejo.Push do
     not Repo.exists?(
       from f in Follow, where: f.user_id == ^user_id and f.topic_id == ^topic_id and f.muted
     )
+  end
+
+  @banner_quiet_days 14
+
+  @doc """
+  Whether the notifications banner (PN-20) is offered to `user` on category and topic pages:
+  push on (PN-19); the welcome card seen (`welcomed_at`: never on the first page view after
+  sign-up); "Not now" not said in the last #{@banner_quiet_days} days; and the user has
+  posted or follows a topic. The browser decides the rest (`assets/js/push_banner.js`:
+  permission still undecided, push supported, or an iPhone or iPad Safari tab).
+  """
+  @spec banner?(User.t() | nil) :: boolean()
+  def banner?(nil), do: false
+
+  def banner?(%User{} = user) do
+    enabled?() and user.welcomed_at != nil and not dismissed_recently?(user) and
+      (Repo.exists?(from m in Idejo.Messages.Message, where: m.author_id == ^user.id) or
+         Repo.exists?(from f in Follow, where: f.user_id == ^user.id and f.following))
+  end
+
+  defp dismissed_recently?(user) do
+    case preferences(user).banner_dismissed_at do
+      nil -> false
+      at -> DateTime.diff(DateTime.utc_now(), at, :day) < @banner_quiet_days
+    end
+  end
+
+  @doc "Records \"Not now\" on the notifications banner (PN-21): hidden for #{@banner_quiet_days} days."
+  @spec dismiss_banner(User.t()) :: {:ok, Preference.t()} | {:error, Ecto.Changeset.t()}
+  def dismiss_banner(%User{} = user) do
+    user
+    |> preferences()
+    |> Ecto.Changeset.change(banner_dismissed_at: DateTime.utc_now())
+    |> Repo.insert_or_update()
   end
 
   @doc "The user's push types (PN-11): their row, or the defaults (all on)."
