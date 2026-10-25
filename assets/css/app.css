@@ -958,9 +958,16 @@
     border: 1px solid color-mix(in oklab, var(--color-primary) 35%, transparent);
     font-size: 0.875rem;
     &[hidden] { display: none; }
-    & p[hidden], & button[hidden], & .push-banner-actions[hidden] { display: none; }
+    & p[hidden], & button[hidden], & .push-banner-actions[hidden], & .push-banner-enable[hidden] { display: none; }
   }
-  .push-banner-actions { display: flex; gap: 0.5rem; }
+  .push-banner-actions { display: flex; align-items: flex-start; gap: 0.5rem; }
+  /* "Enable" with its tutorial bubble under it, triangle up (steward decision, 2026-10-25). */
+  .push-banner-enable {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4375rem;
+  }
   .push-browser [hidden] { display: none; }
 
   .site-footer {
@@ -2051,6 +2058,14 @@ html:not([data-js]) .spoiler-cover { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tutorial-bubble.is-sent, .tutorial-bubble.is-sent::before { animation: none; }
+}
+/* Under the notifications banner's "Enable" (steward decision, 2026-10-25): three lines,
+   its triangle up. Unlayered, like the bubble it changes. */
+.push-banner-bubble {
+  white-space: pre-line;
+  text-align: center;
+  line-height: 1.25;
+  border-radius: 0.75rem;
 }
 /* The sidebar's tutorial bubbles (steward decisions, 2026-10-25): one on <body>, at the
    right of the × or fold button it explains, placed by assets/js/sidebar.js; fixed, so the

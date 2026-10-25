@@ -220,8 +220,8 @@ week while you stay away; without it, one a day. Nothing new, no email. Each ema
 link that stops them all in one click.
 
 **Push notifications** show on your computer or phone even when the server is not open.
-A bar on category and topic pages offers them once you have posted or follow a topic:
-**Turn on** asks your browser, **Not now** hides it for two weeks. Under **Push
+A bar on category and topic pages says when they are not enabled, once you have posted or
+follow a topic: **Enable** asks your browser, **Dismiss** hides it for two weeks. Under **Push
 notifications** in **Profile and account** you can:
 
 - see whether this browser has them on, and **Turn on** (if your browser blocked them, it

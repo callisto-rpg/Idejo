@@ -1075,17 +1075,22 @@ roles or the permission grid. Every later change must keep it true:
   `/unread`, tag `followed`.
 - **Notifications banner** (PN-20 to PN-23; extra review: DV-06): category and topic pages
   pass `push_banner={@push_banner?}` to `Layouts.app` (their controllers ask
-  `Push.banner?/1`: push on, the welcome card seen (`welcomed_at`), no "Not now" within 14
+  `Push.banner?/1`: push on, the welcome card seen (`welcomed_at`), no "Dismiss" within 14
   days (`push_preferences.banner_dismissed_at`, `Push.dismiss_banner/1`), and the user has
   posted or follows a topic). `Layouts.push_banner/1` renders `#push-banner` `hidden` in
   the column's flow before `<main>` (never over the composer): `role="region"`,
-  `aria-label`, `aria-live="polite"`, never an alert, never focused.
+  `aria-label`, `aria-live="polite"`, never an alert, never focused. Its words (steward
+  decision, 2026-10-25, replacing PN-21's): "Push notifications not enabled. You will not be
+  notified of new messages.", "Enable" with a tutorial bubble under it ("This can always
+  be / turned off and on / in user settings", `.push-banner-bubble`, `points-up`, in the
+  banner's flow; the Tutorial bubbles toggle hides it) and "Dismiss".
   `assets/js/push_banner.js` shows it only with a push key, and either in an iPhone or iPad
-  Safari tab (`.push-banner-ios`, no "Turn on", PN-22) or where push is supported and the
-  permission is `default`. "Turn on" calls `enablePush()` (push.js, the only permission
-  request): granted says "Notifications are on" for 4 s, denied hides; "Not now" hides and
-  `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus left on its buttons goes
-  to `#main`.
+  Safari tab (`.push-banner-ios`, no "Enable", PN-22) or while push is off in this browser
+  (`pushOff()`: permission `default`, or `granted` without a subscription here, e.g. a
+  device removed in the settings). "Enable" calls `enablePush()` (push.js, the only
+  permission request): granted says "Notifications are on" for 4 s, denied hides;
+  "Dismiss" hides and `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus
+  left on its buttons goes to `#main`.
 - **Push settings** (PN-11, PN-24; extra review: DV-06): **Profile and account** has a
   "Push notifications" section while push is on: `#push-browser` (`PushSettings` hook,
   `assets/js/push_settings.js`, `phx-update="ignore"`) shows this browser's state (on, off
