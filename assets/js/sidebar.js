@@ -13,19 +13,71 @@ const isShown = () =>
 
 const sync = () => toggle()?.setAttribute("aria-expanded", String(isShown()))
 
-// The ×'s tutorial bubble on touch screens, which cannot point at it (steward decision,
-// 2026-10-25): shown for 3 s, once a page, the first time the topic on screen's entry is in
-// view (at load beside the page, or when the drawer opens), then fading out.
+// Tutorial bubbles in the sidebar (steward decisions, 2026-10-25): the ×'s "close & unfollow
+// thread" and a category's fold button's (its `data-bubble`, or `data-bubble-folded` while
+// folded), at the right of what they explain, on hover or keyboard focus. One bubble on
+// <body>, placed `fixed` from the button's position, so the sidebar's scrolling (or the
+// drawer's) never clips it; hidden when anything scrolls.
+let floating = null
+let shownFor = null
+
+const bubbleFor = el =>
+  el.getAttribute("aria-pressed") === "true" && el.dataset.bubbleFolded ? el.dataset.bubbleFolded : el.dataset.bubble
+
+const showBubble = el => {
+  if (!floating) {
+    floating = document.createElement("span")
+    floating.className = "tutorial-bubble sidebar-bubble"
+    floating.setAttribute("aria-hidden", "true")
+    document.body.appendChild(floating)
+  }
+  const r = el.getBoundingClientRect()
+  floating.textContent = bubbleFor(el)
+  floating.style.left = `${r.right + 8}px`
+  floating.style.top = `${r.top + r.height / 2}px`
+  floating.classList.add("is-shown")
+  shownFor = el
+}
+
+const hideBubble = () => {
+  floating?.classList.remove("is-shown")
+  shownFor = null
+}
+
+const bubbled = e => e.target.closest?.("#sidebar [data-bubble]")
+const pointing = matchMedia("(hover: hover)")
+
+document.addEventListener("mouseover", e => {
+  const el = bubbled(e)
+  if (el && pointing.matches && el !== shownFor) showBubble(el)
+})
+document.addEventListener("mouseout", e => {
+  const el = bubbled(e)
+  if (el && el === shownFor && !el.contains(e.relatedTarget) && !el.matches(":focus-visible")) hideBubble()
+})
+document.addEventListener("focusin", e => {
+  const el = bubbled(e)
+  if (el && el.matches(":focus-visible")) showBubble(el)
+})
+document.addEventListener("focusout", e => { if (bubbled(e) === shownFor) hideBubble() })
+document.addEventListener("scroll", () => { if (shownFor) hideBubble() }, {capture: true, passive: true})
+
+// Touch screens cannot point: the ×'s bubble shows for 3 s, once a page, the first time the
+// topic on screen's entry is in view (at load beside the page, or once the drawer has slid
+// open), then fades out.
 const PEEK_MS = 3000
+const DRAWER_MS = 220
 let peeked = false
 
 const peek = () => {
-  if (peeked || !matchMedia("(hover: none)").matches || root.dataset.bubbles === "off" || !isShown()) return
-  const bubble = document.querySelector("#sidebar .sidebar-topic.is-current .sidebar-unfollow-bubble")
-  if (!bubble) return
+  if (peeked || pointing.matches || root.dataset.bubbles === "off" || !isShown()) return
+  const button = document.querySelector("#sidebar .sidebar-topic.is-current .sidebar-unfollow [data-bubble]")
+  if (!button) return
   peeked = true
-  bubble.classList.add("is-peek")
-  setTimeout(() => bubble.classList.remove("is-peek"), PEEK_MS)
+  setTimeout(() => {
+    showBubble(button)
+    setTimeout(() => { if (shownFor === button) hideBubble() }, PEEK_MS)
+  }, wide.matches ? 0 : DRAWER_MS)
 }
 
 const closeDrawer = () => {
@@ -138,6 +190,8 @@ const setFolded = (category, folded) => {
 }
 
 export function applyFolds() {
+  // A fresh sidebar: the button a bubble pointed at is gone.
+  hideBubble()
   const ids = foldedIds()
   document.querySelectorAll("#sidebar .sidebar-category").forEach(category => {
     setFolded(category, ids.has(category.dataset.categoryId))
@@ -156,6 +210,8 @@ document.addEventListener("click", (e) => {
   // Unfolded, past the first four go back behind "more topics".
   const more = category.querySelector(".sidebar-more")
   if (more && !folded) more.open = false
+  // Its bubble says what a click does now.
+  if (shownFor === button) showBubble(button)
   try {
     localStorage.setItem(FOLDED, JSON.stringify([...ids]))
   } catch (_e) {
