@@ -173,6 +173,8 @@ defmodule IdejoWeb.Router do
     # PN-13, PN-16: the browser saves or removes its push subscription (JSON, from push.js).
     post "/push/subscriptions", PushSubscriptionController, :create
     delete "/push/subscriptions", PushSubscriptionController, :delete
+    # PN-21: "Not now" on the notifications banner.
+    post "/push/banner/dismiss", PushBannerController, :dismiss
 
     live_session :member, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do
       live "/c/:slug/new", NewTopicLive

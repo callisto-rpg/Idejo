@@ -300,6 +300,40 @@ defmodule Idejo.Push do
     )
   end
 
+  @banner_quiet_days 14
+
+  @doc """
+  Whether the notifications banner (PN-20) is offered to `user` on category and topic pages:
+  push on (PN-19); the welcome card seen (`welcomed_at`: never on the first page view after
+  sign-up); "Not now" not said in the last #{@banner_quiet_days} days; and the user has
+  posted or follows a topic. The browser decides the rest (`assets/js/push_banner.js`:
+  permission still undecided, push supported, or an iPhone or iPad Safari tab).
+  """
+  @spec banner?(User.t() | nil) :: boolean()
+  def banner?(nil), do: false
+
+  def banner?(%User{} = user) do
+    enabled?() and user.welcomed_at != nil and not dismissed_recently?(user) and
+      (Repo.exists?(from m in Idejo.Messages.Message, where: m.author_id == ^user.id) or
+         Repo.exists?(from f in Follow, where: f.user_id == ^user.id and f.following))
+  end
+
+  defp dismissed_recently?(user) do
+    case preferences(user).banner_dismissed_at do
+      nil -> false
+      at -> DateTime.diff(DateTime.utc_now(), at, :day) < @banner_quiet_days
+    end
+  end
+
+  @doc "Records \"Not now\" on the notifications banner (PN-21): hidden for #{@banner_quiet_days} days."
+  @spec dismiss_banner(User.t()) :: {:ok, Preference.t()} | {:error, Ecto.Changeset.t()}
+  def dismiss_banner(%User{} = user) do
+    user
+    |> preferences()
+    |> Ecto.Changeset.change(banner_dismissed_at: DateTime.utc_now())
+    |> Repo.insert_or_update()
+  end
+
   @doc "The user's push types (PN-11): their row, or the defaults (all on)."
   @spec preferences(User.t()) :: Preference.t()
   def preferences(%User{id: id}),

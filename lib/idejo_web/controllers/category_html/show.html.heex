@@ -2,7 +2,12 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<Layouts.app flash={@flash} current_scope={@current_scope} category={@category}>
+<Layouts.app
+  flash={@flash}
+  current_scope={@current_scope}
+  category={@category}
+  push_banner={@push_banner?}
+>
   <header class={["page-intro page-intro-row category-intro", "cat-#{@category.id}"]}>
     <TopicComponents.category_mark category={@category} size={:large} />
     <div class="grow">

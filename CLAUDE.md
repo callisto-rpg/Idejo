@@ -944,6 +944,19 @@ roles or the permission grid. Every later change must keep it true:
   push (N has grown), then `followed_sent_at` and `followed_count` are kept.
   `Payload.followed/2`: "There are new messages in N topics you follow", empty body,
   `/unread`, tag `followed`.
+- **Notifications banner** (PN-20 to PN-23; extra review: DV-06): category and topic pages
+  pass `push_banner={@push_banner?}` to `Layouts.app` (their controllers ask
+  `Push.banner?/1`: push on, the welcome card seen (`welcomed_at`), no "Not now" within 14
+  days (`push_preferences.banner_dismissed_at`, `Push.dismiss_banner/1`), and the user has
+  posted or follows a topic). `Layouts.push_banner/1` renders `#push-banner` `hidden` in
+  the column's flow before `<main>` (never over the composer): `role="region"`,
+  `aria-label`, `aria-live="polite"`, never an alert, never focused.
+  `assets/js/push_banner.js` shows it only with a push key, and either in an iPhone or iPad
+  Safari tab (`.push-banner-ios`, no "Turn on", PN-22) or where push is supported and the
+  permission is `default`. "Turn on" calls `enablePush()` (push.js, the only permission
+  request): granted says "Notifications are on" for 4 s, denied hides; "Not now" hides and
+  `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus left on its buttons goes
+  to `#main`.
 - **Service worker and sync** (PN-17, PN-18): `priv/push/sw.js`, embedded at compile time by
   `ServiceWorkerController` and served at `/sw.js` (no session, `no-cache`,
   `Service-Worker-Allowed: /`); not bundled, it imports nothing. It shows declarative push

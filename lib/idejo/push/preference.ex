@@ -21,6 +21,8 @@ defmodule Idejo.Push.Preference do
     # PN-04: when the last followed-activity push went, and how many topics it counted.
     field :followed_sent_at, :utc_datetime_usec
     field :followed_count, :integer, default: 0
+    # PN-20: when the user last said "Not now" to the notifications banner.
+    field :banner_dismissed_at, :utc_datetime_usec
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end
