@@ -15,6 +15,9 @@
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
     <%!-- The small Idejo logo (steward decision, 2026-10-23). --%>
     <link rel="icon" type="image/png" href={~p"/images/logo-small.png"} />
+    <%!-- CL-01: installable; iPhones and iPads read the touch icon, not the manifest's. --%>
+    <link rel="manifest" href={~p"/manifest.webmanifest"} />
+    <link rel="apple-touch-icon" href={~p"/images/icon-180.png"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <%!-- The server's own stylesheet, after Idejo's: Admin → Stylesheet. --%>
     <link
