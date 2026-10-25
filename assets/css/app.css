@@ -355,16 +355,12 @@
     border-radius: 0.5rem;
     box-shadow: var(--shadow-soft);
   }
-  /* The full logo on the sign-in, sign-up and setup pages: black, white in the dark theme. */
+  /* The full logo on the sign-in, sign-up and setup pages: in colour, in both themes. */
   .full-logo {
     display: inline-block;
     width: 10rem;
     height: auto;
     margin-bottom: 1.5rem;
-  }
-  [data-theme="dark"] .full-logo { filter: invert(1); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .full-logo { filter: invert(1); }
   }
   .brand-name {
     display: none;
@@ -690,6 +686,16 @@
       &:hover { color: var(--color-base-content); }
     }
   }
+  /* Tutorial bubbles (steward decision, 2026-10-25): words, not icons; need scripts. */
+  .theme-toggle.bubbles-toggle button { padding: 0.25rem 0.625rem; font-size: 0.8125rem; font-weight: 500; }
+  html:not([data-js]) .bubbles-toggle-row { display: none; }
+  .help-intro {
+    justify-content: space-between;
+    & .bubbles-toggle-row { display: flex; align-items: center; gap: 0.625rem; color: var(--ink-soft); font-size: 0.875rem; }
+  }
+  html:not([data-js]) .help-intro .bubbles-toggle-row { display: none; }
+  :root:not([data-bubbles="off"]) .bubbles-toggle [data-choice="on"],
+  [data-bubbles="off"] .bubbles-toggle [data-choice="off"],
   [data-theme-source="system"] .theme-toggle [data-phx-theme="system"],
   [data-theme-source="user"][data-theme="light"] .theme-toggle [data-phx-theme="light"],
   [data-theme-source="user"][data-theme="dark"] .theme-toggle [data-phx-theme="dark"] {
@@ -878,7 +884,7 @@
   .sidebar-topic-link {
     flex: 1;
     min-width: 0;
-    padding: 0.25rem 0.5rem 0.25rem 0.375rem;
+    padding: 0.375rem 0.5rem 0.375rem 0.375rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1059,6 +1065,10 @@
     & input { width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid var(--hairline); border-radius: var(--radius-field); background: none; cursor: pointer; }
   }
   .icon-picker { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+  /* Admin → Settings: the website theme (steward decision, 2026-10-24). */
+  .theme-settings { margin: 0.5rem 0 1rem; }
+  .theme-settings-title { margin-bottom: 0.25rem; font-family: var(--font-title); font-size: 1.125rem; font-weight: 650; }
+  .theme-colour { display: flex; align-items: flex-end; gap: 0.5rem; max-width: 22rem; }
   .icon-group legend { margin-bottom: 0.375rem; color: var(--ink-faint); font-size: 0.75rem; font-weight: 600; }
   .icon-choices { display: flex; flex-wrap: wrap; gap: 0.25rem; }
   .icon-choice {
@@ -1116,6 +1126,15 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  /* Info boxes (steward decision, 2026-10-25): category cards holding Markdown. Not a link,
+     so links in the text stay clickable. */
+  .info-box-body {
+    flex: 1;
+    color: var(--ink-soft);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+    & .message-body { line-height: 1.5; }
   }
   .category-card-stats {
     display: flex;
@@ -1546,11 +1565,41 @@
     &::-webkit-details-marker { display: none; }
     &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
   }
+  /* Message actions (steward decision, 2026-10-25). Screens that point: hidden until the
+     message is hovered or has the focus (keyboard). Touch screens, with scripts: a pill
+     floating under the message once it is tapped (assets/js/message_actions.js), gone at
+     any other action; hidden, not removed, so screen readers still reach them. Without
+     scripts they stay in place. */
   @media (hover: hover) {
-    .message .message-actions { opacity: 0.6; }
+    .message .message-actions { opacity: 0; }
     .message:hover .message-actions,
     .message:focus-within .message-actions,
     .message-actions:has([open]) { opacity: 1; }
+  }
+  @media (hover: none) {
+    [data-js] .message { position: relative; }
+    [data-js] .message .message-actions {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% - 0.75rem);
+      left: 0.75rem;
+      max-width: calc(100% - 1.5rem);
+      margin: 0 !important;
+      padding: 0.25rem;
+      border: 1px solid var(--overlay-line);
+      border-radius: 1.25rem;
+      background: color-mix(in oklab, var(--color-base-100) var(--menu-opacity, 70%), transparent);
+      -webkit-backdrop-filter: blur(var(--menu-blur, 4px));
+      backdrop-filter: blur(var(--menu-blur, 4px));
+      box-shadow: var(--shadow-lift);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+    [data-js] .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
+    [data-js] .message[data-acting] .message-actions,
+    [data-js] .message .message-actions:focus-within,
+    [data-js] .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   .reactions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
@@ -1577,14 +1626,8 @@
   .emoji { width: 1.25rem; height: 1.25rem; object-fit: contain; }
   .add-reaction {
     position: relative;
-    & > summary { list-style: none; cursor: pointer; font-size: 0.9375rem; }
+    & > summary { list-style: none; cursor: pointer; }
     & > summary::-webkit-details-marker { display: none; }
-  }
-  /* Shown when the message is hovered or has the focus; always on touch screens. */
-  @media (hover: hover) {
-    .message .add-reaction:not([open]) > summary { opacity: 0; }
-    .message:hover .add-reaction > summary,
-    .message:focus-within .add-reaction > summary { opacity: 1; }
   }
   .add-reaction-panel {
     position: absolute;
@@ -1863,12 +1906,8 @@ html:not([data-js]) .spoiler-cover { display: none; }
   position: relative;
   border-radius: 0.5rem;
 }
-/* AX-01: the composer's text box draws no outline of its own (it is transparent over the
-   backdrop), so a faint ring around it shows the focus. */
-.composer:focus-within {
-  outline: 2px solid color-mix(in oklab, var(--color-primary) 30%, transparent);
-  outline-offset: 0.375rem;
-}
+/* AX-01: no ring around the box while typing (steward decision, 2026-10-25): the focus shows
+   as the thick caret the backdrop draws, and the bubble beside it. */
 .composer-backdrop,
 .composer-input {
   display: block;
@@ -1894,7 +1933,8 @@ html:not([data-js]) .spoiler-cover { display: none; }
   overflow: hidden;
   background: transparent;
   color: transparent;
-  caret-color: var(--color-primary);
+  /* The backdrop draws the caret, thicker (.composer-caret). */
+  caret-color: transparent;
   outline: none;
 }
 .composer-input::placeholder {
@@ -1917,6 +1957,169 @@ html:not([data-js]) .spoiler-cover { display: none; }
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+/* The caret (steward decision, 2026-10-25): an empty inline span where the text box's caret
+   is, so it takes no room and moves no text, drawing a 3px bar that blinks. */
+.composer-caret {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: -0.05em;
+    width: 3px;
+    height: 1.25em;
+    border-radius: 1px;
+    background: var(--color-primary);
+    animation: composer-caret-blink 1.06s steps(1) infinite;
+  }
+}
+@keyframes composer-caret-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .composer-caret::before { animation: none; }
+}
+
+/* Tutorial bubbles (steward decisions, 2026-10-25): a small pill with a triangle pointing at
+   what it explains (the caret, the timer line's front, the sidebar's ×), blurred 6px, in
+   theme colours only, so a new theme in Admin → Settings recolours them. Dark theme: a
+   tertiary outline, secondary text on primary at 50%. Light theme, where the secondary on
+   a pale primary does not read: the primary's own contrasting ink on primary at 75%, and a
+   hint mixing the primary into the text colour. The account menu and the Help page turn
+   them off (`data-bubbles="off"`, theme.js). */
+:root,
+[data-theme="light"] {
+  --bubble-line: var(--color-accent);
+  --bubble-ink: var(--color-primary-content);
+  --bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent);
+  --bubble-hint: color-mix(in oklab, var(--color-primary) 45%, var(--color-base-content));
+}
+[data-theme="dark"] {
+  --bubble-ink: var(--color-secondary);
+  --bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  --bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bubble-ink: var(--color-secondary);
+    --bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent);
+    --bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent);
+  }
+}
+.tutorial-bubble {
+  position: relative;
+  display: inline-block;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--bubble-line);
+  border-radius: 999px;
+  background: var(--bubble-fill);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--bubble-ink);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  &::before {
+    content: "";
+    position: absolute;
+    left: -0.3125rem;
+    top: 50%;
+    width: 0.3125rem;
+    height: 0.5rem;
+    translate: 0 -50%;
+    background: var(--bubble-line);
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+  }
+  /* "Sent!": white text and outline turning to the theme's in a second; composer.js keeps
+     its place across repaints with `--sent-delay`, set through the DOM. */
+  &.is-sent {
+    animation: tutorial-bubble-sent 1s ease-out both;
+    animation-delay: var(--sent-delay, 0ms);
+    &::before {
+      animation: tutorial-bubble-sent-arrow 1s ease-out both;
+      animation-delay: var(--sent-delay, 0ms);
+    }
+  }
+}
+@keyframes tutorial-bubble-sent {
+  from { color: #fff; border-color: #fff; }
+  to { color: var(--bubble-ink); border-color: var(--bubble-line); }
+}
+@keyframes tutorial-bubble-sent-arrow {
+  from { background: #fff; }
+  to { background: var(--bubble-line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-bubble.is-sent, .tutorial-bubble.is-sent::before { animation: none; }
+}
+/* The sidebar's tutorial bubbles (steward decisions, 2026-10-25): one on <body>, at the
+   right of the × or fold button it explains, placed by assets/js/sidebar.js; fixed, so the
+   sidebar's scrolling never clips it. A line break where the label has one. */
+.sidebar-bubble {
+  position: fixed;
+  z-index: 60;
+  translate: 0 -50%;
+  white-space: pre-line;
+  text-align: left;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+  &.is-shown { opacity: 1; }
+}
+/* Appends above the author's message while they type (steward decision, 2026-10-25): the
+   same pill, on the line above their message, its triangle up; not a tutorial bubble, so
+   it stays when those are off. Scrolling up fades it out in 2 s (composer.js). */
+.tutorial-bubble.points-up::before {
+  left: 50%;
+  top: -0.3125rem;
+  width: 0.5rem;
+  height: 0.3125rem;
+  translate: -50% 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.message-mine { position: relative; }
+.composer-appended {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  translate: -50% -50%;
+  pointer-events: none;
+  & .is-fading { animation: composer-appended-fade 2s ease-out forwards; }
+}
+@keyframes composer-appended-fade { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .composer-appended .is-fading { animation-duration: 1ms; }
+}
+[data-bubbles="off"] .tutorial-bubble:not(.is-always),
+[data-bubbles="off"] .composer-hint { display: none; }
+.composer-caret-bubbles {
+  position: absolute;
+  left: 0.625rem;
+  top: 0.65em;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  white-space: nowrap;
+}
+.composer-hint {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: var(--bubble-hint);
+  /* No room beside the bubble: under it (composer.js, `fitHint`). */
+  &.is-below {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    left: 0;
+    width: max-content;
+    white-space: normal;
+  }
+}
+
 /* The burn (steward decision, 2026-10-23): light theme, white text in a golden glow fading to
    the normal dark text; dark theme, bright orange in a golden glow fading to the normal light
    text. */
@@ -1959,6 +2162,48 @@ html:not([data-js]) .spoiler-cover { display: none; }
   .composer-burn { animation: none; }
 }
 
+/* An unread message mentioning the reader, once scrolled to (steward decision, 2026-10-25;
+   assets/js/mention_glow.js): it glows in its notification dot's colour, red for an
+   @mention, blue for a +role, medium, bigger in 0.3 s, held 1 s, faded in 3 s (4.3 s in
+   all); the tag naming the reader pulses three times, 0.5 s each. */
+[data-glowing="mention"] { --mention-glow: var(--color-error); }
+[data-glowing="role-mention"] { --mention-glow: oklch(65% 0.17 250); }
+[data-glowing] > .message {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-box);
+  animation: mention-glow 4.3s ease-out both;
+}
+[data-glowing] .mention-pulse {
+  border-radius: 0.25rem;
+  animation: mention-pulse 0.5s ease-in-out 3;
+}
+@keyframes mention-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--mention-glow) 55%, transparent),
+      0 0 12px 2px color-mix(in oklab, var(--mention-glow) 35%, transparent);
+  }
+  7%, 30.2% {
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--mention-glow) 85%, transparent),
+      0 0 30px 8px color-mix(in oklab, var(--mention-glow) 55%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 transparent,
+      0 0 0 0 transparent;
+  }
+}
+@keyframes mention-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--mention-glow) 80%, transparent),
+      0 0 12px 3px color-mix(in oklab, var(--mention-glow) 65%, transparent);
+  }
+}
+
 /* The line under the composer until Ctrl+Enter may start a new message (steward decision,
    2026-10-23; assets/js/composer_timer.js sets the fill's duration and delay). Thin and
    orange, its front a small bright white glow inside a fainter, larger yellow one; at the end
@@ -1966,9 +2211,43 @@ html:not([data-js]) .spoiler-cover { display: none; }
 .composer-timer {
   position: relative;
   height: 2px;
-  margin-top: 0.5rem;
+  margin: 0.875rem var(--bubble-room, 0px) 0.625rem 0;
   pointer-events: none;
   &[hidden] { display: none; }
+}
+/* In front of the line, moving with it; once it is full, quickly to the middle. */
+.composer-timer-bubble {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  translate: 0.4375rem -50%;
+  animation: composer-timer-bubble linear both;
+  &.is-done {
+    left: calc(50% + var(--bubble-room, 0px) / 2);
+    translate: -50% -50%;
+    animation: composer-timer-bubble-centre 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    &::before { display: none; }
+  }
+  &.is-still { animation: none; }
+}
+/* Under the line while the bubble says "slow mode", centred under the composer and still
+   (composer_timer.js changes its words); the line keeps room for it below. */
+.composer-timer-hint {
+  position: absolute;
+  top: calc(100% + 0.625rem);
+  left: calc(50% + var(--bubble-room, 0px) / 2);
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100% + var(--bubble-room, 0px));
+  text-align: center;
+  &[hidden] { display: none; }
+}
+.composer-timer:has(.composer-timer-hint:not([hidden])) { margin-bottom: 2rem; }
+[data-bubbles="off"] .composer-timer:has(.composer-timer-hint) { margin-bottom: 0.625rem; }
+@keyframes composer-timer-bubble { from { left: 0%; } to { left: 100%; } }
+@keyframes composer-timer-bubble-centre {
+  from { left: 100%; translate: 0.4375rem -50%; }
+  to { left: calc(50% + var(--bubble-room, 0px) / 2); translate: -50% -50%; }
 }
 .composer-timer-line {
   --timer-orange: oklch(72% 0.18 55);
@@ -1998,6 +2277,7 @@ html:not([data-js]) .spoiler-cover { display: none; }
     animation: composer-timer-burn 2.2s ease-out both;
     &::after { display: none; }
   }
+  &.is-over { display: none; }
 }
 @keyframes composer-timer-fill { from { width: 0%; } to { width: 100%; } }
 @keyframes composer-timer-burn {
@@ -2014,6 +2294,7 @@ html:not([data-js]) .spoiler-cover { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .composer-timer-line.is-burning { animation-duration: 1ms; }
+  .composer-timer-bubble.is-done { animation: none; }
 }
 
 /* A new message in a topic of the sidebar: its name glows like sent text burns in, half as
@@ -2219,8 +2500,9 @@ html:not([data-js]) .spoiler-cover { display: none; }
 }
 
 /* The topic navigator (steward decision, 2026-10-23; assets/js/topic_nav.js): once the title
-   has scrolled away, a card at the right of the conversation, or where there is no room for
-   it a pill at the top right that opens it. Hidden without JavaScript. */
+   has scrolled away, a card at the right of the conversation, half way down the space under
+   the header (steward decision, 2026-10-24), or where there is no room for it a pill at the
+   top right that opens it. Hidden without JavaScript. */
 .topic-nav { display: none; }
 .topic-nav[data-shown] {
   display: grid;
@@ -2231,6 +2513,10 @@ html:not([data-js]) .spoiler-cover { display: none; }
   right: 1rem;
   z-index: 30;
   animation: bubble-in 200ms ease-out;
+}
+.topic-nav[data-mode="card"] {
+  top: calc((100dvh + var(--header-h)) / 2);
+  translate: 0 -50%;
 }
 .topic-nav[data-mode="card"] .topic-nav-pill { display: none; }
 .topic-nav[data-mode="pill"]:not([data-open]) .topic-nav-panel { display: none; }
@@ -2264,6 +2550,7 @@ html:not([data-js]) .spoiler-cover { display: none; }
 }
 .topic-nav-title {
   font-family: var(--font-title);
+  font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.3;
   margin: 0 0.25rem 0.5rem;
@@ -2312,6 +2599,14 @@ html:not([data-js]) .spoiler-cover { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .unread-line { animation-duration: 1ms; }
 }
+
+/* The visitors' card on the home page (steward decision, 2026-10-24): the logo, what signing
+   in gives, continue, then sign in or up. */
+.guest-notice { max-width: 26rem; display: grid; gap: 1rem; text-align: center; }
+.guest-notice-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+.guest-notice-account { display: flex; justify-content: center; gap: 0.5rem; }
+.guest-notice-account > .btn { flex: 1; }
+.guest-notice .full-logo { margin: 0 auto; }
 
 /* TP-10: the card an inline link opens in a topic (IdejoWeb.CardComponents): small. */
 .inline-card { max-width: 24rem; display: grid; gap: 0.5rem; }

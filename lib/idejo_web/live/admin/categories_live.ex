@@ -11,8 +11,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Forum
-  alias Idejo.Forum.{Category, CategoryIcons}
-  alias IdejoWeb.CategoryIconNames
+  alias IdejoWeb.Admin
 
   @impl true
   def mount(_params, _session, socket) do
@@ -58,13 +57,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
 
   # The preview follows the form; the colour picker fills in the hex field.
   def handle_event("validate_new", %{"category" => params} = all, socket) do
-    params = picked_colour(params, all)
+    params = Admin.picked_colour(params, all)
     form = params |> Forum.change_new_category() |> Map.put(:action, :validate)
     {:noreply, assign(socket, :new_form, to_form(form, as: :category))}
   end
 
   def handle_event("validate_edit", %{"id" => id, "edit" => params} = all, socket) do
-    params = picked_colour(params, all)
+    params = Admin.picked_colour(params, all)
     form = socket |> find(id) |> Forum.change_category(params) |> Map.put(:action, :validate)
     {:noreply, assign(socket, :editing, {id, to_form(form, as: :edit)})}
   end
@@ -186,11 +185,6 @@ defmodule IdejoWeb.Admin.CategoriesLive do
      |> load()}
   end
 
-  defp picked_colour(params, %{"_target" => [_, "colour_picker"]}),
-    do: Map.put(params, "colour", params["colour_picker"])
-
-  defp picked_colour(params, _all), do: params
-
   defp group_name(groups, category),
     do: Enum.find_value(groups, &(&1.id == category.group_id && &1.name))
 
@@ -216,85 +210,6 @@ defmodule IdejoWeb.Admin.CategoriesLive do
 
   defp delete_error(:archive, _category), do: gettext("The Archive cannot be deleted.")
   defp delete_error(_reason, _category), do: gettext("The category could not be deleted.")
-
-  attr :form, :any, required: true
-  attr :id, :string, required: true
-  attr :category_id, :any, required: true
-
-  # RP-03: the colour (typed, or picked with the browser's colour picker) and the icon, with a
-  # preview of the mark as it will show.
-  defp look(assigns) do
-    form = assigns.form
-    colour = valid(form, :colour)
-    tint = if assigns.category_id, do: CategoryIcons.tint(assigns.category_id), else: "#6567e7"
-
-    preview = %Category{
-      id: assigns.category_id || "new",
-      name: form[:name].value || "?",
-      icon: valid(form, :icon),
-      colour: colour
-    }
-
-    assigns =
-      assign(assigns,
-        preview: preview,
-        tile: colour || tint,
-        icon: form[:icon].value || ""
-      )
-
-    ~H"""
-    <div class="category-look">
-      <div class="category-look-preview" aria-hidden="true">
-        <TopicComponents.category_mark category={@preview} size={:large} />
-      </div>
-      <div class="category-look-colour">
-        <.input
-          field={@form[:colour]}
-          type="text"
-          label={gettext("Colour (#rrggbb, empty for the default)")}
-          placeholder="#3366ff"
-          spellcheck="false"
-        />
-        <label class="category-look-picker">
-          <span class="sr-only">{gettext("Pick a colour")}</span>
-          <input
-            type="color"
-            name={@form[:colour_picker].name}
-            id={"#{@id}-colour-picker"}
-            value={@tile}
-          />
-        </label>
-      </div>
-    </div>
-    <fieldset class="icon-picker">
-      <legend class="label mb-1">{gettext("Icon")}</legend>
-      <label class="icon-choice icon-choice-none">
-        <input type="radio" name={@form[:icon].name} value="" checked={@icon == ""} />
-        <span>{gettext("No icon")}</span>
-      </label>
-      <fieldset :for={{group, ids} <- CategoryIcons.groups()} class="icon-group">
-        <legend>{CategoryIconNames.group_name(group)}</legend>
-        <div class="icon-choices">
-          <label :for={id <- ids} class="icon-choice" title={CategoryIconNames.name(id)}>
-            <input type="radio" name={@form[:icon].name} value={id} checked={@icon == id} />
-            <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-              <TopicComponents.icon_shapes shapes={CategoryIcons.shapes(id, @tile)} />
-            </svg>
-            <span class="sr-only">{CategoryIconNames.name(id)}</span>
-          </label>
-        </div>
-      </fieldset>
-    </fieldset>
-    """
-  end
-
-  # A field's value only when it passed validation, for the preview.
-  defp valid(form, field) do
-    if Keyword.has_key?(form.errors, field), do: nil, else: blank_to_nil(form[field].value)
-  end
-
-  defp blank_to_nil(value) when value in [nil, ""], do: nil
-  defp blank_to_nil(value), do: value
 
   @impl true
   def render(assigns) do
@@ -337,7 +252,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                   label={gettext("Group")}
                   options={group_options(@groups)}
                 />
-                <.look form={form} id={"edit-#{category.id}"} category_id={category.id} />
+                <Admin.look form={form} id={"edit-#{category.id}"} item_id={category.id} />
                 <div class="flex gap-2">
                   <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                   <button type="button" class="btn btn-sm" phx-click="cancel_edit">
@@ -569,7 +484,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
             label={gettext("Group")}
             options={group_options(@groups)}
           />
-          <.look form={@new_form} id="new" category_id={nil} />
+          <Admin.look form={@new_form} id="new" item_id={nil} />
           <.input
             field={@new_form[:slug]}
             type="text"

@@ -75,7 +75,7 @@ defmodule IdejoWeb.Layouts do
 
       <a href={~p"/"} class="brand" id="brand">
         <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23). --%>
-        <img src={~p"/images/logo-small.png"} alt="" class="brand-mark" width="32" height="32" />
+        <img src={~p"/images/logo-small.svg"} alt="" class="brand-mark" width="32" height="32" />
         <span class="brand-name">{server_name()}</span>
       </a>
 
@@ -274,6 +274,10 @@ defmodule IdejoWeb.Layouts do
                 <span>{gettext("Theme")}</span>
                 <.theme_toggle />
               </li>
+              <li class="account-panel-theme bubbles-toggle-row">
+                <span id="account-bubbles-label">{gettext("Tutorial bubbles")}</span>
+                <.bubbles_toggle labelled_by="account-bubbles-label" />
+              </li>
               <li>
                 <%!-- A form, not a data-method link, so signing out works without JavaScript. --%>
                 <.form for={%{}} action={~p"/users/sign-out"} method="delete">
@@ -453,7 +457,8 @@ defmodule IdejoWeb.Layouts do
             aria-pressed="false"
             aria-controls={"sidebar-topics-#{category.id}"}
             aria-label={gettext("Only topics with new messages in %{name}", name: category.name)}
-            title={gettext("Show only topics with new messages, or all")}
+            data-bubble={gettext("Hide topics with\nno new messages")}
+            data-bubble-folded={gettext("Show all followed topics")}
           ></button>
         </div>
         <.followed_topics
@@ -571,10 +576,12 @@ defmodule IdejoWeb.Layouts do
         class="sidebar-topic-action sidebar-unfollow"
       >
         <input type="hidden" name="return" value="back" />
+        <%!-- Its tutorial bubble (steward decision, 2026-10-25), at its right on hover or
+             focus, and for a moment on touch screens (assets/js/sidebar.js). --%>
         <button
           type="submit"
           aria-label={gettext("Unfollow %{title}", title: @topic.title)}
-          title={gettext("Unfollow")}
+          data-bubble={gettext("close & unfollow thread")}
         >
           <.icon name="hero-x-mark-micro" class="size-3.5" />
         </button>
@@ -606,19 +613,26 @@ defmodule IdejoWeb.Layouts do
 
   attr :nonce, :string, default: nil
   attr :user, :any, default: nil
+  attr :info_boxes, :list, default: [], doc: "the page's info boxes (the home page's)"
 
   @doc """
   Each category's colour as a CSS variable, `--cat` on `.cat-{id}`, for the lines and glows
   of the elements that belong to it (RP-03): its own colour, or the tint its id gives it. Only
-  the categories the visitor may view, so no other id reaches the page (AC-05). A `<style>`
-  with the request's nonce: the CSP refuses `style` attributes (SP-05); the colours are checked
-  `#rrggbb` and the ids UUIDs, so the rules hold nothing else.
+  the categories the visitor may view, so no other id reaches the page (AC-05). The page's
+  info boxes (steward decision, 2026-10-25) get theirs the same way, on `.info-box-{id}`. A
+  `<style>` with the request's nonce: the CSP refuses `style` attributes (SP-05); the colours
+  are checked `#rrggbb` and the ids UUIDs, so the rules hold nothing else.
   """
   def category_colours(assigns) do
-    rules =
+    categories =
       for category <- Idejo.Forum.list_viewable_categories(assigns.user), into: "" do
         colour = category.colour || CategoryIcons.tint(category.id)
         ".cat-#{category.id}{--cat:#{colour}}"
+      end
+
+    rules =
+      for box <- assigns.info_boxes, into: categories do
+        ".info-box-#{box.id}{--cat:#{box.colour || CategoryIcons.tint(box.id)}}"
       end
 
     assigns = assign(assigns, :rules, rules)
@@ -629,6 +643,62 @@ defmodule IdejoWeb.Layouts do
     </style>
     """
   end
+
+  @doc """
+  The website theme (steward decision, 2026-10-24; Admin → Settings): the daisyUI colour
+  variables of both themes from `Idejo.Settings.theme/0`, in one `<style>` with the
+  request's nonce, before the server stylesheet so Admin → Stylesheet can still override it.
+  Primary drives buttons, toggles and links; secondary and tertiary (daisyUI's secondary and
+  accent) only where a second colour distinguishes or unemphasises. The page background is
+  the light or dark background, cards a little lighter, and text the other background. Text
+  on a colour is white or near-black, whichever contrasts better. The colours are checked
+  `#rrggbb` or `#rrggbbaa`, so the rules hold nothing else.
+  """
+  attr :nonce, :string, default: nil
+
+  def theme_colours(assigns) do
+    assigns = assign(assigns, :rules, theme_rules(Idejo.Settings.theme()))
+
+    ~H"""
+    <style :if={@nonce} nonce={@nonce}>
+      <%= @rules %>
+    </style>
+    """
+  end
+
+  @doc false
+  def theme_rules(%{light_bg: light, dark_bg: dark} = theme) do
+    accents = accent_variables(theme)
+
+    light_vars =
+      accents <>
+        "--color-base-100:color-mix(in oklab,#{light} 35%,#fff);" <>
+        "--color-base-200:#{light};" <>
+        "--color-base-300:color-mix(in oklab,#{light} 91%,#000);" <>
+        "--color-base-content:#{dark};"
+
+    dark_vars =
+      accents <>
+        "--color-base-100:color-mix(in oklab,#{dark} 92%,#fff);" <>
+        "--color-base-200:#{dark};" <>
+        "--color-base-300:color-mix(in oklab,#{dark} 82%,#fff);" <>
+        "--color-base-content:color-mix(in oklab,#{light} 92%,#{dark});"
+
+    # The selectors match daisyUI's own (light by default, dark when chosen or, with no
+    # choice, when the system prefers it), so these come after them and win.
+    ":root,[data-theme=light]{#{light_vars}}" <>
+      "@media (prefers-color-scheme:dark){:root:not([data-theme]){#{dark_vars}}}" <>
+      "[data-theme=dark]{#{dark_vars}}"
+  end
+
+  defp accent_variables(%{primary: primary, secondary: secondary, tertiary: tertiary}) do
+    for {name, colour} <- [primary: primary, secondary: secondary, accent: tertiary], into: "" do
+      "--color-#{name}:#{colour};--color-#{name}-content:#{on_colour(colour)};"
+    end
+  end
+
+  # White or near-black text on a colour; any alpha is ignored for the choice.
+  defp on_colour(colour), do: CategoryIcons.contrast(String.slice(colour, 0, 7))
 
   @doc """
   The roles' colours (steward decision, 2026-10-23): `--role` on each `role-{id}` class, in
@@ -728,9 +798,9 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The full Idejo logo (steward decision, 2026-10-23), above the sign-in, sign-up and setup
-  pages. Black, turned white by the dark theme's stylesheet (`.full-logo`). CC-BY-4.0, ©
-  Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
+  The full Idejo logo (steward decisions, 2026-10-23 and 2026-10-24), above the sign-in,
+  sign-up and setup pages and on the visitors' card: in colour, the same in both themes.
+  CC-BY-4.0, © Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
   """
   def full_logo(assigns) do
     ~H"""
@@ -850,7 +920,8 @@ defmodule IdejoWeb.Layouts do
       :categories,
       :tags,
       :permissions,
-      :stylesheet
+      :stylesheet,
+      :info_boxes
     ]
 
   slot :inner_block, required: true
@@ -865,6 +936,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :settings && "page"}
         >
           {gettext("Settings")}
+        </.link>
+        <.link
+          navigate={~p"/admin/info-boxes"}
+          class={["tab", @section == :info_boxes && "tab-active"]}
+          aria-current={@section == :info_boxes && "page"}
+        >
+          {gettext("Info boxes")}
         </.link>
         <.link
           navigate={~p"/admin/email"}
@@ -976,6 +1054,37 @@ defmodule IdejoWeb.Layouts do
         {gettext("Attempting to reconnect")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
+    </div>
+    """
+  end
+
+  @doc """
+  Turns the tutorial bubbles on or off (steward decision, 2026-10-25): the composer's, the
+  timer line's and the sidebar ×'s. Like the theme, theme.js applies the choice before the
+  page is drawn (`data-bubbles="off"` on `<html>`) and the browser remembers it; the
+  stylesheet highlights the current one. Hidden without JavaScript, which the bubbles need.
+  """
+  attr :labelled_by, :string, required: true
+
+  def bubbles_toggle(assigns) do
+    ~H"""
+    <div role="group" aria-labelledby={@labelled_by} class="theme-toggle bubbles-toggle">
+      <button
+        type="button"
+        phx-click={JS.dispatch("phx:set-bubbles")}
+        data-choice="on"
+        aria-label={gettext("Turn tutorial bubbles on")}
+      >
+        {gettext("On")}
+      </button>
+      <button
+        type="button"
+        phx-click={JS.dispatch("phx:set-bubbles")}
+        data-choice="off"
+        aria-label={gettext("Turn tutorial bubbles off")}
+      >
+        {gettext("Off")}
+      </button>
     </div>
     """
   end

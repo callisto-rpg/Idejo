@@ -22,10 +22,11 @@ defmodule IdejoWeb.TopicController do
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
 
-    # A topic in a category the visitor may not view is not found, like the category.
+    # A topic the reader may not view leads to sign-in, or home with a dialog
+    # (steward decision, 2026-10-24).
     case Forum.get_viewable_topic(user, id) do
       nil ->
-        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+        IdejoWeb.Unavailable.redirect_away(conn, :topic)
 
       topic ->
         if params["slug"] == topic.slug do

@@ -5,8 +5,8 @@ defmodule IdejoWeb.ReactionComponents do
   @moduledoc """
   Reactions under a message (TP-17; steward decision, 2026-10-22), in `IdejoWeb.TopicLive`:
   each emoji used, with a count when several people chose it; a click adds or takes back the
-  reader's own. A 🙂 button among the message's actions (shown on hover or focus) opens the
-  eight first choices and a + for every emoji (`emoji_picker/1`, a dialog with a search box).
+  reader's own. A "React" action among the message's others (steward decision, 2026-10-25)
+  opens the eight first choices and a + for every emoji (`emoji_picker/1`, a dialog with a search box).
   The LiveView handles `"react"` (`id`, `emoji`), `"emoji_picker"` (`id`), `"emoji_search"`
   and `"close_picker"`.
   """
@@ -98,16 +98,16 @@ defmodule IdejoWeb.ReactionComponents do
   attr :message_id, :string, required: true
 
   @doc """
-  The 🙂 button and the first choices: a `<details>`, so it opens from the keyboard too;
-  choosing closes it.
+  "React" and the first choices: a `<details>`, so it opens from the keyboard too; choosing
+  closes it, and so does a click outside it (assets/js/account_menu.js).
   """
   def add_reaction(assigns) do
     assigns = assign(assigns, :defaults, Emoji.defaults())
 
     ~H"""
     <details id={"message-#{@message_id}-react"} class="add-reaction">
-      <summary class="message-action" aria-label={gettext("Add a reaction")}>
-        <span aria-hidden="true">🙂</span>
+      <summary class="message-action">
+        <IdejoWeb.CoreComponents.icon name="hero-face-smile-micro" class="size-4" />{gettext("React")}
       </summary>
       <div class="add-reaction-panel">
         <button

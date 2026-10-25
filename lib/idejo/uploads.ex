@@ -29,7 +29,7 @@ defmodule Idejo.Uploads do
   alias Idejo.RateLimit
   alias Idejo.Repo
   alias Idejo.Settings
-  alias Idejo.Settings.Setting
+  alias Idejo.Settings.{InfoBox, Setting}
   alias Idejo.Uploads.Upload
   alias Vix.Vips.Image, as: VipsImage
 
@@ -131,8 +131,8 @@ defmodule Idejo.Uploads do
   Deletes the uploads, and their files, that nothing uses and that are older than `before`
   (default: #{@unused_after_hours} hours ago). Used means: a user's avatar (light or dark),
   or named in the Markdown of a message, deleted ones included (moderators still read them,
-  MO-02), of an earlier version of one (GM-11) or of a setting (About, Rules, the
-  stylesheet). Returns the file names deleted.
+  MO-02), of an earlier version of one (GM-11), of a setting (About, Rules, the
+  stylesheet) or of an info box. Returns the file names deleted.
   """
   @spec delete_unused(DateTime.t()) :: [String.t()]
   def delete_unused(before \\ DateTime.add(DateTime.utc_now(), -@unused_after_hours, :hour)) do
@@ -141,6 +141,7 @@ defmodule Idejo.Uploads do
       |> named_in(:body_md)
       |> union_all(^named_in(Version, :body_md))
       |> union_all(^named_in(Setting, :value))
+      |> union_all(^named_in(InfoBox, :body_md))
 
     avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
     dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)

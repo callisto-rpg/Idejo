@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Applies the light/dark theme, and the hidden sidebar (sidebar.js), before first paint. Loaded as a blocking
+// Applies the light/dark theme, the hidden sidebar (sidebar.js) and the tutorial bubbles'
+// choice, before first paint. Loaded as a blocking
 // <script> in the root layout; kept out of the HTML so the content security
 // policy can refuse inline scripts (SP-05).
 (() => {
@@ -27,6 +28,27 @@
   } catch (_e) {
     // Storage refused (private window): the sidebar shows.
   }
+
+  // Tutorial bubbles (steward decision, 2026-10-25): on unless turned off in the account menu
+  // or on the Help page; remembered by the browser, like the theme.
+  const setBubbles = (choice, remember) => {
+    if (choice === "off") document.documentElement.dataset.bubbles = "off"
+    else delete document.documentElement.dataset.bubbles
+    try {
+      if (remember && choice === "off") localStorage.setItem("idejo:bubbles", "off")
+      else if (remember) localStorage.removeItem("idejo:bubbles")
+    } catch (_e) {
+      // Storage refused (private window): the choice lasts for this page only.
+    }
+    window.dispatchEvent(new CustomEvent("idejo:bubbles"))
+  };
+  try {
+    if (localStorage.getItem("idejo:bubbles") === "off") setBubbles("off", false)
+  } catch (_e) {
+    // Storage refused: bubbles show.
+  }
+  window.addEventListener("storage", (e) => e.key === "idejo:bubbles" && setBubbles(e.newValue || "on", false));
+  window.addEventListener("phx:set-bubbles", (e) => setBubbles(e.target.dataset.choice, true));
 
   if (!document.documentElement.hasAttribute("data-theme")) {
     setTheme(localStorage.getItem("phx:theme") || "system");

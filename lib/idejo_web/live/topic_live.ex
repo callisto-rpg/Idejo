@@ -90,12 +90,19 @@ defmodule IdejoWeb.TopicLive do
            move_error: nil,
            first_unread: nil,
            unread_line?: false,
+           mention_glows: %{},
+           mention_tags: [],
            pending: [],
            schedule: nil,
            polls: %{},
            poll_form: nil,
            live?: connected?(socket),
-           revealed: MapSet.new()
+           revealed: MapSet.new(),
+           draft_over: nil,
+           early_reply?: true,
+           too_soon?: false,
+           composing_edit: nil,
+           edit_versioned?: false
          )}
 
       topic ->
@@ -113,8 +120,12 @@ defmodule IdejoWeb.TopicLive do
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
+         |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
+         |> assign(composing_edit: nil, edit_versioned?: false)
          |> put_messages(Forum.list_messages(topic))
+         |> put_draft()
          |> put_first_unread(session["first_unread"])
+         |> put_mention_glows()
          |> put_forks()
          |> assign(can_react?: can_react?(user, topic), picker: nil)
          |> assign(
@@ -141,6 +152,22 @@ defmodule IdejoWeb.TopicLive do
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
 
+  # Reply starts a new message (steward decision, 2026-10-24): with the author's message
+  # still open, the composer leaves it for a new one at the end; `draft_over` is the open
+  # message it left. Sending closes that message first (`Messages.commit/4` with `new:`).
+  # Without the reply, or with replies waiting for the timer (`gm_early_reply` off), Enter is
+  # refused until Ctrl+Enter could start a new message.
+  defp put_draft(socket) do
+    open = socket.assigns.reply_to && open_message(socket.assigns.messages, user(socket))
+    assign(socket, :draft_over, open && open.id)
+  end
+
+  # The open message the composer left, while it is still open.
+  defp draft_over(%{draft_over: nil}), do: nil
+
+  defp draft_over(%{draft_over: id, messages: messages}),
+    do: Enum.find(messages, &(&1.id == id and &1.state == "open"))
+
   # `!schedule` (steward decision, 2026-10-23): the viewer's messages waiting to be posted
   # here, which only they see.
   defp put_pending(%{assigns: %{can_post?: true}} = socket),
@@ -159,6 +186,40 @@ defmodule IdejoWeb.TopicLive do
 
   defp put_first_unread(socket, _none),
     do: assign(socket, first_unread: nil, unread_line?: false)
+
+  # Unread messages that @mention the reader or +mention one of their roles (steward
+  # decision, 2026-10-25): the `MentionGlow` hook makes each glow once it is scrolled to, in
+  # its notification dot's colour, and the tag naming the reader pulse. Read from the stored
+  # HTML's links (`/u/{id}`, `/r/{slug}`), with no query but the reader's roles.
+  defp put_mention_glows(%{assigns: %{first_unread: %{id: first_id}}} = socket) do
+    user = user(socket)
+
+    roles =
+      for role <- Access.roles_of(user),
+          not (role.built_in and role.name in ~w(member guest)),
+          do: "/r/" <> Access.role_slug(role)
+
+    mention = "/u/" <> user.id
+
+    glows =
+      socket.assigns.messages
+      |> Enum.drop_while(&(&1.id != first_id))
+      |> Enum.filter(&(&1.author_id != user.id and is_nil(&1.deleted_at)))
+      |> Enum.flat_map(fn message ->
+        cond do
+          links_to?(message.body_html, [mention]) -> [{message.id, "mention"}]
+          links_to?(message.body_html, roles) -> [{message.id, "role-mention"}]
+          true -> []
+        end
+      end)
+      |> Map.new()
+
+    assign(socket, mention_glows: glows, mention_tags: [mention | roles])
+  end
+
+  defp put_mention_glows(socket), do: assign(socket, mention_glows: %{}, mention_tags: [])
+
+  defp links_to?(html, hrefs), do: Enum.any?(hrefs, &String.contains?(html, ~s(href="#{&1}")))
 
   defp subscribe(topic, user) do
     Messages.subscribe(topic.id)
@@ -239,6 +300,7 @@ defmodule IdejoWeb.TopicLive do
     if connected?(socket) do
       body =
         case open_message(socket.assigns.messages, user(socket)) do
+          %{id: id} when id == socket.assigns.draft_over -> ""
           %{body_md: body} -> body
           nil -> ""
         end
@@ -456,12 +518,27 @@ defmodule IdejoWeb.TopicLive do
 
   defp after_send(socket, _then, _message), do: assign(socket, :reply_to, nil)
 
-  # `!poll`: the dialog for a poll under the author's message, one per message.
+  # `!poll`: the dialog for a poll under the author's message, one per message; with no
+  # message, the poll is posted as one.
+  defp open_poll(socket, nil),
+    do: assign(socket, :poll_form, %{message_id: nil, params: %{}, count: 2, error: nil})
+
   defp open_poll(socket, message) do
     if Map.has_key?(socket.assigns.polls, message.id) or Polls.summary(message.id) != nil,
       do: put_flash(socket, :error, gettext("This message has a poll already.")),
       else:
         assign(socket, :poll_form, %{message_id: message.id, params: %{}, count: 2, error: nil})
+  end
+
+  # Under the author's message, or with none, posted as a message of its own.
+  defp add_poll(socket, nil, params) do
+    %{topic: topic, reply_to: reply_to} = socket.assigns
+    Polls.post(user(socket), topic, params, reply_to && reply_to.id)
+  end
+
+  defp add_poll(socket, message_id, params) do
+    message = Repo.get(Messages.Message, message_id)
+    message && Polls.create(user(socket), message, params)
   end
 
   defp poll_error(:question), do: gettext("Write the question.")
@@ -536,9 +613,27 @@ defmodule IdejoWeb.TopicLive do
   end
 
   @impl true
+  def handle_event(
+        "commit",
+        %{"body" => body} = params,
+        %{assigns: %{composing_edit: id}} = socket
+      )
+      when is_binary(id) do
+    case editing_in_composer(socket.assigns) do
+      nil -> {:reply, %{error: true}, end_composer_edit(socket)}
+      message -> commit_edit(socket, message, body, params["break"] == true)
+    end
+  end
+
   def handle_event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
-    opts = [break: params["break"] == true, reply_to_id: reply_to && reply_to.id]
+
+    opts = [
+      break: params["break"] == true,
+      reply_to_id: reply_to && reply_to.id,
+      new: draft_over(socket.assigns) != nil
+    ]
+
     then = params["then"]
 
     case Messages.commit(user(socket), topic, body, opts) do
@@ -549,6 +644,10 @@ defmodule IdejoWeb.TopicLive do
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
          after_send(socket, then, message)}
+
+      # A new message before the open one may end: the text stays, unsent.
+      {:error, :too_soon} ->
+        {:reply, %{error: true}, assign(socket, :too_soon?, true)}
 
       {:error, :forbidden} ->
         {:reply, %{error: true},
@@ -583,17 +682,16 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # `!poll` and `!spoiler` with nothing new to send: for the open message.
+  # With nothing open, `!poll` posts the poll as a message of its own (steward decision,
+  # 2026-10-24); `!spoiler` needs a message.
   def handle_event(command, _params, socket) when command in ["open_poll", "spoiler"] do
     case open_message(socket.assigns.messages, user(socket)) do
+      nil when command == "open_poll" ->
+        {:noreply, open_poll(socket, nil)}
+
       nil ->
         {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("Write your message first, then choose !%{command}.",
-             command: if(command == "spoiler", do: "spoiler", else: "poll")
-           )
-         )}
+         put_flash(socket, :error, gettext("Write your message first, then choose !spoiler."))}
 
       message when command == "spoiler" ->
         {:noreply, toggle_spoiler(socket, message)}
@@ -618,11 +716,12 @@ defmodule IdejoWeb.TopicLive do
 
   def handle_event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
       when is_map(params) and form != nil do
-    message = Repo.get(Messages.Message, form.message_id)
-
-    case message && Polls.create(user(socket), message, params) do
+    case add_poll(socket, form.message_id, params) do
       {:ok, _summary} ->
         {:noreply, assign(socket, :poll_form, nil)}
+
+      {:ok, _message, _summary} ->
+        {:noreply, socket |> assign(:poll_form, nil) |> assign(:reply_to, nil)}
 
       {:error, reason} when reason in [:question, :options, :hours, :rate_limited] ->
         {:noreply,
@@ -797,8 +896,26 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # The composer stays a new message (`draft_over`), refused until it may be sent.
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
+
+  def handle_event("hide_too_soon", _params, socket),
+    do: {:noreply, assign(socket, :too_soon?, false)}
+
+  # Back to the open message: what was typed follows its text, unsent.
+  def handle_event("append_to_open", _params, socket) do
+    case draft_over(socket.assigns) do
+      nil ->
+        {:noreply, assign(socket, too_soon?: false)}
+
+      open ->
+        {:noreply,
+         socket
+         |> assign(too_soon?: false, draft_over: nil, reply_to: nil)
+         |> push_event("composer_sent", %{body: open.body_md})}
+    end
+  end
 
   # A moderator closes someone's open message (GM-16) or deletes a message (MO-02), with an
   # optional reason for the log. The changed message arrives as an event.
@@ -957,7 +1074,20 @@ defmodule IdejoWeb.TopicLive do
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
+    user = user(socket)
+
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
+      # Steward decision, 2026-10-24: the author edits in the composer, as they wrote it.
+      %{state: "closed", deleted_at: nil, author_id: author_id} = message
+      when author_id == user.id ->
+        {:noreply,
+         socket
+         |> close_editor()
+         |> assign(composing_edit: id, edit_versioned?: false)
+         |> push_event("composer_sent", %{body: message.body_md})
+         # AX-01: the Edit button that had the focus is gone; the box takes it.
+         |> push_event("composer_focus", %{})}
+
       %{state: "closed", deleted_at: nil} = message ->
         form = to_form(%{"body" => message.body_md}, as: :edit)
         {:noreply, assign(socket, editing: {id, form}, editor_mode: :write, preview_html: "")}
@@ -1055,7 +1185,10 @@ defmodule IdejoWeb.TopicLive do
     case message && Messages.delete_own(user(socket), message) do
       # AX-01: the focus moves to the placeholder that replaces the editor.
       {:ok, _message} ->
-        {:noreply, assign(socket, editing: nil, refocus: id)}
+        {:noreply,
+         socket
+         |> assign(editing: nil, refocus: id)
+         |> then(&if(&1.assigns.composing_edit == id, do: end_composer_edit(&1), else: &1))}
 
       _error ->
         {:noreply,
@@ -1077,6 +1210,58 @@ defmodule IdejoWeb.TopicLive do
     do: assign(socket, editing: nil, refocus: id)
 
   defp close_editor(socket), do: assign(socket, :editing, nil)
+
+  # Editing in the composer (steward decision, 2026-10-24): the author's closed message, in
+  # place, appended to like an open one. Enter saves; Ctrl+Enter saves and ends the edit, at
+  # any time. One version per edit: the text from before it, kept at its first change.
+  defp editing_in_composer(%{composing_edit: nil}), do: nil
+
+  defp editing_in_composer(%{composing_edit: id, messages: messages}),
+    do: Enum.find(messages, &(&1.id == id and &1.state == "closed" and is_nil(&1.deleted_at)))
+
+  defp commit_edit(socket, message, "", _break?) do
+    # Emptied: ask whether to delete it, as the editor does (not the opening message).
+    if message.id != hd(socket.assigns.messages).id,
+      do: {:reply, %{error: true}, assign(socket, :confirm_delete, message.id)},
+      else: {:reply, %{error: true}, socket}
+  end
+
+  defp commit_edit(socket, message, body, break?) do
+    version = if socket.assigns.edit_versioned?, do: :never, else: :always
+
+    case Messages.edit(user(socket), message, body, version: version) do
+      {:ok, edited} ->
+        socket =
+          assign(socket, :edit_versioned?, socket.assigns.edit_versioned? or edited != message)
+
+        if break?,
+          do: {:reply, %{closed: true, body: edited.body_md}, end_composer_edit(socket)},
+          else: {:reply, %{closed: false, body: edited.body_md}, socket}
+
+      {:error, :blank} ->
+        commit_edit(socket, message, "", break?)
+
+      {:error, _} ->
+        {:reply, %{error: true},
+         socket
+         |> end_composer_edit()
+         |> put_flash(:error, gettext("This message cannot be edited."))}
+    end
+  end
+
+  # The composer goes back to the author's open message, or to the end.
+  defp end_composer_edit(socket) do
+    id = socket.assigns.composing_edit
+    socket = assign(socket, composing_edit: nil, edit_versioned?: false, refocus: id)
+
+    case open_message(socket.assigns.messages, user(socket)) do
+      %{id: open_id, body_md: body} when open_id != socket.assigns.draft_over ->
+        push_event(socket, "composer_sent", %{body: body})
+
+      _ ->
+        push_event(socket, "composer_sent", %{body: ""})
+    end
+  end
 
   defp selectable?(socket, id) do
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
@@ -1107,7 +1292,7 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def render(assigns) do
-    mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+    {mine, locked} = composer_place(assigns)
     {before, after_} = split(assigns.messages, mine)
     # TP-12: allowed at mount for those who could post then; nil otherwise.
     uploads = assigns[:uploads] || %{}
@@ -1118,6 +1303,7 @@ defmodule IdejoWeb.TopicLive do
           assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
         before: before,
         mine: mine,
+        locked: locked,
         later: after_,
         deleted_runs: Map.merge(deleted_runs(before), deleted_runs(after_)),
         composer_upload: uploads[:composer_image],
@@ -1146,6 +1332,7 @@ defmodule IdejoWeb.TopicLive do
       <.delete_own_dialog :if={@confirm_delete} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
+      <.too_soon_dialog :if={@too_soon?} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -1189,12 +1376,19 @@ defmodule IdejoWeb.TopicLive do
         {gettext("You can no longer view this topic.")}
       </p>
 
-      <ol id="messages" class={["message-list", @topic && "cat-#{@topic.category_id}"]}>
+      <ol
+        id="messages"
+        class={["message-list", @topic && "cat-#{@topic.category_id}"]}
+        phx-hook="MentionGlow"
+        data-mention-tags={@mention_glows != %{} && Jason.encode!(@mention_tags)}
+      >
         <li
           :for={message <- @before}
           :key={message.id}
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+          data-mention-glow={@mention_glows[message.id]}
+          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
         >
           <.unread_line
             :if={@unread_line? and @first_unread.id == message.id}
@@ -1234,13 +1428,19 @@ defmodule IdejoWeb.TopicLive do
             pending={@pending}
             commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
             reply_to={@reply_to}
+            locked={@locked}
+            editing?={@mine != nil and @mine.id == @composing_edit}
             roles={@roles}
             author={@current_scope.user}
             now={@now}
             upload={@composer_upload}
             image_error={@image_error}
             poll={@mine && @polls[@mine.id]}
-            answered?={Enum.any?(@later, &is_nil(&1.deleted_at))}
+            answered?={
+              if @locked,
+                do: answered?(@messages, @locked),
+                else: Enum.any?(@later, &is_nil(&1.deleted_at))
+            }
             unanswered_minutes={@unanswered_minutes}
           />
         </li>
@@ -1249,6 +1449,8 @@ defmodule IdejoWeb.TopicLive do
           :key={message.id}
           id={"message-#{message.id}"}
           hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
+          data-mention-glow={@mention_glows[message.id]}
+          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
         >
           <.unread_line
             :if={@unread_line? and @first_unread.id == message.id}
@@ -1381,6 +1583,40 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # A new message sent before the open one may end (steward decision, 2026-10-24).
+  defp too_soon_dialog(assigns) do
+    ~H"""
+    <dialog
+      id="too-soon-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="hide_too_soon"
+      aria-labelledby="too-soon-title"
+      aria-describedby="too-soon-text"
+    >
+      <div class="modal-box">
+        <h2 id="too-soon-title" class="inline-card-title">{gettext("Not yet")}</h2>
+        <p id="too-soon-text" class="mt-2">
+          {gettext("You cannot post a new message yet. Append your old message.")}
+        </p>
+        <div class="modal-action">
+          <button
+            type="button"
+            id="too-soon-append"
+            class="btn btn-sm btn-primary"
+            phx-click="append_to_open"
+          >
+            {gettext("Append to my message")}
+          </button>
+          <form method="dialog">
+            <button class="btn btn-sm btn-ghost">{gettext("OK")}</button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+    """
+  end
+
   attr :message_id, :string, required: true, doc: "the message it stands above"
   attr :count, :integer, required: true
 
@@ -1465,6 +1701,21 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # Where the composer goes: in the author's open message, or after Reply a new message at
+  # the end, the open one reading like the others (steward decision, 2026-10-24). `locked`:
+  # the open message a new message waits for, refused on Enter until it may start one.
+  defp composer_place(assigns) do
+    mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
+    editing = assigns[:composing_edit] && editing_in_composer(assigns)
+
+    cond do
+      editing -> {editing, nil}
+      is_nil(mine) or mine.id != assigns[:draft_over] -> {mine, nil}
+      assigns.reply_to && assigns.early_reply? -> {nil, nil}
+      true -> {nil, mine}
+    end
+  end
+
   # The messages before the author's open message and the ones after it; with none open,
   # everything comes before and the composer goes to the end.
   defp split(messages, nil), do: {messages, []}
@@ -1540,6 +1791,7 @@ defmodule IdejoWeb.TopicLive do
       :if={is_nil(@message.deleted_at) or @can_moderate?}
       aria-labelledby={"message-#{@message.id}-author"}
       class="message"
+      phx-mounted={JS.ignore_attributes(["data-acting"])}
     >
       <p id={"message-#{@message.id}-author"} class="message-head">
         <%!-- Choosing messages to move (TP-15) or delete (MO-02). --%>
@@ -1646,8 +1898,9 @@ defmodule IdejoWeb.TopicLive do
           tabindex="-1"
           inert={@message.spoiler and !@revealed? and @live?}
         >
+          <%!-- A poll posted on its own: its question says it all. --%>
           <MessageComponents.collapsible_body
-            :if={!@edit_form}
+            :if={!@edit_form and !Polls.poll_only?(@message, @poll)}
             id={"message-#{@message.id}-body"}
             html={@message.body_html}
           />
@@ -1861,6 +2114,15 @@ defmodule IdejoWeb.TopicLive do
   attr :pending, :list, default: [], doc: "the author's scheduled messages here"
   attr :commands, :list, default: [], doc: "the `!` commands, for the Composer hook"
   attr :reply_to, :any, required: true
+
+  attr :locked, :any,
+    default: nil,
+    doc: "the open message a new message waits for, after Reply (steward decision, 2026-10-24)"
+
+  attr :editing?, :boolean,
+    default: false,
+    doc: "`mine` is a closed message the author edits (steward decision, 2026-10-24)"
+
   attr :roles, :map, required: true
   attr :author, :map, required: true
   attr :now, DateTime, required: true
@@ -1874,10 +2136,14 @@ defmodule IdejoWeb.TopicLive do
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
   # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
-    %{mine: mine, now: now} = assigns
+    %{now: now} = assigns
+    # The timer runs for the open message, or for the one a new message waits for; an edit
+    # has none (Ctrl+Enter ends it at any time).
+    mine = if assigns.editing?, do: nil, else: assigns.mine || assigns.locked
 
     assigns =
       assign(assigns,
+        timed: mine,
         left: mine && DateTime.diff(mine.closes_at, now),
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
@@ -1889,8 +2155,19 @@ defmodule IdejoWeb.TopicLive do
 
     ~H"""
     <section aria-label={gettext("Your message")} class="message message-mine">
+      <%!-- Appends to messages above while the author types (steward decision, 2026-10-25):
+           the Composer hook fills it; decorative, like the burn it counts. --%>
+      <div
+        id="composer-appended"
+        class="composer-appended"
+        phx-update="ignore"
+        aria-hidden="true"
+        data-label-one={gettext("1 message above has been appended")}
+        data-label-other={gettext("%{count} messages above have been appended", count: "%{count}")}
+      >
+      </div>
       <p :if={@mine} class="message-head"><.author_line author={@author} roles={@roles} /></p>
-      <div :if={@reply_to} id="replying-to" class="message-quote">
+      <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
           <button type="button" class="link ml-2" phx-click="cancel_reply">
@@ -1905,7 +2182,12 @@ defmodule IdejoWeb.TopicLive do
         phx-hook="Composer"
         phx-update="ignore"
         data-sent={@mine && @mine.body_md}
+        data-editing={@editing?}
         data-commands={Jason.encode!(@commands)}
+        data-label-send={gettext("Enter to send")}
+        data-label-sent={gettext("Sent!")}
+        data-label-continue={gettext("Continue typing to add to your message")}
+        data-label-visible={gettext("Message now visible to all!")}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
@@ -1938,7 +2220,7 @@ defmodule IdejoWeb.TopicLive do
         id="composer-timer"
         class="composer-timer"
         phx-hook="ComposerTimer"
-        data-start={DateTime.to_unix(@mine.opened_at, :millisecond)}
+        data-start={DateTime.to_unix(@timed.opened_at, :millisecond)}
         data-end={DateTime.to_unix(@ready_at, :millisecond)}
         data-now={DateTime.to_unix(@now, :millisecond)}
         aria-hidden="true"
@@ -1946,10 +2228,42 @@ defmodule IdejoWeb.TopicLive do
         phx-mounted={JS.ignore_attributes(["hidden"])}
       >
         <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
+        <%!-- In front of the line while it fills, then in the middle (steward decision,
+             2026-10-25). --%>
+        <span
+          id="composer-timer-bubble"
+          class="tutorial-bubble composer-timer-bubble"
+          phx-update="ignore"
+          data-label-done={gettext("Ctrl+Enter to start new message")}
+        >
+          {gettext("slow mode")}
+        </span>
+        <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
+             decision, 2026-10-25). --%>
+        <span
+          id="composer-timer-hint"
+          class="composer-hint composer-timer-hint"
+          phx-update="ignore"
+          data-labels={
+            Jason.encode!([
+              gettext("You cannot start a new message..."),
+              gettext("...but you can continue the one above."),
+              gettext("[Enter] to send always works.")
+            ])
+          }
+        ></span>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
-          <% is_nil(@mine) -> %>
+          <% @editing? -> %>
+            {gettext(
+              "You are editing your message. Enter saves it; Ctrl+Enter, or Enter three times, saves it and ends the edit."
+            )}
+          <% @locked && @ready_at && DateTime.compare(@ready_at, @now) == :gt -> %>
+            {gettext(
+              "This is a new message. Enter sends it once your open message's timer has ended."
+            )}
+          <% is_nil(@timed) or @locked -> %>
             {gettext("Enter starts a new message.")}
           <% @lone_left && @lone_left > 0 -> %>
             {gettext("Your message is open.")}

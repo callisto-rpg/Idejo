@@ -13,12 +13,14 @@
     <IdejoWeb.Layouts.page_title page_title={assigns[:page_title]} />
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
-    <%!-- The small Idejo logo (steward decision, 2026-10-23). --%>
-    <link rel="icon" type="image/png" href={~p"/images/logo-small.png"} />
+    <%!-- The Idejo favicon (steward decision, 2026-10-24). --%>
+    <link rel="icon" type="image/png" href={~p"/images/favicon.png"} />
     <%!-- CL-01: installable; iPhones and iPads read the touch icon, not the manifest's. --%>
     <link rel="manifest" href={~p"/manifest.webmanifest"} />
     <link rel="apple-touch-icon" href={~p"/images/icon-180.png"} />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- The website theme, Admin → Settings (steward decision, 2026-10-24). --%>
+    <IdejoWeb.Layouts.theme_colours nonce={assigns[:style_csp_nonce]} />
     <%!-- The server's own stylesheet, after Idejo's: Admin → Stylesheet. --%>
     <link
       rel="stylesheet"
@@ -27,6 +29,7 @@
     <IdejoWeb.Layouts.category_colours
       nonce={assigns[:style_csp_nonce]}
       user={assigns[:current_scope] && @current_scope.user}
+      info_boxes={assigns[:info_boxes] || []}
     />
     <IdejoWeb.Layouts.role_colours nonce={assigns[:style_csp_nonce]} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
