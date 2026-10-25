@@ -337,14 +337,43 @@ defmodule IdejoWeb.ComposerTest do
   @tag req: "GM-02"
   test "GM-02 a send keeps the composer where it was, above the on-screen keyboard" do
     js = File.read!("assets/js/composer.js")
-    # Measuring the box's height must not leave the page scrolled elsewhere.
+    # A repaint must not leave the page scrolled elsewhere: the scroll is taken before
+    # anything changes and put back after the box is measured.
     assert js =~
-             ~r/const y = window\.scrollY\s*this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
+             ~r/const y = window\.scrollY\s*this\.el\.style\.minHeight = `\$\{this\.el\.offsetHeight\}px`/
+
+    assert js =~
+             ~r/this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*this\.el\.style\.minHeight = ""\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
 
     # The visible band excludes the keyboard; only a box seen when sent is kept in sight.
     assert js =~ "window.visualViewport"
     assert js =~ "const shown = this.inView()"
     assert length(Regex.scan(~r/if \(shown\) this\.reveal\(\)/, js)) == 2
+  end
+
+  # Steward report, 2026-10-25: on phones (Chrome, Firefox) the page still moved up and down
+  # while typing and sending.
+  @tag req: "GM-02"
+  test "GM-02 typing and sending never change the page's height under the author" do
+    js = File.read!("assets/js/composer.js")
+    css = File.read!("assets/css/app.css")
+
+    # The box keeps its height while it repaints, so the page never shrinks for a moment.
+    assert js =~ "this.el.style.minHeight = `${this.el.offsetHeight}px`"
+
+    # The hint's room below the box is kept, the largest, while the box has the focus.
+    assert js =~
+             "this.hintRoom = focused ? Math.max(this.hintRoom || 0, room) : room"
+
+    refute js =~ ~s|this.el.style.paddingBottom = ""\n    const hint|
+
+    # The backdrop, rewritten at every keystroke, is never the scroll anchor.
+    [backdrop] = Regex.run(~r/^\.composer-backdrop \{.*?^\}/ms, css)
+    assert backdrop =~ "overflow-anchor: none"
+
+    # The slow mode hint's room under the timer line stays when the hint goes.
+    assert css =~ ".composer-timer:has(.composer-timer-hint) { margin-bottom: 2rem; }"
+    refute css =~ ".composer-timer:has(.composer-timer-hint:not([hidden]))"
   end
 
   # Steward decision, 2026-10-25.

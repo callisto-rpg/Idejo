@@ -1933,6 +1933,8 @@ html:not([data-js]) .spoiler-cover { display: none; }
   inset: 0;
   pointer-events: none;
   overflow: visible;
+  /* Rewritten at every keystroke: never what the browser keeps the page still by. */
+  overflow-anchor: none;
 }
 .composer-input {
   position: relative;
@@ -2257,7 +2259,8 @@ html:not([data-js]) .spoiler-cover { display: none; }
   text-align: center;
   &[hidden] { display: none; }
 }
-.composer-timer:has(.composer-timer-hint:not([hidden])) { margin-bottom: 2rem; }
+/* The room for it stays once the line is full, so the page does not move when it goes. */
+.composer-timer:has(.composer-timer-hint) { margin-bottom: 2rem; }
 [data-bubbles="off"] .composer-timer:has(.composer-timer-hint) { margin-bottom: 0.625rem; }
 @keyframes composer-timer-bubble { from { left: 0%; } to { left: 100%; } }
 @keyframes composer-timer-bubble-centre {
