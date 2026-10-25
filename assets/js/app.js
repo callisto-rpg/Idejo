@@ -45,12 +45,13 @@ import "./dropdown"
 import "./account_menu"
 import "./push"
 import "./push_banner"
+import {PushSettings} from "./push_settings"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine},
+  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine, PushSettings},
 })
 
 // Show progress bar on live navigation and form submits

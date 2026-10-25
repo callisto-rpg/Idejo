@@ -10,16 +10,9 @@
 // Granted: it says "Notifications are on" and goes; denied: it goes (and the browser never
 // lets it show again). "Not now" records the dismissal on the server and hides it. It never
 // takes the focus; one that was on its buttons goes to the page's main content.
-import {enablePush, pushSupported} from "./push"
+import {appleTouch, enablePush, fromHomeScreen, pushSupported} from "./push"
 
 const ON_MS = 4000
-
-const appleTouch = () =>
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-
-const fromHomeScreen = () =>
-  navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches
 
 const csrfToken = () => document.querySelector("meta[name='csrf-token']")?.content
 

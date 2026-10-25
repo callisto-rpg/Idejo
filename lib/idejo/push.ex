@@ -32,7 +32,7 @@ defmodule Idejo.Push do
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
   alias Idejo.Forum.Topic
-  alias Idejo.Push.{Dispatch, Endpoint, FollowedWorker, Preference, Subscription, Worker}
+  alias Idejo.Push.{Dispatch, Endpoint, FollowedWorker, Payload, Preference, Subscription, Worker}
   alias Idejo.RateLimit
   alias Idejo.Reading.Follow
   alias Idejo.Repo
@@ -356,6 +356,38 @@ defmodule Idejo.Push do
   def wants?(%Preference{} = preference, "mention"), do: preference.mention
   def wants?(%Preference{} = preference, "role_mention"), do: preference.role_mention
   def wants?(%Preference{} = preference, "follow"), do: preference.followed
+
+  @doc """
+  Removes one of `user`'s browsers (PN-24, "Remove"): its endpoint, so the page can end that
+  browser's own subscription when it is this one, or `{:error, :not_found}`.
+  """
+  @spec remove_subscription(User.t(), String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def remove_subscription(%User{id: user_id}, id) when is_binary(id) do
+    with {:ok, uuid} <- Ecto.UUID.cast(id),
+         {1, [endpoint]} <-
+           Repo.delete_all(
+             from s in Subscription,
+               where: s.id == ^uuid and s.user_id == ^user_id,
+               select: s.endpoint
+           ) do
+      {:ok, endpoint}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Sends a test notification to every browser of `user` (PN-24): how many were queued.
+  Rate-limited (`:push_test`).
+  """
+  @spec send_test(User.t()) ::
+          {:ok, non_neg_integer()} | {:error, :disabled | :rate_limited | :too_large}
+  def send_test(%User{} = user) do
+    with :ok <- if(enabled?(), do: :ok, else: {:error, :disabled}),
+         :ok <- RateLimit.check(:push_test, user.id) do
+      deliver(user, Payload.test(user))
+    end
+  end
 
   @doc "Deletes `user`'s subscription with `endpoint`, if there is one."
   @spec unsubscribe(User.t(), String.t()) :: :ok

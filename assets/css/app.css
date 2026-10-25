@@ -955,6 +955,7 @@
     & p[hidden], & button[hidden], & .push-banner-actions[hidden] { display: none; }
   }
   .push-banner-actions { display: flex; gap: 0.5rem; }
+  .push-browser [hidden] { display: none; }
 
   .site-footer {
     display: flex;

@@ -189,3 +189,23 @@ activity**. Only finished messages count, never muted topics. With **Don't send 
 second message in the same week if I don't log in** (on at first) you get at most one a
 week while you stay away; without it, one a day. Nothing new, no email. Each email has a
 link that stops them all in one click.
+
+**Push notifications** show on your computer or phone even when the server is not open.
+A bar on category and topic pages offers them once you have posted or follow a topic:
+**Turn on** asks your browser, **Not now** hides it for two weeks. Under **Push
+notifications** in **Profile and account** you can:
+
+- see whether this browser has them on, and **Turn on** (if your browser blocked them, it
+  says how to allow them again);
+- choose what sends one, for all your devices: **Replies to me**, **@you mentions**,
+  **+role mentions** and **New messages in topics I follow** (at most one every half hour
+  or so, counting the topics);
+- see your devices, with **Remove** for any you no longer use;
+- **Send test notification** to every device.
+
+You get one notification per message, however much it grows, and none while you have that
+topic open. A notification opens the message, or **Unread** when there are several.
+
+**On iPhone or iPad**, notifications come only from the site added to your Home Screen: in
+Safari, tap **Share**, then **Add to Home Screen**, then open the server from its icon and
+turn them on there.

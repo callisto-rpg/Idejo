@@ -957,6 +957,19 @@ roles or the permission grid. Every later change must keep it true:
   request): granted says "Notifications are on" for 4 s, denied hides; "Not now" hides and
   `POST /push/banner/dismiss` (`PushBannerController`, 204). Focus left on its buttons goes
   to `#main`.
+- **Push settings** (PN-11, PN-24; extra review: DV-06): **Profile and account** has a
+  "Push notifications" section while push is on: `#push-browser` (`PushSettings` hook,
+  `assets/js/push_settings.js`, `phx-update="ignore"`) shows this browser's state (on, off
+  with "Turn on", blocked with how to allow it, the iPhone/iPad Home Screen steps,
+  unsupported) and tells the view `"push_endpoint"` (marks "This browser") and
+  `"push_changed"`; the four switches (`Push.update_preferences/2`); the devices
+  (`Push.list_subscriptions/1`, named by `UserSettingsLive.device_name/1` from the user
+  agent, with the date) with Remove (`Push.remove_subscription/2`; this browser's also
+  gets `"push_unsubscribe"`, and push.js keeps it off here with `localStorage`
+  `idejo:push-off` until "Turn on", or `syncPush()` would subscribe it again); "Send test
+  notification" (`Push.send_test/1`, `Payload.test/1`, rate-limited `:push_test`).
+  `appleTouch()`, `fromHomeScreen()`, `currentEndpoint()` and `disablePush()` live in
+  push.js.
 - **Service worker and sync** (PN-17, PN-18): `priv/push/sw.js`, embedded at compile time by
   `ServiceWorkerController` and served at `/sw.js` (no session, `no-cache`,
   `Service-Worker-Allowed: /`); not bundled, it imports nothing. It shows declarative push

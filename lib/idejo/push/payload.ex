@@ -139,6 +139,22 @@ defmodule Idejo.Push.Payload do
     }
   end
 
+  @doc "The payload of \"Send test notification\" (PN-24): it opens the profile page."
+  @spec test(User.t()) :: map()
+  def test(%User{} = user) do
+    %{
+      "web_push" => 8030,
+      "notification" => %{
+        "title" => gettext("Test notification"),
+        "body" => gettext("Notifications from this server work on this device."),
+        "navigate" => Application.fetch_env!(:idejo, :base_uri) <> "/users/settings",
+        "tag" => "test",
+        "lang" => Gettext.get_locale(IdejoWeb.Gettext)
+      },
+      "app_badge" => Reading.for_you(user).count
+    }
+  end
+
   defp tag("reply", message), do: "reply-" <> message.topic_id
   defp tag("mention", _message), do: "mentions"
   defp tag("role_mention", _message), do: "role-mentions"
