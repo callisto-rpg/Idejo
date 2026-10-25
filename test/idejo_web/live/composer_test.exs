@@ -98,8 +98,8 @@ defmodule IdejoWeb.ComposerTest do
     timer = File.read!("assets/js/composer_timer.js")
     assert timer =~ "labelDone"
 
-    # Beside "slow mode", three lines in turn every 1.5 s, monospace like the hint (steward
-    # decision, 2026-10-25); at the bubble's left, or under the line, without room.
+    # With "slow mode", three lines in turn, monospace like the hint (steward decision,
+    # 2026-10-25).
     assert has_element?(
              lv,
              ~s|#composer-timer #composer-timer-hint.composer-hint[phx-update=ignore]|
@@ -108,9 +108,16 @@ defmodule IdejoWeb.ComposerTest do
     assert lv |> element("#composer-timer-hint") |> render() =~
              ~s|data-labels="[&quot;You cannot start a new message...&quot;,&quot;...but you can continue the one above.&quot;,&quot;[Enter] to send always works.&quot;]"|
 
-    assert timer =~ "const HINT_MS = 1500"
-    assert timer =~ ~s|"is-left" : "is-under"|
-    assert timer =~ "for (const el of [this.line, this.bubble, this.hint])"
+    # Under the line, centred, still; each line 3 s (steward decision, 2026-10-25).
+    assert timer =~ "const HINT_MS = 3000"
+    assert timer =~ "for (const el of [this.line, this.bubble])"
+
+    [hint_css] =
+      Regex.run(~r/^\.composer-timer-hint \{.*?^\}/ms, File.read!("assets/css/app.css"))
+
+    assert hint_css =~ "top: calc(100% + 0.625rem)"
+    assert hint_css =~ "text-align: center"
+    refute hint_css =~ "animation"
 
     # After a send the hint first says the message is visible to all, for 2 s.
     assert has_element?(lv, ~s|#composer[data-label-visible="Message now visible to all!"]|)
