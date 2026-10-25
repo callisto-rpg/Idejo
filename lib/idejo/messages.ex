@@ -92,9 +92,14 @@ defmodule Idejo.Messages do
 
     * `:break` - Ctrl+Enter. Defaults to `false`.
     * `:reply_to_id` - when this Enter opens a message, the message it replies to (TP-08).
+    * `:new` - `text` is a new message, written after "Reply" (steward decision,
+      2026-10-24), not the open one: the open message closes first. Allowed when Ctrl+Enter
+      would start a new message (`may_start_new?/2`) or, for a reply, at any time while the
+      `gm_early_reply` setting is on; else `{:error, :too_soon}`, and nothing changes.
   """
   @spec commit(User.t(), Topic.t(), String.t(), keyword()) ::
-          {:ok, Message.t() | nil} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
+          {:ok, Message.t() | nil}
+          | {:error, :forbidden | :rate_limited | :too_soon | Ecto.Changeset.t()}
   def commit(%User{} = author, %Topic{} = topic, text, opts \\ []) when is_binary(text) do
     result =
       Repo.transact(fn ->
@@ -109,11 +114,20 @@ defmodule Idejo.Messages do
         end
       end)
 
-    with {:ok, %Message{} = message} <- result do
-      after_commit(message)
-    end
+    case result do
+      # The open message closed for the new one: announced first, so viewers see it end.
+      {:ok, {closed, message}} ->
+        after_commit(closed)
+        after_commit(message)
+        {:ok, message}
 
-    result
+      {:ok, %Message{} = message} ->
+        after_commit(message)
+        result
+
+      result ->
+        result
+    end
   end
 
   defp commit_locked(author, topic, text, opts) do
@@ -124,6 +138,9 @@ defmodule Idejo.Messages do
       open == nil and text == "" ->
         {:ok, nil}
 
+      open != nil and opts[:new] == true ->
+        start_over(author, topic, open, text, now, opts[:reply_to_id])
+
       # SP-05: and a new message counts towards the new messages a minute.
       open == nil ->
         with :ok <- RateLimit.check(:new_message, author.id),
@@ -131,6 +148,20 @@ defmodule Idejo.Messages do
 
       true ->
         append(open, text, now, Keyword.get(opts, :break, false))
+    end
+  end
+
+  # A new message while one is open (`:new`): the open one closes first (GM-09: one open).
+  defp start_over(_author, _topic, _open, "", _now, _reply_to_id), do: {:ok, nil}
+
+  defp start_over(author, topic, open, text, now, reply_to_id) do
+    early? = reply_to_id not in [nil, ""] and Settings.get(:gm_early_reply)
+
+    with :ok <- if(early? or may_start_new?(open, now), do: :ok, else: {:error, :too_soon}),
+         :ok <- RateLimit.check(:new_message, author.id),
+         {:ok, closed} <- close_locked(open, now),
+         {:ok, message} <- open_new(author, topic, text, now, reply_to_id) do
+      {:ok, {closed, message}}
     end
   end
 
@@ -340,10 +371,17 @@ defmodule Idejo.Messages do
 
   Refused with `{:error, :forbidden}` for someone else's message, an open one, or in a locked or
   archived topic; `{:error, :blank}` for empty text.
+
+  ## Options
+
+    * `:version` - `:auto` (the default) as above; `:always` keeps the previous text as a
+      version whenever the text changes, appends too; `:never` keeps none. Editing in the
+      composer (steward decision, 2026-10-24) keeps one version per edit: `:always` for
+      its first change, `:never` for the Enters after it.
   """
-  @spec edit(User.t(), Message.t(), String.t()) ::
+  @spec edit(User.t(), Message.t(), String.t(), keyword()) ::
           {:ok, Message.t()} | {:error, :forbidden | :blank | Ecto.Changeset.t()}
-  def edit(%User{} = author, %Message{} = message, text) when is_binary(text) do
+  def edit(%User{} = author, %Message{} = message, text, opts \\ []) when is_binary(text) do
     text = String.trim_trailing(text)
 
     result =
@@ -358,7 +396,7 @@ defmodule Idejo.Messages do
           not Forum.can_post?(author, topic) -> {:error, :forbidden}
           String.trim(text) == "" -> {:error, :blank}
           text == message.body_md -> {:ok, message}
-          true -> save_edit(author, message, text, topic)
+          true -> save_edit(author, message, text, topic, Keyword.get(opts, :version, :auto))
         end
       end)
 
@@ -464,9 +502,15 @@ defmodule Idejo.Messages do
     end
   end
 
-  defp save_edit(author, message, text, topic) do
+  defp save_edit(author, message, text, topic, version) do
     now = DateTime.utc_now()
-    edit? = not String.starts_with?(text, message.body_md)
+
+    edit? =
+      case version do
+        :auto -> not String.starts_with?(text, message.body_md)
+        :always -> true
+        :never -> false
+      end
 
     with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
          {:ok, message} <- update_body(message, text, true, edit?),

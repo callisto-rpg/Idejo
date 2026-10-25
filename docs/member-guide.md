@@ -15,9 +15,15 @@ What is different is how you write: **your message grows as you go.**
 | **Enter** | Sends what you wrote. Everyone sees it at once. Keep typing and press Enter again: it joins the **same message**, on the same line. |
 | **Shift+Enter** | A line break, as in any text box. Nothing is sent. |
 | **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
+| **Ctrl+Enter** outside the box | Anywhere on the topic's page (not in another text box): starts a new message, sending what you had not sent yet, and puts the cursor in the box. While you cannot start one yet, it only puts the cursor at the end of your message, to go on writing. |
 | **Enter** three times | The same as Ctrl+Enter: press Enter three times in a row, quickly, without typing in between. This is how it works on a phone or tablet, which has no Ctrl. |
 
-The text box below the topic is where you write. Its placeholder repeats the keys.
+The text box below the topic is where you write. Its placeholder repeats the keys, and a
+small bubble beside the cursor says **Enter to send**; once you press it, **Sent!**, with
+"Message now visible to all!" for two seconds, then "Continue typing to add to your
+message" until you type again. These **tutorial bubbles**
+(also on the timer line below, and on the sidebar's **×**) can be turned off with
+**Tutorial bubbles**: **Off**, in the menu under your name or at the top of **Help**.
 
 ## How a message grows
 
@@ -27,13 +33,19 @@ The text box below the topic is where you write. Its placeholder repeats the key
    message. If your sentence had no punctuation, Idejo adds a full stop.
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
+   What others add to their messages glows the same way. While you type, a bubble over your
+   message counts the messages above it that grew ("2 messages above have been appended");
+   it fades when you scroll up to read them.
 3. For a short while after your message starts (15 seconds, unless your server changed it),
    you can only add to it. Nothing shows this to others; it only means that one quick
    thought stays one message. While nobody has written below it, that lasts longer: until
    your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
    line, so when you write alone your thoughts stay one message. A thin orange line under
-   the box fills up meanwhile; when it reaches the end it flashes and goes, and Ctrl+Enter
-   starts a new message. If someone writes below you, it jumps to the shorter wait.
+   the box fills up meanwhile, a **slow mode** bubble in front of it, and under it "You
+   cannot start a new message...", "...but you can continue the one above." and "[Enter] to
+   send always works." take turns; when it reaches the
+   end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start
+   new message**, and Ctrl+Enter starts a new message. If someone writes below you, it jumps to the shorter wait.
 4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is
    complete, and your next line starts a new message.
 
@@ -46,8 +58,12 @@ topic is locked, or when a moderator closes it.
 
 - **While your message is open**, change the text right in the box and press Enter. The
   changed part shows as unsent until you do.
-- **After it is complete**, use **Edit** under it.
-- **To delete it**, use **Edit**, remove all the text and save. You are asked "Are you sure
+- **After it is complete**, use **Edit** under it: the box opens in your message with its
+  text, and you change it or add to it as while writing, Enter saving each time. There is no
+  timer: **Ctrl+Enter** (or Enter three times) saves and finishes the edit whenever you like.
+  The text from before the edit is kept once, as an earlier version, however many times you
+  pressed Enter.
+- **To delete it**, use **Edit**, remove all the text and press Enter. You are asked "Are you sure
   you want to delete your own message?"; **Yes** deletes it, and others see "Message deleted
   by user" in its place (moderators can still read it). The first message of a topic cannot
   be deleted this way.
@@ -61,8 +77,17 @@ change and keeps no history.
 
 ## Around a message
 
+A message's actions (**React**, **Edit**, **Reply** and the others) show when you point at
+the message. On a phone or tablet, tap the message: they open in a bubble under it, which
+goes away when you tap elsewhere or scroll.
+
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
-  reply** to undo it). Your next new message is shown as a reply to theirs.
+  reply** to undo it), and the box is a new message, shown as a reply to theirs. If your
+  own message is still open, sending the reply completes it (when the server allows replies
+  while the timer runs, as it does unless an administrator turned it off). Cancel the reply
+  and the box stays a new message: Enter then says **You cannot post a new message yet**
+  until your open message could be completed with Ctrl+Enter. **Append to my message** puts
+  what you typed back after your open message instead.
 - **Inline links**, highlighted in the message:
   - **@username** mentions someone: they get a notification and follow the topic (unless
     they unfollowed it).
@@ -79,12 +104,13 @@ change and keeps no history.
 - **Emoji**: write `:name:`, such as `:joy:`, `:tada:` or `:+1:`, or type an emoji; it shows
   as a picture. This server also has its own: `:agree:`, `:disagree:`, `:this:`, `:same:`,
   `:yes:`, `:no:`, `:bruh:`, `:nice:`, `:oof:`, `:thank-you:`, `:true:`.
-- **Reactions**: point at a message and click **🙂** for eight quick choices, or **+** for
+- **Reactions**: click **React** under a message for eight quick choices (a click elsewhere
+  closes them), or **+** for
   every emoji (with a search box). Your reactions show under the message, with a count when
   several people chose the same one; click one to add yours or take it back. You may add
   several. The author is told once per message how many reactions it has.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box, or use
-  **!image** (below). In the editor for a new topic or an edit, there is also **Add image**.
+  **!image** (below). In the editor for a new topic, there is also **Add image**.
 - **Commands**: type **!** at the start of a word in the box for a list of commands. Pick one
   with a click, or type its name or use the arrow keys, then **Enter** (or **Tab**):
   - **!image** opens your files; the picture goes at the end of your message.
@@ -96,7 +122,8 @@ change and keeps no history.
   - **!poll** sends what you wrote, then asks for a question, its answers (**Add an answer**
     for more than two, at most ten), whether **several answers** may be chosen, and in how
     many hours it closes (decimals work; at most 168). The poll goes under your message, one
-    per message. Anyone who may post in the topic votes, and may **Change vote** until it
+    per message; with nothing written, the poll is posted on its own, its question as the
+    message. Anyone who may post in the topic votes, and may **Change vote** until it
     closes. You see the counts from the start, others once they voted, and everyone once it
     closed; nobody sees who voted for what.
   - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
@@ -159,7 +186,9 @@ change and keeps no history.
   mention you or one of your roles; its colour is that of the strongest, as for the
   sidebar's dots. It updates by itself.
 - **Back in a topic** you opened before, the page opens on the oldest message you have not
-  seen, under a red **N unread messages** line that fades after a few seconds.
+  seen, under a red **N unread messages** line that fades after a few seconds. An unread
+  message that mentions you (red) or one of your roles (blue) glows in that colour as you
+  reach it, and the mention in it pulses.
 - **Jump to a message**: once you scroll past a topic's title, a card at the right shows the
   title with **First message**, **First unread**, **Last message** and **My last message**.
   Where there is no room beside the conversation (on a phone), it is a small round button at

@@ -45,6 +45,32 @@ defmodule Idejo.SettingsTest do
   end
 
   @tag req: "AD-02"
+  test "AD-02 the website theme has the steward's colours until changed", %{admin: admin} do
+    assert Settings.theme() == %{
+             primary: "#daa304ff",
+             secondary: "#f2c94c",
+             tertiary: "#b8860b",
+             light_bg: "#fdfcf6",
+             dark_bg: "#1d1a00"
+           }
+
+    assert {:ok, _} =
+             Settings.update_settings(admin, %{
+               "theme_primary" => " #3366FF ",
+               "theme_dark_bg" => "#11223380"
+             })
+
+    assert %{primary: "#3366ff", dark_bg: "#11223380", secondary: "#f2c94c"} = Settings.theme()
+
+    for bad <- ["red", "#12345", "#1234567", "##b8860b", "#ggg000", "#fff;}"] do
+      assert {:error, changeset} = Settings.update_settings(admin, %{"theme_tertiary" => bad})
+      assert ["must look like #daa304 or #daa304ff"] = errors_on(changeset).theme_tertiary
+    end
+
+    assert Settings.theme().tertiary == "#b8860b"
+  end
+
+  @tag req: "AD-02"
   test "AD-02 saving unchanged values writes nothing", %{admin: admin} do
     # The push keys (PN-14) are rows of their own, made by a migration.
     stored = Repo.aggregate(Idejo.Settings.Setting, :count)

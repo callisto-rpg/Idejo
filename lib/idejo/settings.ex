@@ -15,7 +15,8 @@ defmodule Idejo.Settings do
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
   email (AD-08), the growing-message window (GM-15, AD-04), the image size limit (TP-12), and
-  the About and Rules texts of the welcome card (Markdown), and the server's stylesheet.
+  the About and Rules texts of the welcome card (Markdown), the server's stylesheet, and the
+  website theme's colours.
   """
 
   import Ecto.Changeset
@@ -63,6 +64,9 @@ defmodule Idejo.Settings do
     # GM-05 (steward decision, 2026-10-23): while nobody has written below a message, its
     # author may start a new one only once it is this many minutes old. Admin → Settings.
     gm_unanswered_minutes: %{type: :integer, default: 10, required: true, range: 1..1440},
+    # Reply starts a new message at any time (steward decision, 2026-10-24): sending it
+    # completes the author's open message even while its timer runs. Admin → Settings.
+    gm_early_reply: %{type: :boolean, default: true},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
@@ -92,8 +96,24 @@ defmodule Idejo.Settings do
     },
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
-    custom_css: %{type: :string, default: @default_css, max: 100_000}
+    custom_css: %{type: :string, default: @default_css, max: 100_000},
+    # The website theme (steward decision, 2026-10-24): buttons, toggles, links and the page
+    # backgrounds, as #rrggbb or #rrggbbaa. Admin → Settings.
+    theme_primary: %{type: :string, default: "#daa304ff", required: true, format: :colour},
+    theme_secondary: %{type: :string, default: "#f2c94c", required: true, format: :colour},
+    theme_tertiary: %{type: :string, default: "#b8860b", required: true, format: :colour},
+    theme_light_bg: %{type: :string, default: "#fdfcf6", required: true, format: :colour},
+    theme_dark_bg: %{type: :string, default: "#1d1a00", required: true, format: :colour}
   }
+
+  @theme_names [
+    theme_primary: :primary,
+    theme_secondary: :secondary,
+    theme_tertiary: :tertiary,
+    theme_light_bg: :light_bg,
+    theme_dark_bg: :dark_bg
+  ]
+  @theme_keys Keyword.keys(@theme_names)
 
   @type key ::
           :server_name
@@ -106,6 +126,7 @@ defmodule Idejo.Settings do
           | :smtp_password
           | :gm_window_seconds
           | :gm_unanswered_minutes
+          | :gm_early_reply
           | :upload_max_mb
           | :server_about
           | :server_rules
@@ -114,6 +135,11 @@ defmodule Idejo.Settings do
           | :push_followed_interval_minutes
           | :push_services
           | :custom_css
+          | :theme_primary
+          | :theme_secondary
+          | :theme_tertiary
+          | :theme_light_bg
+          | :theme_dark_bg
 
   @doc """
   The allowed values of `:registration_mode`: open, or invite-only (AC-02).
@@ -132,7 +158,7 @@ defmodule Idejo.Settings do
   decrypted, or `""` when none is saved or it can no longer be read (e.g. after
   `SECRET_KEY_BASE` changed).
   """
-  @spec get(key()) :: String.t() | integer()
+  @spec get(key()) :: String.t() | integer() | boolean()
   def get(key) when is_map_key(@definitions, key) do
     stored = Repo.get(Setting, Atom.to_string(key))
     decode(key, stored && stored.value)
@@ -141,11 +167,27 @@ defmodule Idejo.Settings do
   @doc """
   Returns every setting with its current value. Secrets are decrypted.
   """
-  @spec all() :: %{key() => String.t() | integer()}
+  @spec all() :: %{key() => String.t() | integer() | boolean()}
   def all do
     stored = Map.new(Repo.all(Setting), &{&1.key, &1.value})
     Map.new(@definitions, fn {key, _} -> {key, decode(key, stored[Atom.to_string(key)])} end)
   end
+
+  @doc """
+  The website theme's colours (steward decision, 2026-10-24), keyed by `:primary`,
+  `:secondary`, `:tertiary`, `:light_bg` and `:dark_bg`, in one query: every page reads them.
+  """
+  @spec theme() :: %{atom() => String.t()}
+  def theme do
+    names = Enum.map(@theme_keys, &Atom.to_string/1)
+    stored = Map.new(Repo.all(from s in Setting, where: s.key in ^names), &{&1.key, &1.value})
+
+    Map.new(@theme_names, fn {key, name} -> {name, decode(key, stored[Atom.to_string(key)])} end)
+  end
+
+  @doc "The theme's setting keys, in the order Admin → Settings shows them."
+  @spec theme_keys() :: [key()]
+  def theme_keys, do: @theme_keys
 
   @doc """
   Returns true when a secret setting holds a value, so a form can say it is saved.
@@ -174,7 +216,7 @@ defmodule Idejo.Settings do
   changed.
   """
   @spec update_settings(User.t(), map()) ::
-          {:ok, %{key() => String.t() | integer()}} | {:error, Ecto.Changeset.t()}
+          {:ok, %{key() => String.t() | integer() | boolean()}} | {:error, Ecto.Changeset.t()}
   def update_settings(%User{} = admin, attrs) do
     changeset = change_settings(attrs)
 
@@ -294,6 +336,14 @@ defmodule Idejo.Settings do
     end)
   end
 
+  defp validate_format_of(changeset, key, :colour) do
+    changeset
+    |> update_change(key, &(&1 && String.downcase(&1)))
+    |> validate_format(key, ~r/^#[0-9a-f]{6}([0-9a-f]{2})?$/,
+      message: "must look like #daa304 or #daa304ff"
+    )
+  end
+
   defp validate_format_of(changeset, _key, nil), do: changeset
 
   defp decode(key, nil), do: default(key)
@@ -302,6 +352,7 @@ defmodule Idejo.Settings do
     case @definitions[key] do
       %{secret: true} -> Secret.decrypt(value) || ""
       %{type: :integer} -> String.to_integer(value)
+      %{type: :boolean} -> value == "true"
       %{type: :string} -> value
     end
   end
@@ -314,7 +365,7 @@ defmodule Idejo.Settings do
   end
 
   @doc "A setting's default value: what it is until an administrator changes it."
-  @spec default(key()) :: String.t() | integer()
+  @spec default(key()) :: String.t() | integer() | boolean()
   def default(key) when is_map_key(@definitions, key) do
     case @definitions[key].default do
       :noreply ->

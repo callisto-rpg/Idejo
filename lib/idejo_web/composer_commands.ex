@@ -36,7 +36,7 @@ defmodule IdejoWeb.ComposerCommands do
         detail: gettext("Add a poll under your message"),
         help:
           gettext(
-            "Sends what you wrote, then asks for a question, its answers, whether several answers may be chosen and how many hours it stays open (decimals work, at most 168). The poll goes under your message, one per message. Anyone who may post here votes and may change their vote until it closes; the counts show once you voted, and to everyone once it closed. Nobody sees who voted for what."
+            "Sends what you wrote, then asks for a question, its answers, whether several answers may be chosen and how many hours it stays open (decimals work, at most 168). The poll goes under your message, one per message; with nothing written, it is posted on its own. Anyone who may post here votes and may change their vote until it closes; the counts show once you voted, and to everyone once it closed. Nobody sees who voted for what."
           )
       },
       %{

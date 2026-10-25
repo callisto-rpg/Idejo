@@ -99,7 +99,9 @@ defmodule IdejoWeb.TopicArchiveDeleteTest do
     refute Repo.get(Message, reply.id)
     refute Messages.OpenMessage.running?(open.id)
     assert Repo.get!(Topic, fork.id).forked_from_message_id == nil
-    assert_error_sent 404, fn -> get(build_conn(), ~p"/t/#{topic.id}/#{topic.slug}") end
+
+    assert redirected_to(get(build_conn(), ~p"/t/#{topic.id}/#{topic.slug}")) ==
+             ~p"/users/sign-in"
 
     {[entry | _], _} = Moderation.list(admin)
     assert entry.action == "topic.delete"

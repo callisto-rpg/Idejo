@@ -56,19 +56,51 @@ defmodule Idejo.Messages.Polls do
           {:ok, summary()}
           | {:error, :forbidden | :taken | :question | :options | :hours | :rate_limited}
   def create(%User{} = user, %Message{} = message, attrs) do
+    with :ok <- may_add?(user, message),
+         {:ok, %{question: question, options: options, seconds: seconds}} <- validate(attrs),
+         :ok <- RateLimit.check(:vote, user.id) do
+      insert(user, message, question, options, attrs["multiple"] in [true, "true"], seconds)
+    end
+  end
+
+  @doc """
+  A poll without a message of its own (steward decision, 2026-10-24): posts a closed message
+  whose text is the question (so excerpts, search and notifications read it), then adds the
+  poll under it. `attrs` as for `create/3`; checked before anything is posted. `reply_to_id`
+  as for `Idejo.Forum.post_message/3`.
+  """
+  @spec post(User.t(), Topic.t(), map(), Ecto.UUID.t() | nil) ::
+          {:ok, Message.t(), summary()}
+          | {:error,
+             :forbidden | :question | :options | :hours | :rate_limited | Ecto.Changeset.t()}
+  def post(%User{} = user, %Topic{} = topic, attrs, reply_to_id \\ nil) do
+    with {:ok, %{question: question}} <- validate(attrs),
+         {:ok, message} <-
+           Forum.post_message(user, topic, %{"body" => question, "reply_to_id" => reply_to_id}),
+         {:ok, summary} <- create(user, message, attrs) do
+      {:ok, message, summary}
+    end
+  end
+
+  defp validate(attrs) do
     question = String.trim(attrs["question"] || "")
 
     options =
       for text <- List.wrap(attrs["options"]), text = String.trim(text), text != "", do: text
 
-    with :ok <- may_add?(user, message),
-         :ok <- if(question == "", do: {:error, :question}, else: :ok),
+    with :ok <- if(question == "", do: {:error, :question}, else: :ok),
          :ok <- if(length(options) in 2..@max_options//1, do: :ok, else: {:error, :options}),
-         {:ok, seconds} <- hours(attrs["hours"]),
-         :ok <- RateLimit.check(:vote, user.id) do
-      insert(user, message, question, options, attrs["multiple"] in [true, "true"], seconds)
+         {:ok, seconds} <- hours(attrs["hours"]) do
+      {:ok, %{question: question, options: options, seconds: seconds}}
     end
   end
+
+  @doc "True for a message posted by `post/4`: its text is only its poll's question."
+  @spec poll_only?(Message.t(), summary() | nil) :: boolean()
+  def poll_only?(_message, nil), do: false
+
+  def poll_only?(%Message{body_md: body}, %{question: question}),
+    do: String.trim(body || "") == question
 
   defp may_add?(user, message) do
     topic = Repo.get!(Topic, message.topic_id)

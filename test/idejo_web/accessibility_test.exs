@@ -11,6 +11,7 @@ defmodule IdejoWeb.AccessibilityTest do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Moderation
+  alias Idejo.Settings.InfoBoxes
   alias IdejoWeb.Accessibility
 
   setup do
@@ -54,6 +55,14 @@ defmodule IdejoWeb.AccessibilityTest do
       Forum.Tags.create_tag(admin, %{"name" => "Seeds #{n}", "category_id" => general.id})
 
     {:ok, _} = Forum.set_topic_tags(admin, topic, [idea.id])
+
+    # An info box on the home page (steward decision, 2026-10-25).
+    {:ok, _} =
+      InfoBoxes.create(admin, %{
+        "title" => "Welcome",
+        "icon" => "general",
+        "body_md" => "Read the [rules](/rules) first.\n\n## Links\n\n- one"
+      })
 
     on_exit(fn ->
       for {_, pid, _, _} <-
@@ -135,6 +144,19 @@ defmodule IdejoWeb.AccessibilityTest do
   end
 
   @tag req: "AX-01"
+  test "AX-01 the dialog over the home page after a topic link one may not view", %{
+    conn: conn,
+    reader: reader
+  } do
+    conn = log_in_user(conn, reader)
+    res = get(conn, ~p"/t/#{Ecto.UUID.generate()}")
+    page = res |> recycle() |> get(~p"/") |> html_response(200)
+
+    assert page =~ ~s(id="topic-unavailable")
+    assert Accessibility.audit(page) == []
+  end
+
+  @tag req: "AX-01"
   test "AX-01 signed-in pages", %{
     conn: conn,
     general: general,
@@ -172,6 +194,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/moderation",
       ~p"/moderation/log",
       ~p"/admin",
+      ~p"/admin/info-boxes",
       ~p"/admin/email",
       ~p"/admin/users",
       ~p"/admin/users/#{admin.id}",
@@ -238,7 +261,10 @@ defmodule IdejoWeb.AccessibilityTest do
              "#{String.trim(selector)} hides the focus outline"
     end
 
-    assert css =~ ~r/\.composer:focus-within \{\s*outline: 2px solid/
+    # The composer's box has no ring (steward decision, 2026-10-25): its transparent text
+    # box's caret is drawn by the backdrop instead, 3px wide, which shows where the focus is.
+    assert css =~ ~r/\.composer-input \{[^}]*caret-color: transparent/
+    assert css =~ ~r/\.composer-caret \{[^}]*&::before \{[^}]*width: 3px/
   end
 
   @tag req: "AX-01"
@@ -256,13 +282,23 @@ defmodule IdejoWeb.AccessibilityTest do
     # A moderator: every message has its moderation form.
     assert_accessible(log_in_user(build_conn(), admin), path)
 
-    # Connected, with the message editor open and in Preview.
-    {:ok, view, _html} =
+    # Connected: the author edits their message in the composer.
+    {:ok, own, _html} =
       live_isolated(log_in_user(build_conn(), member), IdejoWeb.TopicLive,
         session: %{"topic_id" => topic.id}
       )
 
     [edited | _] = for m <- Forum.list_messages(topic), m.edited, do: m
+    own |> element("#message-#{edited.id} button", "Edit") |> render_click()
+    assert has_element?(own, "#message-#{edited.id} #composer[data-editing]")
+    assert_fragment_accessible(render(own), "#{path}, editing in the composer")
+
+    # A moderator edits someone else's message in the message editor, opened in Preview.
+    {:ok, view, _html} =
+      live_isolated(log_in_user(build_conn(), admin), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
     view |> element("#message-#{edited.id} button", "Edit") |> render_click()
     assert_fragment_accessible(render(view), "#{path}, editing")
     # The Write / Preview tabs: only the selected one in the Tab order, arrows from the hook.
@@ -307,15 +343,33 @@ defmodule IdejoWeb.AccessibilityTest do
   @tag req: "AX-01"
   test "AX-01 the focus moves into the message editor and back to Edit when it closes", %{
     topic: topic,
-    member: member
+    member: member,
+    admin: admin
   } do
-    {:ok, view, _html} =
+    [edited | _] = for m <- Forum.list_messages(topic), m.edited, do: m
+    edit_button = "#message-#{edited.id}-edit"
+
+    # The author: into the composer, and back to Edit once Ctrl+Enter ends the edit.
+    {:ok, own, _html} =
       live_isolated(log_in_user(build_conn(), member), IdejoWeb.TopicLive,
         session: %{"topic_id" => topic.id}
       )
 
-    [edited | _] = for m <- Forum.list_messages(topic), m.edited, do: m
-    edit_button = "#message-#{edited.id}-edit"
+    own |> element(edit_button) |> render_click()
+    assert_push_event(own, "composer_focus", %{})
+
+    own
+    |> element("#composer")
+    |> render_hook("commit", %{"body" => edited.body_md, "break" => true})
+
+    assert own |> element(edit_button) |> render() =~ ~r/phx-mounted="[^"]*focus/
+
+    # A moderator: into the message editor, and back.
+    {:ok, view, _html} =
+      live_isolated(log_in_user(build_conn(), admin), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
     refute view |> element(edit_button) |> render() =~ "phx-mounted"
 
     view |> element(edit_button) |> render_click()

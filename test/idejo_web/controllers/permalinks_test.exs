@@ -78,7 +78,7 @@ defmodule IdejoWeb.PermalinksTest do
   end
 
   @tag req: "TP-06"
-  test "TP-06 a message visitors may not view is not found", %{
+  test "TP-06 a message visitors may not view leads to sign-in, or home", %{
     conn: conn,
     admin: admin,
     general: general,
@@ -86,9 +86,14 @@ defmodule IdejoWeb.PermalinksTest do
   } do
     {:ok, _} = Access.set_permission(admin, Access.built_in_role!(:guest), general, :view, :deny)
 
-    assert_error_sent 404, fn -> get(conn, ~p"/m/#{message.id}") end
-    assert_error_sent 404, fn -> get(conn, ~p"/m/#{Ecto.UUID.generate()}") end
-    assert_error_sent 404, fn -> get(conn, ~p"/m/nope") end
+    for path <- [~p"/m/#{message.id}", ~p"/m/#{Ecto.UUID.generate()}", ~p"/m/nope"] do
+      res = get(conn, path)
+      assert redirected_to(res) == ~p"/users/sign-in"
+      assert get_session(res, :user_return_to) == path
+    end
+
+    signed_in = build_conn() |> log_in_user(user_fixture())
+    assert redirected_to(get(signed_in, ~p"/m/#{Ecto.UUID.generate()}")) == ~p"/"
 
     member = build_conn() |> log_in_user(user_fixture())
     assert redirected_to(get(member, ~p"/m/#{message.id}"), 302) =~ "#message-#{message.id}"

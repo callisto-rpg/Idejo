@@ -60,6 +60,106 @@ defmodule IdejoWeb.ComposerTest do
     refute composer =~ ~r/\d+\s*s\b/
   end
 
+  # Steward decision, 2026-10-25: bubbles beside the caret and in front of the timer line.
+  @tag req: "GM-07"
+  test "GM-07 bubbles say what Enter and Ctrl+Enter do, beside the caret and the timer line", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+
+    assert has_element?(
+             lv,
+             ~s|#composer[data-label-send="Enter to send"][data-label-sent="Sent!"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#composer[data-label-continue="Continue typing to add to your message"]|
+           )
+
+    enter(lv, "Thinking aloud")
+
+    assert has_element?(
+             lv,
+             ~s|#composer-timer #composer-timer-bubble[data-label-done="Ctrl+Enter to start new message"]|,
+             "slow mode"
+           )
+
+    js = File.read!("assets/js/composer.js")
+    assert js =~ "composer-caret"
+    assert js =~ "labelSent"
+    # No room beside the bubble for the hint: it goes below.
+    assert js =~ ~s|hint.classList.add("is-below")|
+
+    assert File.read!("assets/css/app.css") =~
+             ~r/&\.is-below \{\s*position: absolute;\s*top: calc\(100% \+ 0\.375rem\)/
+
+    timer = File.read!("assets/js/composer_timer.js")
+    assert timer =~ "labelDone"
+
+    # With "slow mode", three lines in turn, monospace like the hint (steward decision,
+    # 2026-10-25).
+    assert has_element?(
+             lv,
+             ~s|#composer-timer #composer-timer-hint.composer-hint[phx-update=ignore]|
+           )
+
+    assert lv |> element("#composer-timer-hint") |> render() =~
+             ~s|data-labels="[&quot;You cannot start a new message...&quot;,&quot;...but you can continue the one above.&quot;,&quot;[Enter] to send always works.&quot;]"|
+
+    # Under the line, centred, still; each line 3 s (steward decision, 2026-10-25).
+    assert timer =~ "const HINT_MS = 3000"
+    assert timer =~ "for (const el of [this.line, this.bubble])"
+
+    [hint_css] =
+      Regex.run(~r/^\.composer-timer-hint \{.*?^\}/ms, File.read!("assets/css/app.css"))
+
+    assert hint_css =~ "top: calc(100% + 0.625rem)"
+    assert hint_css =~ "text-align: center"
+    refute hint_css =~ "animation"
+
+    # After a send the hint first says the message is visible to all, for 2 s.
+    assert has_element?(lv, ~s|#composer[data-label-visible="Message now visible to all!"]|)
+    assert js =~ "const VISIBLE_MS = 2000"
+    assert js =~ ~s|span("composer-hint", this.hintLabel())|
+
+    # Theme colours only (steward decision, 2026-10-25), so a new theme recolours them. Dark
+    # theme: tertiary outline, secondary text, on primary at 50% blurred 6px, the hint in
+    # primary at 60%. Light theme: the primary's contrasting ink on primary at 75%.
+    css = File.read!("assets/css/app.css")
+    [bubble] = Regex.run(~r/^\.tutorial-bubble \{.*?^\}/ms, css)
+    assert bubble =~ "border: 1px solid var(--bubble-line)"
+    assert bubble =~ "color: var(--bubble-ink)"
+    assert bubble =~ "background: var(--bubble-fill)"
+    assert bubble =~ "backdrop-filter: blur(6px)"
+    [light] = Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css)
+    assert light =~ "--bubble-line: var(--color-accent)"
+    assert light =~ "--bubble-ink: var(--color-primary-content)"
+    assert light =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 75%, transparent)"
+    [dark] = Regex.run(~r/^\[data-theme="dark"\] \{.*?^\}/ms, css)
+    assert dark =~ "--bubble-ink: var(--color-secondary)"
+    assert dark =~ "--bubble-fill: color-mix(in oklab, var(--color-primary) 50%, transparent)"
+    assert dark =~ "--bubble-hint: color-mix(in oklab, var(--color-primary) 60%, transparent)"
+    refute Regex.run(~r/^:root,\n\[data-theme="light"\] \{.*?^\}/ms, css) |> hd() =~ "#"
+
+    assert css =~
+             ~r/\.composer-hint \{[^}]*monospace[^}]*font-weight: 300[^}]*var\(--bubble-hint\)/s
+
+    # "Sent!" starts white, text and outline, and turns to the theme's colours in a second.
+    assert bubble =~ "animation: tutorial-bubble-sent 1s"
+
+    assert css =~
+             ~r/@keyframes tutorial-bubble-sent \{\s*from \{ color: #fff; border-color: #fff; \}/
+
+    assert js =~ ~s|span("tutorial-bubble is-sent"|
+    assert js =~ ~s|setProperty("--sent-delay"|
+
+    # The account menu and the Help page turn them off.
+    assert css =~
+             ~r/\[data-bubbles="off"\] \.tutorial-bubble:not\(\.is-always\),\s*\[data-bubbles="off"\] \.composer-hint \{ display: none; \}/
+  end
+
   @tag req: "GM-01"
   test "GM-01 Enter in the composer opens a message for everyone", %{
     conn: conn,
@@ -186,6 +286,84 @@ defmodule IdejoWeb.ComposerTest do
     Idejo.Messages.close(mine)
     _ = render(lv)
     refute has_element?(lv, "#composer-timer")
+  end
+
+  # Steward decision, 2026-10-25: appends by others burn in; the author typing below is told.
+  @tag req: "GM-02"
+  test "GM-02 others' appends burn in, and the composer counts the ones above it", %{
+    conn: conn,
+    topic: topic
+  } do
+    other = user_fixture()
+    {:ok, theirs} = Messages.commit(other, topic, "Their start")
+    {:ok, lv, _html} = watch(conn, topic)
+    enter(lv, "Mine below")
+    [_first, _theirs, mine] = Forum.list_messages(topic)
+
+    # Nothing in the markup tells open from closed (GM-07): the hook burns what a body gains.
+    assert has_element?(lv, "#message-#{theirs.id}-body[phx-hook=ShowAll]")
+    refute render(lv) =~ "data-growing"
+
+    # The bubble over the author's message, its labels from gettext.
+    assert has_element?(
+             lv,
+             ~s|#message-#{mine.id} #composer-appended[phx-update=ignore][aria-hidden=true][data-label-one="1 message above has been appended"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#composer-appended[data-label-other="%{count} messages above have been appended"]|
+           )
+
+    show_all = File.read!("assets/js/show_all.js")
+    assert show_all =~ "export function burnTail"
+    assert show_all =~ ~s|new CustomEvent("idejo:appended"|
+
+    js = File.read!("assets/js/composer.js")
+    # Only appends above the composer, while it has the focus; scrolling up fades it.
+    assert js =~ "Node.DOCUMENT_POSITION_FOLLOWING"
+    assert js =~ "document.activeElement !== this.input"
+    assert js =~ "if (window.scrollY < this.lastY && this.appended.size > 0) this.fadeAppended()"
+
+    # Not a tutorial bubble: turning those off leaves it; the fade lasts 2 s.
+    css = File.read!("assets/css/app.css")
+    assert js =~ ~s|bubble.className = "tutorial-bubble is-always points-up"|
+    assert css =~ ~s|[data-bubbles="off"] .tutorial-bubble:not(.is-always),|
+    assert css =~ "& .is-fading { animation: composer-appended-fade 2s ease-out forwards; }"
+  end
+
+  # Steward decision, 2026-10-25: on phones the page pulled up at each send, hiding the box
+  # under the keyboard.
+  @tag req: "GM-02"
+  test "GM-02 a send keeps the composer where it was, above the on-screen keyboard" do
+    js = File.read!("assets/js/composer.js")
+    # Measuring the box's height must not leave the page scrolled elsewhere.
+    assert js =~
+             ~r/const y = window\.scrollY\s*this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
+
+    # The visible band excludes the keyboard; only a box seen when sent is kept in sight.
+    assert js =~ "window.visualViewport"
+    assert js =~ "const shown = this.inView()"
+    assert length(Regex.scan(~r/if \(shown\) this\.reveal\(\)/, js)) == 2
+  end
+
+  # Steward decision, 2026-10-25.
+  @tag req: "GM-05"
+  test "GM-05 Ctrl+Enter outside the box starts a new message when it may, else goes to the box" do
+    js = File.read!("assets/js/composer.js")
+    assert js =~ ~s|document.addEventListener("keydown", this.onPageKey)|
+    assert js =~ ~s|document.removeEventListener("keydown", this.onPageKey)|
+    # Never from other text fields, links or dialogs, which keep their own Ctrl+Enter.
+    assert js =~
+             ~s|const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dialog[open]"|
+
+    # A new message only when the timer line allows it (or in an edit); the caret in any case.
+    assert js =~
+             ~s|if (this.sent !== "" && (this.el.hasAttribute("data-editing") \|\| mayStartNew())) this.send(true)\n      this.focusEnd()|
+
+    timer = File.read!("assets/js/composer_timer.js")
+    assert timer =~ "export const mayStartNew = () => readyAt === null || Date.now() >= readyAt"
+    assert timer =~ "readyAt = end + skew"
   end
 
   # Steward decision, 2026-10-23: the unanswered message time.

@@ -10,7 +10,8 @@
 //
 // UnreadLine hook, on the "N unread messages" line: the page opens centred on the message
 // below it, unless the address names a message (a permalink, TP-06). The line fades by CSS
-// after 4 s, then the server is told to drop it.
+// after 4 s, then the server is told to drop it. With nothing unread, TopicNav opens the
+// page at its end, where the conversation goes on (steward decision, 2026-10-24).
 
 const CARD_REM = 15
 const GAP_REM = 1
@@ -55,6 +56,7 @@ export const TopicNav = {
     document.addEventListener("keydown", this.onKey)
     document.addEventListener("click", this.onOutside)
     this.place()
+    this.openAtEnd()
   },
 
   updated() { this.place() },
@@ -80,6 +82,17 @@ export const TopicNav = {
     this.el.toggleAttribute("data-shown", shown)
     this.el.dataset.mode = mode
     if (!shown || mode === "card") this.setOpen(false)
+  },
+
+  // Once per page, as UnreadLine does: a reconnect mounts the hook again.
+  openAtEnd() {
+    const id = this.el.closest("[data-topic-id]")?.dataset.topicId
+    if (placed.has(`end:${id}`) || window.location.hash) return
+    placed.add(`end:${id}`)
+    requestAnimationFrame(() => {
+      if (document.getElementById("unread-line")) return
+      window.scrollTo({top: document.documentElement.scrollHeight, behavior: "auto"})
+    })
   },
 
   setOpen(open) {

@@ -48,7 +48,7 @@ have every right, whatever the settings say.
 ## The admin panel
 
 Owners and administrators find **Admin** in the menu under their name, in the top right
-corner. It has seven tabs.
+corner. It has ten tabs.
 
 ### Settings
 
@@ -60,6 +60,10 @@ corner. It has seven tabs.
   has written below a message, its author can start a new one (Ctrl+Enter, or Enter three
   times) only once the message is this old; until then it adds a line to the same message,
   so someone writing alone keeps one message. It applies at once, to open messages too.
+- **Allow replies even if the timer is still running**: on by default. **Reply** always
+  starts a new message; with this on, sending it completes the author's open message at
+  once. Off, a reply waits like Ctrl+Enter: until the window (and, while nobody wrote below,
+  the unanswered message time) has passed.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **Push notifications**: **On** (the default) or **Off**. On, members can turn on
   browser notifications for replies, mentions and topics they follow. Off, they are not
@@ -76,6 +80,20 @@ corner. It has seven tabs.
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
 - **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of every
   page. Until you write one, the page says the server has not published a notice yet.
+- **Theme**: the website's colours, as `#rrggbb` (or `#rrggbbaa` with transparency), typed
+  or chosen with the colour button beside each. **Primary colour** fills buttons, toggles and
+  links; **Secondary colour** and **Tertiary colour** appear only where a second colour is
+  needed. **Light background** and **Dark background** are the page's in the light and dark
+  themes. Text on a colour turns white or near-black, whichever reads better. The page loads
+  again when you save a change, to show it. **Stylesheet** can still override them.
+
+### Info boxes
+
+Cards shown to everyone on the home page, before the categories and drawn like them, with
+your own text: a welcome, links, the next event. **Create info box** takes a **Title**, an
+**Icon** and **Colour** (the same choices as a category's) and a **Text (Markdown)** written
+in the message editor, with its **Preview**. **Edit** changes one, the arrows change their
+order, **Delete** removes one.
 
 ### Email
 

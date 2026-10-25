@@ -1,10 +1,17 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10).
+// Composer hook (M3): the text box is the author's open message (GM-02, GM-08, GM-10), or
+// a closed message of theirs they chose to Edit (data-editing; steward decision, 2026-10-24):
+// Enter saves it, Ctrl+Enter saves it and ends the edit, with no timer.
 // Enter sends the whole text and keeps it in the box; a backdrop behind a transparent
 // textarea draws sent text like any message's and highlights unsent text as temporary.
 // Text just sent "burns" in: bright with a glow, fading into the message (BURN_MS).
+// The backdrop also draws the caret, thicker than the browser's (whose own is transparent),
+// and beside it, at the end of the text, a bubble (steward decision, 2026-10-25): "Enter to
+// send" while something is not sent, then "Sent!" (white, turning to the theme's colours)
+// with a faded "Continue typing to add to your message" until the author types again. The
+// account menu and the Help page turn the bubbles off (theme.js).
 //
 // Commands (steward decision, 2026-10-23), listed after ! by `Suggest`: !image picks an image
 // that lands at the end of the message; !new-topic sends, then goes to "New topic from this"
@@ -120,12 +127,22 @@ export function keptAfterReload(value, sent) {
 
 import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
+import {mayStartNew} from "./composer_timer"
+
+// Where Ctrl+Enter keeps its own meaning (typing elsewhere, a link opening in a new tab), so
+// it never reaches the composer from there.
+const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dialog[open]"
 
 // How long text just sent glows before it reads like the rest (matches .composer-burn).
 const BURN_MS = 2200
+// How long the hint says the message is visible to all, after a send.
+const VISIBLE_MS = 2000
 
 // Enter three times in a row, nothing typed between and each within this of the last, works
 // as Ctrl+Enter (steward decision, 2026-10-23), so phones, which have no Ctrl, can do it too.
+// Room kept between the end of the box and the keyboard (or the bottom of the screen).
+const REVEAL_MARGIN = 48
+
 const ENTER_RUN = 3
 const ENTER_RUN_MS = 1000
 
@@ -140,19 +157,35 @@ export function burnMarks(before, after) {
 
 const escape = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
-const span = (cls, text) => `<span class="${cls}">${escape(text)}</span>`
+const span = (cls, text) => text === "" ? "" : `<span class="${cls}">${escape(text)}</span>`
 
-// The sent text as runs, the characters just sent marked to burn.
-function burnSpans(sent, marks) {
-  let html = "", run = "", burning = null
+// The sent text as runs ([class, text]), the characters just sent marked to burn.
+function burnRuns(sent, marks) {
+  const runs = []
+  let run = "", burning = null
   Array.from(sent).forEach((ch, i) => {
     const b = Boolean(marks[i])
-    if (burning !== null && b !== burning) { html += span(burning ? "composer-sent composer-burn" : "composer-sent", run); run = "" }
+    if (burning !== null && b !== burning) { runs.push([burning ? "composer-sent composer-burn" : "composer-sent", run]); run = "" }
     burning = b
     run += ch
   })
-  if (run) html += span(burning ? "composer-sent composer-burn" : "composer-sent", run)
-  return html
+  if (run) runs.push([burning ? "composer-sent composer-burn" : "composer-sent", run])
+  return runs
+}
+
+// The runs as HTML, with `caret` (HTML) at character `at` of their text, when `at` is a number.
+export function withCaret(runs, at, caret) {
+  let html = "", pos = 0, placed = at == null
+  for (const [cls, text] of runs) {
+    if (!placed && at <= pos + text.length) {
+      html += span(cls, text.slice(0, at - pos)) + caret + span(cls, text.slice(at - pos))
+      placed = true
+    } else {
+      html += span(cls, text)
+    }
+    pos += text.length
+  }
+  return placed ? html : html + caret
 }
 
 export const Composer = {
@@ -169,8 +202,15 @@ export const Composer = {
 
     this.input.addEventListener("input", () => {
       this.enters = 0
+      this.justSent = false
       this.paint()
     })
+    // The caret drawn in the backdrop follows the focus and the selection.
+    this.onSelection = () => { if (document.activeElement === this.input) this.paint() }
+    document.addEventListener("selectionchange", this.onSelection)
+    for (const event of ["focus", "blur", "select", "keyup", "mouseup"]) {
+      this.input.addEventListener(event, () => this.paint())
+    }
     // TP-10: suggestions while typing an inline link; added first, so its Enter picks.
     this.suggest = new Suggest(this.input, this.el.querySelector("[role=listbox]"),
       (sign, q, reply) => this.pushEvent("suggest", {sign, q}, reply),
@@ -180,8 +220,41 @@ export const Composer = {
       e.preventDefault()
       this.send(e.ctrlKey || e.metaKey || this.enterRun())
     })
+    // Ctrl+Enter from anywhere else on the page (steward decision, 2026-10-25): starts a new
+    // message when it may, sending what is not sent yet, and puts the caret at the end of the
+    // box; when it may not yet, only the caret goes there, so the author goes on writing.
+    this.onPageKey = e => {
+      if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || e.isComposing || e.defaultPrevented) return
+      if (e.target === this.input || e.target.closest?.(OWN_CTRL_ENTER)) return
+      if (document.querySelector("dialog[open]")) return
+      e.preventDefault()
+      if (this.sent !== "" && (this.el.hasAttribute("data-editing") || mayStartNew())) this.send(true)
+      this.focusEnd()
+    }
+    document.addEventListener("keydown", this.onPageKey)
+    // Appends to other messages above while the author types here (steward decision,
+    // 2026-10-25): a bubble over the message counts them, until the author scrolls up.
+    this.appended = new Set()
+    this.appendedBox = document.getElementById("composer-appended")
+    this.onAppended = e => {
+      if (document.activeElement !== this.input || !this.appendedBox) return
+      const message = e.detail.closest("#messages > li")
+      if (!message || message.contains(this.el)) return
+      if (!(message.compareDocumentPosition(this.el) & Node.DOCUMENT_POSITION_FOLLOWING)) return
+      this.appended.add(message.id)
+      this.showAppended()
+    }
+    window.addEventListener("idejo:appended", this.onAppended)
+    this.lastY = window.scrollY
+    this.onScroll = () => {
+      if (window.scrollY < this.lastY && this.appended.size > 0) this.fadeAppended()
+      this.lastY = window.scrollY
+    }
+    window.addEventListener("scroll", this.onScroll, {passive: true})
     // The server says what it holds of the open message, e.g. after a reconnect.
     this.handleEvent("composer_sent", ({body}) => this.restore(body))
+    // Edit (steward decision, 2026-10-24): the box takes the focus, the caret at the end.
+    this.handleEvent("composer_focus", () => this.focusEnd())
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
     // unsent, like anything typed.
     onImages(this.input, files => this.upload("composer_image", files))
@@ -199,6 +272,43 @@ export const Composer = {
       this.paint()
     })
     this.paint()
+  },
+
+  destroyed() {
+    document.removeEventListener("selectionchange", this.onSelection)
+    document.removeEventListener("keydown", this.onPageKey)
+    window.removeEventListener("idejo:appended", this.onAppended)
+    window.removeEventListener("scroll", this.onScroll)
+  },
+
+  showAppended() {
+    const box = this.appendedBox
+    const n = this.appended.size
+    const label = n === 1 ? box.dataset.labelOne : box.dataset.labelOther.replace("%{count}", n)
+    let bubble = box.querySelector(".tutorial-bubble")
+    if (!bubble) {
+      bubble = document.createElement("span")
+      bubble.className = "tutorial-bubble is-always points-up"
+      bubble.addEventListener("animationend", e => {
+        if (e.animationName !== "composer-appended-fade") return
+        bubble.remove()
+        this.appended.clear()
+      })
+      box.appendChild(bubble)
+    }
+    bubble.classList.remove("is-fading")
+    bubble.textContent = label
+  },
+
+  // Scrolling up: the author is looking; the count fades out (2 s) and starts again.
+  fadeAppended() {
+    this.appendedBox?.querySelector(".tutorial-bubble")?.classList.add("is-fading")
+  },
+
+  // The caret at the end of the box, which takes the focus.
+  focusEnd() {
+    this.input.focus()
+    this.input.setSelectionRange(this.input.value.length, this.input.value.length)
   },
 
   command(name) {
@@ -256,19 +366,31 @@ export const Composer = {
   send(isBreak, then) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value)
+    // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
+    // delete it.
+    if (body === "" && this.el.hasAttribute("data-editing")) {
+      if (this.sent !== "") this.pushEvent("commit", {body: "", break: isBreak})
+      return
+    }
     if (body === "") return
     if (!isBreak && body === this.sent.replace(/\s+$/, "")) return
 
     const before = this.sent
+    // Seen when sent (steward decision, 2026-10-25): it stays in sight, unless the author had
+    // scrolled away from it.
+    const shown = this.inView()
     const separator = isBreak ? "\n" : " "
     // Keep the caret where it was unless it was at the end of the text (GM-02).
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
     this.input.value = body + separator
     this.sent = this.input.value
+    this.justSent = true
+    this.sentAt = performance.now()
     this.burn = {marks: burnMarks(before, this.sent), sent: this.sent, start: performance.now()}
     const position = atEnd ? this.input.value.length : caret
     this.input.setSelectionRange(position, position)
     this.paint()
+    if (shown) this.reveal()
 
     this.pushEvent("commit", then ? {body, break: isBreak, then} : {body, break: isBreak}, reply => {
       const typed = this.input.value.startsWith(this.sent) ? this.input.value.slice(this.sent.length) : ""
@@ -288,6 +410,9 @@ export const Composer = {
         this.sent = reply.body + separator
       }
       this.paint()
+      // The page has the server's answer by now (the first Enter moves the box into the
+      // message, under the author's name).
+      if (shown) this.reveal()
     })
   },
 
@@ -297,13 +422,19 @@ export const Composer = {
     // A burn shows while it lasts and while the sent text is still the start of the box.
     const burning = elapsed < BURN_MS && this.burn.sent === this.sent && value.startsWith(this.sent)
 
-    const html = burning
-      ? burnSpans(this.sent, this.burn.marks) +
-        (value.length > this.sent.length ? span("composer-unsent", value.slice(this.sent.length)) : "")
-      : sentRuns(this.sent, value).map(([text, sent]) => span(sent ? "composer-sent" : "composer-unsent", text)).join("")
+    const runs = burning
+      ? [...burnRuns(this.sent, this.burn.marks), ["composer-unsent", value.slice(this.sent.length)]]
+      : sentRuns(this.sent, value).map(([text, sent]) => [sent ? "composer-sent" : "composer-unsent", text])
+
+    const {selectionStart: start, selectionEnd: end} = this.input
+    const caretAt = document.activeElement === this.input && start === end ? start : null
 
     // The extra space keeps a trailing line break visible in the backdrop.
-    this.backdrop.innerHTML = html + " "
+    this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt)) + " "
+    this.fitHint()
+    // "Sent!" turns from white to the theme's colours once, whatever repaints it.
+    this.backdrop.querySelector(".is-sent")
+      ?.style.setProperty("--sent-delay", `-${performance.now() - this.sentAt}ms`)
     // Repaints (every keystroke) keep the animation where it was: a negative delay, set
     // through the DOM, never a style attribute (SP-05).
     if (burning) {
@@ -311,7 +442,75 @@ export const Composer = {
       clearTimeout(this.burnTimer)
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
+    // Measuring shrinks the box for a moment, and the page with it: scrolled to its end (a
+    // phone with its keyboard open), the browser would pull the page up and leave it there,
+    // the box sliding under the keyboard. The scroll goes back where it was.
+    const y = window.scrollY
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
+    if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
+  },
+
+  // The part of the page the reader sees: the visual viewport, without an on-screen keyboard.
+  visibleBand() {
+    const vv = window.visualViewport
+    return vv ? {top: vv.offsetTop, bottom: vv.offsetTop + vv.height} : {top: 0, bottom: window.innerHeight}
+  },
+
+  inView() {
+    const r = this.input.getBoundingClientRect()
+    const {top, bottom} = this.visibleBand()
+    return r.bottom > top && r.top < bottom
+  },
+
+  // After a send the box can grow a line, or move down under the author's name (the first
+  // Enter): scrolls just enough to keep its end above the keyboard.
+  reveal() {
+    const r = this.input.getBoundingClientRect()
+    const {bottom} = this.visibleBand()
+    const below = r.bottom + REVEAL_MARGIN - bottom
+    if (below > 0) window.scrollBy(0, below)
+  },
+
+  // The caret, and at the end of the text its bubble: "Enter to send" while something is not
+  // sent, "Sent!" once it is, and the hint while nothing new was typed since.
+  caret(value, at) {
+    const labels = this.el.dataset
+    const atEnd = value.slice(at).trim() === ""
+    const pending = value.replace(/\s+$/, "") !== this.sent.replace(/\s+$/, "")
+    let bubbles = ""
+    if (atEnd && value.trim() !== "") {
+      if (pending) bubbles = span("tutorial-bubble", labels.labelSend || "")
+      else {
+        if (this.justSent) bubbles = span("tutorial-bubble is-sent", labels.labelSent || "")
+        bubbles += span("composer-hint", this.hintLabel())
+      }
+    }
+    return `<span class="composer-caret">${bubbles && `<span class="composer-caret-bubbles">${bubbles}</span>`}</span>`
+  },
+
+  // The hint: "Message now visible to all!" for VISIBLE_MS after a send, then "Continue
+  // typing to add to your message" (steward decision, 2026-10-25), repainted when it changes.
+  hintLabel() {
+    const labels = this.el.dataset
+    const shown = this.justSent ? performance.now() - this.sentAt : Infinity
+    if (shown >= VISIBLE_MS) return labels.labelContinue || ""
+    clearTimeout(this.hintTimer)
+    this.hintTimer = setTimeout(() => this.paint(), VISIBLE_MS - shown + 20)
+    return labels.labelVisible || ""
+  },
+
+  // With no room for the hint beside the bubble (on a phone, or late on a line), it goes
+  // below, moved left as far as it must to stay inside the composer, which grows to hold it.
+  fitHint() {
+    this.el.style.paddingBottom = ""
+    const hint = this.backdrop.querySelector(".composer-hint")
+    const box = this.el.getBoundingClientRect()
+    if (!hint || hint.getBoundingClientRect().right <= box.right) return
+    hint.classList.add("is-below")
+    hint.style.maxWidth = `${box.width}px`
+    const r = hint.getBoundingClientRect()
+    if (r.right > box.right) hint.style.translate = `${Math.max(box.right - r.right, box.left - r.left)}px 0`
+    this.el.style.paddingBottom = `${Math.max(0, r.bottom - box.bottom) + 4}px`
   },
 }

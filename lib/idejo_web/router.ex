@@ -53,6 +53,8 @@ defmodule IdejoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    # The visitors' card on the home page (steward decision, 2026-10-24).
+    post "/continue-as-guest", GuestNoticeController, :dismiss
 
     # Public pages (AC-05): server-rendered, no JavaScript needed.
     get "/c/:slug", CategoryController, :show
@@ -190,6 +192,7 @@ defmodule IdejoWeb.Router do
 
     live_session :admin, on_mount: [{IdejoWeb.UserAuth, :require_administrator}] do
       live "/", SettingsLive
+      live "/info-boxes", InfoBoxesLive
       live "/email", EmailLive
       live "/users", UsersLive
       live "/invites", InvitesLive

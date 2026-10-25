@@ -64,8 +64,9 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
 4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
 5. A message closes only on Ctrl+Enter after the window (GM-05; with nothing below it, also
-   after the unanswered message time), lock or archive, session disconnect (GM-12) or a
-   moderator (GM-16).
+   after the unanswered message time), its author sending a new message after Reply
+   (`commit/4` with `new: true`; steward decision, 2026-10-24), lock or archive, session
+   disconnect (GM-12) or a moderator (GM-16).
 6. At most one open message per author per topic (GM-09). The first message of a topic is
    never open (GM-14).
 7. Notifications, unread counts and search treat a growing message as one item (GM-13).
@@ -196,6 +197,19 @@ roles or the permission grid. Every later change must keep it true:
   title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
   `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
   credited in `NOTICE` and `REUSE.toml`). Small uppercase labels stay in Rubik.
+- **Website theme** (steward decision, 2026-10-24): five settings in **Admin → Settings**
+  (`theme_primary`, `theme_secondary`, `theme_tertiary`, `theme_light_bg`, `theme_dark_bg`;
+  `#rrggbb` or `#rrggbbaa`; defaults gold `#daa304ff`, `#f2c94c`, `#b8860b`, `#fdfcf6`,
+  `#1d1a00`), read in one query by `Settings.theme/0`. `Layouts.theme_colours/1` (root
+  layout, a nonce `<style>` after `app.css` and before `/theme.css`) sets daisyUI's
+  variables for both themes with daisyUI's own selectors: primary, secondary and accent
+  (the tertiary) with their `-content` (white or `#111111`, `CategoryIcons.contrast/1`),
+  `base-200` the background (the page), `base-100` a little lighter (cards), `base-300` a
+  little darker, `base-content` the other background. So use theme classes and variables
+  (`btn-primary`, `var(--color-primary)`), never fixed colours, for anything the theme
+  should colour: primary by default, secondary or accent only to distinguish or to
+  unemphasise. The daisyUI themes in `app.css` are the fallback when no nonce is set.
+  Saving a theme change reloads the admin page (the root layout only renders on a load).
 - **Server stylesheet** (steward decision, 2026-10-23): the `custom_css` setting, default
   `priv/theme/default.css` (`Settings.default/1`), edited in **Admin → Stylesheet**
   (`Admin.StylesheetLive`: save, reset to default; audited like any setting) and served at
@@ -276,6 +290,12 @@ roles or the permission grid. Every later change must keep it true:
   `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
   renames and moves. Each message's time links to its permalink. When topic pages are paged,
   `/m/{id}` must lead to the right page.
+  A topic, message or category link the reader may not view (missing, deleted or hidden:
+  the same answer, AC-05; steward decision, 2026-10-24) is never a 404: `IdejoWeb.Unavailable`
+  sends a visitor to sign-in with the link as `:user_return_to` (signing in or up leads
+  back), and a signed-in user home, where the `:unavailable` flash (`"topic"` or
+  `"category"`, `Unavailable.message/1`) opens the "Unavailable" `<dialog id="topic-unavailable">` (rendered `open`, closed by a `method="dialog"` form
+  without JavaScript; `data-show-modal` reopens it as a modal).
 - **Posting and inline replies** (TP-08): members post with the composer (`Messages.commit/4`);
   `Forum.post_message/3` still posts one closed message (tests use it). Both need
   `Forum.can_post?/2` (the `:post` right and an open topic; locked and archived take nothing).
@@ -283,6 +303,17 @@ roles or the permission grid. Every later change must keep it true:
   (only moving messages, TP-15, leaves replies across topics);
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
   links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
+  Reply starts a new message (steward decision, 2026-10-24): with the author's message still
+  open, `TopicLive` sets `draft_over` (that message's id), shows it like the others and puts
+  an empty composer at the end; Enter commits with `new: true`, which closes the open
+  message and opens the reply (`Messages.commit/4`). That is allowed at any time while the
+  `gm_early_reply` setting ("Allow replies even if the timer is still running", **Admin →
+  Settings**, on by default) is on, else and without a reply (after "Cancel reply") only when
+  `may_start_new?/2`; otherwise `{:error, :too_soon}`: the text stays and
+  `#too-soon-dialog` says "You cannot post a new message yet. Append your old message.",
+  with "Append to my message" (`"append_to_open"`: the composer is the open message again,
+  `"composer_sent"` keeping what was typed after it). While refused, the composer's timer
+  line runs for the open message.
 - **Live updates stay cheap** (NF-01): `Messages.broadcast/2` sends `{:message, m}` with
   `Messages.shown/0` loaded once; a topic view must do no database work per update (every
   viewer handles every Enter). Keep it so: check with `load/run.sh --hot --writers 10`
@@ -296,6 +327,12 @@ roles or the permission grid. Every later change must keep it true:
   Rights are checked at mount and again on `:permissions_changed`, which
   `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
+- **Message actions** (React, Edit, Reply…; steward decision, 2026-10-25): on screens that
+  point, hidden until the message is hovered or has the focus; on touch screens, with
+  scripts, a pill floating under the message once it is tapped (`data-acting`, set by
+  `assets/js/message_actions.js` and kept across patches by `JS.ignore_attributes`), closed
+  by a tap anywhere but on the pill or by a scroll. Hidden with opacity, never removed, so
+  screen readers reach them; without scripts they stay in place.
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or
@@ -304,19 +341,59 @@ roles or the permission grid. Every later change must keep it true:
   that fills up until Ctrl+Enter may start a new message (the window's end, or the
   unanswered message time's while nobody wrote below: `start_new_at/3`), its front glowing
   white in yellow, then burns in and goes; the hook sets its duration and negative delay
-  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Sent text is drawn like a
+  through the DOM, from the server's `data-start` / `data-end` / `data-now`. Tutorial bubbles
+  (steward decisions, 2026-10-25; `.tutorial-bubble`: a pill blurred 6px with a triangle
+  toward what it explains; theme colours only, through
+  `--bubble-line` / `-ink` / `-fill` / `-hint`: dark theme tertiary outline, secondary text,
+  primary at 50%; light theme `primary-content` on primary at 75%, the hint the primary mixed
+  into `base-content`): "slow mode" rides in front of the line (which
+  stops short by `--bubble-room`, the bubble's width), and once it is full slides to the
+  middle as "Ctrl+Enter to start new message" (`#composer-timer-bubble`, `data-label-done`),
+  while under the line, centred and still, a monospace `.composer-hint`
+  (`#composer-timer-hint`, `data-labels`) shows "You cannot start a new message...",
+  "...but you can continue the one above." and "[Enter] to send always works." in turn
+  every 3 s (`HINT_MS`);
+  beside the caret, at the end of the text, "Enter to send" while something is not sent,
+  then "Sent!" (`.is-sent`: white text and outline turning to the theme's in 1 s, its place
+  kept across repaints by `--sent-delay`) and a faded monospace "Message now visible to
+  all!" for 2 s after the send (`VISIBLE_MS`, `data-label-visible`), then "Continue typing
+  to add to your message"
+  (`.composer-hint`; with no room beside the bubble, `is-below`: under it, kept inside the
+  composer, which grows to hold it) until the author types
+  (`data-label-send` / `-sent` / `-continue`, from gettext). In the sidebar, buttons with
+  `data-bubble` get one at their right on hover or keyboard focus: the ×'s "close & unfollow
+  thread" (on touch screens also for 3 s once a page when the topic on screen's entry shows,
+  `peek()`) and a category's fold button's "Hide topics with / no new messages", or "Show
+  all followed topics" while folded (`data-bubble-folded`). `assets/js/sidebar.js` keeps one
+  `.sidebar-bubble` on `<body>`, placed `fixed` from the button, so the sidebar's scrolling
+  never clips it; any scroll or a swapped sidebar hides it. "Tutorial bubbles" On / Off (`Layouts.bubbles_toggle/1`, in the
+  account menu under Theme and at the right of the Help page's title; hidden without
+  JavaScript) turns them all off: like the theme, theme.js applies `data-bubbles="off"` on
+  `<html>` before paint, remembered in `localStorage` (`idejo:bubbles`), and sends
+  `idejo:bubbles` so the timer line makes room again. Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every
   character under the transparent textarea), and text just sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
-  `animationDelay` set through the DOM, never a style attribute). A faint ring shows the
-  focus (AX-01). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
+  `animationDelay` set through the DOM, never a style attribute). The backdrop also draws
+  the caret, 3px and blinking (`.composer-caret`, an empty inline span at the selection; the
+  text box's own `caret-color` is transparent), which with the bubble shows the focus: the
+  box has no ring (AX-01; steward decision, 2026-10-25). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
   (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
   rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect; the text box is `autocomplete="off"`, and what a browser still puts back on
   reload is cut to what followed the sent text (`keptAfterReload/2`), so the message never
   shows twice. Three Enters in a row, nothing typed between and each within 1 s of the last,
   work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
-  screens too, which have no Ctrl.
+  screens too, which have no Ctrl. A send never moves the page under the author (steward
+  decision, 2026-10-25): `paint()` puts the scroll back after measuring the box (its brief
+  `height: auto` would let a page scrolled to its end, a phone with its keyboard open, pull
+  up), and a box in view when sent (`inView()`) is kept above the keyboard after the send
+  and the server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`). Ctrl+Enter
+  from anywhere else on the page (steward
+  decision, 2026-10-25; `onPageKey`, not from `OWN_CTRL_ENTER`: other text fields, links,
+  open dialogs) sends with `break` when a new message may start (an edit, or
+  `mayStartNew()` from `composer_timer.js`: the line's end has passed, or there is none),
+  then puts the caret at the end of the box (`focusEnd()`); otherwise only the caret.
 - **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the
   `Suggest` list shows the composer's commands (`data-commands` from `TopicLive.commands/2`:
   only those the author may use; no server question; Enter picks one only once a letter
@@ -329,12 +406,17 @@ roles or the permission grid. Every later change must keep it true:
   with the text not sent yet (never sent text: nothing when sent text was changed), and the
   dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours; `!poll` and `!spoiler`
   send what is new with `then: "poll"` / `"spoiler"` (or push `"open_poll"` / `"spoiler"`
-  for the open message; nothing open asks for the message first). The commands are defined
+  for the open message; with nothing open, `!poll` opens the dialog alone and `!spoiler`
+  asks for the message first). The commands are defined
   once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
 - **Polls** (steward decision, 2026-10-23; `Idejo.Messages.Polls`, `polls`, `poll_options`,
   `poll_votes`): `!poll`'s dialog (`PollComponents.poll_dialog/1`, `#poll-dialog`) takes a
   question, 2 to 10 answers, "Allow several answers" and hours like `!schedule` (required,
-  at most 168), for the author's message (one poll each, `create/3`). `PollComponents.poll/1`
+  at most 168), for the author's message (one poll each, `create/3`), or with nothing to
+  go under (steward decision, 2026-10-24) as a closed message of its own whose text is the
+  question (`post/4`, checked before posting; `poll_only?/2`: the body is not shown twice).
+  Dialogs of the `InlineCard` hook keep the `open` that `showModal()` set
+  (`ignoreAttributes`), or a patch would close them. `PollComponents.poll/1`
   shows it under the message (under the composer for the author's open message): a form
   posting `"vote"`; anyone with the post right votes (`Forum.can_post?/2`, not on deleted
   messages), changes or takes back their vote until `closes_at`. Votes are anonymous; counts
@@ -373,17 +455,32 @@ roles or the permission grid. Every later change must keep it true:
   `TopicLive` bodies use `MessageComponents.collapsible_body/1`: the `ShowAll` hook
   (`assets/js/show_all.js`) collapses a body taller than the window, with a "Show all" button,
   and re-measures growing messages. Its state lives in `data-collapsed` / `data-expanded`, kept
-  across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows.
+  across patches by `JS.ignore_attributes`. Without JavaScript the whole body shows. Text a
+  body gains at its end (another user's append, or an edit adding to it) burns in like the
+  composer's (`burnTail/2`, `.composer-burn`; steward decision, 2026-10-25; nothing in the
+  markup marks open messages, GM-07), and `ShowAll` sends `idejo:appended`: while the
+  composer has the focus, appends to messages above it are counted in a bubble over the
+  author's message (`#composer-appended`, `phx-update="ignore"`, "N messages above have been
+  appended"; `.tutorial-bubble.is-always.points-up`, so the Tutorial bubbles toggle leaves
+  it), fading out in 2 s when the author scrolls up.
 - **Edits and earlier versions** (GM-10, GM-11): open messages are edited in the composer;
-  closed ones with `Messages.edit/3` (the author only, in an open topic; the text kept as
-  written, no `.` added), from an "Edit" button that opens the message editor in place.
-  Changing text already there keeps a version and sets `edited`; adding at the end does not.
+  closed ones with `Messages.edit/4` (the author only, in an open topic; the text kept as
+  written, no `.` added). The author's "Edit" (steward decision, 2026-10-24) puts the
+  composer in the message (`TopicLive`'s `composing_edit`, `data-editing`, `composer_place/1`,
+  `"composer_sent"` with its text, `"composer_focus"`): appended to like an open message, no
+  timer; Enter saves, Ctrl+Enter saves and ends the edit at any time (`commit_edit/4`, reply
+  `closed: true`; the composer goes back to the open message or the end, the focus to Edit).
+  One version per edit: `version: :always` at its first change (kept then, so a closed tab
+  loses no history), `:never` after (`edit_versioned?`). A moderator's "Edit" opens the
+  message editor in place (`edit_as_moderator/4`). Otherwise (`version: :auto`), changing
+  text already there keeps a version and sets `edited`; adding at the end does not.
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
   needed) listing each version newest first with the span it was current. `list_messages/1`
   preloads `:versions`.
-- **Deleting one's own message** (steward decision, 2026-10-23): saving an edit with no text
-  asks "Are you sure you want to delete your own message?" (`TopicLive`, `confirm_delete`;
-  "No" is a `method="dialog"` form, so the focus returns to the editor), and "Yes" calls
+- **Deleting one's own message** (steward decision, 2026-10-23): Enter on an emptied edit
+  (the composer sends `""` while `data-editing`) asks "Are you sure you want to delete your
+  own message?" (`TopicLive`, `confirm_delete`; "No" is a `method="dialog"` form, so the
+  focus returns to the composer, still editing), and "Yes" calls
   `Messages.delete_own/2`: like a moderator's delete (MO-02: `deleted_at`, the topic counts
   one less, kept for moderators) but `deleted_by_id` is the author, nothing is logged, and
   the topic's opening message is refused (it stays "can't be blank"). Readers see "Message
@@ -396,6 +493,17 @@ roles or the permission grid. Every later change must keep it true:
   `Recovery` starts that grace for every open message at boot. Moderators close others' open
   messages (`Messages.close_as_moderator/3`, a "Close message" button; logged, MO-03). Tests run with a
   one-hour grace and pass `grace_ms:` when they need one.
+- **Info boxes** (steward decision, 2026-10-25; `Idejo.Settings.InfoBoxes`, `info_boxes`):
+  cards of the administrators' own Markdown (`body_md` and its `body_html`, FD-03, rendered
+  with `Body.to_html/2` as the admin), each with a title, an icon and a `#rrggbb` colour,
+  ordered, made in **Admin → Info boxes** (`Admin.InfoBoxesLive`: one form for new or
+  edited, the message editor with Write / Preview; audited `info_box.create|update|reorder|
+  delete`). The home page shows them to everyone first in the first section's
+  `.category-grid`, as `.category-card.info-box` (no card link, so links in the text work;
+  the mark from `PageHTML.info_box_mark/1`); `--cat` comes from `Layouts.category_colours/1`
+  (`info_boxes` assign, `.info-box-{id}`). The icon and colour picker is
+  `IdejoWeb.Admin.look/1`, shared with Admin → Categories. `Uploads.delete_unused/1` reads
+  their Markdown.
 - **Topic list** (TP-03): the category page lists `Forum.list_topics/2`, 30 a page (`?page=`),
   pinned first, then by `last_activity_at`, with starter, message count, last activity and,
   for signed-in users, the unread marker ("N new"). Every topic list (category, home,
@@ -437,10 +545,21 @@ roles or the permission grid. Every later change must keep it true:
   (`#unread-line`, `.unread-line`; not `.unread-marker`, the lists' "N new") in that
   message's `<li>`; the `UnreadLine` hook (`assets/js/topic_nav.js`) centres the page on it
   unless the address has a `#`, CSS fades it after 4 s and `"unread_line_done"` drops it.
+  With nothing unread (and no `#`), the `TopicNav` hook opens the page at its end (steward
+  decision, 2026-10-24).
+  Unread messages from there on that @mention the reader or +mention one of their roles
+  (`put_mention_glows/1`: links to `/u/{id}` or `/r/{slug}` in the stored HTML, no query
+  but the reader's roles; steward decision, 2026-10-25) carry `data-mention-glow`
+  (`mention` / `role-mention`); the `MentionGlow` hook (`assets/js/mention_glow.js`, on
+  `#messages`, tags in `data-mention-tags`) glows each once, when scrolled to, in its
+  sidebar dot's colour (`data-glowing`, kept by `JS.ignore_attributes`; medium, bigger in
+  0.3 s, held 1 s, faded in 3 s) and pulses the tags naming the reader three times
+  (`.mention-pulse`, 0.5 s each).
 - **Topic navigator** (steward decision, 2026-10-23): `TopicLive`'s `#topic-nav` (named
   `<nav>`), links to `#message-{id}` of the first message, the first unread, the last and the
   reader's last (not deleted). The `TopicNav` hook shows it once the page's `<h1>` is under
-  the header: a card at the right when the space beside `#main > div` fits it, else a pill
+  the header: a card at the right, half way down the space under the header (steward
+  decision, 2026-10-24), when the space beside `#main > div` fits it, else a pill
   at the top right that opens it (`data-shown`, `data-mode`, `data-open`, kept by
   `JS.ignore_attributes`); a jump centres the message and focuses its first control.
   Hidden without JavaScript.
@@ -658,8 +777,9 @@ roles or the permission grid. Every later change must keep it true:
   live bubble. After each change
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
-  several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions
-  (`add_reaction/1`: the eight defaults and +) and the + dialog (`emoji_picker/1`, reusing
+  several chose an emoji; buttons with `aria-pressed`), a "React" `<details>` among the
+  actions, drawn like Edit or Report (`add_reaction/1`: the eight defaults and +; a click
+  outside closes it, `assets/js/account_menu.js`; steward decision, 2026-10-25) and the + dialog (`emoji_picker/1`, reusing
   the `InlineCard` hook with `data-close-event`). The server renders only its frame: the
   `EmojiPicker` hook (`assets/js/emoji_picker.js`, `phx-update="ignore"`) fetches
   `/emoji-index.json?v=` (`EmojiController`, `Emoji.index_json/0`, built at compile time,
@@ -677,7 +797,13 @@ roles or the permission grid. Every later change must keep it true:
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers
   (`PageController`, `CategoryController`) listing only what the visitor may view
   (`Forum.list_viewable_categories/1`, `Forum.get_viewable_category/2`). A category the visitor
-  may not view answers 404, so its name is not given away.
+  may not view is never named: it leads to sign-in, or home with a dialog (see Permalinks).
+  Visitors see a card over the home page (`#guest-notice`; steward decision, 2026-10-24):
+  the logo (`Layouts.full_logo/1`), what
+  they miss without signing in, "Continue without signing in" (a form to
+  `POST /continue-as-guest`, `GuestNoticeController`, which hides it for the session), then
+  Sign in and Sign up. Dialogs a page renders `open` take `data-show-modal`, which
+  `assets/js/open_dialogs.js` turns into modals.
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
@@ -754,10 +880,13 @@ roles or the permission grid. Every later change must keep it true:
   server.
 - **Branding**: the header and page titles show the server name (`IdejoWeb.Layouts.server_name/0`),
   falling back to "Idejo". The Idejo logos (steward decision, 2026-10-23; © Mariano Pictet,
-  CC-BY-4.0, in NOTICE and REUSE.toml): the small one (`/images/logo-small.png`, also
-  `/favicon.ico` and the `rel="icon"`) before the server name in the header; the full one
+  CC-BY-4.0, in NOTICE and REUSE.toml): the small one (`/images/logo-small.svg`, with
+  `logo-small.png` as a raster copy) before the server name in the header; the favicon
+  (`/images/favicon.png`, the `rel="icon"`, and the same bytes at `/favicon.ico`; steward
+  decision, 2026-10-24); the full one
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
-  sign-in, sign-up and setup pages, inverted by the dark theme. Pages set `page_title`; the title reads "Page · Server name". No
+  sign-in, sign-up and setup pages and on the visitors' card, in colour in both themes
+  (steward decision, 2026-10-24). Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface. The square logo, rendered at 180, 192 and 512 px
   (`/images/icon-*.png`), is the app icon: the web app manifest (CL-01,
   `/manifest.webmanifest`, `ManifestController`, no session: the server name, `standalone`)

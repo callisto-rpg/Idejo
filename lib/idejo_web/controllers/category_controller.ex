@@ -16,10 +16,11 @@ defmodule IdejoWeb.CategoryController do
   def show(conn, %{"slug" => slug} = params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
 
-    # A category the visitor may not view is not found, so its name is not given away.
+    # A category the reader may not view leads to sign-in, or home with a dialog, never
+    # giving its name away (steward decision, 2026-10-24).
     case Forum.get_viewable_category(user, slug) do
       nil ->
-        raise Ecto.NoResultsError, queryable: Idejo.Forum.Category
+        IdejoWeb.Unavailable.redirect_away(conn, :category)
 
       category ->
         page = page(params)
