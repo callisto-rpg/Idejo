@@ -32,7 +32,7 @@ defmodule Idejo.Push do
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts.User
   alias Idejo.Forum.Topic
-  alias Idejo.Push.{Dispatch, Endpoint, Preference, Subscription, Worker}
+  alias Idejo.Push.{Dispatch, Endpoint, FollowedWorker, Preference, Subscription, Worker}
   alias Idejo.RateLimit
   alias Idejo.Reading.Follow
   alias Idejo.Repo
@@ -181,33 +181,78 @@ defmodule Idejo.Push do
   @pushed ~w(reply mention role_mention)
 
   @doc """
-  Queues a push for each of a message's notifications that may be pushed (PN-01 to PN-03;
-  `follow` waits for PN-04): one `Idejo.Push.Dispatch` job per user and message, only for
-  users with a browser taking pushes, nothing while push is off. Takes the entries
+  Queues the pushes a message's notifications call for, only for users with a browser
+  taking pushes and nothing while push is off. Takes the entries
   `Idejo.Notifications.announce/1` has: `%{user_id, kind, message_id}`.
+
+    * reply, mention, role_mention (PN-01 to PN-03): one `Idejo.Push.Dispatch` job per user
+      and message;
+    * follow (PN-04): one `Idejo.Push.FollowedWorker` job per user, at most one waiting,
+      due when the last one went `push_followed_interval_minutes` ago (now, if it is longer).
   """
   @spec dispatch([%{user_id: Ecto.UUID.t(), kind: String.t(), message_id: Ecto.UUID.t()}]) ::
           :ok
   def dispatch(entries) do
-    entries = Enum.filter(entries, &(&1.kind in @pushed))
+    entries = Enum.filter(entries, &(&1.kind in ["follow" | @pushed]))
 
     if entries != [] and enabled?() do
-      ids = entries |> Enum.map(& &1.user_id) |> Enum.uniq()
+      subscribed = subscribed(entries |> Enum.map(& &1.user_id) |> Enum.uniq())
+      {followed, pushed} = Enum.split_with(entries, &(&1.kind == "follow"))
 
-      subscribed =
-        Repo.all(
-          from s in Subscription, where: s.user_id in ^ids, distinct: true, select: s.user_id
-        )
-        |> MapSet.new()
-
-      for entry <- entries, MapSet.member?(subscribed, entry.user_id) do
+      for entry <- pushed, MapSet.member?(subscribed, entry.user_id) do
         Oban.insert!(
           Dispatch.new(%{"user_id" => entry.user_id, "message_id" => entry.message_id})
         )
       end
+
+      followed
+      |> Enum.map(& &1.user_id)
+      |> Enum.uniq()
+      |> Enum.filter(&MapSet.member?(subscribed, &1))
+      |> queue_followed()
     end
 
     :ok
+  end
+
+  defp subscribed(user_ids) do
+    Repo.all(
+      from s in Subscription, where: s.user_id in ^user_ids, distinct: true, select: s.user_id
+    )
+    |> MapSet.new()
+  end
+
+  defp queue_followed([]), do: :ok
+
+  defp queue_followed(user_ids) do
+    sent =
+      Repo.all(
+        from p in Preference,
+          where: p.user_id in ^user_ids,
+          select: {p.user_id, p.followed_sent_at}
+      )
+      |> Map.new()
+
+    for user_id <- user_ids do
+      Oban.insert!(
+        FollowedWorker.new(%{"user_id" => user_id}, scheduled_at: followed_due(sent[user_id]))
+      )
+    end
+
+    :ok
+  end
+
+  @doc """
+  When the next followed-activity push (PN-04) may go, after one sent at `sent_at` (nil:
+  never): `push_followed_interval_minutes` later, or now when that has passed.
+  """
+  @spec followed_due(DateTime.t() | nil, DateTime.t()) :: DateTime.t()
+  def followed_due(sent_at, now \\ DateTime.utc_now())
+  def followed_due(nil, now), do: now
+
+  def followed_due(%DateTime{} = sent_at, now) do
+    due = DateTime.add(sent_at, Settings.get(:push_followed_interval_minutes), :minute)
+    if DateTime.after?(due, now), do: due, else: now
   end
 
   @doc """

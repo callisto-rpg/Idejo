@@ -105,6 +105,22 @@ defmodule IdejoWeb.Admin.SettingsLive do
         <p class="text-sm opacity-70 -mt-1 mb-4">
           {gettext("When off, members are not offered browser notifications and none are sent.")}
         </p>
+        <%!-- PN-04 --%>
+        <.input
+          field={@form[:push_followed_interval_minutes]}
+          type="number"
+          label={gettext("Minutes between followed-topic notifications")}
+          min="1"
+          max="1440"
+          step="1"
+          required
+          aria-describedby="push-followed-help"
+        />
+        <p id="push-followed-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "At most one \"new messages in topics you follow\" notification per member in this time."
+          )}
+        </p>
         <.input
           field={@form[:push_services]}
           type="textarea"

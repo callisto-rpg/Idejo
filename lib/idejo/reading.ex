@@ -437,6 +437,29 @@ defmodule Idejo.Reading do
     %{count: count, titles: titles}
   end
 
+  @doc """
+  The topics with unread messages the user was notified of as a follower (`follow` rows:
+  not mentions or replies, PN-05), in categories they may view, not muted, for PN-04:
+  `[{topic_id, latest}]`, `latest` when the newest of those notifications was made.
+  """
+  @spec unread_followed(User.t()) :: [{Ecto.UUID.t(), DateTime.t()}]
+  def unread_followed(%User{id: user_id} = user) do
+    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+
+    user
+    |> unread_messages()
+    |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
+    |> where([topic: t], t.category_id in subquery(viewable))
+    |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
+    |> join(:inner, [m], n in Idejo.Notifications.Notification,
+      as: :notification,
+      on: n.message_id == m.id and n.user_id == ^user_id and n.kind == "follow"
+    )
+    |> group_by([m], m.topic_id)
+    |> select([m, notification: n], {m.topic_id, max(n.created_at)})
+    |> Repo.all()
+  end
+
   # Messages by others opened after the user's read position in their topic, or after the
   # user signed up where they have none.
   defp unread_messages(%User{id: user_id, created_at: signed_up}) do

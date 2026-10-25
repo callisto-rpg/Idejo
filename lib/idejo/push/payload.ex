@@ -14,6 +14,8 @@ defmodule Idejo.Push.Payload do
       Unread page. Tag `mentions`; urgency `high`.
     * role_mention (PN-03): "{name} mentioned +{role} in {topic}", or "Your role has been
       tagged {N} times". Tag `role-mentions`.
+    * followed activity (PN-04, `followed/2`): "There are new messages in {N} topics you
+      follow", the Unread page. Tag `followed`.
 
   N counts the user's unread notifications of that kind (`Idejo.Reading.unread_notified/3`):
   reading them resets it. Nothing is built when there is nothing unread any more. The badge
@@ -111,6 +113,30 @@ defmodule Idejo.Push.Payload do
     |> Access.roles_of()
     |> Enum.map(&Access.role_slug/1)
     |> Enum.find(hd(slugs ++ [""]), &(&1 in slugs))
+  end
+
+  @doc """
+  The payload of a followed-activity push (PN-04): "There are new messages in {N} topics you
+  follow", no excerpt, the Unread page. Tag `followed`.
+  """
+  @spec followed(User.t(), pos_integer()) :: map()
+  def followed(%User{} = user, count) do
+    %{
+      "web_push" => 8030,
+      "notification" => %{
+        "title" =>
+          ngettext(
+            "There are new messages in 1 topic you follow",
+            "There are new messages in %{count} topics you follow",
+            count
+          ),
+        "body" => "",
+        "navigate" => unread_page(),
+        "tag" => "followed",
+        "lang" => Gettext.get_locale(IdejoWeb.Gettext)
+      },
+      "app_badge" => Reading.for_you(user).count
+    }
   end
 
   defp tag("reply", message), do: "reply-" <> message.topic_id
