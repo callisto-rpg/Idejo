@@ -63,6 +63,8 @@ corner. It has seven tabs.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
+- **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of every
+  page. Until you write one, the page says the server has not published a notice yet.
 
 ### Email
 

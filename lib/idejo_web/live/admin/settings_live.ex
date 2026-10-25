@@ -115,6 +115,17 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "Shown to new members on their first visit, with the roles they may choose, and at any time under Rules & Roles."
           )}
         </p>
+        <%!-- AD-02: the privacy notice at /privacy. --%>
+        <.input
+          field={@form[:privacy_notice]}
+          type="textarea"
+          label={gettext("Privacy notice (Markdown)")}
+          rows="8"
+          aria-describedby="privacy-notice-help"
+        />
+        <p id="privacy-notice-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext("Shown on the Privacy page, linked from the foot of every page.")}
+        </p>
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>
