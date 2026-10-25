@@ -842,8 +842,9 @@ defmodule IdejoWeb.Layouts do
   @doc """
   The notifications banner (PN-20 to PN-23): a slim bar in the page's flow under the header,
   so it never covers the composer. Rendered `hidden`; `assets/js/push_banner.js` shows it
-  only where the browser can still be asked (or, in an iPhone or iPad Safari tab, with how to
-  add the site to the Home Screen instead of "Turn on"). A named region, announced politely,
+  only while push is off in this browser and can be turned on (or, in an iPhone or iPad
+  Safari tab, with how to add the site to the Home Screen instead of "Enable"). Its words
+  and buttons, and the tutorial bubble under "Enable", are the steward's (2026-10-25). A named region, announced politely,
   never an alert; it never takes the focus.
   """
   def push_banner(assigns) do
@@ -858,9 +859,7 @@ defmodule IdejoWeb.Layouts do
     >
       <.icon name="hero-bell" class="size-5 shrink-0" />
       <p class="push-banner-offer grow">
-        {gettext(
-          "Get a notification when someone replies to you, mentions you or your role, or posts in topics you follow."
-        )}
+        {gettext("Push notifications not enabled. You will not be notified of new messages.")}
       </p>
       <p class="push-banner-ios grow" hidden>
         {gettext(
@@ -869,11 +868,18 @@ defmodule IdejoWeb.Layouts do
       </p>
       <p class="push-banner-on grow" hidden>{gettext("Notifications are on")}</p>
       <div class="push-banner-actions">
-        <button type="button" class="btn btn-sm btn-primary push-banner-turn-on">
-          {gettext("Turn on")}
-        </button>
+        <%!-- With a tutorial bubble under it (steward decision, 2026-10-25), in the banner's
+             flow so it covers nothing; the Tutorial bubbles toggle hides it. --%>
+        <span class="push-banner-enable">
+          <button type="button" class="btn btn-sm btn-primary push-banner-turn-on">
+            {gettext("Enable")}
+          </button>
+          <span class="tutorial-bubble points-up push-banner-bubble" aria-hidden="true">{gettext(
+            "This can always be\nturned off and on\nin user settings"
+          )}</span>
+        </span>
         <button type="button" class="btn btn-sm btn-ghost push-banner-not-now">
-          {gettext("Not now")}
+          {gettext("Dismiss")}
         </button>
       </div>
     </section>

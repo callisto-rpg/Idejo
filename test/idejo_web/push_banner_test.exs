@@ -56,7 +56,7 @@ defmodule IdejoWeb.PushBannerTest do
     :ok = Reading.follow(newcomer, topic)
     refute Push.banner?(newcomer)
 
-    # "Not now": 14 days, kept on the server.
+    # "Dismiss": 14 days, kept on the server.
     {:ok, _} = Push.dismiss_banner(member)
     refute Push.banner?(member)
 
@@ -85,13 +85,22 @@ defmodule IdejoWeb.PushBannerTest do
       assert LazyHTML.attribute(banner, "hidden") == [""]
 
       assert LazyHTML.text(banner) =~
-               "Get a notification when someone replies to you, mentions you or your role, or posts in topics you follow."
+               "Push notifications not enabled. You will not be notified of new messages."
 
       assert banner |> LazyHTML.query("button.push-banner-turn-on") |> LazyHTML.text() =~
-               "Turn on"
+               "Enable"
+
+      # Under "Enable", a tutorial bubble on three lines (steward decision, 2026-10-25).
+      [bubble] =
+        banner
+        |> LazyHTML.query(".push-banner-enable > .tutorial-bubble.points-up")
+        |> Enum.to_list()
+
+      assert LazyHTML.text(bubble) == "This can always be\nturned off and on\nin user settings"
+      assert LazyHTML.attribute(bubble, "aria-hidden") == ["true"]
 
       assert banner |> LazyHTML.query("button.push-banner-not-now") |> LazyHTML.text() =~
-               "Not now"
+               "Dismiss"
     end
 
     # In the column's flow, before the main content, never over it.
@@ -102,21 +111,23 @@ defmodule IdejoWeb.PushBannerTest do
     assert conn |> banner(~p"/") |> Enum.empty?()
     assert build_conn() |> banner(~p"/c/#{general.slug}") |> Enum.empty?()
 
-    # "Not now" is recorded for the user.
+    # "Dismiss" is recorded for the user.
     assert conn |> post(~p"/push/banner/dismiss") |> response(204)
     assert Push.preferences(member).banner_dismissed_at
     assert conn |> banner(~p"/c/#{general.slug}") |> Enum.empty?()
 
     js = File.read!("assets/js/push_banner.js")
-    # Only "Turn on" asks for permission (through push.js), only when still undecided.
-    assert js =~ ~s|Notification.permission !== "default"|
+    # Only "Enable" asks for permission (through push.js), only while push is off here:
+    # undecided, or allowed but not subscribed.
+    assert js =~ ~s|if (Notification.permission === "default") return true|
+    assert js =~ "return !(await currentEndpoint())"
     assert js =~ "permission = await enablePush()"
     refute js =~ "requestPermission"
     refute File.read!("assets/js/push_banner.js") =~ ".focus({"
   end
 
   @tag req: "PN-22"
-  test "PN-22 iPhone and iPad Safari tabs get the Home Screen steps, without Turn on", %{
+  test "PN-22 iPhone and iPad Safari tabs get the Home Screen steps, without Enable", %{
     topic: topic
   } do
     member = user_fixture()
@@ -134,7 +145,7 @@ defmodule IdejoWeb.PushBannerTest do
 
     js = File.read!("assets/js/push_banner.js")
     assert js =~ "if (appleTouch() && !fromHomeScreen()) {"
-    assert js =~ ~s|part(banner, "turn-on").hidden = true|
+    assert js =~ ~s|part(banner, "enable").hidden = true|
   end
 
   @tag req: "PN-23"
