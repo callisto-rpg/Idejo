@@ -35,6 +35,13 @@ defmodule IdejoWeb.Router do
     get "/theme.css", ThemeController, :show
     # CL-01: the web app manifest, so the site can be installed.
     get "/manifest.webmanifest", ManifestController, :show
+    # PN-17: the service worker, from the root so its scope is the whole site, and the key
+    # it subscribes with.
+    get "/sw.js", ServiceWorkerController, :show
+    get "/push/key", ServiceWorkerController, :key
+    # PN-17: the service worker saves a subscription its push service replaced. The old
+    # endpoint is the authority: a worker has no session cookie or CSRF token to give.
+    post "/push/subscriptions/renew", PushSubscriptionController, :renew
     # TP-17: the + reaction picker's emoji, drawn by the browser.
     get "/emoji-index.json", EmojiController, :index
     # NO-04: the email summary's one-click unsubscribe (RFC 8058). The token in the address
