@@ -44,6 +44,9 @@ import "./title_edit"
 import "./topic_menu"
 import "./dropdown"
 import "./account_menu"
+import "./push"
+import "./push_banner"
+import {PushSettings} from "./push_settings"
 import "./message_actions"
 import "./open_dialogs"
 
@@ -51,7 +54,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine, MentionGlow},
+  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, Notifier, TopicNav, UnreadLine, MentionGlow, PushSettings},
 })
 
 // Show progress bar on live navigation and form submits

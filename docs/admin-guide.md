@@ -65,8 +65,21 @@ corner. It has ten tabs.
   once. Off, a reply waits like Ctrl+Enter: until the window (and, while nobody wrote below,
   the unanswered message time) has passed.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
+- **Push notifications**: **On** (the default) or **Off**. On, members can turn on
+  browser notifications for replies, mentions and topics they follow. Off, they are not
+  offered and none are sent.
+- **Minutes between followed-topic notifications** (30 by default, 1 to 1440): a member
+  gets at most one "There are new messages in N topics you follow" notification in this
+  time, and only when one of those topics has something new since the last.
+- **Push services**: the only hosts the server sends browser notifications to, one per line.
+  The defaults are the services of Chrome and Edge, Firefox, Safari and Windows;
+  `*.example.org` allows any name under `example.org`. Add your own, for example a
+  UnifiedPush server, if members' browsers use one. Addresses on private networks are always
+  refused.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
+- **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of every
+  page. Until you write one, the page says the server has not published a notice yet.
 - **Theme**: the website's colours, as `#rrggbb` (or `#rrggbbaa` with transparency), typed
   or chosen with the colour button beside each. **Primary colour** fills buttons, toggles and
   links; **Secondary colour** and **Tertiary colour** appear only where a second colour is

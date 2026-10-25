@@ -40,7 +40,7 @@ SPDX-License-Identifier = "CC-BY-4.0"
 
 # The Idejo logos (steward decision, 2026-10-23).
 [[annotations]]
-path = ["priv/static/images/logo*", "priv/static/images/favicon.png", "priv/static/favicon.ico"]
+path = ["priv/static/images/logo*", "priv/static/images/favicon.png", "priv/static/images/icon-*", "priv/static/favicon.ico"]
 precedence = "override"
 SPDX-FileCopyrightText = "Mariano Pictet"
 SPDX-License-Identifier = "CC-BY-4.0"

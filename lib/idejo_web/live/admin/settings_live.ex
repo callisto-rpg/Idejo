@@ -128,6 +128,44 @@ defmodule IdejoWeb.Admin.SettingsLive do
           step="1"
           required
         />
+        <%!-- PN-19 --%>
+        <.input
+          field={@form[:push_enabled]}
+          type="select"
+          label={gettext("Push notifications")}
+          options={[{gettext("On"), "on"}, {gettext("Off"), "off"}]}
+        />
+        <p class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext("When off, members are not offered browser notifications and none are sent.")}
+        </p>
+        <%!-- PN-04 --%>
+        <.input
+          field={@form[:push_followed_interval_minutes]}
+          type="number"
+          label={gettext("Minutes between followed-topic notifications")}
+          min="1"
+          max="1440"
+          step="1"
+          required
+          aria-describedby="push-followed-help"
+        />
+        <p id="push-followed-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "At most one \"new messages in topics you follow\" notification per member in this time."
+          )}
+        </p>
+        <.input
+          field={@form[:push_services]}
+          type="textarea"
+          label={gettext("Push services")}
+          rows="4"
+          aria-describedby="push-services-help"
+        />
+        <p id="push-services-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "The only hosts browser notifications are sent to, one per line; *.example.org allows any name under example.org. The defaults are the services of Chrome, Edge, Firefox, Safari and Windows; add yours, for example a UnifiedPush server."
+          )}
+        </p>
         <%!-- The welcome card and "Rules & Roles" (steward decision, 2026-10-23). --%>
         <.input
           field={@form[:server_about]}
@@ -163,6 +201,17 @@ defmodule IdejoWeb.Admin.SettingsLive do
             label={label}
           />
         </fieldset>
+        <%!-- AD-02: the privacy notice at /privacy. --%>
+        <.input
+          field={@form[:privacy_notice]}
+          type="textarea"
+          label={gettext("Privacy notice (Markdown)")}
+          rows="8"
+          aria-describedby="privacy-notice-help"
+        />
+        <p id="privacy-notice-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext("Shown on the Privacy page, linked from the foot of every page.")}
+        </p>
         <.button class="btn btn-primary" phx-disable-with={gettext("Saving…")}>
           {gettext("Save")}
         </.button>

@@ -9,6 +9,8 @@ defmodule IdejoWeb.Layouts do
   use IdejoWeb, :html
 
   alias Idejo.Forum.CategoryIcons
+  alias Idejo.Push
+  alias Idejo.Push.Vapid
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
@@ -46,6 +48,10 @@ defmodule IdejoWeb.Layouts do
   attr :topic, :any,
     default: nil,
     doc: "the topic shown: highlighted in the sidebar, and listed there even when not followed"
+
+  attr :push_banner, :boolean,
+    default: false,
+    doc: "offer browser notifications (PN-20: category and topic pages, `Push.banner?/1`)"
 
   slot :inner_block, required: true
 
@@ -118,6 +124,8 @@ defmodule IdejoWeb.Layouts do
             <button class="btn btn-sm">{gettext("Send the link again")}</button>
           </.form>
         </div>
+
+        <.push_banner :if={@push_banner} />
 
         <%!-- AX-01: the skip link's target; tabindex lets it take the focus in every browser. --%>
         <main id="main" tabindex="-1" class="app-main focus:outline-none">
@@ -771,8 +779,8 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The footer on every page: the attribution notice (LI-02) and the "Source code" link
-  (LI-03).
+  The footer on every page: the attribution notice (LI-02), the "Source code" link (LI-03)
+  and the privacy notice (AD-02).
 
   The notice is kept word for word as NOTICE gives it, and is not translated: section 7(b)
   of the licence requires it to be preserved.
@@ -784,6 +792,7 @@ defmodule IdejoWeb.Layouts do
         Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
       </a>
       <a href={Idejo.Source.url()} id="source-code">{gettext("Source code")}</a>
+      <a href={~p"/privacy"} id="privacy-link">{gettext("Privacy")}</a>
     </footer>
     """
   end
@@ -805,6 +814,77 @@ defmodule IdejoWeb.Layouts do
   """
   @spec server_name() :: String.t()
   def server_name, do: Idejo.Settings.get(:server_name)
+
+  @doc """
+  The server's VAPID public key as `<meta name="push-key">`, for signed-in users while push
+  is on (PN-18, PN-19): `assets/js/push.js` subscribes the browser with it. Nothing for
+  visitors, so they never subscribe.
+  """
+  attr :current_scope, :any, default: nil
+
+  def push_key(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :key,
+        signed_in?(assigns.current_scope) && Push.enabled?() &&
+          Vapid.public_key()
+      )
+
+    ~H"""
+    <meta :if={@key} name="push-key" content={@key} />
+    """
+  end
+
+  defp signed_in?(%{user: %{}}), do: true
+  defp signed_in?(_scope), do: false
+
+  @doc """
+  The notifications banner (PN-20 to PN-23): a slim bar in the page's flow under the header,
+  so it never covers the composer. Rendered `hidden`; `assets/js/push_banner.js` shows it
+  only while push is off in this browser and can be turned on (or, in an iPhone or iPad
+  Safari tab, with how to add the site to the Home Screen instead of "Enable"). Its words
+  and buttons, and the tutorial bubble under "Enable", are the steward's (2026-10-25). A named region, announced politely,
+  never an alert; it never takes the focus.
+  """
+  def push_banner(assigns) do
+    ~H"""
+    <section
+      id="push-banner"
+      class="push-banner"
+      role="region"
+      aria-label={gettext("Notifications")}
+      aria-live="polite"
+      hidden
+    >
+      <.icon name="hero-bell" class="size-5 shrink-0" />
+      <p class="push-banner-offer grow">
+        {gettext("Push notifications not enabled. You will not be notified of new messages.")}
+      </p>
+      <p class="push-banner-ios grow" hidden>
+        {gettext(
+          "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+        )}
+      </p>
+      <p class="push-banner-on grow" hidden>{gettext("Notifications are on")}</p>
+      <div class="push-banner-actions">
+        <%!-- With a tutorial bubble under it (steward decision, 2026-10-25), in the banner's
+             flow so it covers nothing; the Tutorial bubbles toggle hides it. --%>
+        <span class="push-banner-enable">
+          <button type="button" class="btn btn-sm btn-primary push-banner-turn-on">
+            {gettext("Enable")}
+          </button>
+          <span class="tutorial-bubble points-up push-banner-bubble" aria-hidden="true">{gettext(
+            "This can always be\nturned off and on\nin user settings"
+          )}</span>
+        </span>
+        <button type="button" class="btn btn-sm btn-ghost push-banner-not-now">
+          {gettext("Dismiss")}
+        </button>
+      </div>
+    </section>
+    """
+  end
 
   @doc """
   The page title: "Page · Server name", or the server name alone.

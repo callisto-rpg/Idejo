@@ -15,6 +15,7 @@ defmodule IdejoWeb.UserSettingsLive do
 
   alias Idejo.Accounts
   alias Idejo.Notifications.Digest
+  alias Idejo.Push
   alias Idejo.Uploads
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.UserAuth
@@ -32,6 +33,10 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
+     |> assign(:push_on?, Push.enabled?())
+     |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))
+     |> assign(:this_endpoint, nil)
+     |> assign(:devices, Push.list_subscriptions(user))
      |> assign(:image_error, nil)
      |> allow_avatar(:avatar)
      |> allow_avatar(:dark_avatar)}
@@ -153,6 +158,60 @@ defmodule IdejoWeb.UserSettingsLive do
     end
   end
 
+  # PN-24: push notifications. The `PushSettings` hook tells which subscription is this
+  # browser's (`"push_endpoint"`) and when it subscribed (`"push_changed"`).
+  def handle_event("save_push", %{"push" => params}, socket) do
+    user = socket.assigns.current_scope.user
+
+    case Push.update_preferences(user, params) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Push notifications saved."))
+         |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :push_form, to_form(changeset, as: :push))}
+    end
+  end
+
+  def handle_event("push_endpoint", %{"endpoint" => endpoint}, socket)
+      when is_binary(endpoint) or is_nil(endpoint),
+      do: {:noreply, assign(socket, :this_endpoint, endpoint)}
+
+  def handle_event("push_changed", _params, socket),
+    do: {:noreply, load_devices(socket)}
+
+  def handle_event("remove_device", %{"id" => id}, socket) do
+    case Push.remove_subscription(socket.assigns.current_scope.user, id) do
+      {:ok, endpoint} ->
+        socket = load_devices(socket)
+
+        # This browser: its own subscription ends too, or the next page would save it again.
+        socket =
+          if endpoint == socket.assigns.this_endpoint,
+            do: push_event(socket, "push_unsubscribe", %{}),
+            else: socket
+
+        {:noreply, put_flash(socket, :info, gettext("Device removed."))}
+
+      {:error, :not_found} ->
+        {:noreply, load_devices(socket)}
+    end
+  end
+
+  def handle_event("send_test", _params, socket) do
+    message =
+      case Push.send_test(socket.assigns.current_scope.user) do
+        {:ok, 0} -> {:error, gettext("No device takes notifications yet. Turn them on first.")}
+        {:ok, _} -> {:info, gettext("Test notification sent.")}
+        {:error, :rate_limited} -> {:error, gettext("Too many tests. Try again in a minute.")}
+        {:error, _} -> {:error, gettext("The test notification could not be sent.")}
+      end
+
+    {:noreply, put_flash(socket, elem(message, 0), elem(message, 1))}
+  end
+
   def handle_event("validate_password", %{"password" => params}, socket) do
     changeset =
       socket.assigns.current_scope.user
@@ -210,6 +269,44 @@ defmodule IdejoWeb.UserSettingsLive do
       gettext(
         "You are the only owner of this server. Make someone else owner before deleting your account."
       )
+
+  defp load_devices(socket),
+    do: assign(socket, :devices, Push.list_subscriptions(socket.assigns.current_scope.user))
+
+  # A device as people know it, from the browser's user agent: "Firefox on Linux".
+  @browsers [
+    {"Edg/", "Edge"},
+    {"OPR/", "Opera"},
+    {"SamsungBrowser/", "Samsung Internet"},
+    {"Firefox/", "Firefox"},
+    {"FxiOS/", "Firefox"},
+    {"CriOS/", "Chrome"},
+    {"Chrome/", "Chrome"},
+    {"Safari/", "Safari"}
+  ]
+  @systems [
+    {"Android", "Android"},
+    {"iPhone", "iPhone"},
+    {"iPad", "iPad"},
+    {"Windows", "Windows"},
+    {"Mac OS X", "macOS"},
+    {"CrOS", "ChromeOS"},
+    {"Linux", "Linux"}
+  ]
+
+  @doc false
+  def device_name(user_agent) do
+    agent = user_agent || ""
+    browser = Enum.find_value(@browsers, &(String.contains?(agent, elem(&1, 0)) && elem(&1, 1)))
+    system = Enum.find_value(@systems, &(String.contains?(agent, elem(&1, 0)) && elem(&1, 1)))
+
+    case {browser, system} do
+      {nil, nil} -> gettext("Unknown browser")
+      {nil, system} -> system
+      {browser, nil} -> browser
+      {browser, system} -> gettext("%{browser} on %{system}", browser: browser, system: system)
+    end
+  end
 
   @impl true
   def render(assigns) do
@@ -347,6 +444,103 @@ defmodule IdejoWeb.UserSettingsLive do
           />
           <.button class="btn btn-primary">{gettext("Save email notifications")}</.button>
         </.form>
+      </section>
+
+      <%!-- PN-24: push notifications (while the server has them on, PN-19). --%>
+      <section :if={@push_on?} class="mt-10" aria-labelledby="push-notifications-heading">
+        <h2 id="push-notifications-heading" class="font-semibold mb-2">
+          {gettext("Push notifications")}
+        </h2>
+        <%!-- This browser's state, worked out by the PushSettings hook (assets/js/push_settings.js);
+             without JavaScript, the "unknown" line stays. --%>
+        <div
+          id="push-browser"
+          class="push-browser mb-4"
+          phx-hook="PushSettings"
+          phx-update="ignore"
+          role="status"
+        >
+          <p class="push-browser-unknown">
+            {gettext("Turning notifications on needs JavaScript.")}
+          </p>
+          <p class="push-browser-on" hidden>{gettext("Notifications are on in this browser.")}</p>
+          <div class="push-browser-off" hidden>
+            <p>{gettext("Notifications are off in this browser.")}</p>
+            <button type="button" class="btn btn-sm btn-primary mt-2 push-browser-turn-on">
+              {gettext("Turn on")}
+            </button>
+          </div>
+          <p class="push-browser-blocked" hidden>
+            {gettext(
+              "Notifications are blocked in this browser. To allow them, open the site settings (the icon at the left of the address), set Notifications to Allow, then reload this page."
+            )}
+          </p>
+          <p class="push-browser-ios" hidden>
+            {gettext(
+              "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+            )}
+          </p>
+          <p class="push-browser-unsupported" hidden>
+            {gettext("This browser cannot show notifications.")}
+          </p>
+        </div>
+
+        <.form for={@push_form} id="push-notifications-form" phx-submit="save_push">
+          <fieldset class="mb-2">
+            <legend class="mb-2">{gettext("Send me a notification for:")}</legend>
+            <.input field={@push_form[:reply]} type="checkbox" label={gettext("Replies to me")} />
+            <.input
+              field={@push_form[:mention]}
+              type="checkbox"
+              label={gettext("@%{username} mentions", username: @current_scope.user.username)}
+            />
+            <.input
+              field={@push_form[:role_mention]}
+              type="checkbox"
+              label={gettext("+role mentions")}
+            />
+            <.input
+              field={@push_form[:followed]}
+              type="checkbox"
+              label={gettext("New messages in topics I follow")}
+            />
+          </fieldset>
+          <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
+          <.button class="btn btn-primary">{gettext("Save push notifications")}</.button>
+        </.form>
+
+        <h3 class="font-semibold mt-6 mb-2">{gettext("Devices")}</h3>
+        <p :if={@devices == []} id="push-no-devices" class="text-sm opacity-70">
+          {gettext("No device takes notifications yet.")}
+        </p>
+        <ul :if={@devices != []} id="push-devices" class="space-y-2">
+          <li
+            :for={device <- @devices}
+            id={"push-device-#{device.id}"}
+            class="flex flex-wrap items-center gap-3 rounded border border-base-300 p-3"
+          >
+            <span class="font-medium">{device_name(device.user_agent)}</span>
+            <span :if={device.endpoint == @this_endpoint} class="badge badge-sm">
+              {gettext("This browser")}
+            </span>
+            <span class="text-sm opacity-70">
+              {gettext("Added %{date}", date: Calendar.strftime(device.created_at, "%Y-%m-%d"))}
+            </span>
+            <span class="flex-1"></span>
+            <button
+              type="button"
+              class="btn btn-xs"
+              phx-click="remove_device"
+              phx-value-id={device.id}
+              aria-label={gettext("Remove %{device}", device: device_name(device.user_agent))}
+            >
+              {gettext("Remove")}
+            </button>
+          </li>
+        </ul>
+        <button type="button" id="push-test" class="btn btn-sm mt-4" phx-click="send_test">
+          {gettext("Send test notification")}
+        </button>
       </section>
 
       <section class="mt-10" aria-labelledby="password-heading">

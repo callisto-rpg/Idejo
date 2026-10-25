@@ -1,0 +1,15 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("Privacy")}</h1>
+  </header>
+  <div id="privacy-notice">
+    <MessageComponents.body :if={@notice != ""} html={Body.to_html(@notice)} />
+    <p :if={@notice == ""}>
+      {gettext("This server has not published a privacy notice yet.")}
+    </p>
+  </div>
+</Layouts.app>

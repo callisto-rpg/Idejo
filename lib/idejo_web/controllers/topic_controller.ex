@@ -47,7 +47,9 @@ defmodule IdejoWeb.TopicController do
               can_rename?: Forum.can_rename_topic?(user, topic),
               forked_from: forked_from(user, topic),
               # Without ?reply_to=, which only opens the form.
-              canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}")
+              canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}"),
+              # PN-20: the notifications banner.
+              push_banner?: Idejo.Push.banner?(user)
             ] ++ moderator_tools(user, topic)
           )
         else

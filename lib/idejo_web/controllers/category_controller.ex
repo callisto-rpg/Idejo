@@ -38,7 +38,9 @@ defmodule IdejoWeb.CategoryController do
           more?: more?,
           view: view,
           previews: IdejoWeb.TopicView.previews(view, topics),
-          canonical_url: canonical_url(category, page)
+          canonical_url: canonical_url(category, page),
+          # PN-20: the notifications banner.
+          push_banner?: Idejo.Push.banner?(user)
         )
     end
   end

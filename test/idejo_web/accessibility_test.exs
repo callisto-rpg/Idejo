@@ -125,6 +125,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/tags",
       ~p"/rules",
       ~p"/help",
+      ~p"/privacy",
       ~p"/tags?#{%{"tags" => [idea.slug]}}",
       ~p"/u/#{member.id}",
       # TP-10: the page a +role leads to.
