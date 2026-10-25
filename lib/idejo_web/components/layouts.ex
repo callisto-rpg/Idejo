@@ -449,7 +449,8 @@ defmodule IdejoWeb.Layouts do
             aria-pressed="false"
             aria-controls={"sidebar-topics-#{category.id}"}
             aria-label={gettext("Only topics with new messages in %{name}", name: category.name)}
-            title={gettext("Show only topics with new messages, or all")}
+            data-bubble={gettext("Hide topics with\nno new messages")}
+            data-bubble-folded={gettext("Show all followed topics")}
           ></button>
         </div>
         <.followed_topics
@@ -567,14 +568,15 @@ defmodule IdejoWeb.Layouts do
         class="sidebar-topic-action sidebar-unfollow"
       >
         <input type="hidden" name="return" value="back" />
-        <button type="submit" aria-label={gettext("Unfollow %{title}", title: @topic.title)}>
+        <%!-- Its tutorial bubble (steward decision, 2026-10-25), at its right on hover or
+             focus, and for a moment on touch screens (assets/js/sidebar.js). --%>
+        <button
+          type="submit"
+          aria-label={gettext("Unfollow %{title}", title: @topic.title)}
+          data-bubble={gettext("close & unfollow thread")}
+        >
           <.icon name="hero-x-mark-micro" class="size-3.5" />
         </button>
-        <%!-- Tutorial bubble (steward decision, 2026-10-25): on hover or focus, and for a
-             moment on touch screens (assets/js/sidebar.js). --%>
-        <span class="tutorial-bubble points-right sidebar-unfollow-bubble" aria-hidden="true">
-          {gettext("close & unfollow thread")}
-        </span>
       </.form>
       <.form
         :if={@place.user? && !@following?}

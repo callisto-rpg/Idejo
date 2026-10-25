@@ -1568,14 +1568,8 @@
   .emoji { width: 1.25rem; height: 1.25rem; object-fit: contain; }
   .add-reaction {
     position: relative;
-    & > summary { list-style: none; cursor: pointer; font-size: 0.9375rem; }
+    & > summary { list-style: none; cursor: pointer; }
     & > summary::-webkit-details-marker { display: none; }
-  }
-  /* Shown when the message is hovered or has the focus; always on touch screens. */
-  @media (hover: hover) {
-    .message .add-reaction:not([open]) > summary { opacity: 0; }
-    .message:hover .add-reaction > summary,
-    .message:focus-within .add-reaction > summary { opacity: 1; }
   }
   .add-reaction-panel {
     position: absolute;
@@ -1978,12 +1972,6 @@ html:not([data-js]) .spoiler-cover { display: none; }
     background: var(--bubble-line);
     clip-path: polygon(100% 0, 0 50%, 100% 100%);
   }
-  /* The triangle on the right, pointing at what follows. */
-  &.points-right::before {
-    left: auto;
-    right: -0.3125rem;
-    clip-path: polygon(0 0, 100% 50%, 0 100%);
-  }
   /* "Sent!": white text and outline turning to the theme's in a second; composer.js keeps
      its place across repaints with `--sent-delay`, set through the DOM. */
   &.is-sent {
@@ -2006,23 +1994,21 @@ html:not([data-js]) .spoiler-cover { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .tutorial-bubble.is-sent, .tutorial-bubble.is-sent::before { animation: none; }
 }
-/* The ×'s tutorial bubble (steward decision, 2026-10-25), to its left over the name (the
-   sidebar scrolls, so nothing shows past its edge): while the × is pointed at or focused,
-   and on touch screens for 3 s when the topic opens (`is-peek`, assets/js/sidebar.js). */
-.sidebar-unfollow { position: relative; }
-.sidebar-unfollow-bubble {
-  position: absolute;
-  right: calc(100% + 0.5rem);
-  top: 50%;
+/* The sidebar's tutorial bubbles (steward decisions, 2026-10-25): one on <body>, at the
+   right of the × or fold button it explains, placed by assets/js/sidebar.js; fixed, so the
+   sidebar's scrolling never clips it. A line break where the label has one. */
+.sidebar-bubble {
+  position: fixed;
+  z-index: 60;
   translate: 0 -50%;
-  z-index: 1;
+  white-space: pre-line;
+  text-align: left;
+  line-height: 1.2;
   opacity: 0;
   pointer-events: none;
   transition: opacity 400ms ease;
+  &.is-shown { opacity: 1; }
 }
-.sidebar-unfollow:hover .sidebar-unfollow-bubble,
-.sidebar-unfollow:has(button:focus-visible) .sidebar-unfollow-bubble,
-.sidebar-unfollow-bubble.is-peek { opacity: 1; }
 /* Appends above the author's message while they type (steward decision, 2026-10-25): the
    same pill, on the line above their message, its triangle up; not a tutorial bubble, so
    it stays when those are off. Scrolling up fades it out in 2 s (composer.js). */

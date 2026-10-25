@@ -180,17 +180,26 @@ defmodule IdejoWeb.FollowTest do
            )
            |> Enum.count() == 1
 
-    # Its tutorial bubble (steward decision, 2026-10-25), shown on hover or focus, and for
-    # 3 s on touch screens (assets/js/sidebar.js).
-    assert html
-           |> LazyHTML.from_document()
-           |> LazyHTML.query(
-             ~s(#sidebar form[action="/t/#{topic.id}/follow"] .tutorial-bubble.sidebar-unfollow-bubble[aria-hidden=true])
-           )
-           |> LazyHTML.text()
-           |> String.trim() == "close & unfollow thread"
+    # Its tutorial bubble (steward decisions, 2026-10-25), at its right on hover or focus,
+    # and for 3 s on touch screens; the fold button's says what a click does
+    # (assets/js/sidebar.js: one fixed bubble on <body>, never clipped by the sidebar).
+    doc = LazyHTML.from_document(html)
 
-    assert File.read!("assets/js/sidebar.js") =~ "const PEEK_MS = 3000"
+    assert doc
+           |> LazyHTML.query(
+             ~s(#sidebar form[action="/t/#{topic.id}/follow"] button[data-bubble="close & unfollow thread"])
+           )
+           |> Enum.count() == 1
+
+    [fold] = doc |> LazyHTML.query("#sidebar .sidebar-fold") |> Enum.to_list()
+    assert LazyHTML.attribute(fold, "data-bubble") == ["Hide topics with\nno new messages"]
+    assert LazyHTML.attribute(fold, "data-bubble-folded") == ["Show all followed topics"]
+
+    js = File.read!("assets/js/sidebar.js")
+    assert js =~ "const PEEK_MS = 3000"
+    assert js =~ ~s|floating.className = "tutorial-bubble sidebar-bubble"|
+    assert js =~ "floating.style.left = `${r.right + 8}px`"
+    assert File.read!("assets/css/app.css") =~ ~r/\.sidebar-bubble \{\s*position: fixed;/
 
     conn =
       build_conn()

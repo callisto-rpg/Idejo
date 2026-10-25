@@ -75,10 +75,11 @@ defmodule IdejoWeb.DropdownTest do
     assert card =~ "box-shadow: var(--shadow-lift);"
   end
 
-  test "a click outside the account menu, or Escape, closes it" do
+  test "a click outside the account menu or a message's React choices, or Escape, closes them" do
     js = File.read!("assets/js/account_menu.js")
-    assert js =~ ~s(if (el?.open && !el.contains(e.target\)\) el.open = false)
-    assert js =~ ~s(if (e.key !== "Escape" || !el?.open\) return)
+    assert js =~ ~s|const OUTSIDE_CLOSES = "#account-menu[open], .add-reaction[open]"|
+    assert js =~ ~s|if (!el.contains(e.target)) el.open = false|
+    assert js =~ ~s|if (e.key !== "Escape") return|
     assert File.read!("assets/js/app.js") =~ ~s(import "./account_menu")
   end
 end

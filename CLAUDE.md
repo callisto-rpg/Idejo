@@ -336,7 +336,7 @@ roles or the permission grid. Every later change must keep it true:
   white in yellow, then burns in and goes; the hook sets its duration and negative delay
   through the DOM, from the server's `data-start` / `data-end` / `data-now`. Tutorial bubbles
   (steward decisions, 2026-10-25; `.tutorial-bubble`: a pill blurred 6px with a triangle
-  toward what it explains, `.points-right` for one on its right; theme colours only, through
+  toward what it explains; theme colours only, through
   `--bubble-line` / `-ink` / `-fill` / `-hint`: dark theme tertiary outline, secondary text,
   primary at 50%; light theme `primary-content` on primary at 75%, the hint the primary mixed
   into `base-content`): "slow mode" rides in front of the line (which
@@ -348,10 +348,13 @@ roles or the permission grid. Every later change must keep it true:
   your message"
   (`.composer-hint`; with no room beside the bubble, `is-below`: under it, kept inside the
   composer, which grows to hold it) until the author types
-  (`data-label-send` / `-sent` / `-continue`, from gettext). The sidebar's × has one too,
-  "close & unfollow thread", on hover or focus, and on touch screens for 3 s once a page when
-  the topic on screen's entry shows (`.sidebar-unfollow-bubble`, `is-peek`, `peek()` in
-  `assets/js/sidebar.js`). "Tutorial bubbles" On / Off (`Layouts.bubbles_toggle/1`, in the
+  (`data-label-send` / `-sent` / `-continue`, from gettext). In the sidebar, buttons with
+  `data-bubble` get one at their right on hover or keyboard focus: the ×'s "close & unfollow
+  thread" (on touch screens also for 3 s once a page when the topic on screen's entry shows,
+  `peek()`) and a category's fold button's "Hide topics with / no new messages", or "Show
+  all followed topics" while folded (`data-bubble-folded`). `assets/js/sidebar.js` keeps one
+  `.sidebar-bubble` on `<body>`, placed `fixed` from the button, so the sidebar's scrolling
+  never clips it; any scroll or a swapped sidebar hides it. "Tutorial bubbles" On / Off (`Layouts.bubbles_toggle/1`, in the
   account menu under Theme and at the right of the Help page's title; hidden without
   JavaScript) turns them all off: like the theme, theme.js applies `data-bubbles="off"` on
   `<html>` before paint, remembered in `localStorage` (`idejo:bubbles`), and sends
@@ -731,8 +734,9 @@ roles or the permission grid. Every later change must keep it true:
   live bubble. After each change
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
-  several chose an emoji; buttons with `aria-pressed`), a 🙂 `<details>` among the actions
-  (`add_reaction/1`: the eight defaults and +) and the + dialog (`emoji_picker/1`, reusing
+  several chose an emoji; buttons with `aria-pressed`), a "React" `<details>` among the
+  actions, drawn like Edit or Report (`add_reaction/1`: the eight defaults and +; a click
+  outside closes it, `assets/js/account_menu.js`; steward decision, 2026-10-25) and the + dialog (`emoji_picker/1`, reusing
   the `InlineCard` hook with `data-close-event`). The server renders only its frame: the
   `EmojiPicker` hook (`assets/js/emoji_picker.js`, `phx-update="ignore"`) fetches
   `/emoji-index.json?v=` (`EmojiController`, `Emoji.index_json/0`, built at compile time,

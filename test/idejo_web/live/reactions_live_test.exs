@@ -32,7 +32,7 @@ defmodule IdejoWeb.ReactionsLiveTest do
     do: live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
 
   @tag req: "TP-17"
-  test "TP-17 the 🙂 offers eight emoji and +; a reaction shows under the message, live", %{
+  test "TP-17 React offers eight emoji and +; a reaction shows under the message, live", %{
     topic: topic,
     message: message
   } do
@@ -40,7 +40,10 @@ defmodule IdejoWeb.ReactionsLiveTest do
     {:ok, lv, html} = open(log_in_user(build_conn(), me), topic)
     assert html =~ ~s(src="/emoji/1f602.svg?vsn=#{Idejo.Emoji.version()}")
 
-    assert lv |> element("#message-#{message.id}-react summary") |> has_element?()
+    # A "React" action like Edit or Report (steward decision, 2026-10-25); a click outside
+    # closes its choices.
+    assert has_element?(lv, "#message-#{message.id}-react summary.message-action", "React")
+    assert File.read!("assets/js/account_menu.js") =~ ".add-reaction[open]"
     assert has_element?(lv, "#message-#{message.id}-react button[aria-label=':agree:']")
     assert has_element?(lv, "#message-#{message.id}-react button[aria-label='More emoji']")
 
