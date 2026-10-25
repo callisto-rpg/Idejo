@@ -2211,30 +2211,20 @@ html:not([data-js]) .spoiler-cover { display: none; }
   }
   &.is-still { animation: none; }
 }
-/* Beside the bubble while it says "slow mode", moving with it (composer_timer.js); where it
-   would run past the composer, at its left, above the line. */
+/* Under the line while the bubble says "slow mode", centred under the composer and still
+   (composer_timer.js changes its words); the line keeps room for it below. */
 .composer-timer-hint {
-  --hint-gap: 0.5rem;
   position: absolute;
-  top: 50%;
-  left: 100%;
-  translate: calc(0.4375rem + var(--bubble-room, 0px) + var(--hint-gap)) -50%;
-  white-space: nowrap;
-  animation: composer-timer-bubble linear both;
-  &.is-left { translate: calc(0.4375rem - 100% - var(--hint-gap)) calc(-100% - 0.25rem); }
-  /* No room on either side (a phone): under the line, from its start. */
-  /* The animation keeps running (stopping it would restart it out of step); `!important`
-     wins over it. */
-  &.is-under {
-    left: 0 !important;
-    translate: 0 0.625rem;
-    white-space: normal;
-    width: calc(100% + var(--bubble-room, 0px));
-  }
+  top: calc(100% + 0.625rem);
+  left: calc(50% + var(--bubble-room, 0px) / 2);
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100% + var(--bubble-room, 0px));
+  text-align: center;
   &[hidden] { display: none; }
 }
-.composer-timer:has(.composer-timer-hint.is-under:not([hidden])) { margin-bottom: 2rem; }
-[data-bubbles="off"] .composer-timer:has(.composer-timer-hint.is-under) { margin-bottom: 0.625rem; }
+.composer-timer:has(.composer-timer-hint:not([hidden])) { margin-bottom: 2rem; }
+[data-bubbles="off"] .composer-timer:has(.composer-timer-hint) { margin-bottom: 0.625rem; }
 @keyframes composer-timer-bubble { from { left: 0%; } to { left: 100%; } }
 @keyframes composer-timer-bubble-centre {
   from { left: 100%; translate: 0.4375rem -50%; }

@@ -41,7 +41,7 @@ message" until you type again. These **tutorial bubbles**
    thought stays one message. While nobody has written below it, that lasts longer: until
    your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
    line, so when you write alone your thoughts stay one message. A thin orange line under
-   the box fills up meanwhile, a **slow mode** bubble in front of it, next to which "You
+   the box fills up meanwhile, a **slow mode** bubble in front of it, and under it "You
    cannot start a new message...", "...but you can continue the one above." and "[Enter] to
    send always works." take turns; when it reaches the
    end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start

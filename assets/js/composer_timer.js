@@ -13,16 +13,11 @@
 // stays there while the line burns away. The line stops short by the bubble's width
 // (`--bubble-room`), so the bubble never runs past the composer.
 //
-// At the bubble's right, while it says "slow mode", a monospace hint rides along (steward
-// decision, 2026-10-25), its three lines (`data-labels`) taking turns every HINT_MS. Where it
-// would run past the composer, it goes to the bubble's left, above the line (`is-left`), and
-// with no room on either side (a phone), under the line (`is-under`).
+// While the bubble says "slow mode", a monospace hint stands still under the line, centred
+// (steward decisions, 2026-10-25), its three lines (`data-labels`) taking turns every HINT_MS.
 
 const SAME_END_MS = 1000
-const HINT_MS = 1500
-const HINT_CHECK_MS = 250
-// The space between the bubble and the hint (`--hint-gap` in app.css).
-const HINT_GAP_PX = 8
+const HINT_MS = 3000
 
 // When, on this browser's clock, Ctrl+Enter may start a new message; null without a line
 // (nothing open, or an edit).
@@ -39,7 +34,7 @@ export const ComposerTimer = {
     this.hint = this.el.querySelector(".composer-timer-hint")
     this.hints = JSON.parse(this.hint.dataset.labels || "[]")
     this.hintStart = Date.now()
-    this.hintTimer = setInterval(() => this.showHint(), HINT_CHECK_MS)
+    this.hintTimer = setInterval(() => this.showHint(), HINT_MS)
     this.line.addEventListener("animationend", e => {
       if (e.animationName === "composer-timer-fill") this.burn()
     })
@@ -59,21 +54,12 @@ export const ComposerTimer = {
     // The bubble's width with its "slow mode" label, or none while bubbles are off.
     if (this.bubble.classList.contains("is-done")) return
     this.el.style.setProperty("--bubble-room", `${this.bubble.offsetWidth}px`)
-    this.showHint()
   },
 
-  // The hint's line of the moment, at the bubble's right, or its left when there is no room.
+  // The hint's line of the moment.
   showHint() {
-    if (this.bubble.classList.contains("is-done")) return
     const text = this.hints[Math.floor((Date.now() - this.hintStart) / HINT_MS) % this.hints.length] || ""
     if (this.hint.textContent !== text) this.hint.textContent = text
-    // Measured in one line at the right, the way it rides when there is room.
-    this.hint.classList.remove("is-left", "is-under")
-    const width = this.hint.offsetWidth
-    const bubble = this.bubble.getBoundingClientRect()
-    const rail = this.el.getBoundingClientRect()
-    if (bubble.right + HINT_GAP_PX + width <= rail.right + this.bubble.offsetWidth) return
-    this.hint.classList.add(bubble.left - HINT_GAP_PX - width >= rail.left ? "is-left" : "is-under")
   },
 
   // Re-rendered every second while the window runs: only a new end restarts the line.
@@ -93,6 +79,7 @@ export const ComposerTimer = {
     this.line.classList.remove("is-burning", "is-over")
     this.bubble.classList.remove("is-done", "is-still")
     this.hint.hidden = false
+    this.showHint()
     this.bubble.textContent = this.slowLabel
     this.makeRoom()
     // Over already (a reload after the time, or an answer that shortened it): only the bubble
@@ -103,7 +90,7 @@ export const ComposerTimer = {
       return
     }
     this.started = true
-    for (const el of [this.line, this.bubble, this.hint]) {
+    for (const el of [this.line, this.bubble]) {
       el.style.animation = "none"
       void el.offsetWidth
       el.style.animation = ""

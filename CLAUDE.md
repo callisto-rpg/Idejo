@@ -348,10 +348,10 @@ roles or the permission grid. Every later change must keep it true:
   into `base-content`): "slow mode" rides in front of the line (which
   stops short by `--bubble-room`, the bubble's width), and once it is full slides to the
   middle as "Ctrl+Enter to start new message" (`#composer-timer-bubble`, `data-label-done`),
-  while at its right a monospace `.composer-hint` (`#composer-timer-hint`, `data-labels`)
-  shows "You cannot start a new message...", "...but you can continue the one above." and
-  "[Enter] to send always works." in turn every 1.5 s (`HINT_MS`; at the bubble's left
-  above the line, `is-left`, or under it, `is-under`, where there is no room);
+  while under the line, centred and still, a monospace `.composer-hint`
+  (`#composer-timer-hint`, `data-labels`) shows "You cannot start a new message...",
+  "...but you can continue the one above." and "[Enter] to send always works." in turn
+  every 3 s (`HINT_MS`);
   beside the caret, at the end of the text, "Enter to send" while something is not sent,
   then "Sent!" (`.is-sent`: white text and outline turning to the theme's in 1 s, its place
   kept across repaints by `--sent-delay`) and a faded monospace "Message now visible to
