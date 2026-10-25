@@ -64,6 +64,9 @@ corner. It has seven tabs.
 - **Push notifications**: **On** (the default) or **Off**. On, members can turn on
   browser notifications for replies, mentions and topics they follow. Off, they are not
   offered and none are sent.
+- **Minutes between followed-topic notifications** (30 by default, 1 to 1440): a member
+  gets at most one "There are new messages in N topics you follow" notification in this
+  time, and only when one of those topics has something new since the last.
 - **Push services**: the only hosts the server sends browser notifications to, one per line.
   The defaults are the services of Chrome and Edge, Firefox, Safari and Windows;
   `*.example.org` allows any name under `example.org`. Add your own, for example a

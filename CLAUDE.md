@@ -934,6 +934,16 @@ roles or the permission grid. Every later change must keep it true:
   mention. N comes from `Reading.unread_notified/3` (unread rows of that kind, viewable,
   not muted; the reply count in the topic). The role in a PN-03 title is the user's
   highest-ranked +mentioned role, as its slug.
+- **Followed activity** (PN-04; extra review: DV-06): a `follow` row makes `Push.dispatch/1`
+  queue one `Idejo.Push.FollowedWorker` per user (unique while waiting), `scheduled_at`
+  `Push.followed_due/2`: the last one's `push_preferences.followed_sent_at` plus
+  `push_followed_interval_minutes` (default 30, 1–1440, **Admin → Settings**), or now; run
+  early it snoozes. N = `Reading.unread_followed/1` (topics with unread `follow`-kind
+  notifications, so mentions and replies never count again, PN-05; viewable, not muted)
+  minus topics on screen (PN-08); sent only when one has a notification newer than the last
+  push (N has grown), then `followed_sent_at` and `followed_count` are kept.
+  `Payload.followed/2`: "There are new messages in N topics you follow", empty body,
+  `/unread`, tag `followed`.
 - **Backups** (AD-05, `Idejo.Backup`): one tar per backup in `:backup_dir`
   (`IDEJO_BACKUP_DIR`, the `/data/backups` volume; `tmp/test_backups` in tests),
   `idejo-YYYYMMDD-HHMMSS.tar` (UTC) holding `manifest.json` (format, last migration),

@@ -18,6 +18,9 @@ defmodule Idejo.Push.Preference do
     field :mention, :boolean, default: true
     field :role_mention, :boolean, default: true
     field :followed, :boolean, default: true
+    # PN-04: when the last followed-activity push went, and how many topics it counted.
+    field :followed_sent_at, :utc_datetime_usec
+    field :followed_count, :integer, default: 0
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end
