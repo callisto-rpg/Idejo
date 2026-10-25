@@ -17,7 +17,8 @@ const sync = () => toggle()?.setAttribute("aria-expanded", String(isShown()))
 // thread" and a category's fold button's (its `data-bubble`, or `data-bubble-folded` while
 // folded), at the right of what they explain, on hover or keyboard focus. One bubble on
 // <body>, placed `fixed` from the button's position, so the sidebar's scrolling (or the
-// drawer's) never clips it; hidden when anything scrolls.
+// drawer's) never clips it; hidden when anything scrolls. None in the drawer (narrow
+// screens: the phone's sidebar; steward decision, 2026-10-25).
 let floating = null
 let shownFor = null
 
@@ -25,6 +26,7 @@ const bubbleFor = el =>
   el.getAttribute("aria-pressed") === "true" && el.dataset.bubbleFolded ? el.dataset.bubbleFolded : el.dataset.bubble
 
 const showBubble = el => {
+  if (!wide.matches) return
   if (!floating) {
     floating = document.createElement("span")
     floating.className = "tutorial-bubble sidebar-bubble"
@@ -62,22 +64,20 @@ document.addEventListener("focusin", e => {
 document.addEventListener("focusout", e => { if (bubbled(e) === shownFor) hideBubble() })
 document.addEventListener("scroll", () => { if (shownFor) hideBubble() }, {capture: true, passive: true})
 
-// Touch screens cannot point: the ×'s bubble shows for 3 s, once a page, the first time the
-// topic on screen's entry is in view (at load beside the page, or once the drawer has slid
-// open), then fades out.
+// Wide touch screens cannot point: the ×'s bubble shows for 3 s, once a page, the first time
+// the topic on screen's entry is in view beside the page, then fades out.
 const PEEK_MS = 3000
-const DRAWER_MS = 220
 let peeked = false
 
 const peek = () => {
-  if (peeked || pointing.matches || root.dataset.bubbles === "off" || !isShown()) return
+  if (peeked || !wide.matches || pointing.matches || root.dataset.bubbles === "off" || !isShown()) return
   const button = document.querySelector("#sidebar .sidebar-topic.is-current .sidebar-unfollow [data-bubble]")
   if (!button) return
   peeked = true
   setTimeout(() => {
     showBubble(button)
     setTimeout(() => { if (shownFor === button) hideBubble() }, PEEK_MS)
-  }, wide.matches ? 0 : DRAWER_MS)
+  }, 0)
 }
 
 const closeDrawer = () => {
@@ -163,8 +163,12 @@ document.addEventListener("touchend", e => {
 document.addEventListener("touchcancel", () => { touch = null }, {passive: true})
 
 wide.addEventListener("change", closeDrawer)
-// LiveView re-renders the header on navigation; keep the button's state right.
-window.addEventListener("phx:page-loading-stop", sync)
+// LiveView re-renders the header on navigation; keep the button's state right, and the
+// sidebar's topics being unfollowed.
+window.addEventListener("phx:page-loading-stop", () => {
+  sync()
+  showUnfollowing()
+})
 sync()
 peek()
 
@@ -190,8 +194,10 @@ const setFolded = (category, folded) => {
 }
 
 export function applyFolds() {
-  // A fresh sidebar: the button a bubble pointed at is gone.
+  // A fresh sidebar: the button a bubble pointed at is gone, and topics being unfollowed
+  // show so again.
   hideBubble()
+  showUnfollowing()
   const ids = foldedIds()
   document.querySelectorAll("#sidebar .sidebar-category").forEach(category => {
     setFolded(category, ids.has(category.dataset.categoryId))
@@ -220,3 +226,99 @@ document.addEventListener("click", (e) => {
 })
 
 applyFolds()
+
+// Unfollowing from the sidebar (steward decision, 2026-10-25): the × turns the topic's entry
+// into "Topic unfollowed", in red, and a Cancel button for UNDO_MS; then the unfollow is sent
+// (the form's own request, `quiet=1` so no message waits on the next page) and the entry
+// goes. Leaving the page sends it at once. Without scripts the form posts as before.
+const UNDO_MS = 4000
+const unfollowing = new Map()
+
+const topicEntries = id =>
+  document.querySelectorAll(`#sidebar .sidebar-topic[data-topic-id="${CSS.escape(id)}"]`)
+
+const markUnfollowing = (li, form) => {
+  if (li.classList.contains("is-unfollowing")) return
+  li.classList.add("is-unfollowing")
+  const undo = document.createElement("span")
+  undo.className = "sidebar-undo"
+  const text = document.createElement("span")
+  text.className = "sidebar-undo-text"
+  text.setAttribute("role", "status")
+  text.textContent = form.dataset.unfollowed || ""
+  const cancel = document.createElement("button")
+  cancel.type = "button"
+  cancel.className = "sidebar-undo-cancel btn btn-xs"
+  cancel.textContent = form.dataset.cancel || ""
+  undo.append(text, cancel)
+  li.appendChild(undo)
+}
+
+function showUnfollowing() {
+  for (const id of unfollowing.keys()) {
+    topicEntries(id).forEach(li => {
+      const form = li.querySelector(".sidebar-unfollow")
+      if (form) markUnfollowing(li, form)
+    })
+  }
+}
+
+const send = (entry, beacon) => {
+  if (beacon && navigator.sendBeacon?.(entry.action, entry.data)) return
+  fetch(entry.action, {method: "POST", body: entry.data, credentials: "same-origin", redirect: "manual"})
+    .catch(() => {})
+}
+
+const unfollow = id => {
+  const entry = unfollowing.get(id)
+  if (!entry) return
+  unfollowing.delete(id)
+  send(entry, false)
+  topicEntries(id).forEach(li => {
+    // The focus, on Cancel, goes to the next entry or the category.
+    if (li.contains(document.activeElement)) {
+      const next = li.nextElementSibling || li.previousElementSibling
+      const target = next?.querySelector("a") || li.closest(".sidebar-category")?.querySelector(".sidebar-link")
+      target?.focus()
+    }
+    li.remove()
+  })
+}
+
+document.addEventListener("submit", e => {
+  const form = e.target.closest?.("#sidebar .sidebar-unfollow")
+  if (!form) return
+  e.preventDefault()
+  const li = form.closest(".sidebar-topic")
+  const id = li?.dataset.topicId
+  if (!id || unfollowing.has(id)) return
+  const data = new FormData(form)
+  data.set("quiet", "1")
+  unfollowing.set(id, {action: form.action, data, timer: setTimeout(() => unfollow(id), UNDO_MS)})
+  hideBubble()
+  const hadFocus = li.contains(document.activeElement)
+  markUnfollowing(li, form)
+  if (hadFocus) li.querySelector(".sidebar-undo-cancel")?.focus()
+})
+
+document.addEventListener("click", e => {
+  const cancel = e.target.closest("#sidebar .sidebar-undo-cancel")
+  if (!cancel) return
+  const li = cancel.closest(".sidebar-topic")
+  const id = li.dataset.topicId
+  clearTimeout(unfollowing.get(id)?.timer)
+  unfollowing.delete(id)
+  topicEntries(id).forEach(entry => {
+    entry.classList.remove("is-unfollowing")
+    entry.querySelector(".sidebar-undo")?.remove()
+  })
+  li.querySelector(".sidebar-unfollow button")?.focus()
+})
+
+window.addEventListener("pagehide", () => {
+  for (const [id, entry] of unfollowing) {
+    clearTimeout(entry.timer)
+    unfollowing.delete(id)
+    send(entry, true)
+  }
+})

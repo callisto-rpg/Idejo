@@ -56,10 +56,15 @@ defmodule IdejoWeb.FollowController do
         {topic, message} = fun.(user, topic)
 
         conn
-        |> put_flash(:info, message)
+        |> flash(params, message)
         |> redirect(to: back(conn, params) || ~p"/t/#{topic.id}/#{topic.slug}")
     end
   end
+
+  # The sidebar's delayed unfollow (`quiet=1`, assets/js/sidebar.js) is sent from a page that
+  # already said so: no message waits for the next one.
+  defp flash(conn, %{"quiet" => "1"}, _message), do: conn
+  defp flash(conn, _params, message), do: put_flash(conn, :info, message)
 
   # The referring page on this server, as a local path, or nil.
   defp back(conn, %{"return" => "back"}) do

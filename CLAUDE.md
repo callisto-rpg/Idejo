@@ -804,7 +804,11 @@ roles or the permission grid. Every later change must keep it true:
   `Reading.list_followed_topics/1`, oldest followed first so the list stays put; past four, a
   "N more topics" `<details>`; each with an unfollow ×, shown on hover, focus or the topic on screen, a
   form to `DELETE /t/{id}/follow` with `return=back`, which `FollowController` sends back to
-  the same-host `Referer`; long names end in "…", the lists' grid columns being
+  the same-host `Referer`; with scripts the × first turns the entry into "Topic unfollowed"
+  in red and a Cancel button for 4 s (`UNDO_MS`, `.is-unfollowing`, `data-unfollowed` /
+  `data-cancel`), then sends the form with `quiet=1` (no flash) and drops the entry, or at
+  once on `pagehide` (`sendBeacon`); kept across sidebar swaps by `applyFolds()` (steward
+  decision, 2026-10-25); long names end in "…", the lists' grid columns being
   `minmax(0, 1fr)`) and the content column (`width={:narrow}` for reading, `:wide` for the
   home grid and the admin panel; pass `category=` to mark it in the sidebar, and `topic=` on
   a topic page). The topic on screen is highlighted (`.sidebar-topic.is-current`,
@@ -819,7 +823,9 @@ roles or the permission grid. Every later change must keep it true:
   `.has-news` topics and the one on screen, remembered in `localStorage`
   (`idejo:folded-categories`) and applied again by `applyFolds()` after the Notifier swaps
   the sidebar; steward decision, 2026-10-23); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
-  before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
+  before paint by `theme.js`) and opens it as a drawer on narrow ones (the whole width under the header, and no
+  sidebar tutorial bubbles: `showBubble` and `peek` need a wide screen; steward decision,
+  2026-10-25), where a quick sideways
   swipe right opens it and left closes it; followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their
   notifications: grey new, blue a +role mention, orange a reply, red an @mention; the

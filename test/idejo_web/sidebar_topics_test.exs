@@ -206,4 +206,60 @@ defmodule IdejoWeb.SidebarTopicsTest do
     doc = sidebar(log_in_user(build_conn(), me), ~p"/")
     assert Enum.count(LazyHTML.query(doc, ".sidebar-fold")) == 1
   end
+
+  # Steward decision, 2026-10-25: the × first says "Topic unfollowed", with Cancel, for 4 s.
+  @tag req: "TP-13"
+  test "TP-13 the sidebar's × waits 4 s with Cancel before a quiet unfollow", %{
+    me: me,
+    topic: topic
+  } do
+    :ok = Reading.follow(me, topic)
+    conn = log_in_user(build_conn(), me)
+
+    form =
+      conn
+      |> sidebar(~p"/")
+      |> topic_item(topic)
+      |> LazyHTML.query(
+        ~s(form.sidebar-unfollow[data-unfollowed="Topic unfollowed"][data-cancel="Cancel"])
+      )
+
+    assert Enum.count(form) == 1
+
+    # The delayed request, `quiet=1`: unfollowed, and no message waits for the next page.
+    conn = delete(conn, ~p"/t/#{topic.id}/follow", %{"return" => "back", "quiet" => "1"})
+    refute Reading.following?(me, topic)
+    refute Phoenix.Flash.get(conn.assigns.flash, :info)
+
+    # Without it (no JavaScript), the message shows as before.
+    :ok = Reading.follow(me, topic)
+    conn = delete(build_conn() |> log_in_user(me), ~p"/t/#{topic.id}/follow")
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "no longer follow"
+
+    js = File.read!("assets/js/sidebar.js")
+    assert js =~ "const UNDO_MS = 4000"
+    assert js =~ ~s|data.set("quiet", "1")|
+    assert js =~ ~s|window.addEventListener("pagehide"|
+
+    css = File.read!("assets/css/app.css")
+    assert css =~ ~r/\.sidebar-undo-text \{[^}]*color: var\(--color-error\)/
+
+    assert css =~
+             ~r/\.sidebar-topic\.is-unfollowing \{\s*& > :not\(\.sidebar-undo\) \{ display: none; \}/
+  end
+
+  # Steward decision, 2026-10-25: on phones the drawer fills the screen and the sidebar's
+  # tutorial bubbles stay away; topics are a little bigger to tap.
+  test "the drawer takes the whole width, without bubbles, and topics are bigger to tap" do
+    css = File.read!("assets/css/app.css")
+
+    assert css =~
+             ~r/@media \(max-width: 1023\.98px\) \{\s*\.app-sidebar \{\s*position: fixed;\s*left: 0;\s*width: 100%;/
+
+    assert css =~ "padding: 0.5rem 0.5rem 0.5rem 0.375rem"
+
+    js = File.read!("assets/js/sidebar.js")
+    assert js =~ "const showBubble = el => {\n  if (!wide.matches) return"
+    assert js =~ "if (peeked || !wide.matches ||"
+  end
 end

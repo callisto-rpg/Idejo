@@ -525,7 +525,8 @@ defmodule IdejoWeb.Layouts do
 
   # One topic: followed, with an "×" to unfollow it (TP-13), or the topic on screen, not
   # followed, with a "+" to follow it. Plain form posts: FollowController leads back to the
-  # page they came from. Something new there shows as a dot, grey, blue for a mention of one
+  # page they came from. With scripts, the × first shows "Topic unfollowed" and Cancel for
+  # 4 s (assets/js/sidebar.js; steward decision, 2026-10-25). Something new there shows as a dot, grey, blue for a mention of one
   # of the user's roles, orange for a reply to the user, red for a mention of them, and a
   # stronger name. The topic on screen is highlighted; a new message there makes its name
   # glow (the Notifier hook, `data-topic-id`).
@@ -566,6 +567,8 @@ defmodule IdejoWeb.Layouts do
         action={~p"/t/#{@topic.id}/follow"}
         method="delete"
         class="sidebar-topic-action sidebar-unfollow"
+        data-unfollowed={gettext("Topic unfollowed")}
+        data-cancel={gettext("Cancel")}
       >
         <input type="hidden" name="return" value="back" />
         <%!-- Its tutorial bubble (steward decision, 2026-10-25), at its right on hover or
