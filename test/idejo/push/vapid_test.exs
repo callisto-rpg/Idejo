@@ -50,7 +50,7 @@ defmodule Idejo.Push.VapidTest do
       assert [%{change: "push.rotate_keys", admin_id: nil, after: after_} | _] =
                Audit.list_entries()
 
-      assert after_ == %{"public_key" => Vapid.public_key()}
+      assert after_ == %{"public_key" => Vapid.public_key(), "subscriptions_ended" => 0}
       refute inspect(Audit.list_entries()) =~ Base.url_encode64(now.private, padding: false)
     end
 

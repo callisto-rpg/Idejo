@@ -33,6 +33,12 @@ defmodule Idejo.Settings do
   @external_resource @default_css_path
   @default_css @default_css_path |> File.read!() |> String.trim()
   @registration_modes ~w(open invite_only)
+  # PN-16: the push services of Chrome and Edge (FCM), Firefox, Safari and Windows.
+  @push_services Enum.join(
+                   ~w(fcm.googleapis.com updates.push.services.mozilla.com *.push.apple.com
+                      *.notify.windows.com),
+                   "\n"
+                 )
 
   @definitions %{
     server_name: %{type: :string, default: "Idejo", required: true, max: 80},
@@ -68,6 +74,15 @@ defmodule Idejo.Settings do
     # PN-19: web push notifications, on by default; "off" means no banner, no subscribing
     # and no sending.
     push_enabled: %{type: :string, default: "on", required: true, in: ~w(on off)},
+    # PN-16: the push services the server sends to, one host per line; "*.example.com"
+    # allows any name under example.com.
+    push_services: %{
+      type: :string,
+      default: @push_services,
+      required: true,
+      max: 2000,
+      format: :host_patterns
+    },
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
     custom_css: %{type: :string, default: @default_css, max: 100_000}
@@ -89,6 +104,7 @@ defmodule Idejo.Settings do
           | :server_rules
           | :privacy_notice
           | :push_enabled
+          | :push_services
           | :custom_css
 
   @doc """
@@ -258,6 +274,16 @@ defmodule Idejo.Settings do
     validate_format(changeset, key, ~r/^([A-Za-z0-9-]+\.)*[A-Za-z0-9-]+$|^$/,
       message: "must be a host name such as smtp.example.org"
     )
+  end
+
+  defp validate_format_of(changeset, key, :host_patterns) do
+    validate_change(changeset, key, fn ^key, value ->
+      patterns = String.split(value, ["\n", "\r", ",", " "], trim: true)
+
+      if Enum.all?(patterns, &Regex.match?(~r/^(\*\.)?([A-Za-z0-9-]+\.)+[A-Za-z0-9-]+$/, &1)),
+        do: [],
+        else: [{key, "must be host names such as push.example.org, one per line"}]
+    end)
   end
 
   defp validate_format_of(changeset, _key, nil), do: changeset
