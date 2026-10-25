@@ -65,6 +65,9 @@ defmodule Idejo.Settings do
     server_rules: %{type: :string, default: "", max: 20_000},
     # The privacy notice at /privacy (AD-02, legal pages): Markdown.
     privacy_notice: %{type: :string, default: "", max: 50_000},
+    # PN-19: web push notifications, on by default; "off" means no banner, no subscribing
+    # and no sending.
+    push_enabled: %{type: :string, default: "on", required: true, in: ~w(on off)},
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
     custom_css: %{type: :string, default: @default_css, max: 100_000}
@@ -85,6 +88,7 @@ defmodule Idejo.Settings do
           | :server_about
           | :server_rules
           | :privacy_notice
+          | :push_enabled
           | :custom_css
 
   @doc """
