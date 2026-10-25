@@ -33,6 +33,8 @@ defmodule IdejoWeb.Router do
     get "/uploads/:name", UploadController, :show
     # The server's stylesheet, from Admin → Stylesheet (steward decision, 2026-10-23).
     get "/theme.css", ThemeController, :show
+    # CL-01: the web app manifest, so the site can be installed.
+    get "/manifest.webmanifest", ManifestController, :show
     # TP-17: the + reaction picker's emoji, drawn by the browser.
     get "/emoji-index.json", EmojiController, :index
     # NO-04: the email summary's one-click unsubscribe (RFC 8058). The token in the address
@@ -58,6 +60,8 @@ defmodule IdejoWeb.Router do
     get "/rules", WelcomeController, :show
     # Help: the keys, the signs and the ! commands (steward decision, 2026-10-23).
     get "/help", HelpController, :show
+    # AD-02: the privacy notice, written in Admin → Settings.
+    get "/privacy", PrivacyController, :show
     # NO-04: the email summary's unsubscribe link, with no need to sign in.
     get "/email/unsubscribe/:token", EmailUnsubscribeController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).

@@ -97,6 +97,34 @@ defmodule IdejoWeb.PublicPagesTest do
     end
   end
 
+  @tag req: "CL-01"
+  test "CL-01 the site can be installed as a web app", %{conn: conn} = context do
+    for path <- public_paths(context) do
+      assert attributes(page(conn, path), "link[rel='manifest']", "href") ==
+               ["/manifest.webmanifest"],
+             path
+
+      assert attributes(page(conn, path), "link[rel='apple-touch-icon']", "href") ==
+               ["/images/icon-180.png"],
+             path
+    end
+
+    conn = get(build_conn(), "/manifest.webmanifest")
+    assert get_resp_header(conn, "content-type") == ["application/manifest+json; charset=utf-8"]
+    assert get_resp_header(conn, "set-cookie") == []
+
+    manifest = Jason.decode!(response(conn, 200))
+    assert manifest["name"] == IdejoWeb.Layouts.server_name()
+    assert manifest["start_url"] == "/"
+    assert manifest["display"] == "standalone"
+
+    for %{"src" => src, "sizes" => sizes} <-
+          manifest["icons"] ++ [%{"src" => "/images/icon-180.png", "sizes" => "180x180"}] do
+      {:ok, image} = Image.from_binary(response(get(build_conn(), src), 200))
+      assert "#{Image.width(image)}x#{Image.height(image)}" == sizes, src
+    end
+  end
+
   @tag req: "SP-04"
   test "SP-04 pages load scripts, styles, fonts and images from the server only", context do
     member_conn = log_in_user(build_conn(), context.admin)

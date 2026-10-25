@@ -739,7 +739,9 @@ roles or the permission grid. Every later change must keep it true:
 - **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
-  `IDEJO_SOURCE_URL`). New pages must use `Layouts.app` so the footer is never missing.
+  `IDEJO_SOURCE_URL`). It also links the privacy notice (AD-02): `/privacy`
+  (`PrivacyController`, public, no JavaScript), the `privacy_notice` setting, Markdown written
+  in **Admin → Settings**. New pages must use `Layouts.app` so the footer is never missing.
 - **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
   to `/setup`. The wizard needs the setup code written to the app log at boot
   (`Idejo.Setup.token/0`, in memory, new at each restart) and creates the owner, verified, in
@@ -756,7 +758,10 @@ roles or the permission grid. Every later change must keep it true:
   `/favicon.ico` and the `rel="icon"`) before the server name in the header; the full one
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
   sign-in, sign-up and setup pages, inverted by the dark theme. Pages set `page_title`; the title reads "Page · Server name". No
-  framework branding in the interface.
+  framework branding in the interface. The square logo, rendered at 180, 192 and 512 px
+  (`/images/icon-*.png`), is the app icon: the web app manifest (CL-01,
+  `/manifest.webmanifest`, `ManifestController`, no session: the server name, `standalone`)
+  and the `apple-touch-icon`, both linked by the root layout.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
   web module a context may reference.
 - **Lock and pin** (TP-14): `Forum.moderate_topic(moderator, topic, :lock | :unlock | :pin |
