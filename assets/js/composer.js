@@ -135,6 +135,8 @@ const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dia
 
 // How long text just sent glows before it reads like the rest (matches .composer-burn).
 const BURN_MS = 2200
+// How long the hint says the message is visible to all, after a send.
+const VISIBLE_MS = 2000
 
 // Enter three times in a row, nothing typed between and each within this of the last, works
 // as Ctrl+Enter (steward decision, 2026-10-23), so phones, which have no Ctrl, can do it too.
@@ -481,10 +483,21 @@ export const Composer = {
       if (pending) bubbles = span("tutorial-bubble", labels.labelSend || "")
       else {
         if (this.justSent) bubbles = span("tutorial-bubble is-sent", labels.labelSent || "")
-        bubbles += span("composer-hint", labels.labelContinue || "")
+        bubbles += span("composer-hint", this.hintLabel())
       }
     }
     return `<span class="composer-caret">${bubbles && `<span class="composer-caret-bubbles">${bubbles}</span>`}</span>`
+  },
+
+  // The hint: "Message now visible to all!" for VISIBLE_MS after a send, then "Continue
+  // typing to add to your message" (steward decision, 2026-10-25), repainted when it changes.
+  hintLabel() {
+    const labels = this.el.dataset
+    const shown = this.justSent ? performance.now() - this.sentAt : Infinity
+    if (shown >= VISIBLE_MS) return labels.labelContinue || ""
+    clearTimeout(this.hintTimer)
+    this.hintTimer = setTimeout(() => this.paint(), VISIBLE_MS - shown + 20)
+    return labels.labelVisible || ""
   },
 
   // With no room for the hint beside the bubble (on a phone, or late on a line), it goes
