@@ -11,6 +11,7 @@ defmodule IdejoWeb.AccessibilityTest do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Moderation
+  alias Idejo.Settings.InfoBoxes
   alias IdejoWeb.Accessibility
 
   setup do
@@ -54,6 +55,14 @@ defmodule IdejoWeb.AccessibilityTest do
       Forum.Tags.create_tag(admin, %{"name" => "Seeds #{n}", "category_id" => general.id})
 
     {:ok, _} = Forum.set_topic_tags(admin, topic, [idea.id])
+
+    # An info box on the home page (steward decision, 2026-10-25).
+    {:ok, _} =
+      InfoBoxes.create(admin, %{
+        "title" => "Welcome",
+        "icon" => "general",
+        "body_md" => "Read the [rules](/rules) first.\n\n## Links\n\n- one"
+      })
 
     on_exit(fn ->
       for {_, pid, _, _} <-
@@ -184,6 +193,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/moderation",
       ~p"/moderation/log",
       ~p"/admin",
+      ~p"/admin/info-boxes",
       ~p"/admin/email",
       ~p"/admin/users",
       ~p"/admin/users/#{admin.id}",

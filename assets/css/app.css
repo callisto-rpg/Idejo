@@ -1108,6 +1108,15 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* Info boxes (steward decision, 2026-10-25): category cards holding Markdown. Not a link,
+     so links in the text stay clickable. */
+  .info-box-body {
+    flex: 1;
+    color: var(--ink-soft);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+    & .message-body { line-height: 1.5; }
+  }
   .category-card-stats {
     display: flex;
     flex-wrap: wrap;

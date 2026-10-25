@@ -18,4 +18,7 @@ defmodule IdejoWeb.PageHTML do
   def section_title(_group, 1), do: gettext("Categories")
   def section_title(nil, _count), do: gettext("Other")
   def section_title(group, _count), do: group.name
+
+  @doc "An info box's mark: drawn like a category's, from its title, icon and colour."
+  def info_box_mark(box), do: %{id: box.id, name: box.title, icon: box.icon, colour: box.colour}
 end

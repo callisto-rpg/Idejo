@@ -605,19 +605,26 @@ defmodule IdejoWeb.Layouts do
 
   attr :nonce, :string, default: nil
   attr :user, :any, default: nil
+  attr :info_boxes, :list, default: [], doc: "the page's info boxes (the home page's)"
 
   @doc """
   Each category's colour as a CSS variable, `--cat` on `.cat-{id}`, for the lines and glows
   of the elements that belong to it (RP-03): its own colour, or the tint its id gives it. Only
-  the categories the visitor may view, so no other id reaches the page (AC-05). A `<style>`
-  with the request's nonce: the CSP refuses `style` attributes (SP-05); the colours are checked
-  `#rrggbb` and the ids UUIDs, so the rules hold nothing else.
+  the categories the visitor may view, so no other id reaches the page (AC-05). The page's
+  info boxes (steward decision, 2026-10-25) get theirs the same way, on `.info-box-{id}`. A
+  `<style>` with the request's nonce: the CSP refuses `style` attributes (SP-05); the colours
+  are checked `#rrggbb` and the ids UUIDs, so the rules hold nothing else.
   """
   def category_colours(assigns) do
-    rules =
+    categories =
       for category <- Idejo.Forum.list_viewable_categories(assigns.user), into: "" do
         colour = category.colour || CategoryIcons.tint(category.id)
         ".cat-#{category.id}{--cat:#{colour}}"
+      end
+
+    rules =
+      for box <- assigns.info_boxes, into: categories do
+        ".info-box-#{box.id}{--cat:#{box.colour || CategoryIcons.tint(box.id)}}"
       end
 
     assigns = assign(assigns, :rules, rules)
@@ -839,7 +846,8 @@ defmodule IdejoWeb.Layouts do
       :categories,
       :tags,
       :permissions,
-      :stylesheet
+      :stylesheet,
+      :info_boxes
     ]
 
   slot :inner_block, required: true
@@ -854,6 +862,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :settings && "page"}
         >
           {gettext("Settings")}
+        </.link>
+        <.link
+          navigate={~p"/admin/info-boxes"}
+          class={["tab", @section == :info_boxes && "tab-active"]}
+          aria-current={@section == :info_boxes && "page"}
+        >
+          {gettext("Info boxes")}
         </.link>
         <.link
           navigate={~p"/admin/email"}

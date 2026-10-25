@@ -24,6 +24,7 @@
     <IdejoWeb.Layouts.category_colours
       nonce={assigns[:style_csp_nonce]}
       user={assigns[:current_scope] && @current_scope.user}
+      info_boxes={assigns[:info_boxes] || []}
     />
     <IdejoWeb.Layouts.role_colours nonce={assigns[:style_csp_nonce]} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
