@@ -429,6 +429,12 @@ export const Composer = {
     const {selectionStart: start, selectionEnd: end} = this.input
     const caretAt = document.activeElement === this.input && start === end ? start : null
 
+    // Nothing below may move while this repaints (steward report, 2026-10-25: the page shifted
+    // up and down on phones as one typed and sent). The box keeps its height until it is
+    // measured again, so the page never shrinks for a moment: scrolled to its end, the
+    // browser would pull it up and leave it there. The scroll is put back in any case.
+    const y = window.scrollY
+    this.el.style.minHeight = `${this.el.offsetHeight}px`
     // The extra space keeps a trailing line break visible in the backdrop.
     this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt)) + " "
     this.fitHint()
@@ -442,12 +448,9 @@ export const Composer = {
       clearTimeout(this.burnTimer)
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
-    // Measuring shrinks the box for a moment, and the page with it: scrolled to its end (a
-    // phone with its keyboard open), the browser would pull the page up and leave it there,
-    // the box sliding under the keyboard. The scroll goes back where it was.
-    const y = window.scrollY
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
+    this.el.style.minHeight = ""
     if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
   },
 
@@ -502,15 +505,24 @@ export const Composer = {
 
   // With no room for the hint beside the bubble (on a phone, or late on a line), it goes
   // below, moved left as far as it must to stay inside the composer, which grows to hold it.
+  // The room it takes below is kept while the box has the focus, the largest it needed: the
+  // hint comes and goes with every send and keystroke, and the page must not grow and shrink
+  // with it. Given back when the box loses the focus.
   fitHint() {
-    this.el.style.paddingBottom = ""
     const hint = this.backdrop.querySelector(".composer-hint")
     const box = this.el.getBoundingClientRect()
-    if (!hint || hint.getBoundingClientRect().right <= box.right) return
-    hint.classList.add("is-below")
-    hint.style.maxWidth = `${box.width}px`
-    const r = hint.getBoundingClientRect()
-    if (r.right > box.right) hint.style.translate = `${Math.max(box.right - r.right, box.left - r.left)}px 0`
-    this.el.style.paddingBottom = `${Math.max(0, r.bottom - box.bottom) + 4}px`
+    let room = 0
+    if (hint && hint.getBoundingClientRect().right > box.right) {
+      hint.classList.add("is-below")
+      hint.style.maxWidth = `${box.width}px`
+      const r = hint.getBoundingClientRect()
+      if (r.right > box.right) hint.style.translate = `${Math.max(box.right - r.right, box.left - r.left)}px 0`
+      // Measured from the box without the room it already keeps.
+      const reserved = parseFloat(this.el.style.paddingBottom) || 0
+      room = Math.max(0, r.bottom - (box.bottom - reserved)) + 4
+    }
+    const focused = document.activeElement === this.input
+    this.hintRoom = focused ? Math.max(this.hintRoom || 0, room) : room
+    this.el.style.paddingBottom = this.hintRoom ? `${this.hintRoom}px` : ""
   },
 }

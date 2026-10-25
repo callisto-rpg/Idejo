@@ -385,10 +385,14 @@ roles or the permission grid. Every later change must keep it true:
   shows twice. Three Enters in a row, nothing typed between and each within 1 s of the last,
   work as Ctrl+Enter (`enterRun()`, `ENTER_RUN_MS`; steward decision, 2026-10-23), on touch
   screens too, which have no Ctrl. A send never moves the page under the author (steward
-  decision, 2026-10-25): `paint()` puts the scroll back after measuring the box (its brief
-  `height: auto` would let a page scrolled to its end, a phone with its keyboard open, pull
-  up), and a box in view when sent (`inView()`) is kept above the keyboard after the send
-  and the server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`). Ctrl+Enter
+  decisions, 2026-10-25): `paint()` takes the scroll first and keeps the box's height
+  (`min-height`) until it is measured again, so the page never shrinks for a moment (a page
+  scrolled to its end, a phone with its keyboard open, would be pulled up), then puts the
+  scroll back; `fitHint()` keeps the hint's room below the box, the largest it needed, while
+  the box has the focus (`hintRoom`), so the hint coming and going does not move the page;
+  the backdrop is `overflow-anchor: none`; the timer line keeps its hint's room once full;
+  and a box in view when sent (`inView()`) is kept above the keyboard after the send and the
+  server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`). Ctrl+Enter
   from anywhere else on the page (steward
   decision, 2026-10-25; `onPageKey`, not from `OWN_CTRL_ENTER`: other text fields, links,
   open dialogs) sends with `break` when a new message may start (an edit, or
