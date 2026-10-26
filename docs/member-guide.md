@@ -30,7 +30,8 @@ message" until you type again. These **tutorial bubbles**
 1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
    where you write**, looking like any message, while what you have not sent yet is
    highlighted as temporary. Text you just sent glows for a moment, then settles into the
-   message. If your sentence had no punctuation, Idejo adds a full stop.
+   message. If your sentence had no punctuation, Idejo adds a full stop (unless your server
+   turned **Automatic punctuation** off).
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
    What others add to their messages glows the same way. While you type, a bubble over your

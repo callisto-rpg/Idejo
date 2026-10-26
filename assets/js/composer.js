@@ -21,13 +21,14 @@
 // shown again).
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
-// with punctuation, but never after or inside code, where it would become part of the code.
+// with punctuation, but never after or inside code, where it would become part of the code,
+// nor when the server's "Automatic punctuation" is off (`punctuate` false, data-punctuate).
 const ENDS_WITH_PUNCTUATION = /[.!?…:;,)\]}"'»”’]$/u
 const FENCE = /^\s*(```|~~~)/
 
-export function finishSentence(text) {
+export function finishSentence(text, punctuate = true) {
   const body = text.replace(/\s+$/, "")
-  if (body === "" || ENDS_WITH_PUNCTUATION.test(body)) return body
+  if (body === "" || !punctuate || ENDS_WITH_PUNCTUATION.test(body)) return body
   const lines = body.split("\n")
   const last = lines[lines.length - 1]
   const fences = lines.filter(line => FENCE.test(line)).length
@@ -365,7 +366,7 @@ export const Composer = {
   // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler").
   send(isBreak, then) {
     const caret = this.input.selectionStart
-    const body = finishSentence(this.input.value)
+    const body = finishSentence(this.input.value, this.el.dataset.punctuate !== "false")
     // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
     // delete it.
     if (body === "" && this.el.hasAttribute("data-editing")) {

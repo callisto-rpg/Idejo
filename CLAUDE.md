@@ -73,7 +73,9 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 
 The engine is `Idejo.Messages`: the composer sends the author's whole message after each Enter
 and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunctuated text
-(not after code). Each commit overwrites `body_md`/`body_html`; one that changes text already
+(not after code) while the `gm_auto_punctuation` setting ("Automatic punctuation", **Admin →
+Settings**, on by default; steward decision, 2026-10-26) is on; off, the text is stored as
+typed (the composer's `finishSentence/2` reads it from `data-punctuate`). Each commit overwrites `body_md`/`body_html`; one that changes text already
 sent first keeps the old text in `message_versions` (GM-11). History is kept only for edits
 (TP-05): a message that only received appends keeps just its final text, with no versions and
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
@@ -378,8 +380,8 @@ roles or the permission grid. Every later change must keep it true:
   the caret, 3px and blinking (`.composer-caret`, an empty inline span at the selection; the
   text box's own `caret-color` is transparent), which with the bubble shows the focus: the
   box has no ring (AX-01; steward decision, 2026-10-25). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`
-  (`body`, `break`) and keeps the text; its `finishSentence/1` must match the server's dot
-  rule. `data-sent` and the `"composer_sent"` push restore the open message after a reload
+  (`body`, `break`) and keeps the text; its `finishSentence/2` must match the server's dot
+  rule (and the `gm_auto_punctuation` setting, `data-punctuate`). `data-sent` and the `"composer_sent"` push restore the open message after a reload
   or reconnect; the text box is `autocomplete="off"`, and what a browser still puts back on
   reload is cut to what followed the sent text (`keptAfterReload/2`), so the message never
   shows twice. Three Enters in a row, nothing typed between and each within 1 s of the last,

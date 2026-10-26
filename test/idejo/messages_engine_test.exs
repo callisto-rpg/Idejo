@@ -95,6 +95,23 @@ defmodule Idejo.MessagesEngineTest do
     end
   end
 
+  # Steward decision, 2026-10-26: "Automatic punctuation" off stores the text as typed.
+  @tag req: "GM-02"
+  test "GM-02 with automatic punctuation off, no dot is added", %{
+    admin: admin,
+    topic: topic,
+    author: author
+  } do
+    {:ok, _} = Idejo.Settings.update_settings(admin, %{"gm_auto_punctuation" => "false"})
+
+    first = commit!(author, topic, "Hello  ")
+    assert first.body_md == "Hello"
+
+    later = commit!(author, topic, "Hello there")
+    assert later.id == first.id
+    assert later.body_md == "Hello there"
+  end
+
   @tag req: "GM-03"
   test "GM-03 the window is fixed at the first commit and appends never move it", %{
     topic: topic,
