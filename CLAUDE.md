@@ -896,8 +896,9 @@ roles or the permission grid. Every later change must keep it true:
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
   sign-in, sign-up and setup pages and on the visitors' card, in colour in both themes
   (steward decision, 2026-10-24). Pages set `page_title`; the title reads "Page · Server name". No
-  framework branding in the interface. The square logo, rendered at 180, 192 and 512 px
-  (`/images/icon-*.png`), is the app icon: the web app manifest (CL-01,
+  framework branding in the interface. The small logo, rendered from `logo-small.svg` at 180,
+  192 and 512 px (`/images/icon-*.png`; steward decision, 2026-10-26), is the app icon (and
+  the push notifications' icon): the web app manifest (CL-01,
   `/manifest.webmanifest`, `ManifestController`, no session: the server name, `standalone`)
   and the `apple-touch-icon`, both linked by the root layout.
 - Emails built in a context use `IdejoWeb.Gettext` (the one Gettext backend); that is the only
