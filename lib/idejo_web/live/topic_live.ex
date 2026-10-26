@@ -100,6 +100,7 @@ defmodule IdejoWeb.TopicLive do
            revealed: MapSet.new(),
            draft_over: nil,
            early_reply?: true,
+           punctuate?: true,
            too_soon?: false,
            composing_edit: nil,
            edit_versioned?: false
@@ -121,6 +122,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
+         |> assign(:punctuate?, Idejo.Settings.get(:gm_auto_punctuation))
          |> assign(composing_edit: nil, edit_versioned?: false)
          |> put_messages(Forum.list_messages(topic))
          |> put_draft()
@@ -1427,6 +1429,7 @@ defmodule IdejoWeb.TopicLive do
             mine={@mine}
             pending={@pending}
             commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
+            punctuate?={@punctuate?}
             reply_to={@reply_to}
             locked={@locked}
             editing?={@mine != nil and @mine.id == @composing_edit}
@@ -2113,6 +2116,11 @@ defmodule IdejoWeb.TopicLive do
   attr :mine, :any, required: true
   attr :pending, :list, default: [], doc: "the author's scheduled messages here"
   attr :commands, :list, default: [], doc: "the `!` commands, for the Composer hook"
+
+  attr :punctuate?, :boolean,
+    default: true,
+    doc: "the `gm_auto_punctuation` setting, for the Composer hook's dot rule"
+
   attr :reply_to, :any, required: true
 
   attr :locked, :any,
@@ -2184,6 +2192,7 @@ defmodule IdejoWeb.TopicLive do
         data-sent={@mine && @mine.body_md}
         data-editing={@editing?}
         data-commands={Jason.encode!(@commands)}
+        data-punctuate={to_string(@punctuate?)}
         data-label-send={gettext("Enter to send")}
         data-label-sent={gettext("Sent!")}
         data-label-continue={gettext("Continue typing to add to your message")}
