@@ -2777,6 +2777,18 @@ html:not([data-js]) .spoiler-cover { display: none; }
       var(--shadow-soft),
       0 0 0 1px color-mix(in oklab, var(--cat) 8%, transparent);
   }
+  /* On phones (steward decision, 2026-10-26) the messages sit on the page, with no card
+     around them: no side lines, shadow, background or rounding. The hairlines above, between
+     and below messages stay, and so does the glow of an @ or + mention ([data-glowing]). */
+  @media (max-width: 639.98px) {
+    .message-list {
+      background: transparent;
+      border-inline: 0;
+      border-radius: 0;
+      border-color: var(--hairline);
+      box-shadow: none;
+    }
+  }
 
   /* A category's page: its mark glows softly in its colour. */
   .category-intro .category-mark {
