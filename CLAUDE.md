@@ -327,6 +327,9 @@ roles or the permission grid. Every later change must keep it true:
   Rights are checked at mount and again on `:permissions_changed`, which
   `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
+- **Messages on phones** (steward decision, 2026-10-26): under 640 px the topic page's
+  `.message-list` drops its card (side lines, shadow, background, rounding); the hairlines
+  above, between and below messages and the mention glow (`[data-glowing]`) stay.
 - **Message actions** (React, Edit, Reply…; steward decision, 2026-10-25): on screens that
   point, hidden until the message is hovered or has the focus; on touch screens, with
   scripts, a pill floating under the message once it is tapped (`data-acting`, set by
