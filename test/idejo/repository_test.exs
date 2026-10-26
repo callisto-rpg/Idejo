@@ -82,6 +82,20 @@ defmodule Idejo.RepositoryTest do
     assert dockerfile =~ "COPY LICENSES LICENSES"
   end
 
+  @tag req: "LI-05"
+  test "LI-05 the CLA check links the individual and corporate CLA and its sign sentence" do
+    cla = read("docs/legal/CLA.md")
+    assert cla =~ "Part A — Individual Contributor Licence Agreement"
+    assert cla =~ "Part B — Corporate Contributor Licence Agreement"
+    assert cla =~ "Right to relicense"
+
+    # The sentence the CLA asks for is the one the workflow accepts.
+    workflow = read(".github/workflows/cla.yml")
+    assert workflow =~ "/blob/main/docs/legal/CLA.md"
+    [sentence] = Regex.run(~r/body == '(I have read [^']+)'/, workflow, capture: :all_but_first)
+    assert cla =~ "> " <> sentence
+  end
+
   @tag req: "DV-01"
   test "DV-01 CLAUDE.md describes architecture, conventions, commands and the requirement IDs" do
     claude = read("CLAUDE.md")

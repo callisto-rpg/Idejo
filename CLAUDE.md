@@ -185,7 +185,7 @@ roles or the permission grid. Every later change must keep it true:
   its `@pending` (remove the ID when its tests land, or the test fails); process-only IDs
   (DV-05, LI-08) are in `@by_review`, and NF-04, checked by the load test, in
   `@by_load_test`. Requirements met by repository files (SP-01, LI-01,
-  DV-01, DV-03, DV-04, DV-06) are tested in `test/idejo/repository_test.exs`.
+  LI-05, DV-01, DV-03, DV-04, DV-06) are tested in `test/idejo/repository_test.exs`.
 - **Async tests and shared rows**: async tests run side by side, each in its own sandbox
   transaction, and a lock taken there lasts until the test ends (`Forum` locks categories,
   `Access` locks roles). So in async tests: give unique columns values of their own
