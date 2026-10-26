@@ -2742,6 +2742,16 @@ html:not([data-js]) .spoiler-cover { display: none; }
     }
     &:focus-within { border-color: color-mix(in oklab, var(--cat) 70%, transparent); }
   }
+  /* Info boxes (steward decision, 2026-10-26): the text on the page, no card around it. */
+  .category-card.info-box {
+    &, &:hover, &:focus-within {
+      padding: 0;
+      background: none;
+      border-color: transparent;
+      box-shadow: none;
+      transform: none;
+    }
+  }
 
   /* Topic lists: each conversation its own card, lined in its category's colour. */
   .topic-list {

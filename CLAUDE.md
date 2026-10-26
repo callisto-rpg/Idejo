@@ -504,7 +504,9 @@ roles or the permission grid. Every later change must keep it true:
   edited, the message editor with Write / Preview; audited `info_box.create|update|reorder|
   delete`). The home page shows them to everyone first in the first section's
   `.category-grid`, as `.category-card.info-box` (no card link, so links in the text work;
-  the mark from `PageHTML.info_box_mark/1`); `--cat` comes from `Layouts.category_colours/1`
+  the mark from `PageHTML.info_box_mark/1`), drawn without the card's background, lines,
+  shadow or padding, and without its `.category-card-head` when `show_head` ("Show title
+  and icon") is off (steward decisions, 2026-10-26); `--cat` comes from `Layouts.category_colours/1`
   (`info_boxes` assign, `.info-box-{id}`). The icon and colour picker is
   `IdejoWeb.Admin.look/1`, shared with Admin → Categories. `Uploads.delete_unused/1` reads
   their Markdown.

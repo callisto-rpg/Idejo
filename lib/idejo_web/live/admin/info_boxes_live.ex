@@ -205,6 +205,11 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
             item_id={@editing && @editing.id}
             name_field={:title}
           />
+          <.input
+            field={@form[:show_head]}
+            type="checkbox"
+            label={gettext("Show title and icon")}
+          />
           <MessageComponents.editor
             field={@form[:body_md]}
             label={gettext("Text (Markdown)")}
