@@ -372,7 +372,10 @@ roles or the permission grid. Every later change must keep it true:
   `<html>` before paint, remembered in `localStorage` (`idejo:bubbles`), and sends
   `idejo:bubbles` so the timer line makes room again. Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every
-  character under the transparent textarea), and text just sent "burns" in
+  character under the transparent textarea; so an uploaded image's Markdown stays, drawn
+  transparent, `.composer-image`, under the excerpts' "image:" `.image-pill` placed over its
+  start, `withImages/3`, `data-label-image`; steward decision, 2026-10-26), and text just
+  sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
   `animationDelay` set through the DOM, never a style attribute). The backdrop also draws
   the caret, 3px and blinking (`.composer-caret`, an empty inline span at the selection; the

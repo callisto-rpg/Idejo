@@ -2188,6 +2188,7 @@ defmodule IdejoWeb.TopicLive do
         data-label-sent={gettext("Sent!")}
         data-label-continue={gettext("Continue typing to add to your message")}
         data-label-visible={gettext("Message now visible to all!")}
+        data-label-image={gettext("image:")}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
