@@ -22,8 +22,9 @@ The text box below the topic is where you write. Its placeholder repeats the key
 small bubble beside the cursor says **Enter to send**; once you press it, **Sent!**, with
 "Message now visible to all!" for two seconds, then "Continue typing to add to your
 message" until you type again. These **tutorial bubbles**
-(also on the timer line below, and on the sidebar's **×**) can be turned off with
-**Tutorial bubbles**: **Off**, in the menu under your name or at the top of **Help**.
+(also on the timer line below, and on the sidebar's **×**) are chosen with **Tutorial
+bubbles**, in the menu under your name or at the top of **Help**: **All** (the default),
+**Simple** (only **Enter to send** and **Sent!**) or **Off**.
 
 ## How a message grows
 

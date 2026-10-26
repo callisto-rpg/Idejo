@@ -15,7 +15,7 @@ defmodule IdejoWeb.HelpTest do
   end
 
   # Steward decision, 2026-10-25: at the right of the title, as in the account menu.
-  test "Help and the account menu turn the tutorial bubbles on or off" do
+  test "Help and the account menu choose all, simple or no tutorial bubbles" do
     doc = build_conn() |> get(~p"/help") |> html_response(200) |> LazyHTML.from_document()
 
     toggle =
@@ -24,7 +24,8 @@ defmodule IdejoWeb.HelpTest do
         ~s(header.page-intro .bubbles-toggle[aria-labelledby="help-bubbles-label"])
       )
 
-    assert toggle |> LazyHTML.query("button[data-choice=on]") |> LazyHTML.text() =~ "On"
+    assert toggle |> LazyHTML.query("button[data-choice=on]") |> LazyHTML.text() =~ "All"
+    assert toggle |> LazyHTML.query("button[data-choice=simple]") |> LazyHTML.text() =~ "Simple"
     assert toggle |> LazyHTML.query("button[data-choice=off]") |> LazyHTML.text() =~ "Off"
     assert doc |> LazyHTML.query("#help-bubbles-label") |> LazyHTML.text() == "Tutorial bubbles"
 
@@ -34,10 +35,18 @@ defmodule IdejoWeb.HelpTest do
     assert html
            |> LazyHTML.from_document()
            |> LazyHTML.query("#account-menu .bubbles-toggle button")
-           |> Enum.count() == 2
+           |> Enum.count() == 3
 
     theme = File.read!("assets/js/theme.js")
-    assert theme =~ ~s|localStorage.setItem("idejo:bubbles", "off")|
+    assert theme =~ ~s|localStorage.setItem("idejo:bubbles", choice)|
+
+    # Simple (steward decision, 2026-10-26): the composer's caret bubbles stay, no hints.
+    css = File.read!("assets/css/app.css")
+
+    assert css =~
+             ~s|[data-bubbles="simple"] :not(.composer-caret-bubbles) > .tutorial-bubble:not(.is-always),|
+
+    assert css =~ ~s|[data-bubbles="simple"] .composer-hint { display: none; }|
     assert theme =~ "phx:set-bubbles"
   end
 

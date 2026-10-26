@@ -29,13 +29,15 @@
     // Storage refused (private window): the sidebar shows.
   }
 
-  // Tutorial bubbles (steward decision, 2026-10-25): on unless turned off in the account menu
-  // or on the Help page; remembered by the browser, like the theme.
+  // Tutorial bubbles (steward decisions, 2026-10-25, 2026-10-26): all of them unless the
+  // account menu or the Help page chose "simple" (the composer's "Enter to send" and "Sent!"
+  // only) or "off"; remembered by the browser, like the theme.
   const setBubbles = (choice, remember) => {
-    if (choice === "off") document.documentElement.dataset.bubbles = "off"
+    const kept = choice === "off" || choice === "simple"
+    if (kept) document.documentElement.dataset.bubbles = choice
     else delete document.documentElement.dataset.bubbles
     try {
-      if (remember && choice === "off") localStorage.setItem("idejo:bubbles", "off")
+      if (remember && kept) localStorage.setItem("idejo:bubbles", choice)
       else if (remember) localStorage.removeItem("idejo:bubbles")
     } catch (_e) {
       // Storage refused (private window): the choice lasts for this page only.
@@ -43,7 +45,8 @@
     window.dispatchEvent(new CustomEvent("idejo:bubbles"))
   };
   try {
-    if (localStorage.getItem("idejo:bubbles") === "off") setBubbles("off", false)
+    const bubbles = localStorage.getItem("idejo:bubbles")
+    if (bubbles === "off" || bubbles === "simple") setBubbles(bubbles, false)
   } catch (_e) {
     // Storage refused: bubbles show.
   }

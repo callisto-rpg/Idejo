@@ -1065,10 +1065,11 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  Turns the tutorial bubbles on or off (steward decision, 2026-10-25): the composer's, the
-  timer line's and the sidebar ×'s. Like the theme, theme.js applies the choice before the
-  page is drawn (`data-bubbles="off"` on `<html>`) and the browser remembers it; the
-  stylesheet highlights the current one. Hidden without JavaScript, which the bubbles need.
+  Chooses the tutorial bubbles (steward decisions, 2026-10-25, 2026-10-26): All (the
+  composer's, the timer line's, the sidebar's, the push banner's), Simple (the composer's
+  "Enter to send" and "Sent!" only) or Off. Like the theme, theme.js applies the choice
+  before the page is drawn (`data-bubbles="simple"` or `"off"` on `<html>`) and the browser
+  remembers it; the stylesheet highlights the current one. Hidden without JavaScript, which the bubbles need.
   """
   attr :labelled_by, :string, required: true
 
@@ -1079,9 +1080,17 @@ defmodule IdejoWeb.Layouts do
         type="button"
         phx-click={JS.dispatch("phx:set-bubbles")}
         data-choice="on"
-        aria-label={gettext("Turn tutorial bubbles on")}
+        aria-label={gettext("Show all tutorial bubbles")}
       >
-        {gettext("On")}
+        {gettext("All")}
+      </button>
+      <button
+        type="button"
+        phx-click={JS.dispatch("phx:set-bubbles")}
+        data-choice="simple"
+        aria-label={gettext("Show only the Enter to send and Sent! bubbles")}
+      >
+        {gettext("Simple")}
       </button>
       <button
         type="button"
