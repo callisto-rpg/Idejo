@@ -9,9 +9,7 @@ defmodule Idejo.RequirementsTest do
   # MVP requirements whose tests come with a later pull request of M5 (MVP §7). Remove an ID
   # when its tests land: the last test below fails until then.
   @pending %{
-    "NF-03" =>
-      "page speed on a mid-range phone over 4G: needs a browser measurement, not planned",
-    "LI-05" => "the CLA document (docs/legal/CLA.md) is not in the repository yet"
+    "NF-03" => "page speed on a mid-range phone over 4G: needs a browser measurement, not planned"
   }
 
   # MVP requirements on how people work, which no test can check: a person verifies them in
