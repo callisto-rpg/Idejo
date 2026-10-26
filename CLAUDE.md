@@ -371,9 +371,11 @@ roles or the permission grid. Every later change must keep it true:
   `peek()`) and a category's fold button's "Hide topics with / no new messages", or "Show
   all followed topics" while folded (`data-bubble-folded`). `assets/js/sidebar.js` keeps one
   `.sidebar-bubble` on `<body>`, placed `fixed` from the button, so the sidebar's scrolling
-  never clips it; any scroll or a swapped sidebar hides it. "Tutorial bubbles" On / Off (`Layouts.bubbles_toggle/1`, in the
-  account menu under Theme and at the right of the Help page's title; hidden without
-  JavaScript) turns them all off: like the theme, theme.js applies `data-bubbles="off"` on
+  never clips it; any scroll or a swapped sidebar hides it. "Tutorial bubbles" All / Simple
+  / Off (`Layouts.bubbles_toggle/1`, in the account menu under Theme and at the right of the
+  Help page's title; hidden without JavaScript; Simple: steward decision, 2026-10-26) keeps
+  them all, only the composer's caret bubbles ("Enter to send", "Sent!"; no hints) or none:
+  like the theme, theme.js applies `data-bubbles="simple"` or `"off"` on
   `<html>` before paint, remembered in `localStorage` (`idejo:bubbles`), and sends
   `idejo:bubbles` so the timer line makes room again. Sent text is drawn like a
   message's, unsent text highlighted with box-shadow only (the backdrop must keep every

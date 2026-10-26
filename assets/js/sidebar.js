@@ -70,7 +70,7 @@ const DRAWER_MS = 220
 let peeked = false
 
 const peek = () => {
-  if (peeked || pointing.matches || root.dataset.bubbles === "off" || !isShown()) return
+  if (peeked || pointing.matches || root.dataset.bubbles || !isShown()) return
   const button = document.querySelector("#sidebar .sidebar-topic.is-current .sidebar-unfollow [data-bubble]")
   if (!button) return
   peeked = true
