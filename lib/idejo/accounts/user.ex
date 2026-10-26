@@ -35,6 +35,9 @@ defmodule Idejo.Accounts.User do
     # When the user was last seen signed in (steward decision, 2026-10-23): for the email
     # summary of what they missed (Idejo.Notifications.Digest). Kept by Accounts.seen/1.
     field :last_seen_at, :utc_datetime_usec
+    # Automatic punctuation (steward decision, 2026-10-26): a `.` after a sent line that ends
+    # without punctuation (GM-02), set in the profile. See Idejo.Messages.commit/4.
+    field :auto_punctuation, :boolean, default: true
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 
@@ -88,6 +91,16 @@ defmodule Idejo.Accounts.User do
     user
     |> cast(attrs, [:display_name])
     |> validate_display_name()
+  end
+
+  @doc """
+  A changeset for the user's writing preferences: automatic punctuation (steward decision,
+  2026-10-26).
+  """
+  def writing_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:auto_punctuation])
+    |> validate_required([:auto_punctuation])
   end
 
   defp validate_display_name(changeset) do

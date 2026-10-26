@@ -22,7 +22,7 @@
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code,
-// nor when the server's "Automatic punctuation" is off (`punctuate` false, data-punctuate).
+// nor when the author's "Automatic punctuation" is off (`punctuate` false, data-punctuate).
 const ENDS_WITH_PUNCTUATION = /[.!?…:;,)\]}"'»”’]$/u
 const FENCE = /^\s*(```|~~~)/
 

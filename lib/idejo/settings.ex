@@ -67,9 +67,6 @@ defmodule Idejo.Settings do
     # Reply starts a new message at any time (steward decision, 2026-10-24): sending it
     # completes the author's open message even while its timer runs. Admin → Settings.
     gm_early_reply: %{type: :boolean, default: true},
-    # Automatic punctuation (steward decision, 2026-10-26): a `.` after a sent line that ends
-    # without punctuation (GM-02). Off, the text is stored as typed. Admin → Settings.
-    gm_auto_punctuation: %{type: :boolean, default: true},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
@@ -130,7 +127,6 @@ defmodule Idejo.Settings do
           | :gm_window_seconds
           | :gm_unanswered_minutes
           | :gm_early_reply
-          | :gm_auto_punctuation
           | :upload_max_mb
           | :server_about
           | :server_rules

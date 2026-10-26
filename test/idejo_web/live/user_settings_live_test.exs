@@ -76,4 +76,47 @@ defmodule IdejoWeb.UserSettingsLiveTest do
     {:ok, updated} = Accounts.update_user_profile(user, %{"username" => "someone_else"})
     assert updated.username == user.username
   end
+
+  # Steward decision, 2026-10-26: "Automatic punctuation" is each user's, no longer the
+  # server's.
+  @tag req: "GM-02"
+  test "GM-02 a user turns automatic punctuation off in their profile, read by the composer",
+       %{conn: conn, user: user} do
+    admin = user_with_role_fixture(:administrator)
+    {:ok, general} = Idejo.Forum.create_category(admin, %{"name" => "General"})
+    {:ok, topic} = Idejo.Forum.create_topic(admin, general, %{"title" => "Chat", "body" => "Hi"})
+
+    {:ok, lv, html} = live(conn, ~p"/users/settings")
+    assert html =~ "Automatic punctuation"
+    assert user.auto_punctuation
+
+    assert has_element?(
+             lv,
+             ~s(#writing-form input[type="checkbox"][name="writing[auto_punctuation]"][checked])
+           )
+
+    {:ok, topic_lv, _html} =
+      live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+
+    assert has_element?(topic_lv, ~s(#composer[data-punctuate="true"]))
+
+    assert lv
+           |> form("#writing-form", writing: %{auto_punctuation: "false"})
+           |> render_submit() =~ "Writing preferences saved."
+
+    refute Accounts.get_user(user.id).auto_punctuation
+    refute has_element?(lv, ~s(#writing-form input[name="writing[auto_punctuation]"][checked]))
+
+    {:ok, topic_lv, _html} =
+      live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+
+    assert has_element?(topic_lv, ~s(#composer[data-punctuate="false"]))
+  end
+
+  @tag req: "AD-04"
+  test "AD-04 Admin → Settings no longer has automatic punctuation" do
+    admin = user_with_role_fixture(:administrator)
+    {:ok, _lv, html} = live(log_in_user(build_conn(), admin), ~p"/admin")
+    refute html =~ "Automatic punctuation"
+  end
 end

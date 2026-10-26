@@ -64,9 +64,6 @@ corner. It has ten tabs.
   starts a new message; with this on, sending it completes the author's open message at
   once. Off, a reply waits like Ctrl+Enter: until the window (and, while nobody wrote below,
   the unanswered message time) has passed.
-- **Automatic punctuation**: on by default. A line sent without punctuation at its end gets
-  a full stop (never after code). Off, messages keep the text exactly as typed. It applies
-  to the next Enter; a topic page already open picks it up when reloaded.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **Push notifications**: **On** (the default) or **Off**. On, members can turn on
   browser notifications for replies, mentions and topics they follow. Off, they are not

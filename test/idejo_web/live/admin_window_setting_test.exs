@@ -151,39 +151,4 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     assert [%{admin_id: admin_id, after: %{"gm_early_reply" => false}}] = settings_entries()
     assert admin_id == admin.id
   end
-
-  # Steward decision, 2026-10-26: the dot after unpunctuated lines (GM-02) can be turned off.
-  @tag req: "AD-04"
-  test "AD-04 \"Automatic punctuation\": on by default, audited, read by the composer", %{
-    conn: conn,
-    admin: admin,
-    topic: topic
-  } do
-    {:ok, lv, html} = live(conn, ~p"/admin")
-    assert html =~ "Automatic punctuation"
-    assert Settings.get(:gm_auto_punctuation) == true
-
-    assert has_element?(
-             lv,
-             ~s(#settings-form input[type="checkbox"][name="settings[gm_auto_punctuation]"][checked])
-           )
-
-    {:ok, topic_lv, _html} =
-      live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
-
-    assert has_element?(topic_lv, ~s(#composer[data-punctuate="true"]))
-
-    assert lv
-           |> form("#settings-form", settings: %{gm_auto_punctuation: "false"})
-           |> render_submit() =~ "Settings saved."
-
-    assert Settings.get(:gm_auto_punctuation) == false
-    assert [%{admin_id: admin_id, after: %{"gm_auto_punctuation" => false}}] = settings_entries()
-    assert admin_id == admin.id
-
-    {:ok, topic_lv, _html} =
-      live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
-
-    assert has_element?(topic_lv, ~s(#composer[data-punctuate="false"]))
-  end
 end

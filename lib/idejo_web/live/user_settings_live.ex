@@ -3,8 +3,8 @@
 
 defmodule IdejoWeb.UserSettingsLive do
   @moduledoc """
-  Profile and account: the signed-in user changes their display name and avatar (AC-04)
-  and password (AC-01), and can delete their account (AC-07).
+  Profile and account: the signed-in user changes their display name and avatar (AC-04),
+  automatic punctuation, and password (AC-01), and can delete their account (AC-07).
 
   The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/3`: a 256 px
   WebP square without metadata), and can be removed. So can a second picture for the dark
@@ -32,6 +32,7 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
+     |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
      |> assign(:push_on?, Push.enabled?())
      |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))
@@ -140,6 +141,22 @@ defmodule IdejoWeb.UserSettingsLive do
 
     {:noreply,
      socket |> put_flash(:info, gettext("Avatar removed.")) |> redirect(to: ~p"/users/settings")}
+  end
+
+  # Automatic punctuation (steward decision, 2026-10-26): open topic pages pick it up when
+  # reloaded (`TopicLive` reads it at mount, for the composer and for the engine alike).
+  def handle_event("save_writing", %{"writing" => params}, socket) do
+    case Accounts.update_user_writing(socket.assigns.current_scope.user, params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Writing preferences saved."))
+         |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
+         |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :writing_form, to_form(changeset, as: :writing))}
+    end
   end
 
   # Email notifications (steward decision, 2026-10-23): the summary sent after a day away.
@@ -389,6 +406,24 @@ defmodule IdejoWeb.UserSettingsLive do
             </button>
           </div>
         </details>
+      </section>
+
+      <section class="mt-10" aria-labelledby="writing-heading">
+        <h2 id="writing-heading" class="font-semibold mb-2">{gettext("Writing")}</h2>
+        <.form for={@writing_form} id="writing-form" phx-submit="save_writing">
+          <.input
+            field={@writing_form[:auto_punctuation]}
+            type="checkbox"
+            label={gettext("Automatic punctuation")}
+            aria-describedby="auto-punctuation-help"
+          />
+          <p id="auto-punctuation-help" class="text-sm opacity-70 -mt-1 mb-4">
+            {gettext(
+              "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, your messages keep the text exactly as typed."
+            )}
+          </p>
+          <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>
+        </.form>
       </section>
 
       <section class="mt-10" aria-labelledby="email-notifications-heading">

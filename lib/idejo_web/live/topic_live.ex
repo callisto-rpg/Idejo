@@ -122,7 +122,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
-         |> assign(:punctuate?, Idejo.Settings.get(:gm_auto_punctuation))
+         |> assign(:punctuate?, user == nil or user.auto_punctuation)
          |> assign(composing_edit: nil, edit_versioned?: false)
          |> put_messages(Forum.list_messages(topic))
          |> put_draft()
@@ -2119,7 +2119,7 @@ defmodule IdejoWeb.TopicLive do
 
   attr :punctuate?, :boolean,
     default: true,
-    doc: "the `gm_auto_punctuation` setting, for the Composer hook's dot rule"
+    doc: "the author's \"Automatic punctuation\", for the Composer hook's dot rule"
 
   attr :reply_to, :any, required: true
 
