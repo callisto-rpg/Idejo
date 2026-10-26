@@ -521,4 +521,24 @@ defmodule IdejoWeb.ComposerTest do
     # Repaints keep the burn's place through the DOM, never a style attribute (SP-05).
     assert js =~ "style.animationDelay"
   end
+
+  # Steward decision, 2026-10-26: an image in the box shows as the excerpts' pill.
+  @tag req: "TP-12"
+  test "TP-12 an image's Markdown in the composer is drawn as an \"image:\" pill", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    assert has_element?(lv, ~s(#composer[data-label-image="image:"]))
+
+    js = File.read!("assets/js/composer.js")
+    assert js =~ "export function withImages"
+    assert js =~ ~s|const runs = withImages(painted, value, this.el.dataset.labelImage|
+    assert js =~ ~s|<span class="image-pill composer-image-pill">|
+
+    # The Markdown stays under the textarea, unseen, so the caret keeps its place.
+    css = File.read!("assets/css/app.css")
+    assert css =~ ".composer-backdrop .composer-image {\n  color: transparent;"
+    assert css =~ ".composer-image-pill {\n  position: absolute;"
+  end
 end

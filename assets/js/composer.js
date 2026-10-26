@@ -174,11 +174,51 @@ function burnRuns(sent, marks) {
   return runs
 }
 
+// An uploaded image's Markdown, as the composer inserts it (IdejoWeb.ImageUploads).
+const IMAGE = /!\[[^\]\n]*\]\((\/uploads\/[A-Za-z0-9-]+\.(?:jpe?g|png|gif|webp))\)/g
+
+// Images in the box (steward decision, 2026-10-26): their Markdown stays in the text, so the
+// backdrop keeps every character under the textarea, but drawn transparent
+// (`composer-image`), with a pill ("image:" and the picture, like excerpts') over its start.
+// Returns the runs split at each image, the pill as a run of no text and HTML of its own.
+export function withImages(runs, value, label) {
+  const images = Array.from(value.matchAll(IMAGE), m => [m.index, m.index + m[0].length, m[1]])
+  if (images.length === 0) return runs
+  const out = []
+  let pos = 0
+  for (const [cls, text] of runs) {
+    let from = 0
+    while (from < text.length) {
+      const at = pos + from
+      const image = images.find(([start, end]) => start <= at && at < end)
+      const next = images.find(([start]) => start > at)
+      if (image) {
+        if (image[0] === at) out.push(["", "", pill(label, image[2])])
+        const to = Math.min(text.length, image[1] - pos)
+        out.push([`${cls} composer-image`, text.slice(from, to)])
+        from = to
+      } else {
+        const to = next ? Math.min(text.length, next[0] - pos) : text.length
+        out.push([cls, text.slice(from, to)])
+        from = to
+      }
+    }
+    pos += text.length
+  }
+  return out
+}
+
+const pill = (label, src) =>
+  `<span class="composer-image-anchor"><span class="image-pill composer-image-pill">${escape(label)}<img src="${escape(src)}" alt="" class="image-pill-thumb"></span></span>`
+
 // The runs as HTML, with `caret` (HTML) at character `at` of their text, when `at` is a number.
+// A run with HTML of its own (a pill) is written as it is.
 export function withCaret(runs, at, caret) {
   let html = "", pos = 0, placed = at == null
-  for (const [cls, text] of runs) {
-    if (!placed && at <= pos + text.length) {
+  for (const [cls, text, raw] of runs) {
+    if (raw) {
+      html += raw
+    } else if (!placed && at <= pos + text.length) {
       html += span(cls, text.slice(0, at - pos)) + caret + span(cls, text.slice(at - pos))
       placed = true
     } else {
@@ -423,9 +463,10 @@ export const Composer = {
     // A burn shows while it lasts and while the sent text is still the start of the box.
     const burning = elapsed < BURN_MS && this.burn.sent === this.sent && value.startsWith(this.sent)
 
-    const runs = burning
+    const painted = burning
       ? [...burnRuns(this.sent, this.burn.marks), ["composer-unsent", value.slice(this.sent.length)]]
       : sentRuns(this.sent, value).map(([text, sent]) => [sent ? "composer-sent" : "composer-unsent", text])
+    const runs = withImages(painted, value, this.el.dataset.labelImage || "image:")
 
     const {selectionStart: start, selectionEnd: end} = this.input
     const caretAt = document.activeElement === this.input && start === end ? start : null

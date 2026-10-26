@@ -112,7 +112,8 @@ goes away when you tap elsewhere or scroll.
   several people chose the same one; click one to add yours or take it back. You may add
   several. The author is told once per message how many reactions it has.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box, or use
-  **!image** (below). In the editor for a new topic, there is also **Add image**.
+  **!image** (below). In the box it shows as a small "image:" pill with the picture. In the
+  editor for a new topic, there is also **Add image**.
 - **Commands**: type **!** at the start of a word in the box for a list of commands. Pick one
   with a click, or type its name or use the arrow keys, then **Enter** (or **Tab**):
   - **!image** opens your files; the picture goes at the end of your message.

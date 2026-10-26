@@ -1958,6 +1958,21 @@ html:not([data-js]) .spoiler-cover { display: none; }
 .composer-sent {
   color: var(--color-base-content);
 }
+/* An image's Markdown in the box (steward decision, 2026-10-26): kept, for the caret's sake,
+   but unseen, the excerpts' pill drawn over its start. The anchor takes no room. */
+.composer-backdrop .composer-image {
+  color: transparent;
+  text-shadow: none;
+  animation: none;
+}
+.composer-image-anchor { position: relative; }
+.composer-image-pill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: 0 -50%;
+  margin: 0;
+}
 .composer-unsent {
   color: var(--color-base-content);
   background: color-mix(in oklab, var(--color-primary) 11%, transparent);
