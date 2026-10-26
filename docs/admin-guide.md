@@ -92,10 +92,11 @@ corner. It has ten tabs.
 
 ### Info boxes
 
-Cards shown to everyone on the home page, before the categories and drawn like them, with
-your own text: a welcome, links, the next event. **Create info box** takes a **Title**, an
-**Icon** and **Colour** (the same choices as a category's) and a **Text (Markdown)** written
-in the message editor, with its **Preview**. **Edit** changes one, the arrows change their
+Your own text shown to everyone on the home page, before the categories and in their grid,
+without a card around it: a welcome, links, the next event. **Create info box** takes a
+**Title**, an **Icon** and **Colour** (the same choices as a category's), **Show title and
+icon** (on by default; off, only the text shows) and a **Text (Markdown)** written in the
+message editor, with its **Preview**. **Edit** changes one, the arrows change their
 order, **Delete** removes one.
 
 ### Email

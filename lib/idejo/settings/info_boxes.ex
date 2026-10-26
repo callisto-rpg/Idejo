@@ -129,7 +129,8 @@ defmodule Idejo.Settings.InfoBoxes do
 
   defp rendered(changeset, _admin), do: changeset
 
-  defp snapshot(box), do: Audit.snapshot(box, [:title, :icon, :colour, :body_md, :position])
+  defp snapshot(box),
+    do: Audit.snapshot(box, [:title, :icon, :colour, :body_md, :show_head, :position])
 
   defp lock, do: Repo.query!("LOCK TABLE info_boxes IN SHARE ROW EXCLUSIVE MODE")
 end

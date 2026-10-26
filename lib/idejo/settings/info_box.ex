@@ -23,6 +23,9 @@ defmodule Idejo.Settings.InfoBox do
     field :body_md, :string, default: ""
     field :body_html, :string, default: ""
     field :position, :integer
+    # Off, the home page shows the text alone, without the icon and title (steward
+    # decision, 2026-10-26).
+    field :show_head, :boolean, default: true
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
@@ -33,7 +36,7 @@ defmodule Idejo.Settings.InfoBox do
   """
   def changeset(box, attrs) do
     box
-    |> cast(attrs, [:title, :icon, :colour, :body_md])
+    |> cast(attrs, [:title, :icon, :colour, :body_md, :show_head])
     |> update_change(:title, &(&1 && String.trim(&1)))
     # An emptied text is cast to nil; the column keeps "" instead.
     |> then(&if(get_field(&1, :body_md), do: &1, else: put_change(&1, :body_md, "")))

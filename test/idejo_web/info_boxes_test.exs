@@ -53,6 +53,28 @@ defmodule IdejoWeb.InfoBoxesTest do
     assert html =~ ".cat-#{general.id}{--cat:"
   end
 
+  # Steward decision, 2026-10-26: "Show title and icon" off leaves the text alone.
+  @tag req: "AD-02"
+  test "AD-02 an info box can hide its title and icon, audited", %{conn: conn, admin: admin} do
+    {:ok, box} = InfoBoxes.create(admin, %{"title" => "Note", "body_md" => "Just text."})
+    assert box.show_head
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/info-boxes")
+    lv |> element(~s(button[aria-label="Edit Note"])) |> render_click()
+
+    lv
+    |> form("#info-box-form", box: %{show_head: "false"})
+    |> render_submit()
+
+    assert [%{after: %{"show_head" => false}} | _] =
+             Enum.filter(Audit.list_entries(), &(&1.change == "info_box.update"))
+
+    html = build_conn() |> get(~p"/") |> html_response(200)
+    card = "#info-box-#{box.id}"
+    assert html |> query("#{card} .category-card-head") |> Enum.count() == 0
+    assert texts(html, "#{card} .message-body") == ["Just text."]
+  end
+
   @tag req: "AD-02"
   test "AD-02 with no category, the info boxes still show, without the empty notice", %{
     admin: admin

@@ -80,7 +80,7 @@
           id={"info-box-#{box.id}"}
           class={["category-card info-box", "info-box-#{box.id}"]}
         >
-          <div class="category-card-head">
+          <div :if={box.show_head} class="category-card-head">
             <TopicComponents.category_mark category={info_box_mark(box)} size={:large} />
             <h3>{box.title}</h3>
           </div>
