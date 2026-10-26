@@ -95,14 +95,14 @@ defmodule Idejo.MessagesEngineTest do
     end
   end
 
-  # Steward decision, 2026-10-26: "Automatic punctuation" off stores the text as typed.
+  # Steward decision, 2026-10-26: an author who turned "Automatic punctuation" off gets the
+  # text as typed; others keep their dot.
   @tag req: "GM-02"
-  test "GM-02 with automatic punctuation off, no dot is added", %{
-    admin: admin,
+  test "GM-02 with the author's automatic punctuation off, no dot is added", %{
     topic: topic,
     author: author
   } do
-    {:ok, _} = Idejo.Settings.update_settings(admin, %{"gm_auto_punctuation" => "false"})
+    {:ok, author} = Idejo.Accounts.update_user_writing(author, %{"auto_punctuation" => "false"})
 
     first = commit!(author, topic, "Hello  ")
     assert first.body_md == "Hello"
@@ -110,6 +110,8 @@ defmodule Idejo.MessagesEngineTest do
     later = commit!(author, topic, "Hello there")
     assert later.id == first.id
     assert later.body_md == "Hello there"
+
+    assert commit!(user_fixture(), topic, "Hi").body_md == "Hi."
   end
 
   @tag req: "GM-03"

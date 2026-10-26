@@ -31,8 +31,8 @@ bubbles**, in the menu under your name or at the top of **Help**: **All** (the d
 1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
    where you write**, looking like any message, while what you have not sent yet is
    highlighted as temporary. Text you just sent glows for a moment, then settles into the
-   message. If your sentence had no punctuation, Idejo adds a full stop (unless your server
-   turned **Automatic punctuation** off).
+   message. If your sentence had no punctuation, Idejo adds a full stop (unless you turned
+   **Automatic punctuation** off under **Writing** in **Profile and account**).
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
    What others add to their messages glows the same way. While you type, a bubble over your
@@ -212,6 +212,10 @@ display name, add a picture (and, under **Dark mode picture**, another one for p
 using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".
+
+**Writing**, on the same page, has **Automatic punctuation** (on at first): a full stop
+after a line you send without punctuation at its end, never after code. Turn it off to keep
+your messages exactly as typed; a topic page already open follows the change once reloaded.
 
 **Email notifications**, on the same page: when you have not been on the server for 24
 hours, you get one email counting what you missed, for what you tick: **@you mentions and

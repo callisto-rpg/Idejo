@@ -16,7 +16,7 @@ defmodule Idejo.Messages do
       the next line starts a new one (GM-05).
 
   Text that does not end with punctuation gets a `.` (GM-02; the composer shows the space
-  after it) while the `gm_auto_punctuation` setting is on. A commit that changes text already sent keeps the previous full text as a
+  after it) while the author's "Automatic punctuation" (`users.auto_punctuation`) is on. A commit that changes text already sent keeps the previous full text as a
   version (GM-11); appends keep none. An author has at most one open message per topic
   (GM-09, also a unique index), and a topic's first message is never open (GM-14).
 
@@ -110,7 +110,7 @@ defmodule Idejo.Messages do
           not Forum.can_post?(author, topic) -> {:error, :forbidden}
           # SP-05: every Enter counts.
           RateLimit.check(:commit, author.id) != :ok -> {:error, :rate_limited}
-          true -> commit_locked(author, topic, normalize(text), opts)
+          true -> commit_locked(author, topic, normalize(text, author.auto_punctuation), opts)
         end
       end)
 
@@ -166,13 +166,10 @@ defmodule Idejo.Messages do
   end
 
   # The text as sent: line ends trimmed, and a `.` after text that ends without punctuation,
-  # unless automatic punctuation is off (steward decision, 2026-10-26).
-  defp normalize(text) do
+  # unless the author turned automatic punctuation off (steward decision, 2026-10-26).
+  defp normalize(text, punctuate?) do
     text = String.trim_trailing(text)
-
-    if text == "" or ends_in_punctuation?(text) or not Settings.get(:gm_auto_punctuation),
-      do: text,
-      else: text <> "."
+    if text == "" or not punctuate? or ends_in_punctuation?(text), do: text, else: text <> "."
   end
 
   # Code ends without punctuation too, and a dot there would become part of the code: after a

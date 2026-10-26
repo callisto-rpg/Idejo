@@ -119,18 +119,6 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "Reply then starts a new message at any time, completing the author's open message. When off, a reply waits like Ctrl+Enter."
           )}
         </p>
-        <%!-- Steward decision, 2026-10-26. --%>
-        <.input
-          field={@form[:gm_auto_punctuation]}
-          type="checkbox"
-          label={gettext("Automatic punctuation")}
-          aria-describedby="gm-auto-punctuation-help"
-        />
-        <p id="gm-auto-punctuation-help" class="text-sm opacity-70 -mt-1 mb-4">
-          {gettext(
-            "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, messages keep the text exactly as typed."
-          )}
-        </p>
         <.input
           field={@form[:upload_max_mb]}
           type="number"
