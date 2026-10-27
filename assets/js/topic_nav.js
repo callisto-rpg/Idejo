@@ -9,7 +9,8 @@
 // attributes the server never renders (JS.ignore_attributes).
 //
 // UnreadLine hook, on the "N unread messages" line: the page opens centred on the message
-// below it, unless the address names a message (a permalink, TP-06). The line fades by CSS
+// below it, unless the address names a message (a permalink, TP-06), which TopicNav centres
+// instead (a notification names the oldest unread one: `/m/{id}?unread`). The line fades by CSS
 // after 4 s, then the server is told to drop it. With nothing unread, TopicNav opens the
 // page at its end, where the conversation goes on (steward decision, 2026-10-24).
 
@@ -56,6 +57,7 @@ export const TopicNav = {
     document.addEventListener("keydown", this.onKey)
     document.addEventListener("click", this.onOutside)
     this.place()
+    this.openAtNamed()
     this.openAtEnd()
   },
 
@@ -82,6 +84,17 @@ export const TopicNav = {
     this.el.toggleAttribute("data-shown", shown)
     this.el.dataset.mode = mode
     if (!shown || mode === "card") this.setOpen(false)
+  },
+
+  // An address naming a message (a permalink, TP-06, or a notification's oldest unread):
+  // centred once the page is laid out, rather than left to the browser's own jump, which
+  // the page may land before (ShowAll collapsing bodies, the live view connecting).
+  openAtNamed() {
+    const target = /^#message-/.test(window.location.hash) &&
+      document.getElementById(window.location.hash.slice(1))
+    if (!target || placed.has(`named:${target.id}`)) return
+    placed.add(`named:${target.id}`)
+    requestAnimationFrame(() => scrollToMessage(target, "auto"))
   },
 
   // Once per page, as UnreadLine does: a reconnect mounts the hook again.

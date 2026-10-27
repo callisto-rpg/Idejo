@@ -96,7 +96,7 @@ defmodule Idejo.Push.DispatchTest do
     assert notification(payload) == %{
              "title" => "Ada replied in Garden plans",
              "body" => "Beans, they climb.",
-             "navigate" => Idejo.Federation.uri(:message, reply.id),
+             "navigate" => Idejo.Federation.uri(:message, reply.id) <> "?unread",
              "tag" => "reply-#{topic.id}",
              "lang" => "en"
            }
@@ -124,7 +124,7 @@ defmodule Idejo.Push.DispatchTest do
 
     assert notification(payload) |> Map.take(~w(title navigate tag)) == %{
              "title" => "Ada mentioned you in Garden plans",
-             "navigate" => Idejo.Federation.uri(:message, first.id),
+             "navigate" => Idejo.Federation.uri(:message, first.id) <> "?unread",
              "tag" => "mentions"
            }
 
@@ -350,7 +350,7 @@ defmodule Idejo.Push.DispatchTest do
     assert notification(payload) == %{
              "title" => "Ada sent you a private message",
              "body" => "Are you coming?",
-             "navigate" => Idejo.Federation.uri(:message, first.id),
+             "navigate" => Idejo.Federation.uri(:message, first.id) <> "?unread",
              "tag" => "private",
              "lang" => "en"
            }

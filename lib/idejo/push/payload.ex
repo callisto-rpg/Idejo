@@ -7,7 +7,7 @@ defmodule Idejo.Push.Payload do
   `%{"web_push" => 8030, "notification" => %{"title", "body", "navigate", "tag", "lang"},
   "app_badge" => n}`, as the service worker (`priv/push/sw.js`) reads it.
 
-    * reply (PN-01): "{name} replied in {topic}", the reply's excerpt, its permalink; with
+    * reply (PN-01): "{name} replied in {topic}", the reply's excerpt, its permalink (`?unread`: the oldest unread message there); with
       several unread replies in the topic, "{N} replies in {topic}". Tag `reply-{topic id}`.
     * mention (PN-02): "{name} mentioned you in {topic}", the excerpt, the permalink; with
       several unread, "You have been mentioned {N} times", up to three topic titles, the
@@ -186,7 +186,8 @@ defmodule Idejo.Push.Payload do
   @spec excerpt(Message.t()) :: String.t()
   def excerpt(%Message{} = message), do: Forum.excerpt(message, @excerpt)
 
-  defp permalink(message), do: Federation.uri(:message, message.id)
+  # Where the user left off in the topic (`IdejoWeb.MessageController`, `?unread`).
+  defp permalink(message), do: Federation.uri(:message, message.id) <> "?unread"
 
   defp unread_page, do: Application.fetch_env!(:idejo, :base_uri) <> "/unread"
 end

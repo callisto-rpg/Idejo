@@ -297,7 +297,10 @@ roles or the permission grid. Every later change must keep it true:
   there with 301.
 - **Permalinks** (TP-06): a topic's URI `/t/{id}` 301s to `/t/{id}/{slug}`; a message's URI
   `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
-  renames and moves. Each message's time links to its permalink. When topic pages are paged,
+  renames and moves. Each message's time links to its permalink. Notifications (bubbles and
+  pushes, not reactions) link `/m/{id}?unread`, which leads to the reader's oldest unread
+  message of that topic (`Reading.first_unread/2`), or the message itself with nothing
+  unread. When topic pages are paged,
   `/m/{id}` must lead to the right page.
   A topic, message or category link the reader may not view (missing, deleted or hidden:
   the same answer, AC-05; steward decision, 2026-10-24) is never a 404: `IdejoWeb.Unavailable`
@@ -567,7 +570,8 @@ roles or the permission grid. Every later change must keep it true:
   to `TopicLive` (session `"first_unread"`), which draws the red "N unread messages" line
   (`#unread-line`, `.unread-line`; not `.unread-marker`, the lists' "N new") in that
   message's `<li>`; the `UnreadLine` hook (`assets/js/topic_nav.js`) centres the page on it
-  unless the address has a `#`, CSS fades it after 4 s and `"unread_line_done"` drops it.
+  unless the address has a `#message-…` (then `TopicNav` centres that message, never left to
+  the browser's own jump), CSS fades it after 4 s and `"unread_line_done"` drops it.
   With nothing unread (and no `#`), the `TopicNav` hook opens the page at its end (steward
   decision, 2026-10-24).
   Unread messages from there on that @mention the reader or +mention one of their roles
@@ -1116,8 +1120,8 @@ roles or the permission grid. Every later change must keep it true:
   `wants?/2`; no row = all on); a live view of the topic (PN-08, `Authors.present?/2`);
   nothing of that kind unread any more. `Idejo.Push.Payload.build/3` (PN-12) makes the
   declarative JSON the service worker reads: title, body (`Payload.excerpt/1`, 120
-  characters), `navigate` (the permalink `Federation.uri(:message, id)`, or `/unread` for
-  several mentions), tag (`reply-{topic id}`, `mentions`, `role-mentions`), `lang` (the
+  characters), `navigate` (the permalink `Federation.uri(:message, id)` with `?unread`, or
+  `/unread` for several mentions), tag (`reply-{topic id}`, `mentions`, `role-mentions`), `lang` (the
   server's locale), top-level `app_badge` (`Reading.for_you/1`); urgency `high` for a
   mention. N comes from `Reading.unread_notified/3` (unread rows of that kind, viewable,
   not muted; the reply count in the topic). The role in a PN-03 title is the user's
