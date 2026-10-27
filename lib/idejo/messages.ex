@@ -626,6 +626,36 @@ defmodule Idejo.Messages do
   end
 
   @doc """
+  Deletes a reported message of a private conversation, as a server moderator, from the
+  report queue (steward decision, 2026-10-27): there is no category to moderate and no way
+  into the conversation, so only a message with open reports, which it resolves. Otherwise
+  like `delete_as_moderator/3`: the text stays for moderators, the participants see the
+  placeholder, logged (MO-03), then broadcast. `{:error, :forbidden}` for anyone else, a
+  message of a topic, or one without open reports.
+  """
+  @spec delete_reported_private(User.t(), Message.t(), String.t() | nil) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def delete_reported_private(%User{} = moderator, %Message{} = message, reason \\ nil) do
+    topic = Repo.get!(Topic, message.topic_id)
+
+    if topic.private and Idejo.Access.server_moderator?(moderator) do
+      result = Repo.transact(fn -> delete_if_reported(moderator, message, reason) end)
+      with {:ok, message} <- result, do: after_commit(message)
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp delete_if_reported(moderator, message, reason) do
+    locked = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+
+    if Moderation.open_reports?(locked),
+      do: delete_logged(moderator, locked, reason),
+      else: {:error, :forbidden}
+  end
+
+  @doc """
   Deletes several messages of one topic at once, as a moderator of its category (MO-02;
   steward decision, 2026-10-23: "Select multiple messages for deletion"). Each is deleted
   like `delete_as_moderator/3`, all in one transaction, and logged one by one (MO-03); then

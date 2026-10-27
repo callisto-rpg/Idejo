@@ -727,7 +727,9 @@ roles or the permission grid. Every later change must keep it true:
   post, so GM-14 does not apply). Never forked (`can_fork?`), renamed, moderated in place or
   pushed yet (`Push.Dispatch` skips them). A participant reports a message (MO-01): server
   moderators (`open_reports`, `Moderation.get_reported_message/2`, `handle_reports/4`) see
-  that message's text in the queue, never a link into the conversation. Activities are
+  that message's text in the queue, never a link into the conversation, and may delete it
+  there ("Delete message", `outcome=delete`: `Messages.delete_reported_private/3`, only
+  while it has open reports; like `delete_as_moderator/3`, logged, reports resolved). Activities are
   written as for any topic (URIs only): federation must leave private topics out.
 - **New topic from this** (TP-09): every message has a "New topic from this" link for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens

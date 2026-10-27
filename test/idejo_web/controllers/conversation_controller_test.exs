@@ -174,4 +174,53 @@ defmodule IdejoWeb.ConversationControllerTest do
     conn = post(conn, ~p"/moderation/reports/#{message.id}", %{"outcome" => "resolve"})
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "resolved"
   end
+
+  @tag req: "MO-02"
+  test "MO-02 a server moderator deletes a reported private message from the queue", %{
+    conn: conn,
+    ada: ada,
+    bo: bo
+  } do
+    {:ok, topic} = Conversations.start(ada, bo)
+    {:ok, message} = Forum.post_message(bo, topic, %{"body" => "Rude words"})
+    {:ok, _} = Moderation.report_message(ada, message, %{"reason" => "Rude"})
+
+    moderator = log_in_user(build_conn(), user_with_role_fixture(:moderator))
+
+    assert [_] =
+             moderator
+             |> doc(~p"/moderation")
+             |> LazyHTML.query("#delete-#{message.id}")
+             |> Enum.to_list()
+
+    moderator =
+      post(moderator, ~p"/moderation/reports/#{message.id}", %{
+        "outcome" => "delete",
+        "note" => "Insults"
+      })
+
+    assert Phoenix.Flash.get(moderator.assigns.flash, :info) =~ "Message deleted"
+    assert Forum.get_readable_message(ada, message.id).deleted_at
+
+    # Gone from the queue; the participants see the placeholder.
+    refute recycle(moderator) |> get(~p"/moderation") |> html_response(200) =~ "Rude words"
+    {:ok, _lv, html} = live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+    assert html =~ "Message deleted by a moderator"
+    refute html =~ "Rude words"
+  end
+
+  test "the queue offers no delete for a topic's message, nor to others", %{ada: ada, bo: bo} do
+    admin = user_with_role_fixture(:administrator)
+    {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, public} = Forum.create_topic(bo, general, %{"title" => "Hi", "body" => "Hi"})
+    {:ok, reply} = Forum.post_message(bo, public, %{"body" => "Rude"})
+    {:ok, _} = Moderation.report_message(ada, reply, %{"reason" => "Rude"})
+
+    moderator = log_in_user(build_conn(), user_with_role_fixture(:moderator))
+    refute moderator |> get(~p"/moderation") |> html_response(200) =~ "delete-#{reply.id}"
+
+    moderator = post(moderator, ~p"/moderation/reports/#{reply.id}", %{"outcome" => "delete"})
+    assert Phoenix.Flash.get(moderator.assigns.flash, :error) =~ "could not be deleted"
+    refute Forum.get_viewable_message(admin, reply.id).deleted_at
+  end
 end

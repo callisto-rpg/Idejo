@@ -148,6 +148,45 @@ defmodule Idejo.ConversationsTest do
     assert Moderation.get_reported_message(moderator, message.id) == nil
   end
 
+  @tag req: "MO-02"
+  test "MO-02 a server moderator deletes a reported private message, and only that", %{
+    ada: ada,
+    bo: bo
+  } do
+    {:ok, topic} = Conversations.start(ada, bo)
+    {:ok, message} = Forum.post_message(ada, topic, %{"body" => "rude words"})
+    {:ok, other} = Forum.post_message(ada, topic, %{"body" => "not reported"})
+    moderator = user_with_role_fixture(:moderator)
+
+    # Nothing reported: nothing to delete.
+    assert Messages.delete_reported_private(moderator, message) == {:error, :forbidden}
+
+    {:ok, _report} = Moderation.report_message(bo, message, %{"reason" => "Rude"})
+
+    for nobody <- [user_fixture(), bo] do
+      assert Messages.delete_reported_private(nobody, message) == {:error, :forbidden}
+    end
+
+    assert Messages.delete_reported_private(moderator, other) == {:error, :forbidden}
+
+    assert {:ok, %{deleted_at: %DateTime{}, deleted_by_id: by}} =
+             Messages.delete_reported_private(moderator, message, "Insults")
+
+    assert by == moderator.id
+    assert Moderation.list_open_reports(moderator) == []
+
+    assert [%{action: "message.delete", reason: "Insults"}] =
+             Repo.all(Idejo.Moderation.Action)
+
+    # A topic's message goes through the category's moderators, not this.
+    admin = user_with_role_fixture(:administrator)
+    {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, public} = Forum.create_topic(bo, general, %{"title" => "Hi", "body" => "Hi"})
+    {:ok, reply} = Forum.post_message(bo, public, %{"body" => "Rude"})
+    {:ok, _} = Moderation.report_message(ada, reply, %{"reason" => "Rude"})
+    assert Messages.delete_reported_private(moderator, reply) == {:error, :forbidden}
+  end
+
   test "the list holds the user's conversations, with the last message and unread", %{
     ada: ada,
     bo: bo

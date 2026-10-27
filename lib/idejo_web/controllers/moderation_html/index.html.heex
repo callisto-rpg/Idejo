@@ -73,6 +73,20 @@
         </label>
         <button name="outcome" value="resolve" class="btn btn-sm btn-primary">{gettext("Resolve")}</button>
         <button name="outcome" value="dismiss" class="btn btn-sm">{gettext("Dismiss")}</button>
+        <%!-- A private conversation's message: deleted here, as moderators cannot open the
+             conversation (steward decision, 2026-10-27). --%>
+        <button
+          :if={message.topic.private}
+          name="outcome"
+          value="delete"
+          id={"delete-#{message.id}"}
+          class="btn btn-sm btn-error"
+          data-confirm={
+            gettext("Delete this message? Both participants will see it was deleted.")
+          }
+        >
+          <.icon name="hero-trash" class="size-4" />{gettext("Delete message")}
+        </button>
       </.form>
     </li>
   </ol>

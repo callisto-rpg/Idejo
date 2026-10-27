@@ -228,6 +228,11 @@ defmodule Idejo.Moderation do
     end
   end
 
+  @doc "Whether the message has open reports."
+  @spec open_reports?(Message.t()) :: boolean()
+  def open_reports?(%Message{id: id}),
+    do: Repo.exists?(from r in Report, where: r.message_id == ^id and r.status == "open")
+
   @doc """
   Marks a message's open reports resolved by `moderator`, inside the caller's transaction:
   when the message is deleted (MO-02), which answers them.
