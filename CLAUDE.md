@@ -250,7 +250,11 @@ roles or the permission grid. Every later change must keep it true:
 - **Profile** (AC-04): `/users/settings` (`IdejoWeb.UserSettingsLive`, `live_session :signed_in`
   with the `{IdejoWeb.UserAuth, :require_authenticated}` hook) changes the display name
   through `Accounts.update_user_profile/2`, which records an `update` activity. The username
-  never changes (@mentions). The same page sets and removes the avatar
+  never changes (@mentions). The same form sets the user tag (steward decision, 2026-10-27;
+  `users.user_tag`, optional, at most 32 characters, blank is none, not unique, never read by
+  @mentions or suggestions): `UserComponents.user_tag/1` puts it right after the name, inside
+  the name's element (so the author's `a.author-name` opens the card from either), the same
+  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The same page sets and removes the avatar
   (`Accounts.set_avatar/2`, `remove_avatar/1`, with an `update` activity carrying `icon`):
   `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
   `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's

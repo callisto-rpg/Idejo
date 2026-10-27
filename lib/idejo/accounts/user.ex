@@ -20,6 +20,9 @@ defmodule Idejo.Accounts.User do
     field :password_hash, :string, redact: true
     field :username, :string
     field :display_name, :string
+    # The user tag (steward decision, 2026-10-27): optional free text, at most 32 characters,
+    # shown after the name. Not unique, and never matched by @mentions or suggestions.
+    field :user_tag, :string
     field :status, :string, default: "active"
     field :origin, :string, default: "local"
     field :confirmed_at, :utc_datetime
@@ -89,8 +92,9 @@ defmodule Idejo.Accounts.User do
   """
   def profile_changeset(user, attrs) do
     user
-    |> cast(attrs, [:display_name])
+    |> cast(attrs, [:display_name, :user_tag])
     |> validate_display_name()
+    |> validate_user_tag()
   end
 
   @doc """
@@ -109,6 +113,22 @@ defmodule Idejo.Accounts.User do
     |> update_change(:display_name, &(&1 && String.trim(&1)))
     |> validate_required([:display_name])
     |> validate_length(:display_name, max: 60)
+  end
+
+  # Blank means no tag (Ecto turns "" into nil; spaces alone are trimmed to it).
+  defp validate_user_tag(changeset) do
+    changeset
+    |> update_change(:user_tag, &blank_to_nil/1)
+    |> validate_length(:user_tag, max: 32)
+  end
+
+  defp blank_to_nil(nil), do: nil
+
+  defp blank_to_nil(tag) do
+    case String.trim(tag) do
+      "" -> nil
+      tag -> tag
+    end
   end
 
   @doc """

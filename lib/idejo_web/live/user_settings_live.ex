@@ -342,6 +342,12 @@ defmodule IdejoWeb.UserSettingsLive do
           required
           maxlength="60"
         />
+        <.input
+          field={@form[:user_tag]}
+          type="text"
+          label={gettext("User tag or nickname (shown after your name, optional)")}
+          maxlength="32"
+        />
         <.button class="btn btn-primary">{gettext("Save")}</.button>
       </.form>
 
