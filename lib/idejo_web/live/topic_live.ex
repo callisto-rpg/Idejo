@@ -155,6 +155,8 @@ defmodule IdejoWeb.TopicLive do
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
 
+  defp revealed_spoilers(revealed, message_id), do: for({^message_id, n} <- revealed, do: n)
+
   # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
   # would leave it.
   defp can_fork?(_user, %{private: true}), do: false
@@ -516,15 +518,15 @@ defmodule IdejoWeb.TopicLive do
 
   # What a command sends for (steward decision, 2026-10-23): `!new-topic` goes on to the new
   # topic; `!poll` and `!spoiler` act on the message just sent.
-  defp after_send(socket, "new_topic", message), do: new_topic_from(socket, message)
+  defp after_send(socket, "new_topic", message, _params), do: new_topic_from(socket, message)
 
-  defp after_send(socket, "poll", message),
+  defp after_send(socket, "poll", message, _params),
     do: socket |> assign(:reply_to, nil) |> open_poll(message)
 
-  defp after_send(socket, "spoiler", message),
-    do: socket |> assign(:reply_to, nil) |> toggle_spoiler(message)
+  defp after_send(socket, "spoiler", message, params),
+    do: socket |> assign(:reply_to, nil) |> toggle_spoiler(message, params["label"])
 
-  defp after_send(socket, _then, _message), do: assign(socket, :reply_to, nil)
+  defp after_send(socket, _then, _message, _params), do: assign(socket, :reply_to, nil)
 
   # `!poll`: the dialog for a poll under the author's message, one per message; with no
   # message, the poll is posted as one.
@@ -558,9 +560,16 @@ defmodule IdejoWeb.TopicLive do
   defp poll_error(:rate_limited),
     do: gettext("You are sending very fast. Wait a moment, then try again.")
 
-  # `!spoiler`: on, or off again; the message reaches every viewer as an event.
-  defp toggle_spoiler(socket, message) do
-    case Messages.set_spoiler(user(socket), message, !message.spoiler) do
+  # `!spoiler`: on, or off again; `!spoiler:overlay text:` (steward decision, 2026-10-28)
+  # on with that text over it, also for a spoiler already. The message reaches every viewer
+  # as an event.
+  defp toggle_spoiler(socket, message, label) do
+    result =
+      if is_binary(label) and String.trim(label) != "",
+        do: Messages.set_spoiler(user(socket), message, true, label),
+        else: Messages.set_spoiler(user(socket), message, !message.spoiler)
+
+    case result do
       {:ok, %{spoiler: true}} ->
         put_flash(socket, :info, gettext("Your message is hidden as a spoiler."))
 
@@ -651,7 +660,7 @@ defmodule IdejoWeb.TopicLive do
       # The message itself arrives like everyone else's, as an event.
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
-         after_send(socket, then, message)}
+         after_send(socket, then, message, params)}
 
       # A new message before the open one may end: the text stays, unsent.
       {:error, :too_soon} ->
@@ -692,7 +701,7 @@ defmodule IdejoWeb.TopicLive do
   # `!poll` and `!spoiler` with nothing new to send: for the open message.
   # With nothing open, `!poll` posts the poll as a message of its own (steward decision,
   # 2026-10-24); `!spoiler` needs a message.
-  def handle_event(command, _params, socket) when command in ["open_poll", "spoiler"] do
+  def handle_event(command, params, socket) when command in ["open_poll", "spoiler"] do
     case open_message(socket.assigns.messages, user(socket)) do
       nil when command == "open_poll" ->
         {:noreply, open_poll(socket, nil)}
@@ -702,7 +711,7 @@ defmodule IdejoWeb.TopicLive do
          put_flash(socket, :error, gettext("Write your message first, then choose !spoiler."))}
 
       message when command == "spoiler" ->
-        {:noreply, toggle_spoiler(socket, message)}
+        {:noreply, toggle_spoiler(socket, message, params["label"])}
 
       message ->
         {:noreply, open_poll(socket, message)}
@@ -754,6 +763,12 @@ defmodule IdejoWeb.TopicLive do
   # `!spoiler`: this viewer sees the message plainly from now on.
   def handle_event("reveal_spoiler", %{"id" => id}, socket) when is_binary(id),
     do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, id))}
+
+  # A `||spoiler||` in a message (steward decision, 2026-10-28), by its place among the
+  # message's spoilers: this viewer sees it from now on, also as the message grows.
+  def handle_event("reveal_inline_spoiler", %{"id" => id, "index" => index}, socket)
+      when is_binary(id) and is_integer(index) and index >= 0,
+      do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, {id, index}))}
 
   # `!poll`: a vote, or a changed one; the new counts reach every viewer as an event.
   def handle_event("vote", %{"message_id" => id} = params, socket) when is_binary(id) do
@@ -1428,6 +1443,7 @@ defmodule IdejoWeb.TopicLive do
             now={@now}
             live?={@live?}
             revealed?={MapSet.member?(@revealed, message.id)}
+            revealed_spoilers={revealed_spoilers(@revealed, message.id)}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -1492,6 +1508,7 @@ defmodule IdejoWeb.TopicLive do
             now={@now}
             live?={@live?}
             revealed?={MapSet.member?(@revealed, message.id)}
+            revealed_spoilers={revealed_spoilers(@revealed, message.id)}
           />
         </li>
       </ol>
@@ -1779,6 +1796,10 @@ defmodule IdejoWeb.TopicLive do
   attr :live?, :boolean, default: false
   attr :revealed?, :boolean, default: false, doc: "a spoiler the viewer revealed"
 
+  attr :revealed_spoilers, :list,
+    default: [],
+    doc: "the `||spoilers||` of the message the viewer revealed, by place"
+
   # Open and closed messages look the same to readers (GM-07).
   defp message(assigns) do
     editing =
@@ -1915,7 +1936,11 @@ defmodule IdejoWeb.TopicLive do
           <MessageComponents.collapsible_body
             :if={!@edit_form and !Polls.poll_only?(@message, @poll)}
             id={"message-#{@message.id}-body"}
-            html={@message.body_html}
+            html={
+              if @live?,
+                do: MessageComponents.inline_spoilers(@message.body_html, @revealed_spoilers),
+                else: @message.body_html
+            }
           />
           <PollComponents.poll
             :if={@poll && (is_nil(@message.deleted_at) or @can_moderate?)}
@@ -1927,6 +1952,14 @@ defmodule IdejoWeb.TopicLive do
           />
         </div>
         <div :if={@message.spoiler and !@revealed?} class="spoiler-cover">
+          <%!-- `!spoiler:overlay text:` (steward decision, 2026-10-28). --%>
+          <p
+            :if={@message.spoiler_label}
+            id={"message-#{@message.id}-spoiler-label"}
+            class="spoiler-label"
+          >
+            {@message.spoiler_label}
+          </p>
           <button
             type="button"
             id={"message-#{@message.id}-reveal"}

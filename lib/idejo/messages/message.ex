@@ -31,6 +31,8 @@ defmodule Idejo.Messages.Message do
     field :scheduled, :boolean, default: false
     # `!spoiler`: readers see it blurred until they reveal it (steward decision, 2026-10-23).
     field :spoiler, :boolean, default: false
+    # `!spoiler:overlay text:` (steward decision, 2026-10-28): what the cover says, or nil.
+    field :spoiler_label, :string
     # MO-02: deleted by a moderator; readers see a placeholder, moderators the text.
     field :deleted_at, :utc_datetime_usec
     belongs_to :deleted_by, Idejo.Accounts.User

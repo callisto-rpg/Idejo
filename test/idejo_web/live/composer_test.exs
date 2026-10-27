@@ -421,7 +421,7 @@ defmodule IdejoWeb.ComposerTest do
     assert js =~ "const ENTER_RUN_MS = 1000"
     # Every Enter counts, whatever the device; typing in between starts the count again.
     assert js =~ "this.send(e.ctrlKey || e.metaKey || this.enterRun())"
-    assert js =~ ~r/addEventListener\("input", \(\) => \{\s*this.enters = 0/
+    assert js =~ ~r/addEventListener\("input", (\(\)|e) => \{\s*this.enters = 0/
     refute js =~ "No Ctrl+Enter on touch screens"
   end
 

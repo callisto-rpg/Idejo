@@ -137,6 +137,14 @@ goes away when you tap elsewhere or scroll.
     with a **Reveal spoiler** button, until each reader chooses it. Replies quoting it, the
     search results and notifications show *(spoiler)* instead of its words. Choose
     **!spoiler** again, while the message is still yours to continue, to show it plainly.
+    Type **!spoiler:overlay text:** instead (ending with a colon; the text itself has none)
+    to show those words over the hidden message, such as `!spoiler:Ending of book 3:`;
+    quotes then read *(spoiler: Ending of book 3)*. It runs as soon as you type the last
+    colon.
+  - To hide only part of a message, put **||** on each side of it: `The killer is ||the
+    butler||.` Readers see a filled bar where those words are, and click it (or select it
+    and press Enter) to read them; quotes, search results and notifications show
+    *(spoiler)* there.
 - **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
   lines, `> quotes`, lists and links. Messages have no length limit; a long one shows a
   **Show all** button.

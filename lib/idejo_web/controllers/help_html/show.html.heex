@@ -116,5 +116,20 @@
         </div>
       </dl>
     </section>
+
+    <%!-- Steward decision, 2026-10-28. --%>
+    <section id="help-spoilers" aria-labelledby="help-spoilers-title">
+      <h2 id="help-spoilers-title">{gettext("Hiding part of a message")}</h2>
+      <dl class="help-list">
+        <div id="help-inline-spoiler">
+          <dt><code>||{gettext("text")}||</code></dt>
+          <dd>
+            {gettext(
+              "Hides those words until each reader clicks them (or selects them and presses Enter). Quotes, search results and notifications show (spoiler) instead. To hide the whole message, use !spoiler."
+            )}
+          </dd>
+        </div>
+      </dl>
+    </section>
   </div>
 </Layouts.app>

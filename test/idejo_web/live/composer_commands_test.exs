@@ -330,4 +330,94 @@ defmodule IdejoWeb.ComposerCommandsTest do
     refute Repo.reload!(sent).spoiler
     refute has_element?(reader, "#message-#{sent.id}-reveal")
   end
+
+  # Steward decision, 2026-10-28.
+  test "!spoiler:overlay text: shows those words over the hidden message", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+
+    assert render_hook(view, "commit", %{
+             "body" => "The butler did it",
+             "break" => false,
+             "then" => "spoiler",
+             "label" => "  Ending of book 3 "
+           }) =~ "Your message is hidden as a spoiler."
+
+    [_, sent] = Forum.list_messages(topic)
+    assert sent.spoiler and sent.spoiler_label == "Ending of book 3"
+
+    {:ok, reader, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+
+    assert has_element?(
+             reader,
+             "#message-#{sent.id} .spoiler-cover #message-#{sent.id}-spoiler-label",
+             "Ending of book 3"
+           )
+
+    assert has_element?(reader, "#message-#{sent.id}-reveal", "Reveal spoiler")
+    assert Forum.excerpt(sent) == "(spoiler: Ending of book 3)"
+
+    # Again with other words: still a spoiler, with those; plain !spoiler shows it plainly.
+    render_hook(view, "spoiler", %{"label" => "Book 4"})
+    assert %{spoiler: true, spoiler_label: "Book 4"} = Repo.reload!(sent)
+    assert has_element?(reader, "#message-#{sent.id}-spoiler-label", "Book 4")
+
+    render_hook(view, "spoiler", %{})
+    assert %{spoiler: false, spoiler_label: nil} = Repo.reload!(sent)
+    refute has_element?(reader, "#message-#{sent.id}-spoiler-label")
+  end
+
+  test "||spoilers|| hide part of a message until each reader reveals them", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+
+    render_hook(view, "commit", %{
+      "body" => "It was ||the butler|| in ||the hall||",
+      "break" => false
+    })
+
+    [_, sent] = Forum.list_messages(topic)
+
+    {:ok, reader, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    body = "#message-#{sent.id}-body-text"
+
+    # Buttons whose words are out of reach until revealed.
+    assert has_element?(
+             reader,
+             ~s(#{body} .spoiler[data-spoiler="0"][role="button"][tabindex="0"][aria-label="Spoiler, select to reveal"] .spoiler-text[inert]),
+             "the butler"
+           )
+
+    assert has_element?(reader, ~s(#{body} .spoiler[data-spoiler="1"][role="button"]))
+
+    render_hook(reader, "reveal_inline_spoiler", %{"id" => sent.id, "index" => 1})
+    assert has_element?(reader, ~s(#{body} .spoiler.is-revealed[data-spoiler="1"]), "the hall")
+    refute has_element?(reader, ~s(#{body} .spoiler[data-spoiler="1"] [inert]))
+    assert has_element?(reader, ~s(#{body} .spoiler[data-spoiler="0"][role="button"]))
+
+    # Still revealed as the message grows; other readers still see it hidden.
+    render_hook(view, "commit", %{
+      "body" => "It was ||the butler|| in ||the hall||, with a candlestick",
+      "break" => false
+    })
+
+    assert has_element?(reader, body, "candlestick")
+    assert has_element?(reader, ~s(#{body} .spoiler.is-revealed[data-spoiler="1"]), "the hall")
+    {:ok, other, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    refute has_element?(other, "#{body} .spoiler.is-revealed")
+
+    # Quotes give nothing away.
+    assert Forum.excerpt(Repo.reload!(sent)) ==
+             "It was (spoiler) in (spoiler), with a candlestick."
+
+    # Without scripts (the page's first render) it reads as usual: no button, nothing inert.
+    html = build_conn() |> get(~p"/t/#{topic.id}/#{topic.slug}") |> html_response(200)
+    doc = LazyHTML.from_document(html)
+    assert doc |> LazyHTML.query(~s(#{body} .spoiler)) |> LazyHTML.text() =~ "the butler"
+    refute doc |> LazyHTML.query("[inert], .spoiler[role]") |> Enum.any?()
+  end
 end
