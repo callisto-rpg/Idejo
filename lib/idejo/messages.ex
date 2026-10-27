@@ -188,7 +188,8 @@ defmodule Idejo.Messages do
 
   defp open_new(author, topic, text, now, reply_to_id) do
     id = Federation.generate_id()
-    window = Settings.get(:gm_window_seconds)
+    # No slow mode in a private conversation (steward decision, 2026-10-27): no window.
+    window = if topic.private, do: 0, else: Settings.get(:gm_window_seconds)
 
     message = %Message{
       id: id,
@@ -280,12 +281,21 @@ defmodule Idejo.Messages do
   (GM-05): once its window has ended, and, while nobody has written below it, once it is
   `gm_unanswered_minutes` old (steward decision, 2026-10-23). Until then Ctrl+Enter is an
   Enter on a new line: a lone author keeps one message.
+
+  A message opened with no window (`closes_at` equal to `opened_at`: in a private
+  conversation, steward decision, 2026-10-27) has no unanswered message time either.
   """
   @spec may_start_new?(Message.t(), DateTime.t()) :: boolean()
   def may_start_new?(%Message{} = message, now \\ DateTime.utc_now()) do
     window_ended?(message, now) and
-      (DateTime.compare(now, unanswered_until(message)) != :lt or answered?(message))
+      (no_window?(message) or DateTime.compare(now, unanswered_until(message)) != :lt or
+         answered?(message))
   end
+
+  @doc "Whether the message opened with no window: Ctrl+Enter starts a new one at once."
+  @spec no_window?(Message.t()) :: boolean()
+  def no_window?(%Message{opened_at: opened_at, closes_at: closes_at}),
+    do: DateTime.compare(opened_at, closes_at) == :eq
 
   @doc "When a message nobody wrote below may be completed by Ctrl+Enter (GM-05)."
   @spec unanswered_until(Message.t()) :: DateTime.t()
@@ -613,6 +623,36 @@ defmodule Idejo.Messages do
           {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
   def delete_as_moderator(%User{} = moderator, %Message{} = message, reason \\ nil) do
     as_moderator(moderator, message, fn locked -> delete_logged(moderator, locked, reason) end)
+  end
+
+  @doc """
+  Deletes a reported message of a private conversation, as a server moderator, from the
+  report queue (steward decision, 2026-10-27): there is no category to moderate and no way
+  into the conversation, so only a message with open reports, which it resolves. Otherwise
+  like `delete_as_moderator/3`: the text stays for moderators, the participants see the
+  placeholder, logged (MO-03), then broadcast. `{:error, :forbidden}` for anyone else, a
+  message of a topic, or one without open reports.
+  """
+  @spec delete_reported_private(User.t(), Message.t(), String.t() | nil) ::
+          {:ok, Message.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def delete_reported_private(%User{} = moderator, %Message{} = message, reason \\ nil) do
+    topic = Repo.get!(Topic, message.topic_id)
+
+    if topic.private and Idejo.Access.server_moderator?(moderator) do
+      result = Repo.transact(fn -> delete_if_reported(moderator, message, reason) end)
+      with {:ok, message} <- result, do: after_commit(message)
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp delete_if_reported(moderator, message, reason) do
+    locked = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
+
+    if Moderation.open_reports?(locked),
+      do: delete_logged(moderator, locked, reason),
+      else: {:error, :forbidden}
   end
 
   @doc """

@@ -205,6 +205,21 @@ goes away when you tap elsewhere or scroll.
   follow it again. **Mark unread** makes its latest message by someone else new again.
 - **Search**, the box at the top, finds words in messages and titles.
 
+## Private conversations
+
+Click someone's name to open their card, then **Private Message**: a conversation only the
+two of you can read. **Private Conversations**, at the very bottom of the sidebar, lists
+yours as cards, with the latest message and how many are new; the number beside it counts
+the conversations with something new.
+
+Messages grow as in a topic, but there is no slow mode: **Ctrl+Enter** (or Enter three
+times) starts a new message at once. You can still report a message there: moderators then
+see that message, never the rest of the conversation. Search, the sidebar's categories and
+**Unread** never show private conversations.
+
+Under **Private messages** in **Profile and account**, untick **Members can send me private
+messages** to stop new conversations with you, and messages to you in the ones you have.
+
 ## Your account
 
 Click your name in the top right corner, then **Profile and account**, to change your
@@ -235,8 +250,9 @@ notifications** in **Profile and account** you can:
 - see whether this browser has them on, and **Turn on** (if your browser blocked them, it
   says how to allow them again);
 - choose what sends one, for all your devices: **Replies to me**, **@you mentions**,
-  **+role mentions** and **New messages in topics I follow** (at most one every half hour
-  or so, counting the topics);
+  **+role mentions**, **New messages in topics I follow** (at most one every half hour
+  or so, counting the topics) and **Private messages** (who wrote, or with several unread,
+  how many: "3 new private messages.");
 - see your devices, with **Remove** for any you no longer use;
 - **Send test notification** to every device.
 

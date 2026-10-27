@@ -153,8 +153,9 @@ The grid is **Admin → Permissions** (RP-05, `IdejoWeb.Admin.PermissionsLive`):
 rows show “Always” and take no setting.
 
 **Owners and administrators always have every right and can never lock themselves out**
-(steward rule, 2026-10-19). `Idejo.Access.administrator?/1` (holds owner or administrator) is
-checked first by `can?/3` and the admin panel, and does not depend on email verification, other
+(steward rule, 2026-10-19), in every category. `Idejo.Access.administrator?/1` (holds owner
+or administrator) is checked first by `can?/3` (after its one exception: no category, a
+private conversation's, gives nobody any right) and the admin panel, and does not depend on email verification, other
 roles or the permission grid. Every later change must keep it true:
 
 - the permission grid has no deny for owner or administrator (RP-04/RP-05);
@@ -705,6 +706,41 @@ roles or the permission grid. Every later change must keep it true:
   preview, a link to open it, and an action (user actions for server moderators, Follow /
   Unfollow on a topic via `"card_follow"` / `"card_unfollow"`, New topic in a category). A
   reader who may not view it gets `%{shown: false}` and the browser follows the link.
+- **Private conversations** (steward decision, 2026-10-27, departing from v1's "no direct
+  messages"; `Idejo.Conversations`, `conversation_participants`): topics with `private: true`
+  and no category (a check constraint keeps the two together), between two members. With no
+  category, `Access.can?(_, _, nil)` is false for everyone, administrators included, and every
+  query through categories (`where_allowed`, `category_id in subquery(...)`: lists, search,
+  the sitemap, unread, the sidebar, suggestions, digests, push counts) leaves them out: keep
+  new queries that way. Participants get in only through `Forum.get_readable_topic/2` and
+  `get_readable_message/2` (TopicLive, `/m/{id}`, reports, reactions) and
+  `Forum.can_post?/2` (`Conversations.can_post?/2`); everything else keeps
+  `get_viewable_topic/2`, which never returns one. `Conversations.start/2` (the user card's
+  "Private Message", `POST /u/{id}/message`, `ConversationController`) finds or makes the one
+  conversation of a pair (an advisory lock), rate-limited as `:new_topic`; both participants
+  follow it, so `Notifications` (whose `may_view/2` keeps participants) notifies the other.
+  `may_message?/2`: a verified, unbanned sender and an active, unbanned recipient with
+  `users.accepts_private_messages` ("Private messages" in Profile and account); off, nobody
+  starts one with them or writes to them in one. `/p` lists them as cards
+  (`Conversations.list/1`: last message, unread), linked by "Private Conversations" pinned at
+  the bottom of the sidebar (`.sidebar-pinned`, with `Conversations.unread_count/1`); `/p/{id}`
+  embeds `TopicLive` like a topic page (`/t/{id}` sends participants there), titled with the
+  other participant's name. No slow mode: messages open with no window (`closes_at` =
+  `opened_at`, `Messages.no_window?/1`), so `may_start_new?/2` is true at once and the composer
+  (`private?`) has no timer line; the first message is written in the composer (no opening
+  post, so GM-14 does not apply). Never forked (`can_fork?`), renamed or moderated in place.
+  Pushed: `Push.dispatch/1` queues a `Dispatch` job for every kind of row in a private
+  conversation (its `follow` rows never reach PN-04), and the job pushes it as `"private"`
+  (participants only, its own `push_preferences.private` switch, "Private messages"):
+  `Payload` says "{name} sent you a private message" with the excerpt and permalink, or
+  with several unread "{N} new private messages." (`Conversations.unread_summary/1`: unread
+  messages across the user's conversations, and up to three names), opening `/p`; tag
+  `private`, urgency `high`. A participant reports a message (MO-01): server
+  moderators (`open_reports`, `Moderation.get_reported_message/2`, `handle_reports/4`) see
+  that message's text in the queue, never a link into the conversation, and may delete it
+  there ("Delete message", `outcome=delete`: `Messages.delete_reported_private/3`, only
+  while it has open reports; like `delete_as_moderator/3`, logged, reports resolved). Activities are
+  written as for any topic (URIs only): federation must leave private topics out.
 - **New topic from this** (TP-09): every message has a "New topic from this" link for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
   `NewTopicLive` at `/m/{id}/new-topic` (`:fork`): the source's excerpt and a category choice.
@@ -1119,7 +1155,7 @@ roles or the permission grid. Every later change must keep it true:
   `assets/js/push_settings.js`, `phx-update="ignore"`) shows this browser's state (on, off
   with "Turn on", blocked with how to allow it, the iPhone/iPad Home Screen steps,
   unsupported) and tells the view `"push_endpoint"` (marks "This browser") and
-  `"push_changed"`; the four switches (`Push.update_preferences/2`); the devices
+  `"push_changed"`; the five switches (`Push.update_preferences/2`); the devices
   (`Push.list_subscriptions/1`, named by `UserSettingsLive.device_name/1` from the user
   agent, with the date) with Remove (`Push.remove_subscription/2`; this browser's also
   gets `"push_unsubscribe"`, and push.js keeps it off here with `localStorage`

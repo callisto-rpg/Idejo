@@ -344,7 +344,8 @@ defmodule IdejoWeb.Layouts do
         sections: sections,
         followed: Enum.group_by(listed, & &1.category_id),
         activity: activity,
-        place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil}
+        place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil},
+        conversations_unread: Idejo.Conversations.unread_count(assigns.user)
       )
 
     ~H"""
@@ -412,6 +413,21 @@ defmodule IdejoWeb.Layouts do
       <div :if={!@user} class="sidebar-theme sm:hidden">
         <span>{gettext("Theme")}</span>
         <.theme_toggle />
+      </div>
+      <%!-- Pinned at the very bottom (steward decision, 2026-10-27), with how many
+           conversations have something new. --%>
+      <div :if={@user} class="sidebar-pinned">
+        <a href={~p"/p"} class="sidebar-link" id="conversations-sidebar-link">
+          <.icon name="hero-chat-bubble-left-right" class="size-4" />
+          {gettext("Private Conversations")}
+          <span :if={@conversations_unread > 0} class="sidebar-count">
+            {@conversations_unread}<span class="sr-only">{ngettext(
+              " conversation with new messages",
+              " conversations with new messages",
+              @conversations_unread
+            )}</span>
+          </span>
+        </a>
       </div>
     </aside>
     """

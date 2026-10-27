@@ -86,7 +86,9 @@ defmodule Idejo.Moderation do
       message.author_id == user.id or message.deleted_at != nil ->
         {:error, :forbidden}
 
-      is_nil(Idejo.Forum.get_viewable_message(user, message.id)) ->
+      # A participant reports a private conversation's message too (steward decision,
+      # 2026-10-27).
+      is_nil(Idejo.Forum.get_readable_message(user, message.id)) ->
         {:error, :forbidden}
 
       RateLimit.check(:report, user.id) != :ok ->
@@ -137,11 +139,47 @@ defmodule Idejo.Moderation do
         on: t.id == m.topic_id,
         where: r.status == "open"
 
-    if Access.administrator?(moderator) do
-      query
-    else
-      moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
-      where(query, [_r, _m, t], t.category_id in subquery(moderated))
+    # Reports from private conversations (steward decision, 2026-10-27) go to server
+    # moderators, like bans: there is no category to moderate.
+    cond do
+      Access.administrator?(moderator) ->
+        query
+
+      Access.server_moderator?(moderator) ->
+        moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
+        where(query, [_r, _m, t], t.private or t.category_id in subquery(moderated))
+
+      true ->
+        moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
+        where(query, [_r, _m, t], t.category_id in subquery(moderated))
+    end
+  end
+
+  @doc """
+  The reported message with that id, for a moderator who may handle its reports: one they
+  may view, or, for a server moderator, one of a private conversation with open reports
+  (steward decision, 2026-10-27). Nil otherwise.
+  """
+  @spec get_reported_message(User.t(), String.t()) :: Message.t() | nil
+  def get_reported_message(%User{} = moderator, id) do
+    case Idejo.Forum.get_viewable_message(moderator, id) do
+      nil ->
+        with {:ok, id} <- Ecto.UUID.cast(id),
+             true <- Access.server_moderator?(moderator) do
+          open = from r in Report, where: r.message_id == ^id and r.status == "open"
+
+          Repo.one(
+            from m in Message,
+              join: t in assoc(m, :topic),
+              where: m.id == ^id and t.private and exists(open),
+              preload: [topic: :category]
+          )
+        else
+          _ -> nil
+        end
+
+      message ->
+        message
     end
   end
 
@@ -153,15 +191,15 @@ defmodule Idejo.Moderation do
           {:ok, non_neg_integer()} | {:error, :forbidden | :no_reports}
   def handle_reports(%User{} = moderator, %Message{} = message, outcome, note \\ nil)
       when outcome in [:resolve, :dismiss] do
-    category =
-      Repo.one!(
-        from t in Topic,
-          join: c in assoc(t, :category),
-          where: t.id == ^message.topic_id,
-          select: c
-      )
+    topic = Repo.get!(Topic, message.topic_id) |> Repo.preload(:category)
 
-    if Access.can?(moderator, :moderate, category) do
+    # A private conversation's reports: server moderators (steward decision, 2026-10-27).
+    allowed? =
+      if topic.private,
+        do: Access.server_moderator?(moderator),
+        else: Access.can?(moderator, :moderate, topic.category)
+
+    if allowed? do
       Repo.transact(fn -> close_reports(moderator, message, outcome, note) end)
     else
       {:error, :forbidden}
@@ -189,6 +227,11 @@ defmodule Idejo.Moderation do
       end
     end
   end
+
+  @doc "Whether the message has open reports."
+  @spec open_reports?(Message.t()) :: boolean()
+  def open_reports?(%Message{id: id}),
+    do: Repo.exists?(from r in Report, where: r.message_id == ^id and r.status == "open")
 
   @doc """
   Marks a message's open reports resolved by `moderator`, inside the caller's transaction:

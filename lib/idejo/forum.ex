@@ -762,6 +762,8 @@ defmodule Idejo.Forum do
   @spec can_rename_topic?(User.t() | nil, Topic.t()) :: boolean()
   def can_rename_topic?(nil, _topic), do: false
   def can_rename_topic?(_user, %Topic{state: "archived"}), do: false
+  # A private conversation has no title of its own: its page names the other participant.
+  def can_rename_topic?(_user, %Topic{private: true}), do: false
 
   def can_rename_topic?(%User{} = user, %Topic{} = topic) do
     topic = Repo.preload(topic, :category)
@@ -1364,6 +1366,16 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Like `get_viewable_topic/2`, and also a private conversation the user takes part in
+  (steward decision, 2026-10-27; `Idejo.Conversations`). For the pages that show one: the
+  conversation itself, its messages' permalinks, reports and reactions. Everything else
+  keeps `get_viewable_topic/2`, which never returns one.
+  """
+  @spec get_readable_topic(User.t() | nil, String.t()) :: Topic.t() | nil
+  def get_readable_topic(user, id) when is_binary(id),
+    do: get_viewable_topic(user, id) || Idejo.Conversations.get(user, id)
+
+  @doc """
   Lists the topics a visitor without an account may view, most recently active first, at
   most `limit` (a sitemap holds 50,000 addresses). For the sitemap (SE-04); filtered in the
   query by `Idejo.Access.where_allowed/3`.
@@ -1392,6 +1404,28 @@ defmodule Idejo.Forum do
       message
     else
       _ -> nil
+    end
+  end
+
+  @doc """
+  Like `get_viewable_message/2`, and also a message of a private conversation the user takes
+  part in (see `get_readable_topic/2`).
+  """
+  @spec get_readable_message(User.t() | nil, String.t()) :: Message.t() | nil
+  def get_readable_message(user, id) when is_binary(id) do
+    case get_viewable_message(user, id) do
+      nil ->
+        with {:ok, id} <- Ecto.UUID.cast(id),
+             %Message{} = message <- Repo.get(Message, id) |> Repo.preload(topic: :category),
+             true <-
+               message.topic.private and Idejo.Conversations.participant?(user, message.topic) do
+          message
+        else
+          _ -> nil
+        end
+
+      message ->
+        message
     end
   end
 
@@ -1470,6 +1504,10 @@ defmodule Idejo.Forum do
   @spec can_post?(User.t() | nil, Topic.t()) :: boolean()
   def can_post?(nil, _topic), do: false
   def can_post?(_user, %Topic{state: state}) when state != "open", do: false
+
+  # Steward decision, 2026-10-27: only participants, while the others still take messages.
+  def can_post?(user, %Topic{private: true} = topic),
+    do: Idejo.Conversations.can_post?(user, topic)
 
   def can_post?(%User{} = user, %Topic{} = topic) do
     topic = Repo.preload(topic, :category)

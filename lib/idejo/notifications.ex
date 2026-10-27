@@ -168,17 +168,31 @@ defmodule Idejo.Notifications do
   # The users, among those ids, who may view the topic's category and still have an account.
   defp may_view([], _topic), do: []
 
-  # Never those who muted the topic (steward decision, 2026-10-23).
+  # Never those who muted the topic (steward decision, 2026-10-23). In a private
+  # conversation, its participants only (steward decision, 2026-10-27).
+  defp may_view(user_ids, %Topic{private: true} = topic) do
+    participants = Idejo.Conversations.participant_ids(topic)
+
+    topic
+    |> active_unmuted(Enum.filter(user_ids, &(&1 in participants)))
+    |> Enum.map(& &1.id)
+  end
+
   defp may_view(user_ids, topic) do
     category = Repo.get!(Category, topic.category_id)
 
-    from(u in User,
-      where: u.id in ^user_ids and u.status == "active",
-      where: u.id not in subquery(muted_by(topic.id))
-    )
-    |> Repo.all()
+    topic
+    |> active_unmuted(user_ids)
     |> Enum.filter(&Access.can?(&1, :view, category))
     |> Enum.map(& &1.id)
+  end
+
+  defp active_unmuted(topic, user_ids) do
+    Repo.all(
+      from u in User,
+        where: u.id in ^user_ids and u.status == "active",
+        where: u.id not in subquery(muted_by(topic.id))
+    )
   end
 
   ## Live announcements (steward decision, 2026-10-23)

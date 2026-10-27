@@ -33,6 +33,7 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
+     |> assign(:private_form, private_form(user))
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
      |> assign(:push_on?, Push.enabled?())
      |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))
@@ -141,6 +142,21 @@ defmodule IdejoWeb.UserSettingsLive do
 
     {:noreply,
      socket |> put_flash(:info, gettext("Avatar removed.")) |> redirect(to: ~p"/users/settings")}
+  end
+
+  # Receiving private messages (steward decision, 2026-10-27).
+  def handle_event("save_private", %{"private" => params}, socket) do
+    case Accounts.update_user_private_messages(socket.assigns.current_scope.user, params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Private messages preference saved."))
+         |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
+         |> assign(:private_form, private_form(user))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :private_form, to_form(changeset, as: :private))}
+    end
   end
 
   # Automatic punctuation (steward decision, 2026-10-26): open topic pages pick it up when
@@ -311,6 +327,9 @@ defmodule IdejoWeb.UserSettingsLive do
     {"Linux", "Linux"}
   ]
 
+  defp private_form(user),
+    do: to_form(Accounts.change_user_private_messages(user), as: :private)
+
   @doc false
   def device_name(user_agent) do
     agent = user_agent || ""
@@ -432,6 +451,25 @@ defmodule IdejoWeb.UserSettingsLive do
         </.form>
       </section>
 
+      <%!-- Steward decision, 2026-10-27. --%>
+      <section class="mt-10" aria-labelledby="private-heading">
+        <h2 id="private-heading" class="font-semibold mb-2">{gettext("Private messages")}</h2>
+        <.form for={@private_form} id="private-form" phx-submit="save_private">
+          <.input
+            field={@private_form[:accepts_private_messages]}
+            type="checkbox"
+            label={gettext("Members can send me private messages")}
+            aria-describedby="private-help"
+          />
+          <p id="private-help" class="text-sm opacity-70 -mt-1 mb-4">
+            {gettext(
+              "When off, nobody can start a private conversation with you or write to you in one."
+            )}
+          </p>
+          <.button class="btn btn-primary">{gettext("Save private messages preference")}</.button>
+        </.form>
+      </section>
+
       <section class="mt-10" aria-labelledby="email-notifications-heading">
         <h2 id="email-notifications-heading" class="font-semibold mb-2">
           {gettext("Email notifications")}
@@ -544,6 +582,11 @@ defmodule IdejoWeb.UserSettingsLive do
               field={@push_form[:followed]}
               type="checkbox"
               label={gettext("New messages in topics I follow")}
+            />
+            <.input
+              field={@push_form[:private]}
+              type="checkbox"
+              label={gettext("Private messages")}
             />
           </fieldset>
           <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>

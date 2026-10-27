@@ -19,6 +19,9 @@ defmodule Idejo.Push.Dispatch do
     * while the user has a live view of the topic (PN-08: the in-app notification is enough);
     * when nothing of that kind is unread any more (it was read meanwhile).
 
+  In a private conversation (steward decision, 2026-10-27) every kind is pushed, as a
+  private message (`"private"`: its own switch, the participants only); the same checks hold.
+
   Otherwise it marks the notification pushed and sends the payload of `Idejo.Push.Payload`
   to every browser of the user (`Idejo.Push.deliver/3`).
 
@@ -48,12 +51,13 @@ defmodule Idejo.Push.Dispatch do
     with :ok <- check(Push.enabled?(), :disabled),
          {:ok, notification} <- notification(user_id, message_id),
          {:ok, message} <- message(message_id),
+         {:ok, kind} <- kind(notification, message),
          {:ok, user} <- user(user_id),
          :ok <- check(may_view?(user, message), :no_view),
-         :ok <- check(Push.allowed?(user, message.topic, notification.kind), :not_allowed),
-         :ok <- check(Push.wants?(Push.preferences(user), notification.kind), :switched_off),
+         :ok <- check(Push.allowed?(user, message.topic, kind), :not_allowed),
+         :ok <- check(Push.wants?(Push.preferences(user), kind), :switched_off),
          :ok <- check(not Authors.present?(message.topic_id, user.id), :on_screen),
-         {:ok, payload, urgency} <- Payload.build(user, message, notification.kind),
+         {:ok, payload, urgency} <- Payload.build(user, message, kind),
          :ok <- mark_pushed(notification) do
       case Push.deliver(user, payload, urgency: urgency) do
         {:ok, _queued} -> :ok
@@ -71,13 +75,18 @@ defmodule Idejo.Push.Dispatch do
     case Repo.one(
            from n in Notification, where: n.user_id == ^user_id and n.message_id == ^message_id
          ) do
-      %Notification{pushed_at: nil, kind: kind} = notification when kind in @kinds ->
+      %Notification{pushed_at: nil} = notification ->
         {:ok, notification}
 
       _ ->
         {:error, :nothing_to_push}
     end
   end
+
+  # What the push is: any kind in a private conversation is a private message.
+  defp kind(_notification, %Message{topic: %{private: true}}), do: {:ok, "private"}
+  defp kind(%Notification{kind: kind}, _message) when kind in @kinds, do: {:ok, kind}
+  defp kind(_notification, _message), do: {:error, :nothing_to_push}
 
   defp message(message_id) do
     case Repo.get(Message, message_id) do
@@ -95,6 +104,10 @@ defmodule Idejo.Push.Dispatch do
         {:error, :no_account}
     end
   end
+
+  # A private conversation: its participants (steward decision, 2026-10-27).
+  defp may_view?(user, %{topic: %{private: true} = topic}),
+    do: Idejo.Conversations.participant?(user, topic)
 
   defp may_view?(user, message),
     do: Access.can?(user, :view, Repo.get!(Category, message.topic.category_id))

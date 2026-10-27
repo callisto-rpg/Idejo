@@ -610,8 +610,14 @@ defmodule Idejo.Access do
   (`roles_of/1`) gets the category's own setting for that role, or, when unset there, the
   role's server-wide setting; a deny on the category overrides the server-wide allow for that
   role. Across roles, **allow wins**: one role allowing is enough (RP-06).
+
+  No category (`nil`: a private conversation's, steward decision, 2026-10-27) gives nobody
+  any right, owners and administrators included: only its participants read and write there
+  (`Idejo.Conversations`), so a call that skips them never opens one.
   """
-  @spec can?(User.t() | nil, atom(), Category.t()) :: boolean()
+  @spec can?(User.t() | nil, atom(), Category.t() | nil) :: boolean()
+  def can?(_user, right, nil) when right in @rights, do: false
+
   def can?(user, right, %Category{id: category_id})
       when right in @rights do
     from(c in Category, where: c.id == ^category_id)

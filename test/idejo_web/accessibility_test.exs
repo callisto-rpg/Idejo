@@ -159,16 +159,22 @@ defmodule IdejoWeb.AccessibilityTest do
   @tag req: "AX-01"
   test "AX-01 signed-in pages", %{
     conn: conn,
+    member: member,
     general: general,
     reader: reader,
     first: first,
     reply: reply
   } do
     conn = log_in_user(conn, reader)
+    # Private conversations (steward decision, 2026-10-27): the list and one.
+    {:ok, conversation} = Idejo.Conversations.start(reader, member)
+    {:ok, _} = Forum.post_message(member, conversation, %{"body" => "Hello"})
 
     assert_all_accessible(conn, [
       ~p"/",
       ~p"/unread",
+      ~p"/p",
+      ~p"/p/#{conversation.id}",
       ~p"/users/settings",
       ~p"/c/#{general.slug}/new",
       ~p"/m/#{reply.id}/new-topic",

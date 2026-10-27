@@ -1,0 +1,41 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope} width={:wide}>
+  <header class="page-intro">
+    <h1>{gettext("Private Conversations")}</h1>
+  </header>
+
+  <p :if={@conversations == []} id="no-conversations" class="empty-state">
+    {gettext("No private conversations yet. Open someone's card and choose “Private Message”.")}
+  </p>
+
+  <ul :if={@conversations != []} id="conversations" class="category-grid">
+    <li
+      :for={%{topic: topic, others: others, last: last, unread: unread} <- @conversations}
+      id={"conversation-#{topic.id}"}
+      class="category-card conversation-card"
+    >
+      <div class="category-card-head">
+        <IdejoWeb.UserComponents.avatar :for={other <- others} user={other} size={:medium} />
+        <h2 class="conversation-card-name">
+          <.link href={~p"/p/#{topic.id}"} class="category-card-link">
+            {IdejoWeb.ConversationController.title(others)}
+          </.link>
+        </h2>
+      </div>
+      <p :if={last} class="category-card-description">
+        <span class="font-medium">{last.author.display_name}:</span>
+        {Idejo.Forum.excerpt(last)}
+      </p>
+      <p :if={!last} class="category-card-description">{gettext("No messages yet.")}</p>
+      <p class="category-card-stats">
+        <span :if={unread > 0} class="badge badge-sm badge-primary unread-marker">
+          {ngettext("1 new", "%{count} new", unread)}
+        </span>
+        <TopicComponents.time_ago at={topic.last_activity_at} />
+      </p>
+    </li>
+  </ul>
+</Layouts.app>

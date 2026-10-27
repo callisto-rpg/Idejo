@@ -150,6 +150,11 @@ defmodule IdejoWeb.Router do
     get "/moderation", ModerationController, :index
     post "/moderation/reports/:message_id", ModerationController, :handle_reports
     get "/moderation/log", ModerationController, :log
+    # Private conversations (steward decision, 2026-10-27): the list, one, and starting one
+    # from the user card.
+    get "/p", ConversationController, :index
+    get "/p/:id", ConversationController, :show
+    post "/u/:id/message", ConversationController, :create
     # MO-02: server moderators ban an account or lift a ban.
     post "/u/:id/ban", BanController, :create
     delete "/u/:id/ban", BanController, :delete

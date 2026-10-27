@@ -387,6 +387,21 @@ defmodule Idejo.Accounts do
   def update_user_writing(%User{} = user, attrs),
     do: user |> User.writing_changeset(attrs) |> Repo.update()
 
+  @doc "Returns a changeset for receiving private messages."
+  @spec change_user_private_messages(User.t(), map()) :: Ecto.Changeset.t()
+  def change_user_private_messages(%User{} = user, attrs \\ %{}),
+    do: User.private_messages_changeset(user, attrs)
+
+  @doc """
+  Turns receiving private messages on or off (steward decision, 2026-10-27): off, nobody
+  starts a conversation with the user or writes in one they are in. A private preference:
+  no activity.
+  """
+  @spec update_user_private_messages(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_private_messages(%User{} = user, attrs),
+    do: user |> User.private_messages_changeset(attrs) |> Repo.update()
+
   @doc """
   Updates the user's own profile: the display name and the user tag (steward decision,
   2026-10-27). Records an `update` activity (FD-02) when either changes.

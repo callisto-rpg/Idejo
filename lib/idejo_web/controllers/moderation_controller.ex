@@ -12,7 +12,6 @@ defmodule IdejoWeb.ModerationController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Forum
   alias Idejo.Moderation
 
   def index(conn, _params) do
@@ -24,11 +23,29 @@ defmodule IdejoWeb.ModerationController do
     )
   end
 
+  # Steward decision, 2026-10-27: a reported private message is deleted from the queue, the
+  # only place a moderator sees it; the note is the log's reason.
+  def handle_reports(conn, %{"message_id" => id, "outcome" => "delete"} = params) do
+    user = moderator!(conn)
+
+    with %{topic: %{private: true}} = message <- Moderation.get_reported_message(user, id),
+         {:ok, _message} <- Idejo.Messages.delete_reported_private(user, message, params["note"]) do
+      conn
+      |> put_flash(:info, gettext("Message deleted. Its reports are resolved."))
+      |> redirect(to: ~p"/moderation")
+    else
+      _ ->
+        conn
+        |> put_flash(:error, gettext("This message could not be deleted."))
+        |> redirect(to: ~p"/moderation")
+    end
+  end
+
   def handle_reports(conn, %{"message_id" => id, "outcome" => outcome} = params)
       when outcome in ["resolve", "dismiss"] do
     user = moderator!(conn)
 
-    with %{} = message <- Forum.get_viewable_message(user, id),
+    with %{} = message <- Moderation.get_reported_message(user, id),
          {:ok, _count} <-
            Moderation.handle_reports(
              user,
