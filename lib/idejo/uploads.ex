@@ -142,6 +142,8 @@ defmodule Idejo.Uploads do
       |> union_all(^named_in(Version, :body_md))
       |> union_all(^named_in(Setting, :value))
       |> union_all(^named_in(InfoBox, :body_md))
+      # AC-04: a bio may show an image by its address.
+      |> union_all(^named_in(User, :bio_md))
 
     avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
     dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)
