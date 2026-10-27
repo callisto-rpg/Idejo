@@ -217,20 +217,46 @@ defmodule Idejo.Conversations do
     |> Map.new(&{&1.topic_id, &1})
   end
 
+  @doc """
+  The user's unread private messages, for a push: how many in all (a growing message once),
+  and the names of the people who wrote them, those of the latest conversations first, at
+  most three.
+  """
+  @spec unread_summary(User.t()) :: %{count: non_neg_integer(), names: [String.t()]}
+  def unread_summary(%User{} = user) do
+    counts = Reading.unread_counts(user, conversation_ids(user))
+
+    names =
+      Repo.all(
+        from t in Topic,
+          join: p in Participant,
+          on: p.topic_id == t.id and p.user_id != ^user.id,
+          join: u in User,
+          on: u.id == p.user_id,
+          where: t.id in ^Map.keys(counts),
+          order_by: [desc: t.last_activity_at, asc: u.username],
+          select: u.display_name
+      )
+      |> Enum.uniq()
+      |> Enum.take(3)
+
+    %{count: counts |> Map.values() |> Enum.sum(), names: names}
+  end
+
   @doc "How many of the user's private conversations have unread messages: the sidebar's dot."
   @spec unread_count(User.t() | nil) :: non_neg_integer()
   def unread_count(nil), do: 0
 
-  def unread_count(%User{id: user_id} = user) do
-    ids =
-      Repo.all(
-        from p in Participant,
-          join: t in Topic,
-          on: t.id == p.topic_id,
-          where: p.user_id == ^user_id and t.private,
-          select: p.topic_id
-      )
+  def unread_count(%User{} = user),
+    do: user |> Reading.unread_counts(conversation_ids(user)) |> map_size()
 
-    user |> Reading.unread_counts(ids) |> map_size()
+  defp conversation_ids(%User{id: user_id}) do
+    Repo.all(
+      from p in Participant,
+        join: t in Topic,
+        on: t.id == p.topic_id,
+        where: p.user_id == ^user_id and t.private,
+        select: p.topic_id
+    )
   end
 end

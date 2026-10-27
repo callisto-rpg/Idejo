@@ -336,4 +336,64 @@ defmodule Idejo.Push.DispatchTest do
     :ok = Reading.mark_read(reader, topic)
     assert pushes() == []
   end
+
+  # Private conversations (steward decision, 2026-10-27).
+  @tag req: "PN-01"
+  test "PN-01 a private message pushes who wrote it; several read N new private messages", %{
+    reader: reader,
+    ada: ada
+  } do
+    {:ok, conversation} = Idejo.Conversations.start(ada, reader)
+    first = post!(ada, conversation, "Are you **coming**?")
+    assert [{payload, "high"}] = pushes()
+
+    assert notification(payload) == %{
+             "title" => "Ada sent you a private message",
+             "body" => "Are you coming?",
+             "navigate" => Idejo.Federation.uri(:message, first.id),
+             "tag" => "private",
+             "lang" => "en"
+           }
+
+    # Any kind in a private conversation: a reply, from another conversation too.
+    bo = user_fixture(%{display_name: "Bo"})
+    {:ok, other} = Idejo.Conversations.start(bo, reader)
+    post!(bo, other, "Hi")
+    assert [{one, _}] = pushes()
+    assert notification(one)["title"] == "2 new private messages."
+    post!(ada, conversation, "Hello?", %{"reply_to_id" => first.id})
+    assert [{two, _}] = pushes()
+    assert notification(two)["title"] == "3 new private messages."
+    assert notification(two)["body"] == "Ada · Bo"
+    assert notification(two)["navigate"] == Application.fetch_env!(:idejo, :base_uri) <> "/p"
+
+    # Reading resets the count; a growing message counts once.
+    :ok = Reading.mark_read(reader, conversation)
+    :ok = Reading.mark_read(reader, other)
+    {:ok, _} = Messages.commit(ada, conversation, "One")
+    {:ok, _} = Messages.commit(ada, conversation, "One more")
+    assert [{payload, _}] = pushes()
+    assert notification(payload)["title"] == "Ada sent you a private message"
+
+    # Nobody else is pushed, and the author never.
+    outsider = user_fixture()
+    browser(outsider)
+    browser(ada)
+    post!(reader, conversation, "Yes, @#{outsider.username} too")
+    assert [{payload, _}] = pushes()
+    assert notification(payload)["title"] == "Rea sent you a private message"
+  end
+
+  @tag req: "PN-11"
+  test "PN-11 private messages have their own switch", %{reader: reader, ada: ada} do
+    {:ok, conversation} = Idejo.Conversations.start(ada, reader)
+    {:ok, _} = Push.update_preferences(reader, %{"followed" => "false", "reply" => "false"})
+    post!(ada, conversation, "Still pushed")
+    assert [_] = pushes()
+
+    {:ok, _} = Push.update_preferences(reader, %{"private" => "false"})
+    post!(ada, conversation, "Not pushed")
+    assert pushes() == []
+    assert all_enqueued(worker: Idejo.Push.FollowedWorker) == []
+  end
 end

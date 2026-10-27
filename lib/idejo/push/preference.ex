@@ -4,7 +4,8 @@
 defmodule Idejo.Push.Preference do
   @moduledoc """
   A user's push types (PN-11), for all their browsers: replies (PN-01), @mentions (PN-02),
-  +role mentions (PN-03) and followed activity (PN-04), each on by default. A user without a
+  +role mentions (PN-03), followed activity (PN-04) and private messages (steward decision,
+  2026-10-27), each on by default. A user without a
   row has the defaults.
   """
   use Ecto.Schema
@@ -18,6 +19,7 @@ defmodule Idejo.Push.Preference do
     field :mention, :boolean, default: true
     field :role_mention, :boolean, default: true
     field :followed, :boolean, default: true
+    field :private, :boolean, default: true
     # PN-04: when the last followed-activity push went, and how many topics it counted.
     field :followed_sent_at, :utc_datetime_usec
     field :followed_count, :integer, default: 0
@@ -27,7 +29,7 @@ defmodule Idejo.Push.Preference do
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end
 
-  @doc "A changeset for the four switches."
+  @doc "A changeset for the five switches."
   def changeset(preference, attrs),
-    do: cast(preference, attrs, [:reply, :mention, :role_mention, :followed])
+    do: cast(preference, attrs, [:reply, :mention, :role_mention, :followed, :private])
 end

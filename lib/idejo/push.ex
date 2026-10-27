@@ -221,7 +221,9 @@ defmodule Idejo.Push do
     * reply, mention, role_mention (PN-01 to PN-03): one `Idejo.Push.Dispatch` job per user
       and message;
     * follow (PN-04): one `Idejo.Push.FollowedWorker` job per user, at most one waiting,
-      due when the last one went `push_followed_interval_minutes` ago (now, if it is longer).
+      due when the last one went `push_followed_interval_minutes` ago (now, if it is longer);
+    * any kind in a private conversation (steward decision, 2026-10-27): one `Dispatch` job
+      per user and message, pushed as a private message.
   """
   @spec dispatch([%{user_id: Ecto.UUID.t(), kind: String.t(), message_id: Ecto.UUID.t()}]) ::
           :ok
@@ -230,7 +232,10 @@ defmodule Idejo.Push do
 
     if entries != [] and enabled?() do
       subscribed = subscribed(entries |> Enum.map(& &1.user_id) |> Enum.uniq())
-      {followed, pushed} = Enum.split_with(entries, &(&1.kind == "follow"))
+      private = private_topic_ids(entries)
+
+      {followed, pushed} =
+        Enum.split_with(entries, &(&1.kind == "follow" and &1[:topic_id] not in private))
 
       for entry <- pushed, MapSet.member?(subscribed, entry.user_id) do
         Oban.insert!(
@@ -246,6 +251,11 @@ defmodule Idejo.Push do
     end
 
     :ok
+  end
+
+  defp private_topic_ids(entries) do
+    topic_ids = for %{topic_id: id} <- entries, uniq: true, do: id
+    Repo.all(from t in Topic, where: t.id in ^topic_ids and t.private, select: t.id)
   end
 
   defp subscribed(user_ids) do
@@ -356,6 +366,7 @@ defmodule Idejo.Push do
   def wants?(%Preference{} = preference, "mention"), do: preference.mention
   def wants?(%Preference{} = preference, "role_mention"), do: preference.role_mention
   def wants?(%Preference{} = preference, "follow"), do: preference.followed
+  def wants?(%Preference{} = preference, "private"), do: preference.private
 
   @doc """
   Removes one of `user`'s browsers (PN-24, "Remove"): its endpoint, so the page can end that

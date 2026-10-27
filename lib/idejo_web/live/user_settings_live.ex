@@ -577,6 +577,11 @@ defmodule IdejoWeb.UserSettingsLive do
               type="checkbox"
               label={gettext("New messages in topics I follow")}
             />
+            <.input
+              field={@push_form[:private]}
+              type="checkbox"
+              label={gettext("Private messages")}
+            />
           </fieldset>
           <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
           <.button class="btn btn-primary">{gettext("Save push notifications")}</.button>

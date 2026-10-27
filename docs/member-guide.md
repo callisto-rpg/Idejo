@@ -249,8 +249,9 @@ notifications** in **Profile and account** you can:
 - see whether this browser has them on, and **Turn on** (if your browser blocked them, it
   says how to allow them again);
 - choose what sends one, for all your devices: **Replies to me**, **@you mentions**,
-  **+role mentions** and **New messages in topics I follow** (at most one every half hour
-  or so, counting the topics);
+  **+role mentions**, **New messages in topics I follow** (at most one every half hour
+  or so, counting the topics) and **Private messages** (who wrote, or with several unread,
+  how many: "3 new private messages.");
 - see your devices, with **Remove** for any you no longer use;
 - **Send test notification** to every device.
 

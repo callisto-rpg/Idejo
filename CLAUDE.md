@@ -724,8 +724,14 @@ roles or the permission grid. Every later change must keep it true:
   other participant's name. No slow mode: messages open with no window (`closes_at` =
   `opened_at`, `Messages.no_window?/1`), so `may_start_new?/2` is true at once and the composer
   (`private?`) has no timer line; the first message is written in the composer (no opening
-  post, so GM-14 does not apply). Never forked (`can_fork?`), renamed, moderated in place or
-  pushed yet (`Push.Dispatch` skips them). A participant reports a message (MO-01): server
+  post, so GM-14 does not apply). Never forked (`can_fork?`), renamed or moderated in place.
+  Pushed: `Push.dispatch/1` queues a `Dispatch` job for every kind of row in a private
+  conversation (its `follow` rows never reach PN-04), and the job pushes it as `"private"`
+  (participants only, its own `push_preferences.private` switch, "Private messages"):
+  `Payload` says "{name} sent you a private message" with the excerpt and permalink, or
+  with several unread "{N} new private messages." (`Conversations.unread_summary/1`: unread
+  messages across the user's conversations, and up to three names), opening `/p`; tag
+  `private`, urgency `high`. A participant reports a message (MO-01): server
   moderators (`open_reports`, `Moderation.get_reported_message/2`, `handle_reports/4`) see
   that message's text in the queue, never a link into the conversation, and may delete it
   there ("Delete message", `outcome=delete`: `Messages.delete_reported_private/3`, only
@@ -1145,7 +1151,7 @@ roles or the permission grid. Every later change must keep it true:
   `assets/js/push_settings.js`, `phx-update="ignore"`) shows this browser's state (on, off
   with "Turn on", blocked with how to allow it, the iPhone/iPad Home Screen steps,
   unsupported) and tells the view `"push_endpoint"` (marks "This browser") and
-  `"push_changed"`; the four switches (`Push.update_preferences/2`); the devices
+  `"push_changed"`; the five switches (`Push.update_preferences/2`); the devices
   (`Push.list_subscriptions/1`, named by `UserSettingsLive.device_name/1` from the user
   agent, with the date) with Remove (`Push.remove_subscription/2`; this browser's also
   gets `"push_unsubscribe"`, and push.js keeps it off here with `localStorage`

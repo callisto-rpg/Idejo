@@ -14,6 +14,11 @@ defmodule Idejo.Push.Payload do
       Unread page. Tag `mentions`; urgency `high`.
     * role_mention (PN-03): "{name} mentioned +{role} in {topic}", or "Your role has been
       tagged {N} times". Tag `role-mentions`.
+    * private (steward decision, 2026-10-27): "{name} sent you a private message", the
+      excerpt, the permalink; with several unread private messages, "{N} new private
+      messages.", the names of up to three people waiting for an answer, the Private
+      Conversations page. Tag `private`; urgency `high`. N counts unread messages in the
+      user's private conversations (`Idejo.Conversations.unread_summary/1`).
     * followed activity (PN-04, `followed/2`): "There are new messages in {N} topics you
       follow", the Unread page. Tag `followed`.
 
@@ -42,6 +47,13 @@ defmodule Idejo.Push.Payload do
   """
   @spec build(User.t(), Message.t(), String.t()) ::
           {:ok, map(), String.t()} | {:error, :nothing_unread}
+  def build(%User{} = user, %Message{} = message, "private") do
+    case Idejo.Conversations.unread_summary(user) do
+      %{count: 0} -> {:error, :nothing_unread}
+      unread -> {:ok, payload(user, private_text(unread, message), "private"), "high"}
+    end
+  end
+
   def build(%User{} = user, %Message{} = message, kind)
       when kind in ~w(reply mention role_mention) do
     topic_id = if kind == "reply", do: message.topic_id
@@ -50,22 +62,33 @@ defmodule Idejo.Push.Payload do
     if unread.count == 0 do
       {:error, :nothing_unread}
     else
-      {title, body, navigate} = text(kind, unread, user, message)
-
-      payload = %{
-        "web_push" => 8030,
-        "notification" => %{
-          "title" => title,
-          "body" => body,
-          "navigate" => navigate,
-          "tag" => tag(kind, message),
-          "lang" => Gettext.get_locale(IdejoWeb.Gettext)
-        },
-        "app_badge" => Reading.for_you(user).count
-      }
-
+      payload = payload(user, text(kind, unread, user, message), tag(kind, message))
       {:ok, payload, if(kind == "mention", do: "high", else: "normal")}
     end
+  end
+
+  defp payload(user, {title, body, navigate}, tag) do
+    %{
+      "web_push" => 8030,
+      "notification" => %{
+        "title" => title,
+        "body" => body,
+        "navigate" => navigate,
+        "tag" => tag,
+        "lang" => Gettext.get_locale(IdejoWeb.Gettext)
+      },
+      "app_badge" => Reading.for_you(user).count
+    }
+  end
+
+  defp private_text(%{count: 1}, message) do
+    {gettext("%{name} sent you a private message", name: message.author.display_name),
+     excerpt(message), permalink(message)}
+  end
+
+  defp private_text(%{count: count, names: names}, _message) do
+    {ngettext("1 new private message.", "%{count} new private messages.", count),
+     Enum.join(names, " · "), Application.fetch_env!(:idejo, :base_uri) <> "/p"}
   end
 
   defp text("reply", %{count: 1}, _user, message) do
