@@ -37,11 +37,15 @@ defmodule IdejoWeb.NotifierLive do
       kind: live.kind,
       text: text(live.kind, live.author_name, live.topic_title),
       excerpt: live.excerpt,
-      href: ~p"/m/#{live.message_id}",
+      href: href(live),
       topic_id: live.topic_id,
       emoji: live.emoji
     }
   end
+
+  # Where the reader left off in the topic (`/m/{id}?unread`); a reaction, to the message.
+  defp href(%{kind: "reaction", message_id: id}), do: ~p"/m/#{id}"
+  defp href(%{message_id: id}), do: ~p"/m/#{id}?unread"
 
   defp text("mention", name, topic),
     do: gettext("%{name} mentioned you in “%{topic}”", name: name, topic: topic)

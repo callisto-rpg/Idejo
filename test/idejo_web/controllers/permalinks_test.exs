@@ -39,6 +39,43 @@ defmodule IdejoWeb.PermalinksTest do
     assert html =~ ~s(href="/m/#{message.id}")
   end
 
+  @tag req: "TP-07"
+  test "TP-07 a notification's link leads to the oldest unread message in the topic", %{
+    topic: topic,
+    message: first
+  } do
+    reader = user_fixture()
+    conn = log_in_user(build_conn(), reader)
+    # Opened once: everything up to the first message is read.
+    conn |> get(~p"/t/#{topic.id}/hello") |> html_response(200)
+
+    author = user_fixture()
+    {:ok, oldest} = Forum.post_message(author, topic, %{"body" => "One"})
+    {:ok, latest} = Forum.post_message(author, topic, %{"body" => "Two @#{reader.username}"})
+
+    assert redirected_to(get(conn, ~p"/m/#{latest.id}?unread"), 302) ==
+             "/t/#{topic.id}/hello#message-#{oldest.id}"
+
+    # A permalink still names its own message.
+    assert redirected_to(get(conn, ~p"/m/#{latest.id}"), 302) ==
+             "/t/#{topic.id}/hello#message-#{latest.id}"
+
+    # Read now: the notification leads to its message.
+    conn |> get(~p"/t/#{topic.id}/hello") |> html_response(200)
+
+    assert redirected_to(get(conn, ~p"/m/#{latest.id}?unread"), 302) ==
+             "/t/#{topic.id}/hello#message-#{latest.id}"
+
+    # Visitors, and a topic never opened, too.
+    assert redirected_to(get(build_conn(), ~p"/m/#{first.id}?unread"), 302) ==
+             "/t/#{topic.id}/hello#message-#{first.id}"
+
+    stranger = log_in_user(build_conn(), user_fixture())
+
+    assert redirected_to(get(stranger, ~p"/m/#{latest.id}?unread"), 302) ==
+             "/t/#{topic.id}/hello#message-#{latest.id}"
+  end
+
   @tag req: "TP-06"
   test "TP-06 a topic's permalink is its URI", %{conn: conn, topic: topic} do
     assert path(topic.uri) == "/t/#{topic.id}"

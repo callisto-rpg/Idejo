@@ -157,7 +157,7 @@ defmodule IdejoWeb.LiveNotificationsTest do
       topic_id: topic_id
     })
 
-    assert href == "/m/#{message.id}"
+    assert href == "/m/#{message.id}?unread"
     assert topic_id == topic.id
   end
 
