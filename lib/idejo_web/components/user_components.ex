@@ -15,7 +15,7 @@ defmodule IdejoWeb.UserComponents do
   use Gettext, backend: IdejoWeb.Gettext
   use IdejoWeb, :verified_routes
 
-  import IdejoWeb.CoreComponents, only: [dropdown: 1]
+  import IdejoWeb.CoreComponents, only: [dropdown: 1, icon: 1]
 
   alias Idejo.Access
   alias Idejo.Accounts
@@ -24,8 +24,9 @@ defmodule IdejoWeb.UserComponents do
 
   @doc """
   Loads what the card shows to `viewer`: the user and their roles, highest first (RP-06),
-  without the implicit guest, and the moderation actions the viewer may take on the account
-  (`actions`, nil for everyone but server moderators).
+  without the implicit guest, the moderation actions the viewer may take on the account
+  (`actions`, nil for everyone but server moderators), and whether the viewer may send them
+  a private message (`message?`).
 
   ## Options
 
@@ -34,7 +35,14 @@ defmodule IdejoWeb.UserComponents do
   @spec card_data(Accounts.User.t(), Accounts.User.t() | nil, keyword()) :: map()
   def card_data(user, viewer \\ nil, opts \\ []) do
     roles = user |> Access.roles_of() |> Enum.reject(&(&1.built_in and &1.name == "guest"))
-    %{user: user, roles: roles, actions: actions(viewer, user, opts[:return_to])}
+
+    %{
+      user: user,
+      roles: roles,
+      actions: actions(viewer, user, opts[:return_to]),
+      # Steward decision, 2026-10-27: "Private Message", when the viewer may write to them.
+      message?: Idejo.Conversations.may_message?(viewer, user)
+    }
   end
 
   # MO-02: only server moderators ban (Accounts.ban_user/4 checks it again), never themselves
@@ -73,6 +81,21 @@ defmodule IdejoWeb.UserComponents do
             <Admin.role_label role={role} />
           </li>
         </ul>
+        <%!-- Opens the conversation with them, started on first use (steward decision,
+             2026-10-27); a plain form, so no JavaScript is needed. --%>
+        <.form
+          :if={@card[:message?]}
+          for={%{}}
+          action={~p"/u/#{@card.user.id}/message"}
+          method="post"
+          id="private-message-form"
+          class="mt-3"
+        >
+          <button class="btn btn-sm btn-primary" id="private-message">
+            <.icon name="hero-chat-bubble-left-right" class="size-4" />
+            {gettext("Private Message")}
+          </button>
+        </.form>
         <.user_actions :if={@card[:actions]} user={@card.user} actions={@card.actions} />
       </div>
     </div>

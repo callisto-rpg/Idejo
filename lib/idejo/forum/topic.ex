@@ -24,12 +24,16 @@ defmodule Idejo.Forum.Topic do
     # 2026-10-23; Idejo.Reading).
     field :autofollow, :boolean, default: false
     field :message_count, :integer, default: 0
+    # A private conversation (steward decision, 2026-10-27; Idejo.Conversations): no
+    # category, read only by its participants.
+    field :private, :boolean, default: false
     field :last_activity_at, :utc_datetime_usec
     belongs_to :category, Idejo.Forum.Category
     belongs_to :author, Idejo.Accounts.User
     # TP-09: the message this topic was started from, if any.
     belongs_to :forked_from, Idejo.Messages.Message, foreign_key: :forked_from_message_id
     has_many :messages, Idejo.Messages.Message
+    has_many :participants, Idejo.Conversations.Participant
     # TP-19: one or more tags, server-wide or of the topic's category.
     many_to_many :tags, Idejo.Forum.Tag, join_through: "topic_tags", on_replace: :delete
 

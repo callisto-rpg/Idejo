@@ -24,9 +24,14 @@ defmodule IdejoWeb.TopicController do
 
     # A topic the reader may not view leads to sign-in, or home with a dialog
     # (steward decision, 2026-10-24).
-    case Forum.get_viewable_topic(user, id) do
+    case Forum.get_readable_topic(user, id) do
       nil ->
         IdejoWeb.Unavailable.redirect_away(conn, :topic)
+
+      # A private conversation's URI (FD-01) leads its participants to its page (steward
+      # decision, 2026-10-27).
+      %{private: true} = topic ->
+        redirect(conn, to: ~p"/p/#{topic.id}")
 
       topic ->
         if params["slug"] == topic.slug do

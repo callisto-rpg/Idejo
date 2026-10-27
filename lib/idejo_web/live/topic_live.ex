@@ -57,7 +57,8 @@ defmodule IdejoWeb.TopicLive do
   def mount(_params, %{"topic_id" => topic_id} = session, socket) do
     user = user(socket)
 
-    case Forum.get_viewable_topic(user, topic_id) do
+    # A private conversation too, for its participants (steward decision, 2026-10-27).
+    case Forum.get_readable_topic(user, topic_id) do
       nil ->
         {:ok,
          assign(socket,
@@ -116,7 +117,7 @@ defmodule IdejoWeb.TopicLive do
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
-         |> assign(:can_fork?, Forum.list_startable_categories(user) != [])
+         |> assign(:can_fork?, can_fork?(user, topic))
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
@@ -153,6 +154,11 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
+  # would leave it.
+  defp can_fork?(_user, %{private: true}), do: false
+  defp can_fork?(user, _topic), do: Forum.list_startable_categories(user) != []
 
   # Reply starts a new message (steward decision, 2026-10-24): with the author's message
   # still open, the composer leaves it for a new one at the end; `draft_over` is the open
@@ -354,7 +360,7 @@ defmodule IdejoWeb.TopicLive do
     do: {:noreply, socket}
 
   def handle_info({:topic_changed, topic_id}, socket) do
-    case Forum.get_viewable_topic(user(socket), topic_id) do
+    case Forum.get_readable_topic(user(socket), topic_id) do
       nil ->
         Messages.unsubscribe(topic_id)
 
@@ -434,7 +440,7 @@ defmodule IdejoWeb.TopicLive do
   def handle_info(:permissions_changed, socket) do
     user = user(socket)
 
-    case Forum.get_viewable_topic(user, socket.assigns.topic.id) do
+    case Forum.get_readable_topic(user, socket.assigns.topic.id) do
       nil ->
         Messages.unsubscribe(socket.assigns.topic.id)
 
@@ -453,7 +459,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(
            can_post?: Forum.can_post?(user, topic),
            can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
-           can_fork?: Forum.list_startable_categories(user) != []
+           can_fork?: can_fork?(user, topic)
          )
          |> put_forks()}
     end
@@ -1445,6 +1451,7 @@ defmodule IdejoWeb.TopicLive do
                 else: Enum.any?(@later, &is_nil(&1.deleted_at))
             }
             unanswered_minutes={@unanswered_minutes}
+            private?={@topic.private}
           />
         </li>
         <li
@@ -2139,6 +2146,7 @@ defmodule IdejoWeb.TopicLive do
   attr :poll, :map, default: nil, doc: "the open message's poll (`!poll`)"
   attr :answered?, :boolean, default: true, doc: "someone wrote below the open message"
   attr :unanswered_minutes, :integer, default: 10
+  attr :private?, :boolean, default: false, doc: "a private conversation: no slow mode"
 
   # No countdown, button or status around it (GM-07): only the text box. The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
@@ -2148,6 +2156,8 @@ defmodule IdejoWeb.TopicLive do
     # The timer runs for the open message, or for the one a new message waits for; an edit
     # has none (Ctrl+Enter ends it at any time).
     mine = if assigns.editing?, do: nil, else: assigns.mine || assigns.locked
+    # No slow mode in a private conversation (steward decision, 2026-10-27): no timer line.
+    answered? = assigns.answered? or assigns.private?
 
     assigns =
       assign(assigns,
@@ -2155,10 +2165,12 @@ defmodule IdejoWeb.TopicLive do
         left: mine && DateTime.diff(mine.closes_at, now),
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
-          mine && !assigns.answered? &&
+          mine && !answered? &&
             DateTime.diff(start_new_at(mine, false, assigns.unanswered_minutes), now),
         # The line under the composer (steward decision, 2026-10-23) runs to this moment.
-        ready_at: mine && start_new_at(mine, assigns.answered?, assigns.unanswered_minutes)
+        ready_at:
+          mine && !assigns.private? &&
+            start_new_at(mine, answered?, assigns.unanswered_minutes)
       )
 
     ~H"""
@@ -2196,7 +2208,11 @@ defmodule IdejoWeb.TopicLive do
         data-label-send={gettext("Enter to send")}
         data-label-sent={gettext("Sent!")}
         data-label-continue={gettext("Continue typing to add to your message")}
-        data-label-visible={gettext("Message now visible to all!")}
+        data-label-visible={
+          if @private?,
+            do: gettext("Message delivered!"),
+            else: gettext("Message now visible to all!")
+        }
         data-label-image={gettext("image:")}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>

@@ -96,6 +96,10 @@ defmodule Idejo.Push.Dispatch do
     end
   end
 
+  # Private conversations (steward decision, 2026-10-27) are not pushed yet: their counts
+  # and titles (Reading.unread_notified/3) go through categories.
+  defp may_view?(_user, %{topic: %{private: true}}), do: false
+
   defp may_view?(user, message),
     do: Access.can?(user, :view, Repo.get!(Category, message.topic.category_id))
 

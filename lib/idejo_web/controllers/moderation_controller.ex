@@ -12,7 +12,6 @@ defmodule IdejoWeb.ModerationController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Forum
   alias Idejo.Moderation
 
   def index(conn, _params) do
@@ -28,7 +27,7 @@ defmodule IdejoWeb.ModerationController do
       when outcome in ["resolve", "dismiss"] do
     user = moderator!(conn)
 
-    with %{} = message <- Forum.get_viewable_message(user, id),
+    with %{} = message <- Moderation.get_reported_message(user, id),
          {:ok, _count} <-
            Moderation.handle_reports(
              user,

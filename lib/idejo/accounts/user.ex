@@ -38,6 +38,9 @@ defmodule Idejo.Accounts.User do
     # Automatic punctuation (steward decision, 2026-10-26): a `.` after a sent line that ends
     # without punctuation (GM-02), set in the profile. See Idejo.Messages.commit/4.
     field :auto_punctuation, :boolean, default: true
+    # Whether other members may start a private conversation with this user, or write in one
+    # (steward decision, 2026-10-27; Idejo.Conversations).
+    field :accepts_private_messages, :boolean, default: true
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 
@@ -101,6 +104,15 @@ defmodule Idejo.Accounts.User do
     user
     |> cast(attrs, [:auto_punctuation])
     |> validate_required([:auto_punctuation])
+  end
+
+  @doc """
+  A changeset for receiving private messages (steward decision, 2026-10-27).
+  """
+  def private_messages_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:accepts_private_messages])
+    |> validate_required([:accepts_private_messages])
   end
 
   defp validate_display_name(changeset) do

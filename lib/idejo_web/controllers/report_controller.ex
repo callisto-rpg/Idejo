@@ -50,7 +50,8 @@ defmodule IdejoWeb.ReportController do
   defp reportable!(conn, id) do
     user = conn.assigns.current_scope.user
 
-    case Forum.get_viewable_message(user, id) do
+    # A private conversation's too, for its participants (steward decision, 2026-10-27).
+    case Forum.get_readable_message(user, id) do
       %{author_id: author_id, deleted_at: nil} = message when author_id != user.id ->
         Idejo.Repo.preload(message, :author)
 

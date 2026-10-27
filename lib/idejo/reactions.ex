@@ -69,14 +69,15 @@ defmodule Idejo.Reactions do
 
   @doc """
   Returns true when the user may react to the message: signed in and verified, the message
-  not deleted, and its topic one they may view that is neither locked nor archived.
+  not deleted, and its topic one they may view (or a private conversation they are in)
+  that is neither locked nor archived.
   """
   @spec may_react?(User.t() | nil, Message.t()) :: boolean()
   def may_react?(nil, _message), do: false
 
   def may_react?(%User{} = user, %Message{} = message) do
     Accounts.confirmed?(user) and is_nil(message.deleted_at) and
-      case Forum.get_viewable_topic(user, message.topic_id) do
+      case Forum.get_readable_topic(user, message.topic_id) do
         %{state: "open"} -> true
         _ -> false
       end

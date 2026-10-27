@@ -227,6 +227,12 @@ moderators see for their categories and administrators in full.
 see who reported it. **Moderation** lists reported messages, the longest waiting first:
 **Resolve** if you acted, **Dismiss** if not, with a note for the log.
 
+**Private conversations** are read only by the two people in them: not by moderators, and not
+by owners or administrators either. When one of them reports a message, server moderators
+(those who moderate every category) see that message in **Moderation**, marked "in a private
+conversation", with its full text but no link into the conversation. Resolve or dismiss it
+there; to act on the account, open the author's card (their name) for **User actions**.
+
 **On a topic:** **Moderate this topic** (under the title):
 
 - **Lock** / **Unlock**: a locked topic is read only; open messages in it close.

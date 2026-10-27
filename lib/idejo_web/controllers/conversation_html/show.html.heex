@@ -1,0 +1,26 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    <span id="topic-title" class="topic-title">
+      {IdejoWeb.ConversationController.title(@others)}
+    </span>
+    <:subtitle>
+      <.link href={~p"/p"} class="topic-category" id="conversations-link">
+        <.icon name="hero-chat-bubble-left-right" class="size-4" />
+        {gettext("Private Conversations")}
+      </.link>
+    </:subtitle>
+  </.header>
+
+  {live_render(@conn, IdejoWeb.TopicLive,
+    id: "topic-#{@topic.id}",
+    session: %{
+      "topic_id" => @topic.id,
+      "reply_to_id" => @reply_to_id,
+      "first_unread" => @first_unread
+    }
+  )}
+</Layouts.app>
