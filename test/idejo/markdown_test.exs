@@ -34,6 +34,23 @@ defmodule Idejo.MarkdownTest do
     assert html =~ "<table>"
   end
 
+  # Steward decision, 2026-10-28.
+  @tag req: "TP-11"
+  test "TP-11 superscript, highlight and small text, as in Discord" do
+    assert Markdown.to_html("E = mc^2^") == "<p>E = mc<sup>2</sup></p>"
+    assert Markdown.to_html("a ==bright== b") == "<p>a <mark>bright</mark> b</p>"
+
+    assert Markdown.to_html("Big news\n-# small **print**") ==
+             "<p>Big news</p>\n<p><sub>small <strong>print</strong></sub></p>"
+
+    # Small text needs its space and the start of a line; no subscript, so every <sub> is it.
+    assert Markdown.to_html("-#tight") == "<p>-#tight</p>"
+    refute Markdown.to_html("H~2~O") =~ "<sub>"
+    assert Markdown.to_html("x ^ y ^ z, a == b") == "<p>x ^ y ^ z, a == b</p>"
+    # Never inside code.
+    assert Markdown.to_html("`x^2^ ==a==`") == "<p><code>x^2^ ==a==</code></p>"
+  end
+
   @tag req: "TP-11"
   test "TP-11 code blocks and inline code keep their text as written" do
     html =

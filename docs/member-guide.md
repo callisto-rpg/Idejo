@@ -137,9 +137,11 @@ goes away when you tap elsewhere or scroll.
     with a **Reveal spoiler** button, until each reader chooses it. Replies quoting it, the
     search results and notifications show *(spoiler)* instead of its words. Choose
     **!spoiler** again, while the message is still yours to continue, to show it plainly.
-- **Markdown** works: `**bold**`, `*italics*`, `` `code` ``, code blocks between ```` ``` ````
-  lines, `> quotes`, lists and links. Messages have no length limit; a long one shows a
-  **Show all** button.
+- **Markdown** works: `**bold**`, `*italics*`, `~~struck through~~`, `==highlighted==`,
+  `x^2^` (superscript), `-# small text` at the start of a line (smaller and greyed out),
+  `` `code` ``, code blocks between ```` ``` ```` lines, `> quotes`, lists, tables and links.
+  **Help**, in the sidebar, ends with **Formatting text**: every format and how it shows.
+  Messages have no length limit; a long one shows a **Show all** button.
 - **New topic from this** turns a side question into its own topic, linked both ways: the
   new topic says where it continues from, and the message gets a **Continue topic** button.
 - **Report** sends a message to the moderators, with a reason. Only they see that you

@@ -116,5 +116,27 @@
         </div>
       </dl>
     </section>
+
+    <%!-- Last on the page (steward decision, 2026-10-28): every format, what to type and how it
+         shows. --%>
+    <section id="help-formatting" aria-labelledby="help-formatting-title">
+      <h2 id="help-formatting-title">{gettext("Formatting text")}</h2>
+      <p>
+        {gettext(
+          "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, / and $ links are above."
+        )}
+      </p>
+      <dl class="help-list help-formatting">
+        <div :for={format <- @formatting} id={"help-format-#{format.id}"}>
+          <dt><code class="help-syntax">{format.syntax}</code></dt>
+          <dd>
+            <span>{format.label}</span>
+            <div :if={format.example} class="help-example">
+              <MessageComponents.body html={format.example} />
+            </div>
+          </dd>
+        </div>
+      </dl>
+    </section>
   </div>
 </Layouts.app>

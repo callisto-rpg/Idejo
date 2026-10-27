@@ -457,8 +457,11 @@ roles or the permission grid. Every later change must keep it true:
   search excerpts read "(spoiler)".
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
-  server's window), the signs `@ + # / $ !`, and every command from
-  `ComposerCommands.all/0`. A change to the keys, the signs or the commands updates it.
+  server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0`,
+  and last "Formatting text" (`#help-formatting`, steward decision, 2026-10-28): each format
+  from `HelpController.formatting/0`, what to type and the example rendered by
+  `Body.to_html/2` (headings described only, outside the page's outline). A change to the
+  keys, the signs, the commands or the formats updates it.
 - **Scheduled messages** (steward decision, 2026-10-23; `Idejo.Messages.Scheduling`,
   `scheduled_messages`): up to 168 hours, decimals allowed (`parse_hours/1`, at least a
   minute), with the post right now. One Oban job each (`Idejo.Messages.ScheduledWorker`, queue
@@ -850,7 +853,11 @@ roles or the permission grid. Every later change must keep it true:
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
   one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP
-  refuses.
+  refuses. Formats (TP-11): GitHub's (tables, `~~strikethrough~~`, task lists, bare links)
+  and, as in Discord (steward decision, 2026-10-28), `^superscript^`, `==highlight==`
+  (`<mark>`, the theme's primary) and `-# small text` (MDEx's `subtext`: `<sub>`, smaller and
+  `--ink-faint`; subscript stays off, so every `<sub>` is small text). Task lists' checkboxes
+  do not survive the sanitiser. A new format joins `HelpController.formatting/0`.
 - **Search engines** (SE-04): public pages set `canonical_url` (rendered as
   `<link rel="canonical">` by the root layout): `/`, `/c/{slug}` (`?page=n` from page 2) and
   `/t/{id}/{slug}` without `?reply_to=`. `/sitemap.xml` and `/robots.txt` come from

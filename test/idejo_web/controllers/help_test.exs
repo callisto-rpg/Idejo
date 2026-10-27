@@ -75,4 +75,34 @@ defmodule IdejoWeb.HelpTest do
     assert Enum.map(ComposerCommands.all(), & &1.label) ==
              ["!image", "!new-topic", "!poll", "!schedule", "!spoiler"]
   end
+
+  # Steward decision, 2026-10-28.
+  test "Help ends with every way of formatting text, shown as messages show it" do
+    doc = build_conn() |> get(~p"/help") |> html_response(200) |> LazyHTML.from_document()
+
+    assert doc
+           |> LazyHTML.query(".help-page > section:last-child h2")
+           |> LazyHTML.text() == "Formatting text"
+
+    example = fn id, selector ->
+      doc |> LazyHTML.query("#help-format-#{id} .help-example #{selector}") |> LazyHTML.text()
+    end
+
+    assert example.("bold", "strong") == "bold"
+    assert example.("italics", "em") == "italics"
+    assert example.("strikethrough", "del") == "struck through"
+    assert example.("highlight", "mark") == "highlighted"
+    assert example.("superscript", "sup") == "2"
+    assert example.("small", "sub") == "small text"
+    assert example.("code-block", "pre") =~ "several lines"
+    assert example.("table", "td") =~ "1"
+    assert doc |> LazyHTML.query("#help-format-emoji .help-example img") |> Enum.count() == 1
+
+    assert doc |> LazyHTML.query("#help-format-small .help-syntax") |> LazyHTML.text() ==
+             "-# small text"
+
+    # Headings are described, not drawn: they would join the page's outline.
+    assert doc |> LazyHTML.query("#help-format-heading .help-example") |> Enum.count() == 0
+    assert doc |> LazyHTML.query(".help-page h3, .help-page h1") |> Enum.count() == 0
+  end
 end
