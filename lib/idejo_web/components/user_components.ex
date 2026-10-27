@@ -65,7 +65,7 @@ defmodule IdejoWeb.UserComponents do
       <.avatar user={@card.user} size={:large} />
       <div>
         <.dynamic_tag tag_name={@heading} id={"#{@id}-name"} class="text-lg font-semibold">
-          {@card.user.display_name}
+          {@card.user.display_name}<.user_tag user={@card.user} />
         </.dynamic_tag>
         <p class="opacity-70">@{@card.user.username}</p>
         <ul :if={@card.roles != []} class="mt-2 flex flex-wrap gap-2" aria-label={gettext("Roles")}>
@@ -167,6 +167,19 @@ defmodule IdejoWeb.UserComponents do
         </div>
       </details>
     </div>
+    """
+  end
+
+  @doc """
+  The user tag (steward decision, 2026-10-27), right after the display name and inside
+  whatever holds it (the author's link opens the card from either): the same font at 80%,
+  a thin line before it (`.user-tag`). Nothing without one.
+  """
+  attr :user, :map, required: true
+
+  def user_tag(assigns) do
+    ~H"""
+    <span :if={@user.user_tag} class="user-tag">{@user.user_tag}</span>
     """
   end
 

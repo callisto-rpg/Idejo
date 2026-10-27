@@ -208,7 +208,8 @@ goes away when you tap elsewhere or scroll.
 ## Your account
 
 Click your name in the top right corner, then **Profile and account**, to change your
-display name, add a picture (and, under **Dark mode picture**, another one for people
+display name, set a **User tag or nickname** (up to 32 characters, shown after your name
+in a lighter shade; leave it empty for none), add a picture (and, under **Dark mode picture**, another one for people
 using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".

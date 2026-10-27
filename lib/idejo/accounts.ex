@@ -388,8 +388,8 @@ defmodule Idejo.Accounts do
     do: user |> User.writing_changeset(attrs) |> Repo.update()
 
   @doc """
-  Updates the user's own profile: the display name. Records an `update` activity (FD-02)
-  when it changes.
+  Updates the user's own profile: the display name and the user tag (steward decision,
+  2026-10-27). Records an `update` activity (FD-02) when either changes.
   """
   @spec update_user_profile(User.t(), map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def update_user_profile(%User{} = user, attrs) do
@@ -601,6 +601,7 @@ defmodule Idejo.Accounts do
           email: "deleted:" <> user.id,
           username: "deleted-" <> user.id,
           display_name: "Deleted user",
+          user_tag: nil,
           password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
           confirmed_at: nil,
           status: "deleted",
