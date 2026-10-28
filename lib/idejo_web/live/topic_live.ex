@@ -80,6 +80,7 @@ defmodule IdejoWeb.TopicLive do
            reactions: %{},
            can_react?: false,
            picker: nil,
+           reaction_who: nil,
            viewable_replies: MapSet.new(),
            moderating: nil,
            confirm_delete: nil,
@@ -130,7 +131,7 @@ defmodule IdejoWeb.TopicLive do
          |> put_first_unread(session["first_unread"])
          |> put_mention_glows()
          |> put_forks()
-         |> assign(can_react?: can_react?(user, topic), picker: nil)
+         |> assign(can_react?: can_react?(user, topic), picker: nil, reaction_who: nil)
          |> assign(
            moderating: nil,
            confirm_delete: nil,
@@ -243,6 +244,14 @@ defmodule IdejoWeb.TopicLive do
   # TP-17: any signed-in, verified reader reacts, while the topic takes changes.
   defp can_react?(nil, _topic), do: false
   defp can_react?(user, topic), do: Idejo.Accounts.confirmed?(user) and topic.state == "open"
+
+  # Who reacted to a message, for the list or its card; nothing left closes it.
+  defp put_reaction_who(socket, who) do
+    case Idejo.Reactions.reactors(who.message_id) do
+      [] -> assign(socket, :reaction_who, nil)
+      people -> assign(socket, :reaction_who, Map.put(who, :people, people))
+    end
+  end
 
   # TP-17: the reactions of every message shown, in one query; later changes come as events.
   defp put_reactions(socket) do
@@ -372,7 +381,8 @@ defmodule IdejoWeb.TopicLive do
            can_post?: false,
            can_react?: false,
            lost_access?: true,
-           messages: []
+           messages: [],
+           reaction_who: nil
          )}
 
       topic ->
@@ -386,10 +396,15 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # TP-17: someone reacted; the summary was worked out once, by them (NF-01).
-  def handle_info({:reactions, message_id, summary}, socket),
-    do:
-      {:noreply,
-       assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))}
+  # An open list of who reacted is read again; only this viewer's, who has it open.
+  def handle_info({:reactions, message_id, summary}, socket) do
+    socket = assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))
+
+    case socket.assigns.reaction_who do
+      %{message_id: ^message_id} = who -> {:noreply, put_reaction_who(socket, who)}
+      _ -> {:noreply, socket}
+    end
+  end
 
   # `!poll`: someone voted, or a poll was added or closed; worked out once (NF-01).
   def handle_info({:poll, message_id, summary}, socket),
@@ -452,7 +467,8 @@ defmodule IdejoWeb.TopicLive do
            can_post?: false,
            can_react?: false,
            lost_access?: true,
-           messages: []
+           messages: [],
+           reaction_who: nil
          )}
 
       topic ->
@@ -901,6 +917,26 @@ defmodule IdejoWeb.TopicLive do
     do: {:noreply, assign(socket, :picker, %{message_id: id})}
 
   def handle_event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
+
+  # Who reacted with what (steward decision, 2026-10-28): a right click or a long press on a
+  # message's reactions; only for messages on screen, whose reactions the viewer sees.
+  def handle_event("reaction_who", %{"id" => id}, socket) when is_binary(id) do
+    if Map.get(socket.assigns.reactions, id, []) != [] and
+         Enum.any?(socket.assigns.messages, &(&1.id == id)),
+       do: {:noreply, put_reaction_who(socket, %{message_id: id, all?: false})},
+       else: {:noreply, socket}
+  end
+
+  # "Show more": the same people, all of them, in a card.
+  def handle_event("reaction_who_all", _params, socket) do
+    case socket.assigns.reaction_who do
+      %{} = who -> {:noreply, assign(socket, :reaction_who, %{who | all?: true})}
+      nil -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("close_reaction_who", _params, socket),
+    do: {:noreply, assign(socket, :reaction_who, nil)}
 
   # A topic's card: Follow / Unfollow (TP-13), then the card again.
   def handle_event("card_" <> action, %{"id" => id}, socket) when action in ~w(follow unfollow) do
@@ -1352,6 +1388,8 @@ defmodule IdejoWeb.TopicLive do
         </div>
       </dialog>
       <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
+      <ReactionComponents.reaction_who :if={@reaction_who && !@reaction_who.all?} who={@reaction_who} />
+      <ReactionComponents.reaction_card :if={@reaction_who && @reaction_who.all?} who={@reaction_who} />
       <.delete_own_dialog :if={@confirm_delete} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />

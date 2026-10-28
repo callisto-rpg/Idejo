@@ -868,6 +868,13 @@ roles or the permission grid. Every later change must keep it true:
   `/emoji-index.json?v=` (`EmojiController`, `Emoji.index_json/0`, built at compile time,
   cached for a year), draws the groups once per page, searches in the browser and pushes
   `"react"`. Never send the emoji list over the live connection (1,881 emoji, 550 KB).
+  Who reacted (steward decision, 2026-10-28): a right click, the menu key or a long press on
+  the bar (`assets/js/reaction_who.js` runs its `data-who`, a push of `"reaction_who"`)
+  loads `Reactions.reactors/1` (each user once, with their emoji; asked only then, so the
+  summaries carry no names, NF-01) into `reaction_who`, read again on `{:reactions, …}` for
+  that message: `ReactionComponents.reaction_who/1` (`#reaction-who`, a `.popup-menu` the
+  `ReactionWho` hook places at the point) shows five people, then "Show more"
+  (`"reaction_who_all"`) opens them all in `reaction_card/1` (`#reaction-card`, `InlineCard`).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
   one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP

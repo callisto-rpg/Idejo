@@ -110,7 +110,9 @@ goes away when you tap elsewhere or scroll.
   closes them), or **+** for
   every emoji (with a search box). Your reactions show under the message, with a count when
   several people chose the same one; click one to add yours or take it back. You may add
-  several. The author is told once per message how many reactions it has.
+  several. The author sees a bubble for each new reaction. Right click the reactions (on a
+  phone, press and hold them) to see who reacted with what; past five people, **Show more**
+  lists them all.
 - **Images**: paste or drop a picture (JPEG, PNG, GIF or WebP) into the box, or use
   **!image** (below). In the box it shows as a small "image:" pill with the picture. In the
   editor for a new topic, there is also **Add image**.
