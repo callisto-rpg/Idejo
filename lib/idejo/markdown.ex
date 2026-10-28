@@ -9,6 +9,11 @@ defmodule Idejo.Markdown do
   stored HTML is safe to show as is. No syntax highlighting: MDEx would colour code with
   inline styles, which the content security policy refuses (SP-05).
 
+  Formatting (TP-11): CommonMark with GitHub's tables, ~~strikethrough~~, task lists and
+  bare links, plus (steward decisions, 2026-10-28) `||spoilers||` (below), `^superscript^`,
+  `==highlight==` and `-# small text` at the start of a line, as in Discord. The Help page shows them all
+  (`IdejoWeb.HelpController`).
+
   Inline links (TP-10; steward decision, 2026-10-22): `references/1` finds what the text
   names, never in code or inside a link (`a@b.com` is a mail link):
 
@@ -29,8 +34,19 @@ defmodule Idejo.Markdown do
   """
 
   @options [
-    # `spoiler`: ||text|| becomes <span class="spoiler"> (steward decision, 2026-10-28).
-    extension: [strikethrough: true, table: true, autolink: true, tasklist: true, spoiler: true],
+    # Steward decisions, 2026-10-28: `spoiler` (||text|| becomes <span class="spoiler">),
+    # ^superscript^, ==highlight== and -# small text (<sub>, a line of its own; subscript
+    # stays off, so every <sub> is small text).
+    extension: [
+      strikethrough: true,
+      table: true,
+      autolink: true,
+      tasklist: true,
+      spoiler: true,
+      superscript: true,
+      highlight: true,
+      subtext: true
+    ],
     render: [unsafe: false],
     syntax_highlight: nil,
     sanitize: MDEx.Document.default_sanitize_options()
