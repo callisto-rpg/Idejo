@@ -175,7 +175,9 @@ goes away when you tap elsewhere or scroll.
   The **×** next to a topic unfollows it. The topic you are reading is highlighted, and is
   listed even if you do not follow it, with a **+** to follow it. The button at the top left hides the sidebar, and your browser remembers;
   on a phone the same button opens it, and so does a swipe to the right (a swipe to the left
-  closes it).
+  closes it). The small **^** at the right of **All categories** rolls **Filter by tag**,
+  **Rules & Roles** and **Help** up into their icons beside it (point at one for its name);
+  the **V** there unrolls them. Your browser remembers this too.
 - **New topic**, on a category's page: a title, its **tags** (at least one, when the
   category has any) and a first message, with **Preview**. Nobody sees it before you post it.
 - **Tags** show under a topic's title and in topic lists. Clicking one opens

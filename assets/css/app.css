@@ -791,10 +791,66 @@
   /* Links above the categories, a hairline under them. */
   .sidebar-quicklinks {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: 0.125rem;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--hairline);
+  }
+  /* Steward decision, 2026-10-28: the button at the right of All categories rolls the other
+     links up into their icons, between them (`data-quicklinks` on <html>, sidebar.js), and
+     down again. Rolled, each name stays for screen readers and shows in a bubble on hover. */
+  .sidebar-quicklinks > .sidebar-all { grid-column: 1; grid-row: 1; }
+  .sidebar-quicklinks-more {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem;
+  }
+  .sidebar-roll { display: none; }
+  [data-js] .sidebar-roll {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--radius-field);
+    color: var(--ink-faint);
+    cursor: pointer;
+    /* A ^ while the links show (roll them up), a V once rolled (unroll them). */
+    &::after {
+      content: "";
+      width: 0.45rem;
+      height: 0.45rem;
+      margin-top: 0.2rem;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(225deg);
+      transition: transform 150ms ease;
+    }
+    &[aria-pressed="true"]::after { margin-top: -0.2rem; transform: rotate(45deg); }
+    &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
+  }
+  @media (prefers-reduced-motion: reduce) { .sidebar-roll::after { transition: none; } }
+  [data-quicklinks="rolled"] {
+    & .sidebar-quicklinks { grid-template-columns: minmax(0, 1fr) auto auto; }
+    & .sidebar-quicklinks-more { display: flex; grid-column: 2; grid-row: 1; }
+    & .sidebar-roll { grid-column: 3; }
+    & .sidebar-quicklinks-more .sidebar-link { padding: 0.4375rem; }
+    & .sidebar-link-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
   }
   /* "Private Conversations" (steward decision, 2026-10-27): at the very bottom, kept in view
      while the sidebar scrolls. */
