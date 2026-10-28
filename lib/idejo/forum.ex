@@ -1694,7 +1694,7 @@ defmodule Idejo.Forum do
   end
 
   # The images uploaded into the topics' messages (TP-12), not emoji, oldest first, each once;
-  # only messages that hold one are read, and none of a spoiler.
+  # only messages that hold one are read, and none of a spoiler, nor from a ||spoiler||.
   defp topic_images(shown) do
     from(m in shown,
       where: not m.spoiler and like(m.body_html, "%src=\"/uploads/%"),
@@ -1704,12 +1704,13 @@ defmodule Idejo.Forum do
     |> Repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Map.new(fn {topic_id, bodies} ->
-      {topic_id, bodies |> Enum.flat_map(&uploaded_images/1) |> Enum.uniq()}
+      {topic_id,
+       bodies |> Enum.flat_map(&(&1 |> mask_spoilers() |> uploaded_images())) |> Enum.uniq()}
     end)
   end
 
   defp uploaded_images(html) do
-    for [_, src] <- Regex.scan(~r{<img [^>]*\bsrc="(/uploads/[^"]+)"}, html || ""), do: src
+    for [_, src] <- Regex.scan(~r{<img [^>]*\bsrc="(/uploads/[^"]+)"}, html), do: src
   end
 
   @typedoc "A piece of an excerpt: text, or an uploaded image (`{:image, src}`)."
@@ -1728,7 +1729,7 @@ defmodule Idejo.Forum do
     do: [text: excerpt(message)]
 
   def excerpt_segments(%Message{body_html: html}, length) do
-    Regex.split(~r{<img [^>]*>}, html || "", include_captures: true)
+    Regex.split(~r{<img [^>]*>}, mask_spoilers(html || ""), include_captures: true)
     |> Enum.map(&segment/1)
     |> merge_text()
     |> cut_segments(length)
@@ -1826,13 +1827,18 @@ defmodule Idejo.Forum do
   @spec excerpt(Message.t(), pos_integer()) :: String.t()
   def excerpt(message, length \\ 140)
 
-  # `!spoiler` (steward decision, 2026-10-23): quotes, cards and bubbles give nothing away.
+  # `!spoiler` (steward decision, 2026-10-23): quotes, cards and bubbles give nothing away,
+  # but the cover's words (`!spoiler:overlay text:`, steward decision, 2026-10-28).
+  def excerpt(%Message{spoiler: true, spoiler_label: label}, length) when is_binary(label),
+    do: cut(gettext("(spoiler: %{label})", label: label), length)
+
   def excerpt(%Message{spoiler: true}, _length),
     do: gettext("(spoiler)")
 
   def excerpt(%Message{body_html: html}, length) do
     text =
       html
+      |> mask_spoilers()
       # TP-17: an emoji image reads as its emoji (its alt text).
       |> String.replace(~r{<img [^>]*\balt="([^"]*)"[^>]*>}, "\\1")
       # Blocks and line breaks part words; inline tags such as <strong> do not.
@@ -1845,6 +1851,10 @@ defmodule Idejo.Forum do
       |> String.split()
       |> Enum.join(" ")
 
+    cut(text, length)
+  end
+
+  defp cut(text, length) do
     if String.length(text) <= length do
       text
     else
@@ -1852,6 +1862,47 @@ defmodule Idejo.Forum do
       cut = String.replace(cut, ~r/\s+\S*$/u, "")
       cut <> "…"
     end
+  end
+
+  @spoiler_tags ~r{<span class="spoiler">|</span>}
+
+  @doc """
+  The message HTML with every `||spoiler||` (steward decision, 2026-10-28) replaced by
+  "(spoiler)", nested ones included, so excerpts, quotes, notifications and pushes give
+  nothing away. Every `<span>` there is a spoiler (`Idejo.Markdown`).
+  """
+  @spec mask_spoilers(String.t()) :: String.t()
+  def mask_spoilers(html) when is_binary(html) do
+    if String.contains?(html, "<span class=\"spoiler\">") do
+      placeholder = escape_html(gettext("(spoiler)"))
+
+      @spoiler_tags
+      |> Regex.split(html, include_captures: true)
+      |> Enum.reduce({[], 0}, fn
+        "<span class=\"spoiler\">", {out, 0} -> {[placeholder | out], 1}
+        "<span class=\"spoiler\">", {out, depth} -> {out, depth + 1}
+        "</span>", {out, depth} when depth > 0 -> {out, depth - 1}
+        part, {out, 0} -> {[part | out], 0}
+        _hidden, {out, depth} -> {out, depth}
+      end)
+      |> elem(0)
+      |> Enum.reverse()
+      |> IO.iodata_to_binary()
+    else
+      html
+    end
+  end
+
+  @doc "Whether the message's text holds a `||spoiler||` (steward decision, 2026-10-28)."
+  @spec inline_spoilers?(Message.t()) :: boolean()
+  def inline_spoilers?(%Message{body_html: html}),
+    do: is_binary(html) and String.contains?(html, "<span class=\"spoiler\">")
+
+  defp escape_html(text) do
+    text
+    |> String.replace("&", "&amp;")
+    |> String.replace("<", "&lt;")
+    |> String.replace(">", "&gt;")
   end
 
   # The sanitiser escapes text with these entities only.

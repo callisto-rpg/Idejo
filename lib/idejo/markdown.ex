@@ -10,8 +10,8 @@ defmodule Idejo.Markdown do
   inline styles, which the content security policy refuses (SP-05).
 
   Formatting (TP-11): CommonMark with GitHub's tables, ~~strikethrough~~, task lists and
-  bare links, plus (steward decision, 2026-10-28) `^superscript^`, `==highlight==` and
-  `-# small text` at the start of a line, as in Discord. The Help page shows them all
+  bare links, plus (steward decisions, 2026-10-28) `||spoilers||` (below), `^superscript^`,
+  `==highlight==` and `-# small text` at the start of a line, as in Discord. The Help page shows them all
   (`IdejoWeb.HelpController`).
 
   Inline links (TP-10; steward decision, 2026-10-22): `references/1` finds what the text
@@ -24,19 +24,25 @@ defmodule Idejo.Markdown do
   `to_html/2` with `links:` turns the ones it is given into links, keeping what the author
   typed unless it is given a label.
 
+  Spoilers (steward decision, 2026-10-28): `||text||` hides part of a message, rendered as
+  `<span class="spoiler">` (they may nest). Raw HTML is escaped, so every `<span>` in the
+  stored HTML is one: `Idejo.Forum.mask_spoilers/1` relies on it.
+
   Emoji (TP-17): `:name:` (GitHub/Slack names, or the server's own reactions such as
   `:agree:`) and emoji typed as such are drawn as images (`Idejo.Emoji`), outside code; the
   image's `alt` keeps the emoji, or `:name:` for the server's own.
   """
 
   @options [
-    # Steward decision, 2026-10-28: ^superscript^, ==highlight== and -# small text (<sub>,
-    # a line of its own; subscript stays off, so every <sub> is small text).
+    # Steward decisions, 2026-10-28: `spoiler` (||text|| becomes <span class="spoiler">),
+    # ^superscript^, ==highlight== and -# small text (<sub>, a line of its own; subscript
+    # stays off, so every <sub> is small text).
     extension: [
       strikethrough: true,
       table: true,
       autolink: true,
       tasklist: true,
+      spoiler: true,
       superscript: true,
       highlight: true,
       subtext: true

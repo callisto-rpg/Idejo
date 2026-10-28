@@ -40,6 +40,10 @@ defmodule IdejoWeb.HelpController do
        gettext("Superscript: everything between the two ^ is raised, spaces included.")},
       {"small", "-# " <> gettext("small text"),
        gettext("Small text, greyed out: at the start of a line, with a space after the #.")},
+      {"spoiler", "||" <> gettext("hidden words") <> "||",
+       gettext(
+         "A spoiler: hidden in a topic until each reader clicks it. To hide the whole message, use !spoiler."
+       )},
       {"code", "`" <> gettext("code") <> "`", gettext("Code, kept exactly as typed.")},
       {"code-block", "```\n" <> gettext("code on") <> "\n" <> gettext("several lines") <> "\n```",
        gettext("A block of code: ``` on a line before it and after it.")},

@@ -137,6 +137,14 @@ goes away when you tap elsewhere or scroll.
     with a **Reveal spoiler** button, until each reader chooses it. Replies quoting it, the
     search results and notifications show *(spoiler)* instead of its words. Choose
     **!spoiler** again, while the message is still yours to continue, to show it plainly.
+    Type **!spoiler:overlay text:** instead (ending with a colon; the text itself has none)
+    to show those words over the hidden message, such as `!spoiler:Ending of book 3:`;
+    quotes then read *(spoiler: Ending of book 3)*. It runs as soon as you type the last
+    colon.
+  - To hide only part of a message, put **||** on each side of it: `The killer is ||the
+    butler||.` Readers see a filled bar where those words are, and click it (or select it
+    and press Enter) to read them; quotes, search results and notifications show
+    *(spoiler)* there.
 - **Markdown** works: `**bold**`, `*italics*`, `~~struck through~~`, `==highlighted==`,
   `x^2^` (superscript), `-# small text` at the start of a line (smaller and greyed out),
   `` `code` ``, code blocks between ```` ``` ```` lines, `> quotes`, lists, tables and links.
@@ -169,7 +177,9 @@ goes away when you tap elsewhere or scroll.
   The **×** next to a topic unfollows it. The topic you are reading is highlighted, and is
   listed even if you do not follow it, with a **+** to follow it. The button at the top left hides the sidebar, and your browser remembers;
   on a phone the same button opens it, and so does a swipe to the right (a swipe to the left
-  closes it).
+  closes it). The small **^** at the right of **All categories** rolls **Filter by tag**,
+  **Rules & Roles** and **Help** up into their icons beside it (point at one for its name);
+  the **V** there unrolls them. Your browser remembers this too.
 - **New topic**, on a category's page: a title, its **tags** (at least one, when the
   category has any) and a first message, with **Preview**. Nobody sees it before you post it.
 - **Tags** show under a topic's title and in topic lists. Clicking one opens
@@ -226,7 +236,8 @@ messages** to stop new conversations with you, and messages to you in the ones y
 
 Click your name in the top right corner, then **Profile and account**, to change your
 display name, set a **User tag or nickname** (up to 32 characters, shown after your name
-in a lighter shade; leave it empty for none), add a picture (and, under **Dark mode picture**, another one for people
+in a lighter shade; leave it empty for none), write a **Bio** in Markdown, like a message
+(**Preview** shows it; it appears on your user page, under your roles), add a picture (and, under **Dark mode picture**, another one for people
 using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".

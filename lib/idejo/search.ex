@@ -106,8 +106,13 @@ defmodule Idejo.Search do
 
     results =
       Enum.zip_with(messages, rows, fn message, {_, headline} ->
-        # `!spoiler` (steward decision, 2026-10-23): found, but its words stay hidden.
-        excerpt = if message.spoiler, do: [text: Forum.excerpt(message)], else: excerpt(headline)
+        # `!spoiler` (steward decision, 2026-10-23), and `||spoilers||` (2026-10-28): found,
+        # but their words stay hidden.
+        excerpt =
+          if message.spoiler or Forum.inline_spoilers?(message),
+            do: [text: Forum.excerpt(message)],
+            else: excerpt(headline)
+
         %{message: message, excerpt: excerpt}
       end)
 

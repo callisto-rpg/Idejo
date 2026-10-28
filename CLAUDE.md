@@ -255,7 +255,12 @@ roles or the permission grid. Every later change must keep it true:
   `users.user_tag`, optional, at most 32 characters, blank is none, not unique, never read by
   @mentions or suggestions): `UserComponents.user_tag/1` puts it right after the name, inside
   the name's element (so the author's `a.author-name` opens the card from either), the same
-  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The same page sets and removes the avatar
+  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The bio
+  (AC-04; `users.bio_md` / `bio_html`, FD-03; at most 5000 characters, blank is none) is
+  written in the same page with the message editor (Write / Preview, `@` suggestions) and
+  saved by `Accounts.update_user_bio/2`, which renders it with `Body.to_html/2` as the user
+  and records an `update` activity carrying it as `summary`; the user card shows it under the
+  roles (`#user-card-bio`, `.user-bio`). `Uploads.delete_unused/1` reads it. The same page sets and removes the avatar
   (`Accounts.set_avatar/2`, `remove_avatar/1`, with an `update` activity carrying `icon`):
   `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
   `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's
@@ -454,14 +459,27 @@ roles or the permission grid. Every later change must keep it true:
   "Reveal spoiler" button (80%, 6px; the variables are in `priv/theme/default.css`), the
   content `inert` until the viewer reveals it (`"reveal_spoiler"`, per view). Only once
   connected: without JavaScript there is no cover and no `inert`. `Forum.excerpt/2` and
-  search excerpts read "(spoiler)".
+  search excerpts read "(spoiler)". `!spoiler:overlay text:` (steward decision, 2026-10-28;
+  `messages.spoiler_label`, at most 100 characters, `set_spoiler/4`; the composer runs it at
+  its closing colon, `SPOILER_LABEL`, sending `label`) puts those words on the cover
+  (`.spoiler-label`), also on a spoiler already, and excerpts read "(spoiler: …)"; plain
+  `!spoiler` turns it off and clears them. `||text||` hides part of a message (MDEx's
+  `spoiler` extension: `<span class="spoiler">`, nested ones too; raw HTML is escaped, so
+  every `<span>` in stored HTML is one): `Forum.mask_spoilers/1` turns each into "(spoiler)"
+  in `excerpt/2`, `excerpt_segments/2` and topic card pictures, and search uses the excerpt
+  for a message holding one (`Forum.inline_spoilers?/1`). In a live topic
+  `MessageComponents.inline_spoilers/2` numbers them at render time (`data-spoiler`) as
+  buttons whose words are `inert`; the `InlineLinks` hook reveals one on a click or Enter
+  and sends `"reveal_inline_spoiler"` (`id`, `index`), kept in `revealed` as `{id, index}`
+  so patches keep it shown. The stylesheet hides them under `.message-collapsible` as soon
+  as scripts run; elsewhere (bios, versions, previews) they are only marked.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
   server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0`,
-  and last "Formatting text" (`#help-formatting`, steward decision, 2026-10-28): each format
-  from `HelpController.formatting/0`, what to type and the example rendered by
-  `Body.to_html/2` (headings described only, outside the page's outline). A change to the
-  keys, the signs, the commands or the formats updates it.
+  `||text||` (`#help-spoilers`), and last "Formatting text" (`#help-formatting`, steward
+  decision, 2026-10-28): each format from `HelpController.formatting/0`, what to type and
+  the example rendered by `Body.to_html/2` (headings described only, outside the page's
+  outline). A change to the keys, the signs, the commands or the formats updates it.
 - **Scheduled messages** (steward decision, 2026-10-23; `Idejo.Messages.Scheduling`,
   `scheduled_messages`): up to 168 hours, decimals allowed (`parse_hours/1`, at least a
   minute), with the post right now. One Oban job each (`Idejo.Messages.ScheduledWorker`, queue
@@ -908,7 +926,12 @@ roles or the permission grid. Every later change must keep it true:
   strongest wins) and a bolder
   name; and (`swipe/5`: not from the left edge, not in code,
   tables, text boxes or the emoji picker; steward decision, 2026-10-23); All categories, Filter
-  by tag, Rules & Roles and Help sit above its categories. The home page shows no title (its `<h1>`
+  by tag, Rules & Roles and Help sit above its categories; the `.sidebar-roll` button at the
+  right of All categories (steward decision, 2026-10-28; `aria-pressed`, hidden without
+  scripts) rolls the other three into their icons beside it (names `.sidebar-link-label`,
+  visually hidden, and in sidebar bubbles), remembered in `localStorage`
+  (`idejo:quicklinks`) and applied by theme.js before paint as `data-quicklinks="rolled"` on
+  `<html>`, so swapped sidebars keep it (`applyFolds()` syncs the button). The home page shows no title (its `<h1>`
   is `sr-only`: the header names the server) and its sections open with `.section-divider`
   titles (Fraunces, a line across the page). The home page is a
   category grid (topic count, last activity: MVP §5) above `Forum.list_active_topics/2`.

@@ -52,7 +52,7 @@ defmodule IdejoWeb.ComposerCommands do
         detail: gettext("Hide your message until readers reveal it"),
         help:
           gettext(
-            "Sends what you wrote and hides your message behind a blur, with a Reveal spoiler button; quotes and search results show (spoiler) instead of its words. Choose !spoiler again to show it plainly."
+            "Sends what you wrote and hides your message behind a blur, with a Reveal spoiler button; quotes and search results show (spoiler) instead of its words. Type !spoiler:overlay text: (ending with a colon, and no colon in the text) to show those words over it instead, also on a message hidden already; quotes then show (spoiler: overlay text). Choose !spoiler again to show it plainly. To hide only part of a message, put || on each side of it."
           )
       }
     ]

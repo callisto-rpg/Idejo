@@ -44,7 +44,12 @@ const hideBubble = () => {
   shownFor = null
 }
 
-const bubbled = e => e.target.closest?.("#sidebar [data-bubble]")
+// The links rolled into icons say their names in a bubble; shown in full, they need none.
+const bubbled = e => {
+  const el = e.target.closest?.("#sidebar [data-bubble]")
+  if (el && el.closest(".sidebar-quicklinks-more") && root.dataset.quicklinks !== "rolled") return null
+  return el
+}
 const pointing = matchMedia("(hover: hover)")
 
 document.addEventListener("mouseover", e => {
@@ -192,6 +197,7 @@ const setFolded = (category, folded) => {
 export function applyFolds() {
   // A fresh sidebar: the button a bubble pointed at is gone.
   hideBubble()
+  syncRoll()
   const ids = foldedIds()
   document.querySelectorAll("#sidebar .sidebar-category").forEach(category => {
     setFolded(category, ids.has(category.dataset.categoryId))
@@ -216,6 +222,33 @@ document.addEventListener("click", (e) => {
     localStorage.setItem(FOLDED, JSON.stringify([...ids]))
   } catch (_e) {
     // Storage refused (private window): folded for this page only.
+  }
+})
+
+// The links under All categories (steward decision, 2026-10-28): rolled up into their icons
+// at its right, or shown in full. The choice lives on <html> (`data-quicklinks`), which
+// theme.js sets before the first paint, so a fresh sidebar from the Notifier keeps it; the
+// button only says which it is.
+const ROLLED = "idejo:quicklinks"
+
+const syncRoll = () =>
+  document.getElementById("sidebar-quicklinks-roll")
+    ?.setAttribute("aria-pressed", String(root.dataset.quicklinks === "rolled"))
+
+document.addEventListener("click", (e) => {
+  const button = e.target.closest("#sidebar-quicklinks-roll")
+  if (!button) return
+  const rolled = root.dataset.quicklinks !== "rolled"
+  if (rolled) root.dataset.quicklinks = "rolled"
+  else delete root.dataset.quicklinks
+  syncRoll()
+  if (shownFor && shownFor !== button) hideBubble()
+  if (shownFor === button) showBubble(button)
+  try {
+    if (rolled) localStorage.setItem(ROLLED, "rolled")
+    else localStorage.removeItem(ROLLED)
+  } catch (_e) {
+    // Storage refused (private window): rolled for this page only.
   }
 })
 

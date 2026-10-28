@@ -94,6 +94,7 @@ defmodule IdejoWeb.HelpTest do
     assert example.("highlight", "mark") == "highlighted"
     assert example.("superscript", "sup") == "2"
     assert example.("small", "sub") == "small text"
+    assert example.("spoiler", ".spoiler") == "hidden words"
     assert example.("code-block", "pre") =~ "several lines"
     assert example.("table", "td") =~ "1"
     assert doc |> LazyHTML.query("#help-format-emoji .help-example img") |> Enum.count() == 1

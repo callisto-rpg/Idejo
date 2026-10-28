@@ -3,9 +3,9 @@
 
 defmodule IdejoWeb.UserComponents do
   @moduledoc """
-  The user card (TP-10): what an @mention leads to. Display name, username, picture and
-  roles, on the page at `/u/{id}` and in the dialog a mention opens in a topic. A link to
-  the full profile joins it when profiles are built. Server moderators also get a "User
+  The user card (TP-10): what an @mention leads to. Display name, username, picture, roles
+  and the bio under them (AC-04), on the page at `/u/{id}` and in the dialog a mention opens
+  in a topic. Server moderators also get a "User
   actions" button on it, with the moderation actions on the account (MO-02).
 
   And the avatar (AC-04) wherever a user is shown: their picture, or their initial when they
@@ -81,6 +81,13 @@ defmodule IdejoWeb.UserComponents do
             <Admin.role_label role={role} />
           </li>
         </ul>
+        <%!-- AC-04: the bio, the user's Markdown, under the roles. --%>
+        <IdejoWeb.MessageComponents.body
+          :if={@card.user.bio_html}
+          html={@card.user.bio_html}
+          id={"#{@id}-bio"}
+          class="user-bio"
+        />
         <%!-- Opens the conversation with them, started on first use (steward decision,
              2026-10-27); a plain form, so no JavaScript is needed. --%>
         <.form

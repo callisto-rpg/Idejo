@@ -18,7 +18,8 @@
 // with the message's text; !schedule asks the server's dialog for a delay and, once
 // scheduled, takes the text not sent yet out of the box. !poll and !spoiler send what is new,
 // then act on the message: the poll dialog opens, or the message is hidden as a spoiler (or
-// shown again).
+// shown again). `!spoiler:overlay text:` (steward decision, 2026-10-28), typed out, runs at
+// its closing colon: the message is hidden with those words over it.
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code,
@@ -145,6 +146,8 @@ const VISIBLE_MS = 2000
 const REVEAL_MARGIN = 48
 
 const ENTER_RUN = 3
+// `!spoiler:overlay text:` just typed, at the start of a word: the whole of it, and the words.
+export const SPOILER_LABEL = /(?:^|[\s(])(!spoiler:([^:\n]{1,100}):)$/
 const ENTER_RUN_MS = 1000
 
 // Marks, for each character of `after`, whether it is new since `before`: what a send burns.
@@ -241,9 +244,10 @@ export const Composer = {
     // After a reload the author's open message is still theirs to continue (GM-12 grace).
     this.restore(this.el.dataset.sent || "")
 
-    this.input.addEventListener("input", () => {
+    this.input.addEventListener("input", e => {
       this.enters = 0
       this.justSent = false
+      if (e.inputType?.startsWith("insert") && this.labelledSpoiler()) return
       this.paint()
     })
     // The caret drawn in the backdrop follows the focus and the selection.
@@ -352,7 +356,22 @@ export const Composer = {
     this.input.setSelectionRange(this.input.value.length, this.input.value.length)
   },
 
-  command(name) {
+  // `!spoiler:overlay text:` typed up to its closing colon: it leaves the text and runs.
+  labelledSpoiler() {
+    const caret = this.input.selectionStart
+    if (caret !== this.input.selectionEnd) return false
+    const match = SPOILER_LABEL.exec(this.input.value.slice(0, caret))
+    if (!match || match[2].trim() === "") return false
+    const start = caret - match[1].length
+    const value = this.input.value
+    this.input.value = value.slice(0, start) + value.slice(caret).replace(/^ /, "")
+    this.input.setSelectionRange(start, start)
+    this.paint()
+    this.command("spoiler", match[2].trim())
+    return true
+  },
+
+  command(name, label) {
     if (name === "image") {
       this.imageAtEnd = true
       document.querySelector("#composer-image-form input[type=file]")?.click()
@@ -362,8 +381,9 @@ export const Composer = {
     } else if (name === "poll" || name === "spoiler") {
       // The poll dialog gives the focus back to the box when it closes.
       if (name === "poll") InlineCard.opener = this.input
-      if (this.unsent().trim() !== "") this.send(false, name)
-      else this.pushEvent(name === "poll" ? "open_poll" : "spoiler", {})
+      const extra = label ? {label} : {}
+      if (this.unsent().trim() !== "") this.send(false, name, extra)
+      else this.pushEvent(name === "poll" ? "open_poll" : "spoiler", extra)
     } else if (name === "schedule") {
       // The dialog gives the focus back to the box when it closes.
       InlineCard.opener = this.input
@@ -403,8 +423,9 @@ export const Composer = {
     return true
   },
 
-  // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler").
-  send(isBreak, then) {
+  // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler"), with
+  // `extra` for it (the spoiler's `label`).
+  send(isBreak, then, extra = {}) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value, this.el.dataset.punctuate !== "false")
     // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
@@ -433,7 +454,7 @@ export const Composer = {
     this.paint()
     if (shown) this.reveal()
 
-    this.pushEvent("commit", then ? {body, break: isBreak, then} : {body, break: isBreak}, reply => {
+    this.pushEvent("commit", then ? {body, break: isBreak, then, ...extra} : {body, break: isBreak}, reply => {
       const typed = this.input.value.startsWith(this.sent) ? this.input.value.slice(this.sent.length) : ""
 
       if (reply.error) {
