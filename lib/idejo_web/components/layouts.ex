@@ -357,26 +357,58 @@ defmodule IdejoWeb.Layouts do
     >
       <nav aria-label={gettext("Categories")} class="sidebar-nav">
         <%!-- These links first, above the categories (steward decision, 2026-10-23). --%>
-        <div class="sidebar-quicklinks">
-          <a href={~p"/"} class="sidebar-link">
+        <%!-- The button at the right of All categories rolls the other links up into their
+             icons, beside it, and down again (steward decision, 2026-10-28; sidebar.js,
+             remembered and applied before paint by theme.js). Without scripts it is hidden
+             and the links show in full. --%>
+        <div class="sidebar-quicklinks" id="sidebar-quicklinks">
+          <a href={~p"/"} class="sidebar-link sidebar-all">
             <.icon name="hero-squares-2x2" class="size-4" />
             {gettext("All categories")}
           </a>
-          <%!-- TP-19 --%>
-          <a href={~p"/tags"} class="sidebar-link" id="tags-link">
-            <.icon name="hero-tag" class="size-4" />
-            {gettext("Filter by tag")}
-          </a>
-          <%!-- The server's About, Rules and self-select roles (steward decision, 2026-10-23). --%>
-          <a href={~p"/rules"} class="sidebar-link" id="rules-link">
-            <.icon name="hero-book-open" class="size-4" />
-            {gettext("Rules & Roles")}
-          </a>
-          <%!-- The keys, the signs and the ! commands (steward decision, 2026-10-23). --%>
-          <a href={~p"/help"} class="sidebar-link" id="help-link">
-            <.icon name="hero-question-mark-circle" class="size-4" />
-            {gettext("Help")}
-          </a>
+          <div id="sidebar-quicklinks-more" class="sidebar-quicklinks-more">
+            <%!-- TP-19 --%>
+            <a
+              href={~p"/tags"}
+              class="sidebar-link"
+              id="tags-link"
+              data-bubble={gettext("Filter by tag")}
+            >
+              <.icon name="hero-tag" class="size-4" />
+              <span class="sidebar-link-label">{gettext("Filter by tag")}</span>
+            </a>
+            <%!-- The server's About, Rules and self-select roles (steward decision,
+                 2026-10-23). --%>
+            <a
+              href={~p"/rules"}
+              class="sidebar-link"
+              id="rules-link"
+              data-bubble={gettext("Rules & Roles")}
+            >
+              <.icon name="hero-book-open" class="size-4" />
+              <span class="sidebar-link-label">{gettext("Rules & Roles")}</span>
+            </a>
+            <%!-- The keys, the signs and the ! commands (steward decision, 2026-10-23). --%>
+            <a
+              href={~p"/help"}
+              class="sidebar-link"
+              id="help-link"
+              data-bubble={gettext("Help")}
+            >
+              <.icon name="hero-question-mark-circle" class="size-4" />
+              <span class="sidebar-link-label">{gettext("Help")}</span>
+            </a>
+          </div>
+          <button
+            type="button"
+            id="sidebar-quicklinks-roll"
+            class="sidebar-roll"
+            aria-pressed="false"
+            aria-controls="sidebar-quicklinks-more"
+            aria-label={gettext("Show these links as icons only")}
+            data-bubble={gettext("Icons only")}
+            data-bubble-folded={gettext("Show the links' names")}
+          ></button>
         </div>
         <%= case @sections do %>
           <% [{_group, only}] -> %>
