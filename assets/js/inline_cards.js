@@ -21,8 +21,41 @@ export function cardFor(href) {
   return null
 }
 
+// A `||spoiler||` in a message (steward decision, 2026-10-28): shown at once, and the server
+// told, so it stays shown as the message is patched. The server renders it revealed next
+// (MessageComponents.inline_spoilers/2); the focus stays on it.
+const SPOILER = ".message-collapsible .spoiler[data-spoiler]:not(.is-revealed)"
+
+function revealSpoiler(hook, spoiler) {
+  const body = spoiler.closest(".message-collapsible")
+  const id = body && /^message-(.+)-body$/.exec(body.id)?.[1]
+  if (!id) return
+  spoiler.classList.add("is-revealed")
+  spoiler.removeAttribute("role")
+  spoiler.removeAttribute("aria-label")
+  spoiler.setAttribute("tabindex", "-1")
+  spoiler.querySelector(":scope > .spoiler-text")?.removeAttribute("inert")
+  spoiler.focus({preventScroll: true})
+  hook.pushEvent("reveal_inline_spoiler", {id, index: Number(spoiler.dataset.spoiler)})
+}
+
 export const InlineLinks = {
   mounted() {
+    // Before the links: a link inside a hidden spoiler only reveals it.
+    this.el.addEventListener("click", e => {
+      const spoiler = e.target.closest(SPOILER)
+      if (!spoiler) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      revealSpoiler(this, spoiler)
+    })
+    this.el.addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " ") return
+      const spoiler = e.target.closest(SPOILER)
+      if (!spoiler || e.target !== spoiler) return
+      e.preventDefault()
+      revealSpoiler(this, spoiler)
+    })
     this.el.addEventListener("click", e => {
       // Links in messages, and the author's name above each one.
       const link = e.target.closest(".message-body a[href], a.author-name[href]")

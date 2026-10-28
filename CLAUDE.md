@@ -459,11 +459,24 @@ roles or the permission grid. Every later change must keep it true:
   "Reveal spoiler" button (80%, 6px; the variables are in `priv/theme/default.css`), the
   content `inert` until the viewer reveals it (`"reveal_spoiler"`, per view). Only once
   connected: without JavaScript there is no cover and no `inert`. `Forum.excerpt/2` and
-  search excerpts read "(spoiler)".
+  search excerpts read "(spoiler)". `!spoiler:overlay text:` (steward decision, 2026-10-28;
+  `messages.spoiler_label`, at most 100 characters, `set_spoiler/4`; the composer runs it at
+  its closing colon, `SPOILER_LABEL`, sending `label`) puts those words on the cover
+  (`.spoiler-label`), also on a spoiler already, and excerpts read "(spoiler: …)"; plain
+  `!spoiler` turns it off and clears them. `||text||` hides part of a message (MDEx's
+  `spoiler` extension: `<span class="spoiler">`, nested ones too; raw HTML is escaped, so
+  every `<span>` in stored HTML is one): `Forum.mask_spoilers/1` turns each into "(spoiler)"
+  in `excerpt/2`, `excerpt_segments/2` and topic card pictures, and search uses the excerpt
+  for a message holding one (`Forum.inline_spoilers?/1`). In a live topic
+  `MessageComponents.inline_spoilers/2` numbers them at render time (`data-spoiler`) as
+  buttons whose words are `inert`; the `InlineLinks` hook reveals one on a click or Enter
+  and sends `"reveal_inline_spoiler"` (`id`, `index`), kept in `revealed` as `{id, index}`
+  so patches keep it shown. The stylesheet hides them under `.message-collapsible` as soon
+  as scripts run; elsewhere (bios, versions, previews) they are only marked.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
-  server's window), the signs `@ + # / $ !`, and every command from
-  `ComposerCommands.all/0`. A change to the keys, the signs or the commands updates it.
+  server's window), the signs `@ + # / $ !`, every command from
+  `ComposerCommands.all/0`, and `||text||` (`#help-spoilers`). A change to the keys, the signs or the commands updates it.
 - **Scheduled messages** (steward decision, 2026-10-23; `Idejo.Messages.Scheduling`,
   `scheduled_messages`): up to 168 hours, decimals allowed (`parse_hours/1`, at least a
   minute), with the post right now. One Oban job each (`Idejo.Messages.ScheduledWorker`, queue

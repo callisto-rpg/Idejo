@@ -1950,6 +1950,36 @@ html:not([data-js]) .spoiler-cover { display: none; }
   &:hover { box-shadow: var(--shadow-lift); }
 }
 
+/* `!spoiler:overlay text:` (steward decision, 2026-10-28): its words over the cover. */
+.spoiler-cover:has(.spoiler-label) { align-content: center; gap: 0.5rem; padding: 0.5rem; }
+.spoiler-label {
+  max-width: 100%;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* `||spoiler||` (steward decision, 2026-10-28): part of a message, hidden in a live topic
+   until clicked (MessageComponents.inline_spoilers/2, the InlineLinks hook): a filled pill
+   whose words keep their room but do not show. Hidden as soon as scripts run, so nothing
+   flashes before the page connects; without them it reads as usual. Elsewhere (a bio, an
+   earlier version, a preview) it is only marked. */
+.message-body .spoiler {
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoiler) {
+  color: transparent;
+  background: color-mix(in oklab, var(--color-base-content) 70%, var(--color-base-100));
+  cursor: pointer;
+  user-select: none;
+  & * { visibility: hidden; }
+  &:hover { background: color-mix(in oklab, var(--color-base-content) 60%, var(--color-base-100)); }
+}
+.message-collapsible .spoiler.is-revealed { transition: background 200ms; }
+
 /* The composer (GM-02, GM-08) is the author's open message in place: no box. Sent text looks
    like any message's text; what is typed, edited or appended and not sent yet stands out as
    temporary, highlighted with a line and a glow around it (box-shadow only, so the backdrop
