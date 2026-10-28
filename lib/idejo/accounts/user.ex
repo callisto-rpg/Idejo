@@ -23,6 +23,10 @@ defmodule Idejo.Accounts.User do
     # The user tag (steward decision, 2026-10-27): optional free text, at most 32 characters,
     # shown after the name. Not unique, and never matched by @mentions or suggestions.
     field :user_tag, :string
+    # AC-04: the bio, Markdown and its sanitised HTML (FD-03), shown on the user card under
+    # the roles. Set with Idejo.Accounts.update_user_bio/2, which renders it.
+    field :bio_md, :string
+    field :bio_html, :string
     field :status, :string, default: "active"
     field :origin, :string, default: "local"
     field :confirmed_at, :utc_datetime
@@ -108,6 +112,20 @@ defmodule Idejo.Accounts.User do
     user
     |> cast(attrs, [:auto_punctuation])
     |> validate_required([:auto_punctuation])
+  end
+
+  @bio_max 5000
+
+  @doc """
+  A changeset for the bio (AC-04): Markdown, at most #{@bio_max} characters; blank is none.
+  The caller sets `bio_html`.
+  """
+  def bio_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:bio_md])
+    # Kept as written (leading spaces may be Markdown), only blank becomes nil.
+    |> update_change(:bio_md, &(&1 && if(String.trim(&1) == "", do: nil, else: &1)))
+    |> validate_length(:bio_md, max: @bio_max)
   end
 
   @doc """

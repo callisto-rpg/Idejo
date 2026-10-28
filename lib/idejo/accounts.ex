@@ -10,6 +10,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Access
   alias Idejo.Access.UserRole
   alias Idejo.Federation
+  alias Idejo.Messages.Body
   alias Idejo.Moderation
   alias Idejo.Push
   alias Idejo.Repo
@@ -387,6 +388,48 @@ defmodule Idejo.Accounts do
   def update_user_writing(%User{} = user, attrs),
     do: user |> User.writing_changeset(attrs) |> Repo.update()
 
+  @doc "Returns a changeset for the bio (AC-04)."
+  @spec change_user_bio(User.t(), map()) :: Ecto.Changeset.t()
+  def change_user_bio(%User{} = user, attrs \\ %{}), do: User.bio_changeset(user, attrs)
+
+  @doc """
+  Sets the user's bio (AC-04): Markdown, stored with its HTML rendered as the user writes it
+  (FD-03; inline links resolve as they may view them). Records an `update` activity (FD-02)
+  carrying it as `summary` when it changes.
+  """
+  @spec update_user_bio(User.t(), map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_bio(%User{} = user, attrs) do
+    case User.bio_changeset(user, attrs) do
+      %Ecto.Changeset{valid?: true, changes: changes} when changes == %{} ->
+        {:ok, user}
+
+      %Ecto.Changeset{valid?: true} = changeset ->
+        Repo.transact(fn -> save_bio(user, changeset) end)
+
+      changeset ->
+        {:error, Map.put(changeset, :action, :update)}
+    end
+  end
+
+  defp save_bio(user, changeset) do
+    bio = Ecto.Changeset.get_change(changeset, :bio_md)
+    html = if bio, do: Body.to_html(bio, author: user)
+
+    with {:ok, user} <- changeset |> Ecto.Changeset.put_change(:bio_html, html) |> Repo.update(),
+         {:ok, _activity} <- Repo.insert(bio_activity(user)) do
+      {:ok, user}
+    end
+  end
+
+  defp bio_activity(user) do
+    Federation.activity_changeset(%{
+      actor_uri: user.uri,
+      verb: "update",
+      object_uri: user.uri,
+      payload: %{"type" => "Person", "username" => user.username, "summary" => user.bio_html}
+    })
+  end
+
   @doc "Returns a changeset for receiving private messages."
   @spec change_user_private_messages(User.t(), map()) :: Ecto.Changeset.t()
   def change_user_private_messages(%User{} = user, attrs \\ %{}),
@@ -617,6 +660,8 @@ defmodule Idejo.Accounts do
           username: "deleted-" <> user.id,
           display_name: "Deleted user",
           user_tag: nil,
+          bio_md: nil,
+          bio_html: nil,
           password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
           confirmed_at: nil,
           status: "deleted",

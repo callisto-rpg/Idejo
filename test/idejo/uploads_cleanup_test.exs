@@ -49,6 +49,7 @@ defmodule Idejo.UploadsCleanupTest do
     in_version = image!(user)
     in_deleted = image!(user)
     in_setting = image!(user)
+    in_bio = image!(user)
 
     {:ok, topic} =
       Forum.create_topic(user, general, %{"title" => "Photos", "body" => markdown(in_message)})
@@ -63,11 +64,14 @@ defmodule Idejo.UploadsCleanupTest do
 
     {:ok, _} = Settings.update_settings(admin, %{"server_rules" => markdown(in_setting)})
 
+    # AC-04: a bio shows an image by its address.
+    {:ok, _} = Idejo.Accounts.update_user_bio(user, %{"bio_md" => markdown(in_bio)})
+
     {:ok, user} = Idejo.Accounts.set_avatar(user, image_file(:png))
     {:ok, user} = Idejo.Accounts.set_avatar(user, image_file(:png), :dark)
 
     ids =
-      [unused, in_message, in_version, in_deleted, in_setting]
+      [unused, in_message, in_version, in_deleted, in_setting, in_bio]
       |> Enum.map(& &1.id)
       |> Kernel.++([user.avatar_id, user.avatar_dark_id])
 
@@ -78,7 +82,7 @@ defmodule Idejo.UploadsCleanupTest do
     assert Repo.get(Upload, unused.id) == nil
     refute File.exists?(file(unused))
 
-    for kept <- [recent, in_message, in_version, in_deleted, in_setting] do
+    for kept <- [recent, in_message, in_version, in_deleted, in_setting, in_bio] do
       assert Repo.get(Upload, kept.id), "#{kept.path} was deleted"
       assert File.exists?(file(kept))
     end

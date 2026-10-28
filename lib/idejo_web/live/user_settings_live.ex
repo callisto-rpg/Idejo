@@ -14,6 +14,7 @@ defmodule IdejoWeb.UserSettingsLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts
+  alias Idejo.Messages.Body
   alias Idejo.Notifications.Digest
   alias Idejo.Push
   alias Idejo.Uploads
@@ -34,6 +35,8 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
      |> assign(:private_form, private_form(user))
+     |> assign(:bio_form, bio_form(user))
+     |> assign(bio_mode: :write, bio_preview: "")
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
      |> assign(:push_on?, Push.enabled?())
      |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))
@@ -143,6 +146,36 @@ defmodule IdejoWeb.UserSettingsLive do
     {:noreply,
      socket |> put_flash(:info, gettext("Avatar removed.")) |> redirect(to: ~p"/users/settings")}
   end
+
+  # AC-04: the bio, written like a message (Write / Preview), shown on the user card.
+  def handle_event("save_bio", %{"bio" => params}, socket) do
+    case Accounts.update_user_bio(socket.assigns.current_scope.user, params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Bio saved."))
+         |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
+         |> assign(bio_form: bio_form(user), bio_mode: :write)}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, bio_form: to_form(changeset, as: :bio), bio_mode: :write)}
+    end
+  end
+
+  def handle_event("bio_change", %{"bio" => params}, socket),
+    do: {:noreply, assign(socket, :bio_form, to_form(params, as: :bio))}
+
+  def handle_event("editor_mode", %{"mode" => "preview"}, socket) do
+    bio = socket.assigns.bio_form.params["bio_md"] || socket.assigns.bio_form[:bio_md].value || ""
+    html = Body.to_html(bio, author: socket.assigns.current_scope.user)
+    {:noreply, assign(socket, bio_mode: :preview, bio_preview: html)}
+  end
+
+  def handle_event("editor_mode", _params, socket),
+    do: {:noreply, assign(socket, :bio_mode, :write)}
+
+  # TP-10: suggestions while typing @, +, #, / or $ in the bio.
+  def handle_event("suggest", params, socket), do: IdejoWeb.Suggestions.reply(socket, params)
 
   # Receiving private messages (steward decision, 2026-10-27).
   def handle_event("save_private", %{"private" => params}, socket) do
@@ -327,6 +360,8 @@ defmodule IdejoWeb.UserSettingsLive do
     {"Linux", "Linux"}
   ]
 
+  defp bio_form(user), do: to_form(Accounts.change_user_bio(user), as: :bio)
+
   defp private_form(user),
     do: to_form(Accounts.change_user_private_messages(user), as: :private)
 
@@ -369,6 +404,31 @@ defmodule IdejoWeb.UserSettingsLive do
         />
         <.button class="btn btn-primary">{gettext("Save")}</.button>
       </.form>
+
+      <%!-- AC-04: shown on your user page, under your roles. --%>
+      <section class="mt-10" aria-labelledby="bio-heading">
+        <h2 id="bio-heading" class="font-semibold mb-2">{gettext("Bio")}</h2>
+        <.form
+          for={@bio_form}
+          id="bio-form"
+          phx-change="bio_change"
+          phx-submit="save_bio"
+          aria-describedby="bio-help"
+        >
+          <p id="bio-help" class="text-sm opacity-70 mb-2 max-w-prose">
+            {gettext(
+              "Shown on your user page, under your roles. Markdown, like a message; leave it empty for none."
+            )}
+          </p>
+          <IdejoWeb.MessageComponents.editor
+            field={@bio_form[:bio_md]}
+            label={gettext("Bio (Markdown)")}
+            mode={@bio_mode}
+            preview_html={@bio_preview}
+          />
+          <.button class="btn btn-primary">{gettext("Save bio")}</.button>
+        </.form>
+      </section>
 
       <section class="mt-10" aria-labelledby="avatar-heading">
         <h2 id="avatar-heading" class="font-semibold mb-2">{gettext("Avatar")}</h2>

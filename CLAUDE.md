@@ -255,7 +255,12 @@ roles or the permission grid. Every later change must keep it true:
   `users.user_tag`, optional, at most 32 characters, blank is none, not unique, never read by
   @mentions or suggestions): `UserComponents.user_tag/1` puts it right after the name, inside
   the name's element (so the author's `a.author-name` opens the card from either), the same
-  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The same page sets and removes the avatar
+  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The bio
+  (AC-04; `users.bio_md` / `bio_html`, FD-03; at most 5000 characters, blank is none) is
+  written in the same page with the message editor (Write / Preview, `@` suggestions) and
+  saved by `Accounts.update_user_bio/2`, which renders it with `Body.to_html/2` as the user
+  and records an `update` activity carrying it as `summary`; the user card shows it under the
+  roles (`#user-card-bio`, `.user-bio`). `Uploads.delete_unused/1` reads it. The same page sets and removes the avatar
   (`Accounts.set_avatar/2`, `remove_avatar/1`, with an `update` activity carrying `icon`):
   `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
   `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's

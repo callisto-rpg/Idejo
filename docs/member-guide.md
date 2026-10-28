@@ -224,7 +224,8 @@ messages** to stop new conversations with you, and messages to you in the ones y
 
 Click your name in the top right corner, then **Profile and account**, to change your
 display name, set a **User tag or nickname** (up to 32 characters, shown after your name
-in a lighter shade; leave it empty for none), add a picture (and, under **Dark mode picture**, another one for people
+in a lighter shade; leave it empty for none), write a **Bio** in Markdown, like a message
+(**Preview** shows it; it appears on your user page, under your roles), add a picture (and, under **Dark mode picture**, another one for people
 using the dark theme), change your password, or delete your account. The same menu
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".
