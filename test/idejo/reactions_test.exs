@@ -92,4 +92,21 @@ defmodule Idejo.ReactionsTest do
     refute notification(author, message)
     assert Repo.aggregate(Notification, :count) == 0
   end
+
+  @tag req: "TP-17"
+  test "TP-17 reactors: each user once, by first reaction, with their emoji in order", %{
+    message: message
+  } do
+    ada = user_fixture()
+    bea = user_fixture()
+    {:ok, _} = Reactions.toggle(ada, message, "agree")
+    {:ok, _} = Reactions.toggle(bea, message, "heart")
+    {:ok, _} = Reactions.toggle(ada, message, "joy")
+
+    assert [%{user: %{id: a}, emoji: ["agree", "joy"]}, %{user: %{id: b}, emoji: ["heart"]}] =
+             Reactions.reactors(message.id)
+
+    assert {a, b} == {ada.id, bea.id}
+    assert Reactions.reactors(Ecto.UUID.generate()) == []
+  end
 end

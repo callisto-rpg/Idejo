@@ -98,6 +98,29 @@ defmodule Idejo.Reactions do
     |> Map.new(fn {message_id, rows} -> {message_id, summarise(rows)} end)
   end
 
+  @doc """
+  Who reacted to the message, and with what (steward decision, 2026-10-28): each user once,
+  in the order of their first reaction, with their emoji names in the order they chose them.
+  Asked only when a reader opens the list, so the summaries stay free of names (NF-01).
+  """
+  @spec reactors(Ecto.UUID.t()) :: [%{user: User.t(), emoji: [String.t()]}]
+  def reactors(message_id) do
+    from(r in Reaction,
+      join: u in assoc(r, :user),
+      where: r.message_id == ^message_id,
+      order_by: [asc: r.created_at, asc: r.id],
+      select: {u, r.emoji}
+    )
+    |> Repo.all()
+    |> Enum.reduce({[], %{}}, fn {user, emoji}, {order, emoji_by} ->
+      order = if Map.has_key?(emoji_by, user.id), do: order, else: [user | order]
+      {order, Map.update(emoji_by, user.id, [emoji], &(&1 ++ [emoji]))}
+    end)
+    |> then(fn {order, emoji_by} ->
+      for user <- Enum.reverse(order), do: %{user: user, emoji: emoji_by[user.id]}
+    end)
+  end
+
   @doc "The summary of one message's reactions."
   @spec summary(Ecto.UUID.t()) :: summary()
   def summary(message_id), do: Map.get(summaries([message_id]), message_id, [])

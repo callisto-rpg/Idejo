@@ -121,4 +121,67 @@ defmodule IdejoWeb.ReactionsLiveTest do
     conn = get(build_conn(), Idejo.Emoji.lookup("joy").src)
     assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
   end
+
+  @tag req: "TP-17"
+  test "TP-17 a right click on the reactions shows who reacted with what; past five, a card", %{
+    topic: topic,
+    message: message
+  } do
+    people = for n <- 1..6, do: user_fixture(%{display_name: "Reactor #{n}"})
+    [ada | _] = people
+    {:ok, _} = Reactions.toggle(ada, message, "agree")
+    {:ok, _} = Reactions.toggle(ada, message, "heart")
+    for p <- tl(people) |> Enum.take(4), do: {:ok, _} = Reactions.toggle(p, message, "agree")
+
+    {:ok, lv, html} = open(build_conn(), topic)
+    # Visitors see it too; the bar says what a right click asks for.
+    assert html =~ ~s(data-who=)
+    assert File.read!("assets/js/reaction_who.js") =~ "contextmenu"
+    assert File.read!("assets/js/reaction_who.js") =~ "LONG_PRESS_MS"
+
+    assert html =~ "reaction_who"
+    render_hook(lv, "reaction_who", %{id: message.id})
+
+    assert has_element?(lv, "#reaction-who.popup-menu[phx-hook=ReactionWho][role=dialog]")
+    assert has_element?(lv, "#reaction-who .reactor", "Reactor 1")
+    assert has_element?(lv, "#reaction-who .reactor:first-child img[alt='❤️']")
+    assert has_element?(lv, "#reaction-who .reactor:first-child img[alt=':agree:']")
+    assert lv |> element("#reaction-who") |> render() |> count(~s(class="reactor")) == 5
+    refute has_element?(lv, "#reaction-who .reaction-who-more")
+
+    # A sixth person arrives live: the open list is read again and offers the rest.
+    {:ok, _} = Reactions.toggle(List.last(people), message, "joy")
+    assert has_element?(lv, "#reaction-who .reaction-who-more", "Show more")
+    refute has_element?(lv, "#reaction-who .reactor", "Reactor 6")
+
+    lv |> element("#reaction-who .reaction-who-more") |> render_click()
+    refute has_element?(lv, "#reaction-who")
+    assert has_element?(lv, "dialog#reaction-card[aria-labelledby=reaction-card-title]")
+    assert has_element?(lv, "#reaction-card-title", "6 people reacted")
+    assert has_element?(lv, "#reaction-card .reactor", "Reactor 6")
+
+    lv |> element("#reaction-card button", "Close") |> render_click()
+    refute has_element?(lv, "#reaction-card")
+  end
+
+  @tag req: "TP-17"
+  test "TP-17 who reacted: only for messages on screen with reactions", %{
+    topic: topic,
+    message: message
+  } do
+    {:ok, lv, _html} = open(build_conn(), topic)
+    render_hook(lv, "reaction_who", %{id: message.id})
+    refute has_element?(lv, "#reaction-who")
+
+    {:ok, _} = Reactions.toggle(user_fixture(), message, "agree")
+    render_hook(lv, "reaction_who", %{id: Ecto.UUID.generate()})
+    refute has_element?(lv, "#reaction-who")
+
+    render_hook(lv, "reaction_who", %{id: message.id})
+    assert has_element?(lv, "#reaction-who")
+    render_hook(lv, "close_reaction_who", %{})
+    refute has_element?(lv, "#reaction-who")
+  end
+
+  defp count(html, part), do: length(String.split(html, part)) - 1
 end

@@ -9,6 +9,11 @@ defmodule IdejoWeb.ReactionComponents do
   opens the eight first choices and a + for every emoji (`emoji_picker/1`, a dialog with a search box).
   The LiveView handles `"react"` (`id`, `emoji`), `"emoji_picker"` (`id`), `"emoji_search"`
   and `"close_picker"`.
+
+  A right click or a long press on the reactions (steward decision, 2026-10-28) shows who
+  reacted with what (`reaction_who/1`, `"reaction_who"` with `id`), and past five people a
+  "Show more" button opens them all in a card (`reaction_card/1`, `"reaction_who_all"`);
+  both close with `"close_reaction_who"`.
   """
   use Phoenix.Component
   use Gettext, backend: IdejoWeb.Gettext
@@ -48,6 +53,7 @@ defmodule IdejoWeb.ReactionComponents do
       id={"message-#{@message_id}-reactions"}
       class="reactions"
       aria-label={gettext("Reactions")}
+      data-who={JS.push("reaction_who", value: %{id: @message_id})}
     >
       <li :for={{reaction, emoji} <- @shown}>
         <button
@@ -94,6 +100,87 @@ defmodule IdejoWeb.ReactionComponents do
 
     "#{emoji.char || ":#{emoji.name}:"} #{who}"
   end
+
+  # Past this many people, the list opens in a card.
+  @shown_reactors 5
+
+  attr :who, :map, required: true, doc: "`%{message_id: id, people: Reactions.reactors/1}`"
+
+  @doc """
+  Who reacted with what, under the pointer (`assets/js/reaction_who.js` places it): the
+  first five people with their emoji, and "Show more" when there are others. Like every menu,
+  a `.popup-menu`.
+  """
+  def reaction_who(assigns) do
+    assigns =
+      assign(assigns,
+        shown: Enum.take(assigns.who.people, @shown_reactors),
+        more?: length(assigns.who.people) > @shown_reactors
+      )
+
+    ~H"""
+    <div
+      id="reaction-who"
+      class="popup-menu has-arrow reaction-who"
+      role="dialog"
+      aria-label={gettext("Who reacted")}
+      tabindex="-1"
+      phx-hook="ReactionWho"
+      data-message-id={@who.message_id}
+    >
+      <.reactor_list people={@shown} />
+      <button :if={@more?} type="button" class="reaction-who-more" phx-click="reaction_who_all">
+        {gettext("Show more")}
+      </button>
+    </div>
+    """
+  end
+
+  attr :who, :map, required: true, doc: "`%{message_id: id, people: Reactions.reactors/1}`"
+
+  @doc "Everyone who reacted to a message, with their emoji: the list's \"Show more\"."
+  def reaction_card(assigns) do
+    ~H"""
+    <dialog
+      id="reaction-card"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="close_reaction_who"
+      aria-labelledby="reaction-card-title"
+    >
+      <div class="modal-box reaction-card">
+        <h2 id="reaction-card-title" class="inline-card-title">
+          {ngettext("1 person reacted", "%{count} people reacted", length(@who.people))}
+        </h2>
+        <.reactor_list people={@who.people} />
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm btn-ghost" phx-click="close_reaction_who">
+            {gettext("Close")}
+          </button>
+        </div>
+      </div>
+    </dialog>
+    """
+  end
+
+  attr :people, :list, required: true
+
+  defp reactor_list(assigns) do
+    ~H"""
+    <ul class="reactor-list">
+      <li :for={person <- @people} class="reactor">
+        <IdejoWeb.UserComponents.avatar user={person.user} />
+        <span class="reactor-name">{person.user.display_name}</span>
+        <span class="reactor-emoji">
+          <.emoji_img :for={emoji <- emoji_of(person)} emoji={emoji} />
+        </span>
+      </li>
+    </ul>
+    """
+  end
+
+  defp emoji_of(person),
+    do: for(name <- person.emoji, emoji <- [Emoji.lookup(name)], emoji, do: emoji)
 
   attr :message_id, :string, required: true
 
