@@ -2276,12 +2276,16 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 .message-mine { position: relative; }
-/* The author's name over the composer, faded until something is sent, and the message's
-   status at its right (steward decision, 2026-10-31; composer.js `showStatus`). After
-   Ctrl+Enter the completed message says "sent & committed" for 3 s, fading at the end. */
-.composer-head:has(.composer-status[data-status="unsent"]) .author-line > :not(.composer-status) {
+/* The author's picture and name over the composer, faded and grey until something is
+   sent, and the message's status at its right, hidden until the author types (steward
+   decisions, 2026-10-31; composer.js `showStatus`). After Ctrl+Enter the completed message
+   says "sent & committed" for 3 s, fading at the end. */
+.composer-head:has(.composer-status:is([data-status="empty"], [data-status="unsent"]))
+  .author-line > :not(.composer-status) {
   opacity: 0.6;
+  filter: grayscale(1);
 }
+.composer-status[data-status="empty"] { visibility: hidden; }
 .composer-status[data-status="committed"] { animation: composer-status-out 3s ease-in both; }
 @keyframes composer-status-out { 80% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {

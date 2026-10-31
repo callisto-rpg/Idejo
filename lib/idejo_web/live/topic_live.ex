@@ -2355,7 +2355,8 @@ defmodule IdejoWeb.TopicLive do
       <%!-- Before the first Enter too, so the box never moves down when the message opens
            (steward report, 2026-10-31), faded until something is sent, with the message's
            status at the right of the name in place of the role (steward decision,
-           2026-10-31; the Composer hook keeps it current). An edit shows the role. --%>
+           2026-10-31; the Composer hook keeps it current), hidden until the author types
+           (steward decision, 2026-10-31). An edit shows the role. --%>
       <p class="message-head composer-head">
         <.author_line author={@author} roles={@roles} role?={@editing?}>
           <:status :if={!@editing?}>
@@ -2363,12 +2364,12 @@ defmodule IdejoWeb.TopicLive do
               id="composer-status"
               class="tutorial-bubble is-always composer-status"
               phx-update="ignore"
-              data-status={if @mine, do: "sent", else: "unsent"}
+              data-status={if @mine, do: "sent", else: "empty"}
               data-label-unsent={gettext("unsent")}
               data-label-sent={gettext("sent")}
               data-label-appends={gettext("sent, appends unsent")}
             >
-              {if @mine, do: gettext("sent"), else: gettext("unsent")}
+              {if @mine, do: gettext("sent")}
             </span>
           </:status>
         </.author_line>
