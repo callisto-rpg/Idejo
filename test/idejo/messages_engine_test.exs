@@ -216,6 +216,24 @@ defmodule Idejo.MessagesEngineTest do
     assert commit!(author, topic, "Alone. Still. Again. Done", break: true).state == "closed"
   end
 
+  # Steward decision, 2026-10-31: the window may be 0 s; outside a private conversation the
+  # unanswered message time still applies.
+  @tag req: "GM-05"
+  test "GM-05 a 0 s window still waits for an answer or the unanswered message time",
+       %{topic: topic, author: author} do
+    message = commit!(author, topic, "Quick")
+
+    message =
+      message |> Ecto.Changeset.change(closes_at: message.opened_at) |> Repo.update!()
+
+    assert Messages.no_window?(message)
+    refute Messages.may_start_new?(message)
+    assert commit!(author, topic, "Quick. Still", break: true).state == "open"
+
+    commit!(user_fixture(), topic, "An answer")
+    assert commit!(author, topic, "Quick. Still. Done", break: true).state == "closed"
+  end
+
   @tag req: "GM-09"
   test "GM-09 an author has at most one open message per topic", %{
     topic: topic,

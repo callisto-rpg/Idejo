@@ -81,13 +81,14 @@ mount, so an open page picks up a change when reloaded). Each commit overwrites 
 sent first keeps the old text in `message_versions` (GM-11). History is kept only for edits
 (TP-05): a message that only received appends keeps just its final text, with no versions and
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
-`{:window_ended, id}`. The window length is the `gm_window_seconds` setting (default 15,
-2–600 s; steward decision, 2026-10-23), set in **Admin → Settings** (GM-15, AD-04; server-wide
+`{:window_ended, id}`. The window length is the `gm_window_seconds` setting, "Patience timer (active thread)"
+(default 15, 0–600 s; steward decisions, 2026-10-23 and 2026-10-31), set in **Admin → Settings** (GM-15, AD-04; server-wide
 only in v0.1, no per-category override); a change applies to messages opened after it. The
-**unanswered message time** (`gm_unanswered_minutes`, default 10, 1–1440; steward decision,
-2026-10-23) holds Ctrl+Enter back further: while no message (not deleted) is below the open
+**unanswered message time** (`gm_unanswered_minutes`, "Patience timer (unanswered message)",
+default 10, 1–1440; steward decision, 2026-10-23) holds Ctrl+Enter back further: while no message (not deleted) is below the open
 one, it closes only once `opened_at` is that old (`Messages.may_start_new?/2`,
-`unanswered_until/1`; read at each Ctrl+Enter, so a change applies to open messages too);
+`unanswered_until/1`; skipped only in private conversations, not for a 0 s window; read
+at each Ctrl+Enter, so a change applies to open messages too);
 until then Ctrl+Enter appends like Enter. `TopicLive` works it out from the messages shown
 for the composer's description (AX-03), with no query. Tests
 set `recover_open_messages: false` and call `Idejo.Messages.Recovery.run/0` themselves.

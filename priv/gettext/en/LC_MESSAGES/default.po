@@ -1452,7 +1452,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:61
 #, elixir-autogen, elixir-format
-msgid "Growing-message window (seconds)"
+msgid "Patience timer (active thread) (seconds)"
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:69

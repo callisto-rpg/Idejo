@@ -60,7 +60,7 @@ defmodule Idejo.Settings do
     smtp_password: %{type: :string, default: "", max: 255, secret: true},
     # Growing messages (GM-03, GM-15): seconds from a message's first commit until its author
     # may start a new one. Server-wide only in v0.1 (MVP); Admin → Settings (AD-04).
-    gm_window_seconds: %{type: :integer, default: 15, required: true, range: 2..600},
+    gm_window_seconds: %{type: :integer, default: 15, required: true, range: 0..600},
     # GM-05 (steward decision, 2026-10-23): while nobody has written below a message, its
     # author may start a new one only once it is this many minutes old. Admin → Settings.
     gm_unanswered_minutes: %{type: :integer, default: 10, required: true, range: 1..1440},

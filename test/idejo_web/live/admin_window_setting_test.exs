@@ -38,7 +38,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     admin: admin
   } do
     {:ok, lv, html} = live(conn, ~p"/admin")
-    assert html =~ "Growing-message window (seconds)"
+    assert html =~ "Patience timer (active thread) (seconds)"
 
     assert has_element?(
              lv,
@@ -63,7 +63,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     {:ok, lv, _html} = live(conn, ~p"/admin")
 
     for {value, error} <- [
-          {"1", "must be greater than or equal to 2"},
+          {"-1", "must be greater than or equal to 0"},
           {"601", "must be less than or equal to 600"},
           {"", "is invalid"}
         ] do
@@ -105,7 +105,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     admin: admin
   } do
     {:ok, lv, html} = live(conn, ~p"/admin")
-    assert html =~ "Unanswered message time (minutes)"
+    assert html =~ "Patience timer (unanswered message) (minutes)"
 
     assert has_element?(
              lv,
