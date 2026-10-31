@@ -144,8 +144,11 @@ unset; unset follows the role's server-wide setting (a `category_permissions` ro
 `category_id`), and deny overrides it (RP-04/RP-05). Across roles, **allow wins**: a right is
 granted when any of the user's roles allows it, even if a higher-ranked role denies it (RP-06).
 Search and lists filter by `:view` in the query, never after loading: use
-`Idejo.Access.where_allowed(query, user, right)` for lists and `Access.can?/3` for one
-category. Settings change only through `Access.set_permission/5` (audited as
+`Idejo.Access.where_allowed(query, user, right)` for lists (a list of rights, `[:start,
+:view]`, needs them all) and `Access.can?/3` for one category; for many users at once,
+`Access.filter_allowed(users, right, category)` (one check per set of roles), never
+`can?/3` in a loop. A check costs one query for the user's roles (guest and member come
+with the held ones) and one for the answer. Settings change only through `Access.set_permission/5` (audited as
 `permission.update`). Server-wide defaults seeded at install: guest views; member views,
 starts topics and posts; moderator also moderates and edits tags (`:tag`, TP-19).
 The grid is **Admin → Permissions** (RP-05, `IdejoWeb.Admin.PermissionsLive`):
@@ -156,7 +159,9 @@ rows show “Always” and take no setting.
 **Owners and administrators always have every right and can never lock themselves out**
 (steward rule, 2026-10-19), in every category. `Idejo.Access.administrator?/1` (holds owner
 or administrator) is checked first by `can?/3` (after its one exception: no category, a
-private conversation's, gives nobody any right) and the admin panel, and does not depend on email verification, other
+private conversation's, gives nobody any right; `can?/3`, `where_allowed/3` and
+`filter_allowed/3` read it from the roles they load, `roles_of/1`, which keeps owner and
+administrator even unverified) and the admin panel, and does not depend on email verification, other
 roles or the permission grid. Every later change must keep it true:
 
 - the permission grid has no deny for owner or administrator (RP-04/RP-05);

@@ -1061,9 +1061,8 @@ defmodule Idejo.Forum do
   @spec list_moderated_categories(User.t()) :: [Category.t()]
   def list_moderated_categories(%User{} = moderator) do
     from(c in Category, where: not c.archive, order_by: [asc: c.position, asc: c.name])
-    |> Access.where_allowed(moderator, :moderate)
+    |> Access.where_allowed(moderator, [:moderate, :view])
     |> Repo.all()
-    |> Enum.filter(&Access.can?(moderator, :view, &1))
   end
 
   @doc """
@@ -1242,9 +1241,8 @@ defmodule Idejo.Forum do
 
   def list_startable_categories(%User{} = user) do
     from(c in Category, where: not c.archive, order_by: [asc: c.position, asc: c.name])
-    |> Access.where_allowed(user, :start)
+    |> Access.where_allowed(user, [:start, :view])
     |> Repo.all()
-    |> Enum.filter(&Access.can?(user, :view, &1))
   end
 
   @doc """
@@ -1509,10 +1507,9 @@ defmodule Idejo.Forum do
   def can_post?(user, %Topic{private: true} = topic),
     do: Idejo.Conversations.can_post?(user, topic)
 
-  def can_post?(%User{} = user, %Topic{} = topic) do
-    topic = Repo.preload(topic, :category)
-    Access.can?(user, :post, topic.category)
-  end
+  # The check needs only the category's id: no query to load it.
+  def can_post?(%User{} = user, %Topic{category_id: category_id}),
+    do: Access.can?(user, :post, category_id && %Category{id: category_id})
 
   @doc """
   Posts a message in a topic, as `user`, closed (until growing messages arrive in M3).
