@@ -53,6 +53,9 @@ defmodule IdejoWeb.TopicLive do
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
 
+  # How long a completed message's head says "sent & committed" (steward decision, 2026-10-31).
+  @committed_ms 3000
+
   @impl true
   def mount(_params, %{"topic_id" => topic_id} = session, socket) do
     user = user(socket)
@@ -67,6 +70,7 @@ defmodule IdejoWeb.TopicLive do
            lost_access?: false,
            messages: [],
            roles: %{},
+           committed: nil,
            editing: nil,
            refocus: nil,
            can_moderate?: false,
@@ -117,6 +121,7 @@ defmodule IdejoWeb.TopicLive do
         {:ok,
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
+         |> assign(:committed, nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, can_fork?(user, topic))
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
@@ -369,6 +374,11 @@ defmodule IdejoWeb.TopicLive do
      |> schedule_tick()}
   end
 
+  def handle_info({:committed_shown, id}, %{assigns: %{committed: id}} = socket),
+    do: {:noreply, assign(socket, :committed, nil)}
+
+  def handle_info({:committed_shown, _id}, socket), do: {:noreply, socket}
+
   # The time left in the author's window, for the composer's description (AX-03).
   def handle_info(:tick, socket) do
     {:noreply, socket |> assign(now: DateTime.utc_now(), tick: nil) |> schedule_tick()}
@@ -554,6 +564,20 @@ defmodule IdejoWeb.TopicLive do
 
   defp after_send(socket, _then, _message, _params), do: assign(socket, :reply_to, nil)
 
+  # The message a commit completed: this one (Ctrl+Enter), or the open one a new message
+  # closed (after Reply).
+  defp completed(_socket, %{state: "closed", id: id}, _opts), do: id
+  defp completed(socket, _message, opts), do: opts[:new] && socket.assigns.draft_over
+
+  # The author's message just completed: its head says "sent & committed" for
+  # `@committed_ms`, then shows the role (steward decision, 2026-10-31).
+  defp put_committed(socket, id) when id in [nil, false], do: socket
+
+  defp put_committed(socket, id) do
+    Process.send_after(self(), {:committed_shown, id}, @committed_ms)
+    assign(socket, :committed, id)
+  end
+
   # `!poll`: the dialog for a poll under the author's message, one per message; with no
   # message, the poll is posted as one.
   defp open_poll(socket, nil),
@@ -686,7 +710,9 @@ defmodule IdejoWeb.TopicLive do
       # The message itself arrives like everyone else's, as an event.
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
-         after_send(socket, then, message, params)}
+         socket
+         |> put_committed(completed(socket, message, opts))
+         |> after_send(then, message, params)}
 
       # A new message before the open one may end: the text stays, unsent.
       {:error, :too_soon} ->
@@ -1518,6 +1544,7 @@ defmodule IdejoWeb.TopicLive do
             live?={@live?}
             revealed?={MapSet.member?(@revealed, message.id)}
             revealed_spoilers={revealed_spoilers(@revealed, message.id)}
+            committed?={@committed == message.id}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
@@ -1583,6 +1610,7 @@ defmodule IdejoWeb.TopicLive do
             live?={@live?}
             revealed?={MapSet.member?(@revealed, message.id)}
             revealed_spoilers={revealed_spoilers(@revealed, message.id)}
+            committed?={@committed == message.id}
           />
         </li>
       </ol>
@@ -1828,6 +1856,8 @@ defmodule IdejoWeb.TopicLive do
 
   attr :author, :map, required: true
   attr :roles, :map, required: true
+  attr :role?, :boolean, default: true, doc: "false: the role waits (the composer's status)"
+  slot :status, doc: "a bubble at the right of the name, in place of the role"
 
   defp author_line(assigns) do
     assigns = assign(assigns, :role, Map.get(assigns.roles, assigns.author.id))
@@ -1840,7 +1870,8 @@ defmodule IdejoWeb.TopicLive do
       <a href={~p"/u/#{@author.id}"} class="author-name font-semibold">
         {@author.display_name}<UserComponents.user_tag user={@author} />
       </a>
-      <Admin.role_label :if={@role} role={@role} class="author-role" />
+      {render_slot(@status)}
+      <Admin.role_label :if={@role && @role?} role={@role} class="author-role" />
     </span>
     """
   end
@@ -1869,6 +1900,10 @@ defmodule IdejoWeb.TopicLive do
   attr :now, DateTime, default: nil
   attr :live?, :boolean, default: false
   attr :revealed?, :boolean, default: false, doc: "a spoiler the viewer revealed"
+
+  attr :committed?, :boolean,
+    default: false,
+    doc: "the viewer's own message, just completed: \"sent & committed\" for a moment"
 
   attr :revealed_spoilers, :list,
     default: [],
@@ -1915,7 +1950,13 @@ defmodule IdejoWeb.TopicLive do
             {gettext("Select the message by %{name}", name: @message.author.display_name)}
           </span>
         </label>
-        <.author_line author={@message.author} roles={@roles} />
+        <.author_line author={@message.author} roles={@roles} role?={!@committed?}>
+          <:status :if={@committed?}>
+            <span class="tutorial-bubble is-always composer-status" data-status="committed">
+              {gettext("sent & committed")}
+            </span>
+          </:status>
+        </.author_line>
         <%!-- GM-07, AX-03: the open state has no visible sign, only this text. --%>
         <span :if={@message.state == "open"} class="sr-only">
           {gettext("(still being written)")}
@@ -2310,8 +2351,26 @@ defmodule IdejoWeb.TopicLive do
       >
       </div>
       <%!-- Before the first Enter too, so the box never moves down when the message opens
-           (steward report, 2026-10-31). --%>
-      <p class="message-head"><.author_line author={@author} roles={@roles} /></p>
+           (steward report, 2026-10-31), faded until something is sent, with the message's
+           status at the right of the name in place of the role (steward decision,
+           2026-10-31; the Composer hook keeps it current). An edit shows the role. --%>
+      <p class="message-head composer-head">
+        <.author_line author={@author} roles={@roles} role?={@editing?}>
+          <:status :if={!@editing?}>
+            <span
+              id="composer-status"
+              class="tutorial-bubble is-always composer-status"
+              phx-update="ignore"
+              data-status={if @mine, do: "sent", else: "unsent"}
+              data-label-unsent={gettext("unsent")}
+              data-label-sent={gettext("sent")}
+              data-label-appends={gettext("sent, appends unsent")}
+            >
+              {if @mine, do: gettext("sent"), else: gettext("unsent")}
+            </span>
+          </:status>
+        </.author_line>
+      </p>
       <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}

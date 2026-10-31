@@ -247,6 +247,52 @@ defmodule IdejoWeb.ComposerTest do
     assert has_element?(lv, "#message-#{mine.id}", "Done. Bye.")
   end
 
+  # Steward decision, 2026-10-31: the name over the composer is faded until something is
+  # sent, with the message's status at its right in place of the role; after Ctrl+Enter the
+  # completed message says "sent & committed" for 3 s, then shows the role.
+  @tag req: "GM-07"
+  test "GM-07 a bubble by the author's name says whether the message is sent and committed", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    assert has_element?(lv, "#composer-slot #composer-status[data-status=unsent]", "unsent")
+    refute has_element?(lv, "#composer-slot .author-role")
+
+    enter(lv, "Done")
+    [_, mine] = Forum.list_messages(topic)
+    assert has_element?(lv, "#message-#{mine.id} #composer-status")
+    refute has_element?(lv, "#message-#{mine.id} .author-role")
+
+    mine
+    |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1))
+    |> Repo.update!()
+
+    {:ok, _} = Messages.commit(user_fixture(), topic, "Ok")
+    enter(lv, "Done", true)
+    assert_reply(lv, %{closed: true})
+
+    assert has_element?(
+             lv,
+             "#message-#{mine.id} .composer-status[data-status=committed]",
+             "sent & committed"
+           )
+
+    refute has_element?(lv, "#message-#{mine.id} .author-role")
+    assert has_element?(lv, "#composer-slot #composer-status[data-status=unsent]")
+
+    # 3 s later: the bubble goes and the role shows.
+    send(lv.pid, {:committed_shown, mine.id})
+    refute has_element?(lv, "#message-#{mine.id} .composer-status")
+    assert has_element?(lv, "#message-#{mine.id} .author-role")
+
+    # The Composer hook keeps the bubble current, and the stylesheet fades the name.
+    js = File.read!("assets/js/composer.js")
+    assert js =~ ~s|const status = this.sent === "" ? "unsent" : pending ? "appends" : "sent"|
+    css = File.read!("assets/css/app.css")
+    assert css =~ ~s|.composer-head:has(.composer-status[data-status="unsent"])|
+  end
+
   @tag req: "GM-05"
   test "GM-05 Ctrl+Enter within the window keeps the message open", %{conn: conn, topic: topic} do
     {:ok, lv, _html} = watch(conn, topic)
