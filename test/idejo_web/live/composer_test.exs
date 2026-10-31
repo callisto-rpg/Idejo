@@ -421,6 +421,13 @@ defmodule IdejoWeb.ComposerTest do
     assert css =~ ".composer-timer:has(.composer-timer-hint) { margin-bottom: 2rem; }"
     refute css =~ ".composer-timer:has(.composer-timer-hint:not([hidden]))"
 
+    # A new line while typing moves the page up by 1.5 em, and more if it is still under the
+    # keyboard (steward decision, 2026-10-31).
+    assert js =~ "if (shown && this.input.offsetHeight > height) {"
+
+    assert js =~
+             "window.scrollBy(0, 1.5 * (parseFloat(getComputedStyle(this.input).fontSize) || 16))"
+
     # The timer line's room is kept from before it starts to after it goes.
     assert css =~ "[data-js] .composer-timer-slot { min-height: calc(0.875rem + 2px + 2rem); }"
   end

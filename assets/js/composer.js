@@ -512,10 +512,19 @@ export const Composer = {
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
     this.showStatus(value)
+    const height = this.input.offsetHeight
+    const shown = caretAt != null && this.inView()
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
     this.el.style.minHeight = ""
     if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
+    // A new line while typing (steward decision, 2026-10-31): the page moves up by a line,
+    // 1.5 em (the box's line height), and further if it would still be under the on-screen
+    // keyboard, so what is being typed stays in sight on phones.
+    if (shown && this.input.offsetHeight > height) {
+      window.scrollBy(0, 1.5 * (parseFloat(getComputedStyle(this.input).fontSize) || 16))
+      this.reveal()
+    }
   },
 
   // The bubble at the right of the author's name (steward decision, 2026-10-31): "unsent"
