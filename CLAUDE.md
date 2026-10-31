@@ -421,7 +421,12 @@ roles or the permission grid. Every later change must keep it true:
   the backdrop is `overflow-anchor: none`; the timer line keeps its hint's room once full,
   and its `.composer-timer-slot` keeps the line's room (with scripts) before it starts and
   after it goes; the composer shows the author's name before their first Enter too (steward
-  report, 2026-10-31);
+  report, 2026-10-31), at 60% until something is sent, with a status bubble at its right in
+  place of the role (steward decision, 2026-10-31; `#composer-status`, `phx-update="ignore"`,
+  `.tutorial-bubble.is-always`, kept by the hook's `showStatus/1`: "unsent", "sent", "sent,
+  appends unsent"; none while editing); the message a commit completes (Ctrl+Enter, or a new
+  message after Reply) says "sent & committed" in its head for 3 s (`committed`,
+  `@committed_ms`, `{:committed_shown, id}`), then shows the role;
   and a box in view when sent (`inView()`) is kept above the keyboard after the send and the
   server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`). Ctrl+Enter
   from anywhere else on the page (steward

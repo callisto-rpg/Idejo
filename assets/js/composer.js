@@ -511,10 +511,24 @@ export const Composer = {
       clearTimeout(this.burnTimer)
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
+    this.showStatus(value)
     this.input.style.height = "auto"
     this.input.style.height = this.input.scrollHeight + "px"
     this.el.style.minHeight = ""
     if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
+  },
+
+  // The bubble at the right of the author's name (steward decision, 2026-10-31): "unsent"
+  // until the message opens, then "sent", or "sent, appends unsent" while something typed
+  // is not sent yet. None while editing.
+  showStatus(value) {
+    const el = document.getElementById("composer-status")
+    if (!el) return
+    const pending = value.replace(/\s+$/, "") !== this.sent.replace(/\s+$/, "")
+    const status = this.sent === "" ? "unsent" : pending ? "appends" : "sent"
+    if (el.dataset.status === status) return
+    el.dataset.status = status
+    el.textContent = el.dataset[`label${status[0].toUpperCase()}${status.slice(1)}`] || ""
   },
 
   // The part of the page the reader sees: the visual viewport, without an on-screen keyboard.
