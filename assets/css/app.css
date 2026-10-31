@@ -1843,7 +1843,6 @@
     }
   }
   .message-mine { padding-bottom: 1.25rem; }
-  .message-mine:not(:has(.message-head)) > * { margin-left: 0; }
 
   /* Disclosures such as "Moderate this topic". */
   .panel-details {
@@ -2442,6 +2441,12 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 /* The room for it stays once the line is full, so the page does not move when it goes. */
 .composer-timer:has(.composer-timer-hint) { margin-bottom: 2rem; }
 [data-bubbles] .composer-timer:has(.composer-timer-hint) { margin-bottom: 0.625rem; }
+/* The line's room, its margins included, from before it starts to after it goes (steward
+   report, 2026-10-31: on phones the box jumped when the line came and went). Only with
+   scripts, which draw the line. */
+.composer-timer-slot { display: flow-root; }
+[data-js] .composer-timer-slot { min-height: calc(0.875rem + 2px + 2rem); }
+[data-js][data-bubbles] .composer-timer-slot { min-height: calc(0.875rem + 2px + 0.625rem); }
 @keyframes composer-timer-bubble { from { left: 0%; } to { left: 100%; } }
 @keyframes composer-timer-bubble-centre {
   from { left: 100%; translate: 0.4375rem -50%; }
