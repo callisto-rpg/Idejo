@@ -144,4 +144,38 @@ defmodule Idejo.ReadingTest do
     refute hidden.id in ids
     assert {_, 2} = Enum.find(rows, fn {t, _} -> t.id == other.id end)
   end
+
+  @tag req: "TP-07"
+  test "TP-07 Unread pages topics with something new, newest first, each with its count", %{
+    general: general,
+    topic: topic,
+    reader: reader
+  } do
+    # Read up to the last message, with two new ones since.
+    :ok = Reading.mark_read(reader, topic)
+    post!(topic)
+    post!(topic)
+
+    # Read, and nothing new since: not listed.
+    {:ok, quiet} =
+      Forum.create_topic(user_fixture(), general, %{"title" => "Quiet", "body" => "."})
+
+    :ok = Reading.mark_read(reader, quiet)
+
+    # Never opened: unread since the reader signed up.
+    {:ok, fresh} =
+      Forum.create_topic(user_fixture(), general, %{"title" => "Fresh", "body" => "."})
+
+    post!(fresh)
+    post!(fresh, reader)
+
+    assert {[{first, 2}], true} = Reading.list_unread_topics(reader, per_page: 1)
+    assert {[{second, 2}], false} = Reading.list_unread_topics(reader, per_page: 1, page: 2)
+    assert [first.id, second.id] == [fresh.id, topic.id]
+    assert {[], false} = Reading.list_unread_topics(reader, per_page: 1, page: 3)
+
+    Reading.follow(reader, fresh)
+    assert [{%{id: id}, 2}] = Reading.list_unread_followed_topics(reader)
+    assert id == fresh.id
+  end
 end

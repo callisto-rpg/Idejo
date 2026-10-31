@@ -71,18 +71,17 @@ defmodule Idejo.Reading do
   def first_unread(nil, _topic), do: nil
 
   def first_unread(%User{} = user, %Topic{id: topic_id}) do
-    user
-    |> unread_messages()
-    |> where([m, rp], m.topic_id == ^topic_id and not is_nil(rp.user_id))
-    |> select([m], %{
-      id: type(fragment("(array_agg(? ORDER BY ?, ?))[1]", m.id, m.opened_at, m.id), Ecto.UUID),
-      count: count(m.id)
-    })
+    summary =
+      &select(&1, [m], %{
+        id: type(fragment("(array_agg(? ORDER BY ?, ?))[1]", m.id, m.opened_at, m.id), Ecto.UUID),
+        count: count(m.id)
+      })
+
+    Topic
+    |> with_unread(user, summary)
+    |> where([t, position: rp], t.id == ^topic_id and not is_nil(rp.user_id))
+    |> select([unread: u], %{id: u.id, count: u.count})
     |> Repo.one()
-    |> case do
-      %{count: 0} -> nil
-      first -> first
-    end
   end
 
   @doc "Follows the topic (TP-13), also after an earlier unfollow; it is no longer muted."
@@ -257,11 +256,10 @@ defmodule Idejo.Reading do
   def unread_counts(_user, []), do: %{}
 
   def unread_counts(%User{} = user, topic_ids) do
-    user
-    |> unread_messages()
-    |> where([m], m.topic_id in ^topic_ids)
-    |> group_by([m], m.topic_id)
-    |> select([m], {m.topic_id, count(m.id)})
+    Topic
+    |> with_unread(user, &count_unread/1)
+    |> where([t], t.id in ^topic_ids)
+    |> select([t, unread: u], {t.id, u.count})
     |> Repo.all()
     |> Map.new()
   end
@@ -280,22 +278,27 @@ defmodule Idejo.Reading do
   def activity(_user, []), do: %{}
 
   def activity(%User{id: user_id} = user, topic_ids) do
-    user
-    |> unread_messages()
-    |> where([m], m.topic_id in ^topic_ids)
-    |> join(:left, [m], n in Idejo.Notifications.Notification,
-      on: n.message_id == m.id and n.user_id == ^user_id
-    )
-    |> group_by([m], m.topic_id)
-    |> select([m, ..., n], {
-      m.topic_id,
-      max(
-        fragment(
-          "CASE ? WHEN 'mention' THEN 4 WHEN 'reply' THEN 3 WHEN 'role_mention' THEN 2 ELSE 1 END",
-          n.kind
-        )
+    summary = fn unread ->
+      unread
+      |> join(:left, [m], n in Idejo.Notifications.Notification,
+        on: n.message_id == m.id and n.user_id == ^user_id
       )
-    })
+      |> select([m, n], %{
+        count: count(m.id),
+        level:
+          max(
+            fragment(
+              "CASE ? WHEN 'mention' THEN 4 WHEN 'reply' THEN 3 WHEN 'role_mention' THEN 2 ELSE 1 END",
+              n.kind
+            )
+          )
+      })
+    end
+
+    Topic
+    |> with_unread(user, summary)
+    |> where([t], t.id in ^topic_ids)
+    |> select([t, unread: u], {t.id, u.level})
     |> Repo.all()
     |> Map.new(fn {topic_id, level} ->
       {topic_id, Enum.at([:new, :role_mention, :reply, :mention], level - 1)}
@@ -328,7 +331,7 @@ defmodule Idejo.Reading do
           limit: ^(per_page + 1)
       )
 
-    {Enum.take(rows, per_page), length(rows) > per_page}
+    {rows |> Enum.take(per_page) |> with_counts(user), length(rows) > per_page}
   end
 
   @doc """
@@ -339,25 +342,26 @@ defmodule Idejo.Reading do
   @spec list_unread_followed_topics(User.t()) :: [{Topic.t(), pos_integer()}]
   def list_unread_followed_topics(%User{} = user) do
     Repo.all(from t in unread_topics(user), where: t.id in subquery(followed_ids(user)))
+    |> with_counts(user)
   end
 
-  # The topics with unread messages in viewable categories, with their counts, newest first.
+  # The topics with unread messages in viewable categories, newest first. Each topic's first
+  # unread message is enough to know (`limit: 1`, at once in the topic's index range): the
+  # counts come after, for the topics shown only.
   defp unread_topics(user) do
     viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+    any_unread = &(&1 |> select([m], %{count: 1}) |> limit(1))
 
-    counts =
-      user
-      |> unread_messages()
-      |> group_by([m], m.topic_id)
-      |> select([m], %{topic_id: m.topic_id, count: count(m.id)})
-
-    from t in Topic,
-      join: c in subquery(counts),
-      on: c.topic_id == t.id,
+    from t in with_unread(Topic, user, any_unread),
       where: t.category_id in subquery(viewable),
       order_by: [desc: t.last_activity_at, desc: t.id],
-      preload: [:author, :category, tags: ^Tags.ordered()],
-      select: {t, c.count}
+      preload: [:author, :category, tags: ^Tags.ordered()]
+  end
+
+  # Each topic with its unread count; one read meanwhile is left out.
+  defp with_counts(topics, user) do
+    counts = unread_counts(user, Enum.map(topics, & &1.id))
+    for topic <- topics, count = counts[topic.id], do: {topic, count}
   end
 
   defp followed_ids(user), do: from(t in followed(user), select: t.id)
@@ -460,8 +464,45 @@ defmodule Idejo.Reading do
     |> Repo.all()
   end
 
+  # Each of `topics` that has unread messages, with a summary of them as named binding
+  # `:unread`: `summary` selects it from the topic's unread messages (`m`), including their
+  # `count`. Also bound: `:position` (the user's read position, if any) and `:last` (its
+  # message). The messages are read topic by topic, in the topic's own index range
+  # (messages' topic_id, opened_at), so read messages are never touched however long the
+  # topic. A lateral join that sums them up: the database cannot know beforehand how far each
+  # topic was read, and given a plain join (or a subquery it may flatten into one) it reads
+  # every message of the topics and filters them.
+  defp with_unread(topics, %User{id: user_id, created_at: signed_up}, summary) do
+    unread =
+      from m in Message,
+        where: m.topic_id == parent_as(:topic).id,
+        where: m.author_id != ^user_id and is_nil(m.deleted_at),
+        where:
+          m.opened_at >
+            coalesce(
+              parent_as(:last).opened_at,
+              coalesce(parent_as(:position).updated_at, type(^signed_up, :utc_datetime_usec))
+            )
+
+    from t in topics,
+      as: :topic,
+      left_join: rp in ReadPosition,
+      as: :position,
+      on: rp.topic_id == t.id and rp.user_id == ^user_id,
+      left_join: last in Message,
+      as: :last,
+      on: last.id == rp.last_read_message_id,
+      inner_lateral_join: u in subquery(summary.(unread)),
+      as: :unread,
+      on: true,
+      where: u.count > 0
+  end
+
+  defp count_unread(unread), do: select(unread, [m], %{count: count(m.id)})
+
   # Messages by others opened after the user's read position in their topic, or after the
-  # user signed up where they have none.
+  # user signed up where they have none. For queries led by the user's notifications (few
+  # rows); those led by topics use with_unread/3.
   defp unread_messages(%User{id: user_id, created_at: signed_up}) do
     from m in Message,
       left_join: rp in ReadPosition,
