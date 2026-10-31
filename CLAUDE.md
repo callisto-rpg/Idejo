@@ -608,7 +608,14 @@ roles or the permission grid. Every later change must keep it true:
   is open (steward decision); appends do not move it. Unread = messages by others opened
   after that message (`opened_at`), so a growing message counts once and never turns unread
   again as it grows (GM-13). Without a position, everything before the user's sign-up is
-  read. `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
+  read. Queries over topics read each topic's unread messages in its own index range
+  (`with_unread/3`: a lateral join that sums them up, so the database cannot flatten it into
+  a plain join, which reads every message of the topics); `/unread` finds topics with
+  anything new by their first unread message, then counts those shown. Queries led by the
+  user's notifications (`for_you/1`) read mentions and replies through their partial index
+  (`notifications_personal_index`), never the follow rows. The app's connections turn
+  PostgreSQL's JIT off (`config/config.exs`): such queries' cost estimates would trigger it.
+  `/unread` (`UnreadController`, signed in, linked from the header) lists topics with
   unread messages across viewable categories: on the first page, "Following" holds every
   followed one (`Reading.list_unread_followed_topics/1`, `#followed-topics`; steward
   decision, 2026-10-23), then "Other topics", 30 a page (`Reading.list_unread_topics/2` with

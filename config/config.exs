@@ -27,6 +27,12 @@ config :idejo,
   ecto_repos: [Idejo.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# PostgreSQL compiles a query to machine code (JIT) when its estimated cost is high, which
+# takes tens of milliseconds. Idejo's queries are short; the estimates of those that read an
+# index range per topic (the unread counts, Idejo.Reading) are high, as the database cannot
+# know how far each topic was read, so JIT would make them several times slower, never faster.
+config :idejo, Idejo.Repo, parameters: [jit: "off"]
+
 # Base of every stable URI (FD-01). Set from PHX_HOST in production; never change it
 # once a server has content, since URIs are stored at creation.
 config :idejo, :base_uri, "http://localhost:4000"
