@@ -319,7 +319,9 @@ roles or the permission grid. Every later change must keep it true:
   A reply's `reply_to_id` must be a message of the same topic, set when the reply opens
   (only moving messages, TP-15, leaves replies across topics);
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
-  links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript.
+  links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript; once
+  connected (`live?`) Reply is a button (`#message-{id}-reply`, `"reply"`) that shows the
+  quote over the composer at once and focuses it, with no page load.
   Reply starts a new message (steward decision, 2026-10-24): with the author's message still
   open, `TopicLive` sets `draft_over` (that message's id), shows it like the others and puts
   an empty composer at the end; Enter commits with `new: true`, which closes the open

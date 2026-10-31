@@ -168,6 +168,37 @@ defmodule IdejoWeb.InlineRepliesTest do
   end
 
   @tag req: "TP-08"
+  test "TP-08 connected, Reply shows the quote over the composer at once", %{
+    conn: conn,
+    topic: topic,
+    first: first,
+    member: member
+  } do
+    {:ok, lv, _html} = form_live(conn, topic)
+    refute has_element?(lv, "#replying-to")
+
+    lv |> element("#message-#{first.id}-reply") |> render_click()
+    assert has_element?(lv, "#replying-to", "Replying to Sam Starter:")
+    assert_push_event(lv, "composer_focus", %{})
+
+    enter(lv, "About that")
+    assert [_, %{reply_to_id: reply_to_id}] = Forum.list_messages(topic)
+    assert reply_to_id == first.id
+    refute has_element?(lv, "#replying-to")
+
+    # With the author's message open, the composer leaves it for a new message at once.
+    lv |> element("#message-#{first.id}-reply") |> render_click()
+    assert_push_event(lv, "composer_sent", %{body: ""})
+    assert has_element?(lv, "#composer-slot #composer")
+    enter(lv, "And another")
+
+    assert [_, %{state: "closed"}, %{reply_to_id: ^reply_to_id, author_id: author_id}] =
+             Forum.list_messages(topic)
+
+    assert author_id == member.id
+  end
+
+  @tag req: "TP-08"
   test "TP-08 removing the reply before the timer ends refuses Enter with a dialog", %{
     conn: conn,
     topic: topic,

@@ -955,6 +955,32 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # TP-08: Reply without a page load. With the author's message open, the composer leaves
+  # it for a new message at the end (`put_draft/1`), keeping only what was not sent yet.
+  def handle_event("reply", %{"id" => id}, socket) do
+    case socket.assigns.can_post? &&
+           Enum.find(socket.assigns.messages, &(&1.id == id and is_nil(&1.deleted_at))) do
+      %Messages.Message{} = message ->
+        left? = socket.assigns.draft_over == nil
+
+        socket =
+          socket
+          |> assign(:reply_to, message)
+          |> put_draft()
+
+        socket =
+          if left? and socket.assigns.draft_over != nil and socket.assigns.composing_edit == nil,
+            do: push_event(socket, "composer_sent", %{body: ""}),
+            else: socket
+
+        # AX-01: the box takes the focus, as the link's `#composer` did.
+        {:noreply, push_event(socket, "composer_focus", %{})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   # The composer stays a new message (`draft_over`), refused until it may be sent.
   def handle_event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
@@ -2077,8 +2103,21 @@ defmodule IdejoWeb.TopicLive do
             "New topic from this"
           )}
         </.link>
+        <%!-- TP-08: connected, Reply shows the quote over the composer at once; without
+             JavaScript it is a link that loads the page with it. --%>
+        <button
+          :if={@live? and @can_post? and is_nil(@message.deleted_at)}
+          type="button"
+          id={"message-#{@message.id}-reply"}
+          class="message-action"
+          phx-click="reply"
+          phx-value-id={@message.id}
+          aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
+        >
+          <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
+        </button>
         <.link
-          :if={@can_post? and is_nil(@message.deleted_at)}
+          :if={!@live? and @can_post? and is_nil(@message.deleted_at)}
           href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
           class="message-action"
           aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
