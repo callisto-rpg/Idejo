@@ -5,14 +5,24 @@ defmodule IdejoWeb.SetupControllerTest do
   # Turns the setup redirect on, so not async.
   use IdejoWeb.ConnCase, async: false
 
+  import Ecto.Query, only: [from: 2]
   import Idejo.AccountsFixtures
 
+  alias Idejo.Access.UserRole
+  alias Idejo.Repo
   alias Idejo.Settings
   alias Idejo.Setup
+  alias IdejoWeb.Plugs.RequireSetup
 
   setup do
     Application.put_env(:idejo, :setup_redirect, true)
-    on_exit(fn -> Application.put_env(:idejo, :setup_redirect, false) end)
+    # Each test starts from its own database: the plug must ask it again.
+    RequireSetup.forget()
+
+    on_exit(fn ->
+      Application.put_env(:idejo, :setup_redirect, false)
+      RequireSetup.forget()
+    end)
   end
 
   defp params(overrides \\ %{}) do
@@ -110,5 +120,23 @@ defmodule IdejoWeb.SetupControllerTest do
     assert redirected_to(get(conn, ~p"/setup")) == ~p"/"
     assert redirected_to(post(conn, ~p"/setup", %{"setup" => params()})) == ~p"/"
     assert html_response(get(conn, ~p"/users/sign-in"), 200) =~ "Sign in"
+  end
+
+  @tag req: "AD-01"
+  test "AD-01 once a page finds an owner, pages no longer ask the database for one", %{
+    conn: conn
+  } do
+    owner = user_with_role_fixture(:owner)
+    assert html_response(get(conn, ~p"/users/sign-in"), 200)
+
+    # Owners cannot be removed in the app. Taken away behind its back, the wizard stays gone
+    # until the server restarts (forget/0), as nothing asks any more.
+    Repo.delete_all(from(ur in UserRole, where: ur.user_id == ^owner.id))
+
+    assert Setup.needed?()
+    assert html_response(get(build_conn(), ~p"/users/sign-in"), 200)
+
+    RequireSetup.forget()
+    assert redirected_to(get(build_conn(), ~p"/users/sign-in")) == ~p"/setup"
   end
 end

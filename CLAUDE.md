@@ -1015,10 +1015,11 @@ roles or the permission grid. Every later change must keep it true:
   (`PrivacyController`, public, no JavaScript), the `privacy_notice` setting, Markdown written
   in **Admin → Settings**. New pages must use `Layouts.app` so the footer is never missing.
 - **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
-  to `/setup`. The wizard needs the setup code written to the app log at boot
+  to `/setup`; once a page finds an owner it stops asking the database until the server
+  restarts (owners cannot all be removed). The wizard needs the setup code written to the app log at boot
   (`Idejo.Setup.token/0`, in memory, new at each restart) and creates the owner, verified, in
   one locked transaction. Tests run with the redirect off (`setup_redirect: false`); a test
-  that needs it turns it on and is not async.
+  that needs it turns it on, is not async and calls `RequireSetup.forget/0` before and after.
 - **Email** (AD-08): send with `Idejo.Mailer.deliver_email/1`, never `deliver/1`, so production
   uses the SMTP settings from **Admin → Email** (read at each send). Secret settings are
   declared with `secret: true` in `Idejo.Settings`: stored encrypted (`Settings.Secret`), never
