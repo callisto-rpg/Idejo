@@ -518,11 +518,11 @@ export const Composer = {
     this.input.style.height = this.input.scrollHeight + "px"
     this.el.style.minHeight = ""
     if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
-    // A new line while typing (steward decision, 2026-10-31): the page moves up by 1 em, and
-    // further if the line would still be under the on-screen keyboard, so what is being
-    // typed stays in sight on phones.
+    // A new line while typing (steward decision, 2026-10-31): the page moves up by a line,
+    // 1.5 em (the box's line height), and further if it would still be under the on-screen
+    // keyboard, so what is being typed stays in sight on phones.
     if (shown && this.input.offsetHeight > height) {
-      window.scrollBy(0, parseFloat(getComputedStyle(this.input).fontSize) || 16)
+      window.scrollBy(0, 1.5 * (parseFloat(getComputedStyle(this.input).fontSize) || 16))
       this.reveal()
     }
   },

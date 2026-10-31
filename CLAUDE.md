@@ -429,7 +429,7 @@ roles or the permission grid. Every later change must keep it true:
   `@committed_ms`, `{:committed_shown, id}`), then shows the role;
   and a box in view when sent (`inView()`) is kept above the keyboard after the send and the
   server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`); a new line while typing
-  in a box in view scrolls the page by 1 em, then `reveal()` (steward decision, 2026-10-31). Ctrl+Enter
+  in a box in view scrolls the page by 1.5 em (a line), then `reveal()` (steward decision, 2026-10-31). Ctrl+Enter
   from anywhere else on the page (steward
   decision, 2026-10-25; `onPageKey`, not from `OWN_CTRL_ENTER`: other text fields, links,
   open dialogs) sends with `break` when a new message may start (an edit, or
