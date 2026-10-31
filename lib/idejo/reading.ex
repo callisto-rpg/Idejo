@@ -40,6 +40,8 @@ defmodule Idejo.Reading do
   @spec mark_read(User.t() | nil, Topic.t()) :: :ok
   def mark_read(nil, _topic), do: :ok
 
+  # One statement, which looks the latest message up itself (nil in a conversation with none
+  # yet): every view of a topic runs this at each new message (NF-01).
   def mark_read(%User{id: user_id}, %Topic{id: topic_id}) do
     latest =
       from(m in Message,
@@ -48,10 +50,15 @@ defmodule Idejo.Reading do
         limit: 1,
         select: m.id
       )
-      |> Repo.one()
 
-    Repo.insert!(
-      %ReadPosition{user_id: user_id, topic_id: topic_id, last_read_message_id: latest},
+    position = %{
+      user_id: user_id,
+      topic_id: topic_id,
+      last_read_message_id: latest,
+      updated_at: DateTime.utc_now()
+    }
+
+    Repo.insert_all(ReadPosition, [position],
       on_conflict: {:replace, [:last_read_message_id, :updated_at]},
       conflict_target: [:user_id, :topic_id]
     )
