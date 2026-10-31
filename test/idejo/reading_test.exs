@@ -89,6 +89,27 @@ defmodule Idejo.ReadingTest do
     assert Reading.unread_counts(nil, [topic.id]) == %{}
   end
 
+  # Every view of a topic marks it read at each new message (steward decision): one query.
+  @tag req: "TP-07"
+  test "TP-07 marking a topic read takes one query, also before its first message", %{
+    topic: topic,
+    reader: reader
+  } do
+    latest = post!(topic)
+    assert count_queries(fn -> Reading.mark_read(reader, topic) end) == 1
+    assert position(reader, topic).last_read_message_id == latest.id
+
+    # Again: the position moves on to the newest message.
+    newer = post!(topic)
+    :ok = Reading.mark_read(reader, topic)
+    assert position(reader, topic).last_read_message_id == newer.id
+
+    # A private conversation starts with no message: the position holds none.
+    {:ok, conversation} = Idejo.Conversations.start(reader, user_fixture())
+    :ok = Reading.mark_read(reader, conversation)
+    assert position(reader, conversation).last_read_message_id == nil
+  end
+
   @tag req: "TP-07"
   test "TP-07 first_unread is where a reader left off a topic they opened before", %{
     topic: topic,
@@ -167,26 +188,5 @@ defmodule Idejo.ReadingTest do
     refute quiet.id in ids
     refute hidden.id in ids
     assert {_, 2} = Enum.find(rows, fn {t, _} -> t.id == other.id end)
-  end
-
-  # Every view of a topic marks it read at each new message (steward decision): one query.
-  @tag req: "TP-07"
-  test "TP-07 marking a topic read takes one query, also before its first message", %{
-    topic: topic,
-    reader: reader
-  } do
-    latest = post!(topic)
-    assert count_queries(fn -> Reading.mark_read(reader, topic) end) == 1
-    assert position(reader, topic).last_read_message_id == latest.id
-
-    # Again: the position moves on to the newest message.
-    newer = post!(topic)
-    :ok = Reading.mark_read(reader, topic)
-    assert position(reader, topic).last_read_message_id == newer.id
-
-    # A private conversation starts with no message: the position holds none.
-    {:ok, conversation} = Idejo.Conversations.start(reader, user_fixture())
-    :ok = Reading.mark_read(reader, conversation)
-    assert position(reader, conversation).last_read_message_id == nil
   end
 end
