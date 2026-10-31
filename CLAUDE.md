@@ -902,7 +902,9 @@ roles or the permission grid. Every later change must keep it true:
   (`"reaction_who_all"`) opens them all in `reaction_card/1` (`#reaction-card`, `InlineCard`).
 - **Markdown** (FD-03): `Idejo.Markdown.to_html/1` (MDEx) renders with raw HTML off and
   sanitises the result; `body_html` is stored and shown as is (`MessageComponents.body/1`, the
-  one raw output). No syntax highlighting: MDEx colours code with inline styles, which the CSP
+  one raw output). Its options are checked once, when compiled (`@document`, `MDEx.new/1`):
+  call MDEx through it, never with options, which MDEx checks again at each call (more time
+  than the rendering; every Enter renders). No syntax highlighting: MDEx colours code with inline styles, which the CSP
   refuses. Formats (TP-11): GitHub's (tables, `~~strikethrough~~`, task lists, bare links)
   and, as in Discord (steward decision, 2026-10-28), `^superscript^`, `==highlight==`
   (`<mark>`, the theme's primary) and `-# small text` (MDEx's `subtext`: `<sub>`, smaller and
