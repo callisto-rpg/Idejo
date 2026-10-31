@@ -183,7 +183,7 @@ defmodule Idejo.Notifications do
 
     topic
     |> active_unmuted(user_ids)
-    |> Enum.filter(&Access.can?(&1, :view, category))
+    |> Access.filter_allowed(:view, category)
     |> Enum.map(& &1.id)
   end
 

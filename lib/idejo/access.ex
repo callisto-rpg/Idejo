@@ -64,9 +64,10 @@ defmodule Idejo.Access do
   def server_moderator?(nil), do: false
 
   def server_moderator?(%User{} = user) do
-    role_ids = Enum.map(roles_of(user), & &1.id)
+    roles = roles_of(user)
+    role_ids = Enum.map(roles, & &1.id)
 
-    administrator?(user) or
+    all_rights?(roles) or
       Repo.exists?(
         from p in CategoryPermission,
           where:
@@ -83,18 +84,22 @@ defmodule Idejo.Access do
   def roles_of_users(users) do
     ids = Enum.map(users, & &1.id)
 
-    held =
+    # One query: the roles the users hold, with guest and member, which nobody holds.
+    rows =
       Repo.all(
         from r in Role,
-          join: ur in UserRole,
-          on: ur.role_id == r.id,
-          where: ur.user_id in ^ids,
+          left_join: ur in UserRole,
+          on: ur.role_id == r.id and ur.user_id in ^ids,
+          where: not is_nil(ur.user_id) or (r.built_in and r.name in ["guest", "member"]),
           select: {ur.user_id, r}
       )
+
+    held =
+      for({user_id, role} <- rows, user_id != nil, do: {user_id, role})
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
-    guest = built_in_role!(:guest)
-    member = built_in_role!(:member)
+    guest = implicit_role!(rows, "guest")
+    member = implicit_role!(rows, "member")
 
     Map.new(users, fn user ->
       held = Map.get(held, user.id, [])
@@ -108,6 +113,11 @@ defmodule Idejo.Access do
 
       {user.id, roles |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&{&1.position, &1.name})}
     end)
+  end
+
+  defp implicit_role!(rows, name) do
+    Enum.find_value(rows, fn {_user_id, role} -> role.built_in and role.name == name and role end) ||
+      raise Ecto.NoResultsError, queryable: Role
   end
 
   @doc """
@@ -626,34 +636,75 @@ defmodule Idejo.Access do
   end
 
   @doc """
+  The users, among `users`, who have `right` in `category`: the same rule as `can?/3`, in a
+  few queries whatever their number (a new message checks every follower of its topic,
+  NO-01). Users who act with the same roles get the same answer, so the rule is asked once
+  per set of roles.
+  """
+  @spec filter_allowed([User.t()], atom(), Category.t() | nil) :: [User.t()]
+  def filter_allowed(_users, right, nil) when right in @rights, do: []
+  def filter_allowed([], right, _category) when right in @rights, do: []
+
+  def filter_allowed(users, right, %Category{id: category_id}) when right in @rights do
+    roles = roles_of_users(users)
+    category = from(c in Category, where: c.id == ^category_id)
+    # Sorted and without repeats (roles_of_users/1), so the ids name the set.
+    role_set = fn held -> Enum.map(held, & &1.id) end
+
+    answers =
+      roles
+      |> Map.values()
+      |> Enum.uniq_by(role_set)
+      |> Map.new(&{role_set.(&1), category |> where_roles(&1, [right]) |> Repo.exists?()})
+
+    Enum.filter(users, &Map.fetch!(answers, role_set.(roles[&1.id])))
+  end
+
+  @doc """
   Narrows a query on categories to those where the visitor or user has `right`, in the
   database: lists and search filter this way, never after loading. Same rule as `can?/3`.
+  A list of rights needs them all, with one look at the user's roles.
   """
-  @spec where_allowed(Ecto.Queryable.t(), User.t() | nil, atom()) :: Ecto.Query.t()
-  def where_allowed(query, user, right) when right in @rights do
+  @spec where_allowed(Ecto.Queryable.t(), User.t() | nil, atom() | [atom(), ...]) ::
+          Ecto.Query.t()
+  def where_allowed(query, user, right) when right in @rights,
+    do: where_roles(query, roles_of(user), [right])
+
+  def where_allowed(query, user, [_ | _] = rights) do
+    true = Enum.all?(rights, &(&1 in @rights))
+    where_roles(query, roles_of(user), rights)
+  end
+
+  # The administrator check comes from the roles already loaded (`administrator?/1` asks the
+  # database): owners and administrators have every right.
+  defp where_roles(query, roles, rights) do
     query = from(c in query, as: :category)
 
-    if administrator?(user) do
+    if all_rights?(roles) do
       query
     else
-      role_ids = Enum.map(roles_of(user), & &1.id)
-      right = Atom.to_string(right)
-
-      from c in query,
-        where:
-          exists(
-            from r in Role,
-              left_join: own in CategoryPermission,
-              on:
-                own.category_id == parent_as(:category).id and own.role_id == r.id and
-                  own.right == ^right,
-              left_join: server in CategoryPermission,
-              on:
-                is_nil(server.category_id) and server.role_id == r.id and server.right == ^right,
-              where: r.id in ^role_ids and coalesce(own.effect, server.effect) == "allow"
-          )
+      role_ids = Enum.map(roles, & &1.id)
+      Enum.reduce(rights, query, &where_role_allows(&2, role_ids, Atom.to_string(&1)))
     end
   end
+
+  defp where_role_allows(query, role_ids, right) do
+    from c in query,
+      where:
+        exists(
+          from r in Role,
+            left_join: own in CategoryPermission,
+            on:
+              own.category_id == parent_as(:category).id and own.role_id == r.id and
+                own.right == ^right,
+            left_join: server in CategoryPermission,
+            on: is_nil(server.category_id) and server.role_id == r.id and server.right == ^right,
+            where: r.id in ^role_ids and coalesce(own.effect, server.effect) == "allow"
+        )
+  end
+
+  # The same as `administrator?/1`, from roles already loaded (`roles_of/1`).
+  defp all_rights?(roles), do: Enum.any?(roles, &(&1.built_in and &1.name in @all_rights))
 
   @doc """
   Returns the permission settings of a category, or the server-wide ones (`:server`), as a
