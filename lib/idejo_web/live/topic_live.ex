@@ -1504,6 +1504,8 @@ defmodule IdejoWeb.TopicLive do
         class={["message-list", @topic && "cat-#{@topic.category_id}"]}
         phx-hook="MentionGlow"
         data-mention-tags={@mention_glows != %{} && Jason.encode!(@mention_tags)}
+        data-controls-mobile={@current_scope && @current_scope.user.controls_on_mobile}
+        data-controls-desktop={@current_scope && @current_scope.user.controls_on_desktop}
       >
         <li
           :for={message <- @before}

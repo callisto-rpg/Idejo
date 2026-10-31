@@ -388,6 +388,20 @@ defmodule Idejo.Accounts do
   def update_user_writing(%User{} = user, attrs),
     do: user |> User.writing_changeset(attrs) |> Repo.update()
 
+  @doc "Returns a changeset for the message controls preferences."
+  @spec change_user_controls(User.t(), map()) :: Ecto.Changeset.t()
+  def change_user_controls(%User{} = user, attrs \\ %{}),
+    do: User.controls_changeset(user, attrs)
+
+  @doc """
+  Updates where a message's actions always show: "Show message controls on mobile" and "on
+  desktop" (steward decision, 2026-10-31), which `IdejoWeb.TopicLive` reads at mount. A
+  private preference: no activity.
+  """
+  @spec update_user_controls(User.t(), map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_controls(%User{} = user, attrs),
+    do: user |> User.controls_changeset(attrs) |> Repo.update()
+
   @doc "Returns a changeset for the bio (AC-04)."
   @spec change_user_bio(User.t(), map()) :: Ecto.Changeset.t()
   def change_user_bio(%User{} = user, attrs \\ %{}), do: User.bio_changeset(user, attrs)

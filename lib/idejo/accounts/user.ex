@@ -45,6 +45,10 @@ defmodule Idejo.Accounts.User do
     # Automatic punctuation (steward decision, 2026-10-26): a `.` after a sent line that ends
     # without punctuation (GM-02), set in the profile. See Idejo.Messages.commit/4.
     field :auto_punctuation, :boolean, default: true
+    # Whether a message's actions always show on touch screens and on screens that point
+    # (steward decision, 2026-10-31), set in the profile; read by IdejoWeb.TopicLive.
+    field :controls_on_mobile, :boolean, default: false
+    field :controls_on_desktop, :boolean, default: false
     # Whether other members may start a private conversation with this user, or write in one
     # (steward decision, 2026-10-27; Idejo.Conversations).
     field :accepts_private_messages, :boolean, default: true
@@ -112,6 +116,15 @@ defmodule Idejo.Accounts.User do
     user
     |> cast(attrs, [:auto_punctuation])
     |> validate_required([:auto_punctuation])
+  end
+
+  @doc """
+  A changeset for where a message's actions always show (steward decision, 2026-10-31).
+  """
+  def controls_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:controls_on_mobile, :controls_on_desktop])
+    |> validate_required([:controls_on_mobile, :controls_on_desktop])
   end
 
   @bio_max 5000

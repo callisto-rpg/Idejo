@@ -1681,13 +1681,17 @@
      scripts they stay in place. */
   @media (hover: hover) {
     .message .message-actions { opacity: 0; }
+    /* "Show message controls on desktop" (steward decision, 2026-10-31): always. */
+    [data-controls-desktop] .message .message-actions { opacity: 1; }
     .message:hover .message-actions,
     .message:focus-within .message-actions,
     .message-actions:has([open]) { opacity: 1; }
   }
+  /* Touch screens: the pill, unless "Show message controls on mobile" is on (steward
+     decision, 2026-10-31): then in place, as without scripts. */
   @media (hover: none) {
-    [data-js] .message { position: relative; }
-    [data-js] .message .message-actions {
+    [data-js] #messages:not([data-controls-mobile]) .message { position: relative; }
+    [data-js] #messages:not([data-controls-mobile]) .message .message-actions {
       position: absolute;
       z-index: 30;
       top: calc(100% - 0.75rem);
@@ -1705,10 +1709,10 @@
       pointer-events: none;
       transition: opacity 150ms ease;
     }
-    [data-js] .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
-    [data-js] .message[data-acting] .message-actions,
-    [data-js] .message .message-actions:focus-within,
-    [data-js] .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
+    [data-js] #messages:not([data-controls-mobile]) .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
+    [data-js] #messages:not([data-controls-mobile]) .message[data-acting] .message-actions,
+    [data-js] #messages:not([data-controls-mobile]) .message .message-actions:focus-within,
+    [data-js] #messages:not([data-controls-mobile]) .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   /* A long press opens who reacted (assets/js/reaction_who.js), not the phone's own menu. */
