@@ -527,14 +527,14 @@ export const Composer = {
     }
   },
 
-  // The bubble at the right of the author's name (steward decision, 2026-10-31): "unsent"
-  // until the message opens, then "sent", or "sent, appends unsent" while something typed
-  // is not sent yet. None while editing.
+  // The bubble at the right of the author's name (steward decision, 2026-10-31): hidden
+  // ("empty") until the author types, "unsent" until the message opens, then "sent", or
+  // "sent, appends unsent" while something typed is not sent yet. None while editing.
   showStatus(value) {
     const el = document.getElementById("composer-status")
     if (!el) return
     const pending = value.replace(/\s+$/, "") !== this.sent.replace(/\s+$/, "")
-    const status = this.sent === "" ? "unsent" : pending ? "appends" : "sent"
+    const status = this.sent !== "" ? (pending ? "appends" : "sent") : value.trim() === "" ? "empty" : "unsent"
     if (el.dataset.status === status) return
     el.dataset.status = status
     el.textContent = el.dataset[`label${status[0].toUpperCase()}${status.slice(1)}`] || ""

@@ -26,9 +26,9 @@ message" until you type again. These **tutorial bubbles**
 bubbles**, in the menu under your name or at the top of **Help**: **All** (the default),
 **Simple** (only **Enter to send** and **Sent!**) or **Off**.
 
-Your name is above the box, faded until you have sent something. Beside it, a bubble says
-where your message stands: **unsent**, **sent**, or **sent, appends unsent** while you have
-typed more that is not sent yet. When you start a new message (Ctrl+Enter), the one you
+Your picture and name are above the box, faded and grey until you have sent something.
+Once you start typing, a bubble beside them says where your message stands: **unsent**,
+**sent**, or **sent, appends unsent** while you have typed more that is not sent yet. When you start a new message (Ctrl+Enter), the one you
 finished says **sent & committed** for three seconds, then shows your role like any other.
 This bubble stays whatever **Tutorial bubbles** is set to.
 

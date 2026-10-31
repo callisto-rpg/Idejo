@@ -247,8 +247,9 @@ defmodule IdejoWeb.ComposerTest do
     assert has_element?(lv, "#message-#{mine.id}", "Done. Bye.")
   end
 
-  # Steward decision, 2026-10-31: the name over the composer is faded until something is
-  # sent, with the message's status at its right in place of the role; after Ctrl+Enter the
+  # Steward decisions, 2026-10-31: the picture and name over the composer are faded and
+  # grey until something is sent, with the message's status at its right in place of the
+  # role, hidden until the author types; after Ctrl+Enter the
   # completed message says "sent & committed" for 3 s, then shows the role.
   @tag req: "GM-07"
   test "GM-07 a bubble by the author's name says whether the message is sent and committed", %{
@@ -256,7 +257,8 @@ defmodule IdejoWeb.ComposerTest do
     topic: topic
   } do
     {:ok, lv, _html} = watch(conn, topic)
-    assert has_element?(lv, "#composer-slot #composer-status[data-status=unsent]", "unsent")
+    assert has_element?(lv, "#composer-slot #composer-status[data-status=empty]")
+    refute has_element?(lv, "#composer-slot #composer-status", "unsent")
     refute has_element?(lv, "#composer-slot .author-role")
 
     enter(lv, "Done")
@@ -279,7 +281,7 @@ defmodule IdejoWeb.ComposerTest do
            )
 
     refute has_element?(lv, "#message-#{mine.id} .author-role")
-    assert has_element?(lv, "#composer-slot #composer-status[data-status=unsent]")
+    assert has_element?(lv, "#composer-slot #composer-status[data-status=empty]")
 
     # 3 s later: the bubble goes and the role shows.
     send(lv.pid, {:committed_shown, mine.id})
@@ -288,9 +290,14 @@ defmodule IdejoWeb.ComposerTest do
 
     # The Composer hook keeps the bubble current, and the stylesheet fades the name.
     js = File.read!("assets/js/composer.js")
-    assert js =~ ~s|const status = this.sent === "" ? "unsent" : pending ? "appends" : "sent"|
+    assert js =~ ~s|value.trim() === "" ? "empty" : "unsent"|
     css = File.read!("assets/css/app.css")
-    assert css =~ ~s|.composer-head:has(.composer-status[data-status="unsent"])|
+
+    assert css =~
+             ~s|.composer-head:has(.composer-status:is([data-status="empty"], [data-status="unsent"]))|
+
+    assert css =~ "filter: grayscale(1);"
+    assert css =~ ~s|.composer-status[data-status="empty"] { visibility: hidden; }|
   end
 
   @tag req: "GM-05"
