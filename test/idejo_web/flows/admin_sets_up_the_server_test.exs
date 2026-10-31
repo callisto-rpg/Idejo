@@ -20,10 +20,17 @@ defmodule IdejoWeb.Flows.AdminSetsUpTheServerTest do
   alias Idejo.Forum
   alias Idejo.Settings
   alias Idejo.Setup
+  alias IdejoWeb.Plugs.RequireSetup
 
   setup do
     Application.put_env(:idejo, :setup_redirect, true)
-    on_exit(fn -> Application.put_env(:idejo, :setup_redirect, false) end)
+    # Each test starts from its own database: the plug must ask it again.
+    RequireSetup.forget()
+
+    on_exit(fn ->
+      Application.put_env(:idejo, :setup_redirect, false)
+      RequireSetup.forget()
+    end)
   end
 
   defp role(name), do: Enum.find(Access.list_roles(), &(&1.name == name))
