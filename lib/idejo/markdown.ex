@@ -52,6 +52,11 @@ defmodule Idejo.Markdown do
     sanitize: MDEx.Document.default_sanitize_options()
   ]
 
+  # The options, checked once when this module is compiled: MDEx checks the options it is
+  # given at every call, which took longer than the rendering itself, and each Enter renders
+  # the growing message (GM-02), in the transaction that holds the topic's row.
+  @document MDEx.new(@options)
+
   # A username (AC-01: 3 to 30 letters, digits or _) after an @ that does not follow a letter,
   # digit or another @.
   @mention ~r/(?<![\w@])@([A-Za-z0-9_]{3,30})(?!\w)/u
@@ -82,15 +87,18 @@ defmodule Idejo.Markdown do
     links = Keyword.get(opts, :links, %{})
 
     if links == %{} and not emoji?(markdown) do
-      MDEx.to_html!(markdown, @options)
+      markdown |> document() |> MDEx.to_html!()
     else
       markdown
-      |> MDEx.parse_document!(@options)
+      |> parse()
       |> link_references(links)
       |> emojify()
-      |> MDEx.to_html!(@options)
+      |> MDEx.to_html!()
     end
   end
+
+  defp document(markdown), do: MDEx.Document.put_markdown(@document, markdown)
+  defp parse(markdown), do: markdown |> document() |> MDEx.Document.run()
 
   # Only text with a colon or a character beyond ASCII may hold an emoji.
   defp emoji?(markdown), do: String.contains?(markdown, ":") or not ascii?(markdown)
@@ -155,7 +163,7 @@ defmodule Idejo.Markdown do
   def references(markdown) when is_binary(markdown) do
     if String.contains?(markdown, Map.keys(@sigils)) do
       markdown
-      |> MDEx.parse_document!(@options)
+      |> parse()
       |> texts()
       |> Enum.flat_map(&Regex.scan(@reference, &1))
       |> Enum.map(fn [whole] -> reference(whole) end)
@@ -173,7 +181,7 @@ defmodule Idejo.Markdown do
   def mentions(markdown) when is_binary(markdown) do
     if String.contains?(markdown, "@") do
       markdown
-      |> MDEx.parse_document!(@options)
+      |> parse()
       |> texts()
       |> Enum.flat_map(&Regex.scan(@mention, &1, capture: :all_but_first))
       |> Enum.map(fn [name] -> String.downcase(name) end)
