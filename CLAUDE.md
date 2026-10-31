@@ -355,7 +355,12 @@ roles or the permission grid. Every later change must keep it true:
   scripts, a pill floating under the message once it is tapped (`data-acting`, set by
   `assets/js/message_actions.js` and kept across patches by `JS.ignore_attributes`), closed
   by a tap anywhere but on the pill or by a scroll. Hidden with opacity, never removed, so
-  screen readers reach them; without scripts they stay in place.
+  screen readers reach them; without scripts they stay in place. "Show message controls on
+  mobile" / "on desktop" (steward decision, 2026-10-31; `users.controls_on_mobile`,
+  `controls_on_desktop`, off by default, under "Message controls" in Profile and account,
+  `Accounts.update_user_controls/2`; `TopicLive` reads them at mount) put
+  `data-controls-mobile` / `-desktop` on `#messages`: always shown, on touch screens in
+  place as without scripts (no pill).
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or

@@ -28,8 +28,12 @@ defmodule IdejoWeb.MessageActionsTest do
     css = File.read!("assets/css/app.css")
     assert css =~ ~r/@media \(hover: hover\) \{\s*\.message \.message-actions \{ opacity: 0; \}/
     # Touch screens: hidden, not removed (screen readers reach them), only with scripts.
-    assert css =~ ~r/\[data-js\] \.message \.message-actions \{\s*position: absolute;/
-    assert css =~ "[data-js] .message[data-acting] .message-actions,"
+    # (Unless "Show message controls on mobile" is on: then in place.)
+    assert css =~
+             ~r/\[data-js\] #messages:not\(\[data-controls-mobile\]\) \.message \.message-actions \{\s*position: absolute;/
+
+    assert css =~
+             "[data-js] #messages:not([data-controls-mobile]) .message[data-acting] .message-actions,"
 
     js = File.read!("assets/js/message_actions.js")
     assert js =~ ~s|const touch = matchMedia("(hover: none)")|

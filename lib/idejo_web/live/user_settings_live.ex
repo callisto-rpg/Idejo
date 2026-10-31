@@ -34,6 +34,7 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
+     |> assign(:controls_form, to_form(Accounts.change_user_controls(user), as: :controls))
      |> assign(:private_form, private_form(user))
      |> assign(:bio_form, bio_form(user))
      |> assign(bio_mode: :write, bio_preview: "")
@@ -189,6 +190,22 @@ defmodule IdejoWeb.UserSettingsLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :private_form, to_form(changeset, as: :private))}
+    end
+  end
+
+  # Message controls (steward decision, 2026-10-31): open topic pages pick them up when
+  # reloaded (`TopicLive` reads them at mount).
+  def handle_event("save_controls", %{"controls" => params}, socket) do
+    case Accounts.update_user_controls(socket.assigns.current_scope.user, params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Message controls saved."))
+         |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
+         |> assign(:controls_form, to_form(Accounts.change_user_controls(user), as: :controls))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :controls_form, to_form(changeset, as: :controls))}
     end
   end
 
@@ -508,6 +525,31 @@ defmodule IdejoWeb.UserSettingsLive do
             )}
           </p>
           <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>
+        </.form>
+      </section>
+
+      <%!-- Steward decision, 2026-10-31. --%>
+      <section class="mt-10" aria-labelledby="controls-heading">
+        <h2 id="controls-heading" class="font-semibold mb-2">{gettext("Message controls")}</h2>
+        <.form for={@controls_form} id="controls-form" phx-submit="save_controls">
+          <p id="controls-help" class="text-sm opacity-70 mb-4">
+            {gettext(
+              "React, Edit, Reply and the other actions under each message. Off, they show when you tap a message (mobile) or point at it (desktop)."
+            )}
+          </p>
+          <.input
+            field={@controls_form[:controls_on_mobile]}
+            type="checkbox"
+            label={gettext("Show message controls on mobile")}
+            aria-describedby="controls-help"
+          />
+          <.input
+            field={@controls_form[:controls_on_desktop]}
+            type="checkbox"
+            label={gettext("Show message controls on desktop")}
+            aria-describedby="controls-help"
+          />
+          <.button class="btn btn-primary">{gettext("Save message controls")}</.button>
         </.form>
       </section>
 

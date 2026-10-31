@@ -87,7 +87,9 @@ change and keeps no history.
 
 A message's actions (**React**, **Edit**, **Reply** and the others) show when you point at
 the message. On a phone or tablet, tap the message: they open in a bubble under it, which
-goes away when you tap elsewhere or scroll.
+goes away when you tap elsewhere or scroll. To see them under every message all the time,
+turn on **Show message controls on mobile** or **Show message controls on desktop** under
+**Message controls** in **Profile and account** (both off at first).
 
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
   reply** to undo it), and the box is a new message, shown as a reply to theirs. If your

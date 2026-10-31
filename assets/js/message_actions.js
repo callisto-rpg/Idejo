@@ -32,6 +32,8 @@ document.addEventListener("click", e => {
   if (!touch.matches) return
   const message = e.target.closest?.("#messages article.message")
   if (!message || message === justClosed || e.target.closest(OWN_TAP)) return
+  // "Show message controls on mobile" (steward decision, 2026-10-31): always in place.
+  if (message.closest("[data-controls-mobile]")) return
   // Selecting text (a long press) is not asking for the actions.
   if (!document.getSelection()?.isCollapsed) return
   if (!message.querySelector(".message-actions > *")) return
