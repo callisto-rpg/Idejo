@@ -79,8 +79,8 @@ defmodule IdejoWeb.Admin.SettingsLive do
         <.input
           field={@form[:gm_window_seconds]}
           type="number"
-          label={gettext("Growing-message window (seconds)")}
-          min="2"
+          label={gettext("Patience timer (active thread) (seconds)")}
+          min="0"
           max="600"
           step="1"
           aria-describedby="gm-window-help"
@@ -88,14 +88,14 @@ defmodule IdejoWeb.Admin.SettingsLive do
         />
         <p id="gm-window-help" class="text-sm opacity-70 -mt-1 mb-4">
           {gettext(
-            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 2 to 600; messages already open keep their window."
+            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 0 (no wait) to 600; messages already open keep their window."
           )}
         </p>
         <%!-- GM-05 (steward decision, 2026-10-23). --%>
         <.input
           field={@form[:gm_unanswered_minutes]}
           type="number"
-          label={gettext("Unanswered message time (minutes)")}
+          label={gettext("Patience timer (unanswered message) (minutes)")}
           min="1"
           max="1440"
           step="1"

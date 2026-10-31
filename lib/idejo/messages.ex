@@ -282,20 +282,24 @@ defmodule Idejo.Messages do
   `gm_unanswered_minutes` old (steward decision, 2026-10-23). Until then Ctrl+Enter is an
   Enter on a new line: a lone author keeps one message.
 
-  A message opened with no window (`closes_at` equal to `opened_at`: in a private
-  conversation, steward decision, 2026-10-27) has no unanswered message time either.
+  A message in a private conversation (steward decision, 2026-10-27) has no unanswered
+  message time either. A message opened with a window of 0 s elsewhere (the setting's
+  minimum) still waits for it.
   """
   @spec may_start_new?(Message.t(), DateTime.t()) :: boolean()
   def may_start_new?(%Message{} = message, now \\ DateTime.utc_now()) do
     window_ended?(message, now) and
-      (no_window?(message) or DateTime.compare(now, unanswered_until(message)) != :lt or
-         answered?(message))
+      (DateTime.compare(now, unanswered_until(message)) != :lt or answered?(message) or
+         private_topic?(message))
   end
 
-  @doc "Whether the message opened with no window: Ctrl+Enter starts a new one at once."
+  @doc "Whether the message opened with no window (a private conversation, or a 0 s window)."
   @spec no_window?(Message.t()) :: boolean()
   def no_window?(%Message{opened_at: opened_at, closes_at: closes_at}),
     do: DateTime.compare(opened_at, closes_at) == :eq
+
+  defp private_topic?(%Message{topic_id: topic_id}),
+    do: Repo.exists?(from t in Topic, where: t.id == ^topic_id and t.private)
 
   @doc "When a message nobody wrote below may be completed by Ctrl+Enter (GM-05)."
   @spec unanswered_until(Message.t()) :: DateTime.t()

@@ -54,16 +54,17 @@ corner. It has ten tabs.
 
 - **Server name**: shown in the header, in page titles and in emails.
 - **Who can sign up**: **Anyone**, or **Only people with an invite** (see [Invites](#invites)).
-- **Growing-message window (seconds)**: from 2 to 600, 15 by default. It applies to messages
-  started after you change it.
-- **Unanswered message time (minutes)**: from 1 to 1440 (a day), 10 by default. While nobody
+- **Patience timer (active thread) (seconds)**: from 0 to 600, 15 by default: how long after
+  a message's first line its author must wait before starting a new one. 0 means no wait
+  once someone has written below. It applies to messages started after you change it.
+- **Patience timer (unanswered message) (minutes)**: from 1 to 1440 (a day), 10 by default. While nobody
   has written below a message, its author can start a new one (Ctrl+Enter, or Enter three
   times) only once the message is this old; until then it adds a line to the same message,
   so someone writing alone keeps one message. It applies at once, to open messages too.
 - **Allow replies even if the timer is still running**: on by default. **Reply** always
   starts a new message; with this on, sending it completes the author's open message at
-  once. Off, a reply waits like Ctrl+Enter: until the window (and, while nobody wrote below,
-  the unanswered message time) has passed.
+  once. Off, a reply waits like Ctrl+Enter: until the active-thread patience timer (and,
+  while nobody wrote below, the unanswered-message one) has passed.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **Push notifications**: **On** (the default) or **Off**. On, members can turn on
   browser notifications for replies, mentions and topics they follow. Off, they are not
