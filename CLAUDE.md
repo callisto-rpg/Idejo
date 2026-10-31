@@ -336,8 +336,16 @@ roles or the permission grid. Every later change must keep it true:
   line runs for the open message.
 - **Live updates stay cheap** (NF-01): `Messages.broadcast/2` sends `{:message, m}` with
   `Messages.shown/0` loaded once; a topic view must do no database work per update (every
-  viewer handles every Enter). Keep it so: check with `load/run.sh --hot --writers 10`
-  (p95 within 200 ms) and `load/top.exs`.
+  viewer handles every Enter; `put_message/2` looks only at the message that changed). It
+  also renders only what changed: `TopicLive`'s list is a keyed comprehension of `{message,
+  entry}` pairs (`entries/2`), and an entry reads only its message, its `entry` map and
+  assigns that stay put between updates (rights, `live?`). Never a per-message map
+  (`@reactions[message.id]`), a value `render/1` works out (always changed) or `assigns`
+  itself, or every entry is rendered and sent again at each update: put what a message
+  shows in `entry/3`. `put_derived/1` keeps the deleted runs and the navigator's links;
+  polls read the clock when drawn. `test/idejo_web/live/live_update_size_test.exs` checks
+  the size of an update. Keep it so: check with `load/run.sh --hot --writers 10` (p95
+  within 200 ms) and `load/top.exs`.
 - **Live topics** (TP-04): the topic page stays a controller and embeds `IdejoWeb.TopicLive`
   (`live_render/3`, session `"topic_id"`, `"reply_to_id"`) for every viewer: the message list
   (a keyed comprehension, `#message-{id}`, kept for permalinks) and the composer for posters.

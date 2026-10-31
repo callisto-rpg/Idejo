@@ -109,7 +109,10 @@ defmodule IdejoWeb.TopicLive do
            punctuate?: true,
            too_soon?: false,
            composing_edit: nil,
-           edit_versioned?: false
+           edit_versioned?: false,
+           images?: false,
+           nav: nil,
+           deleted_runs: %{}
          )}
 
       topic ->
@@ -153,6 +156,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(schedule: nil, schedule_error: nil, poll_form: nil)
          |> assign(live?: connected?(socket), revealed: MapSet.new())
          |> put_pending()
+         # TP-12: `@uploads` exists only when they were allowed here, at mount.
+         |> assign(:images?, can_post?)
          |> ImageUploads.allow(:composer_image, can_post?)
          |> ImageUploads.allow(:edit_image, can_post?)
          |> sync_composer()
@@ -161,8 +166,6 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
-
-  defp revealed_spoilers(revealed, message_id), do: for({^message_id, n} <- revealed, do: n)
 
   # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
   # would leave it.
@@ -277,24 +280,65 @@ defmodule IdejoWeb.TopicLive do
     assign(socket, :forks, Forum.list_forks(user(socket), ids))
   end
 
+  # All of the topic's messages: at mount, and after messages moved (TP-15).
   defp put_messages(socket, messages) do
     socket
     |> assign(:messages, messages)
     |> add_roles(messages)
     |> put_viewable_replies(messages)
+    |> put_derived()
+  end
+
+  # One message new or changed (NF-01): only it is looked at, for its author's role when new
+  # to this view and its quote when that leads to another topic, so most events cost no
+  # query; the rest is worked out from the messages in memory.
+  defp put_message(socket, message) do
+    socket
+    |> assign(:messages, upsert(socket.assigns.messages, message))
+    |> add_roles([message])
+    |> add_viewable_reply(message)
+    |> put_derived()
+  end
+
+  # What the page draws from the whole list and nothing else, worked out once per change of
+  # it rather than at each render: the runs of deleted messages and the navigator's links.
+  # Messages change through put_messages/2 and put_message/2 only (or go, with the topic).
+  defp put_derived(socket) do
+    %{messages: messages} = socket.assigns
+    assign(socket, deleted_runs: deleted_runs(messages), nav: nav_targets(messages, user(socket)))
   end
 
   # TP-15: a reply may lead to another topic after a move; its quote shows only to readers who
   # may view that topic. Messages of this topic need no query (NF-01).
   defp put_viewable_replies(socket, messages) do
+    assign(
+      socket,
+      :viewable_replies,
+      Forum.viewable_message_ids(user(socket), foreign_replies(socket, messages))
+    )
+  end
+
+  # The same for one message: a query only when its quote leads to another topic.
+  defp add_viewable_reply(socket, message) do
+    case foreign_replies(socket, [message]) do
+      [] ->
+        socket
+
+      [id] ->
+        viewable = socket.assigns.viewable_replies
+
+        if MapSet.member?(Forum.viewable_message_ids(user(socket), [id]), id),
+          do: assign(socket, :viewable_replies, MapSet.put(viewable, id)),
+          else: assign(socket, :viewable_replies, MapSet.delete(viewable, id))
+    end
+  end
+
+  defp foreign_replies(socket, messages) do
     topic_id = socket.assigns.topic.id
 
-    foreign =
-      for %{reply_to: %Messages.Message{topic_id: other} = reply} <- messages,
-          other != topic_id,
-          do: reply.id
-
-    assign(socket, :viewable_replies, Forum.viewable_message_ids(user(socket), foreign))
+    for %{reply_to: %Messages.Message{topic_id: other} = reply} <- messages,
+        other != topic_id,
+        do: reply.id
   end
 
   # The role next to each author's name (GM-07): their highest-ranked one that is "Visible
@@ -370,7 +414,7 @@ defmodule IdejoWeb.TopicLive do
     {:noreply,
      socket
      |> announce(old, message)
-     |> put_messages(upsert(socket.assigns.messages, message))
+     |> put_message(message)
      |> schedule_tick()}
   end
 
@@ -499,6 +543,7 @@ defmodule IdejoWeb.TopicLive do
            can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
            can_fork?: can_fork?(user, topic)
          )
+         |> put_viewable_replies(socket.assigns.messages)
          |> put_forks()}
     end
   end
@@ -1413,22 +1458,19 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def render(assigns) do
-    {mine, locked} = composer_place(assigns)
-    {before, after_} = split(assigns.messages, mine)
-    # TP-12: allowed at mount for those who could post then; nil otherwise.
-    uploads = assigns[:uploads] || %{}
+    # Worked out at each render, as they follow from several assigns: never kept in the
+    # socket, so LiveView sees them as changed each time and the composer is always right.
+    layout = composer_layout(assigns)
+    {before, after_} = split(assigns.messages, layout[:mine])
 
     assigns =
-      assign(assigns,
+      assigns
+      |> assign(layout)
+      |> assign(
         moderated:
           assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
-        before: before,
-        mine: mine,
-        locked: locked,
-        later: after_,
-        deleted_runs: Map.merge(deleted_runs(before), deleted_runs(after_)),
-        composer_upload: uploads[:composer_image],
-        edit_upload: uploads[:edit_image]
+        before: entries(assigns, before),
+        later: entries(assigns, after_)
       )
 
     ~H"""
@@ -1468,7 +1510,7 @@ defmodule IdejoWeb.TopicLive do
         :if={@can_moderate? && @moderated}
         message={@moderated}
         own?={@moderated.author_id == @current_scope.user.id}
-        movable?={@moderated.id != List.first(@messages).id}
+        movable?={@moderated.id != @nav.first}
       />
       <MessageModerationComponents.move_banner
         :if={@can_moderate? && @selected && @select_for == :move}
@@ -1497,11 +1539,10 @@ defmodule IdejoWeb.TopicLive do
         </span>
       </div>
       <.topic_nav
-        :if={@topic && @messages != []}
+        :if={@topic && @nav}
         title={@topic.title}
-        messages={@messages}
+        nav={@nav}
         first_unread={@first_unread}
-        viewer={@current_scope && @current_scope.user}
       />
       <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
         {gettext("You can no longer view this topic.")}
@@ -1515,53 +1556,35 @@ defmodule IdejoWeb.TopicLive do
         data-controls-mobile={@current_scope && @current_scope.user.controls_on_mobile}
         data-controls-desktop={@current_scope && @current_scope.user.controls_on_desktop}
       >
+        <%!-- NF-01: an entry reads only its message, its `entry` (entry/3) and what does not
+             change between updates, so an update renders and sends the entries it changed
+             and no others. --%>
         <li
-          :for={message <- @before}
+          :for={{message, entry} <- @before}
           :key={message.id}
           id={"message-#{message.id}"}
-          hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
-          data-mention-glow={@mention_glows[message.id]}
-          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
+          hidden={entry.hidden?}
+          data-mention-glow={entry.glow}
+          phx-mounted={entry.glow && JS.ignore_attributes(["data-glowing"])}
         >
-          <.unread_line
-            :if={@unread_line? and @first_unread.id == message.id}
-            message_id={message.id}
-            count={@first_unread.count}
-          />
+          <.unread_line :if={entry.unread} message_id={message.id} count={entry.unread} />
           <.message
             message={message}
+            entry={entry}
             topic={@topic}
             can_post?={@can_post?}
-            roles={@roles}
             viewer={@current_scope && @current_scope.user}
             can_moderate?={@can_moderate?}
             can_fork?={@can_fork?}
-            forks={Map.get(@forks, message.id, [])}
-            deleted_run={@deleted_runs[message.id]}
-            editing={@editing}
-            refocus={@refocus}
-            editor_mode={@editor_mode}
-            preview_html={@preview_html}
-            edit_upload={@edit_upload}
-            image_error={@image_error}
-            reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
-            selected={@selected && MapSet.member?(@selected, message.id)}
-            selectable?={selectable_in_view?(assigns, message)}
-            viewable_replies={@viewable_replies}
-            poll={@polls[message.id]}
-            now={@now}
             live?={@live?}
-            revealed?={MapSet.member?(@revealed, message.id)}
-            revealed_spoilers={revealed_spoilers(@revealed, message.id)}
-            committed?={@committed == message.id}
           />
         </li>
         <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
           <.composer
             mine={@mine}
             pending={@pending}
-            commands={IdejoWeb.ComposerCommands.for_composer(@composer_upload != nil, @can_fork?)}
+            commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?)}
             punctuate?={@punctuate?}
             reply_to={@reply_to}
             locked={@locked}
@@ -1569,58 +1592,33 @@ defmodule IdejoWeb.TopicLive do
             roles={@roles}
             author={@current_scope.user}
             now={@now}
-            upload={@composer_upload}
+            upload={if @images?, do: @uploads.composer_image}
             image_error={@image_error}
             poll={@mine && @polls[@mine.id]}
-            answered?={
-              if @locked,
-                do: answered?(@messages, @locked),
-                else: Enum.any?(@later, &is_nil(&1.deleted_at))
-            }
+            answered?={@answered?}
             unanswered_minutes={@unanswered_minutes}
             private?={@topic.private}
           />
         </li>
         <li
-          :for={message <- @later}
+          :for={{message, entry} <- @later}
           :key={message.id}
           id={"message-#{message.id}"}
-          hidden={@deleted_runs[message.id] == :rest and !@can_moderate?}
-          data-mention-glow={@mention_glows[message.id]}
-          phx-mounted={@mention_glows[message.id] && JS.ignore_attributes(["data-glowing"])}
+          hidden={entry.hidden?}
+          data-mention-glow={entry.glow}
+          phx-mounted={entry.glow && JS.ignore_attributes(["data-glowing"])}
         >
-          <.unread_line
-            :if={@unread_line? and @first_unread.id == message.id}
-            message_id={message.id}
-            count={@first_unread.count}
-          />
+          <.unread_line :if={entry.unread} message_id={message.id} count={entry.unread} />
           <.message
             message={message}
+            entry={entry}
             topic={@topic}
             can_post?={@can_post?}
-            roles={@roles}
             viewer={@current_scope && @current_scope.user}
             can_moderate?={@can_moderate?}
             can_fork?={@can_fork?}
-            forks={Map.get(@forks, message.id, [])}
-            deleted_run={@deleted_runs[message.id]}
-            editing={@editing}
-            refocus={@refocus}
-            editor_mode={@editor_mode}
-            preview_html={@preview_html}
-            edit_upload={@edit_upload}
-            image_error={@image_error}
-            reactions={Map.get(@reactions, message.id, [])}
             can_react?={@can_react?}
-            selected={@selected && MapSet.member?(@selected, message.id)}
-            selectable?={selectable_in_view?(assigns, message)}
-            viewable_replies={@viewable_replies}
-            poll={@polls[message.id]}
-            now={@now}
             live?={@live?}
-            revealed?={MapSet.member?(@revealed, message.id)}
-            revealed_spoilers={revealed_spoilers(@revealed, message.id)}
-            committed?={@committed == message.id}
           />
         </li>
       </ol>
@@ -1651,9 +1649,8 @@ defmodule IdejoWeb.TopicLive do
   end
 
   attr :title, :string, required: true
-  attr :messages, :list, required: true
+  attr :nav, :map, required: true, doc: "the messages it links to (`nav_targets/2`)"
   attr :first_unread, :map, default: nil
-  attr :viewer, :any, required: true
 
   # The topic navigator (steward decision, 2026-10-23): once the title has scrolled away, a
   # card at the right with the title and links to the first message, the first unread, the
@@ -1662,19 +1659,6 @@ defmodule IdejoWeb.TopicLive do
   # (TP-06); the `TopicNav` hook shows it, picks card or pill and scrolls. Without
   # JavaScript it stays hidden (the page reads the same without it, AX-04).
   defp topic_nav(assigns) do
-    viewer_id = assigns.viewer && assigns.viewer.id
-
-    assigns =
-      assign(assigns,
-        first: List.first(assigns.messages),
-        last: List.last(assigns.messages),
-        mine:
-          viewer_id &&
-            assigns.messages
-            |> Enum.reverse()
-            |> Enum.find(&(&1.author_id == viewer_id and is_nil(&1.deleted_at)))
-      )
-
     ~H"""
     <nav
       id="topic-nav"
@@ -1697,7 +1681,7 @@ defmodule IdejoWeb.TopicLive do
         <p class="topic-nav-title">{@title}</p>
         <ul class="topic-nav-links">
           <li>
-            <a href={"#message-#{@first.id}"} id="topic-nav-first">
+            <a href={"#message-#{@nav.first}"} id="topic-nav-first">
               <.icon name="hero-chevron-double-up" class="size-4" />{gettext("First message")}
             </a>
           </li>
@@ -1707,12 +1691,12 @@ defmodule IdejoWeb.TopicLive do
             </a>
           </li>
           <li>
-            <a href={"#message-#{@last.id}"} id="topic-nav-last">
+            <a href={"#message-#{@nav.last}"} id="topic-nav-last">
               <.icon name="hero-chevron-double-down" class="size-4" />{gettext("Last message")}
             </a>
           </li>
-          <li :if={@mine}>
-            <a href={"#message-#{@mine.id}"} id="topic-nav-mine">
+          <li :if={@nav.mine}>
+            <a href={"#message-#{@nav.mine}"} id="topic-nav-mine">
               <.icon name="hero-user" class="size-4" />{gettext("My last message")}
             </a>
           </li>
@@ -1772,16 +1756,101 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
-  # Who may edit this message: its author while it is closed (GM-10), or a moderator, someone
-  # else's closed message (MO-02). Deleted messages are edited by nobody.
-  defp edit_rights(%{message: message, viewer: viewer} = assigns) do
-    editable? = viewer != nil and message.state == "closed" and is_nil(message.deleted_at)
-    own? = viewer != nil and viewer.id == message.author_id
+  # Each message shown, with what its entry shows besides the message itself (NF-01). The
+  # list is a keyed comprehension, which renders an entry again only when its message or
+  # this map changed: a change to one message (an Enter, a reaction, a vote, a spoiler
+  # revealed) renders that entry alone, in every view, however long the topic.
+  defp entries(assigns, messages) do
+    spoilers =
+      Enum.group_by(for({id, n} <- assigns.revealed, do: {id, n}), &elem(&1, 0), &elem(&1, 1))
 
-    [
-      own_closed?: editable? and own? and assigns.can_post?,
-      mod_edit?: editable? and not own? and assigns.can_moderate?
-    ]
+    unread = assigns.unread_line? && assigns.first_unread
+    viewer = assigns.current_scope && assigns.current_scope.user
+    Enum.map(messages, &{&1, entry(assigns, &1, {spoilers, unread, viewer})})
+  end
+
+  # `refocus?`: the message whose editor just closed, which takes the focus back (AX-01).
+  # `committed?`: the viewer's own message, just completed: "sent & committed" for a moment.
+  # `selected`: nil outside choosing messages (TP-15, MO-02), with `selectable?` its checkbox.
+  # `revealed_spoilers`: the `||spoilers||` the viewer revealed, by place. `edit`: the
+  # editor, in the message being edited only. `own_closed?` and `mod_edit?`: who may edit it,
+  # its author while it is closed (GM-10) or a moderator someone else's (MO-02); deleted
+  # messages are edited by nobody.
+  defp entry(assigns, %{id: id} = message, {spoilers, unread, viewer}) do
+    run = assigns.deleted_runs[id]
+    {selected, selectable?} = selection(assigns, message)
+    {own_closed?, mod_edit?} = edit_rights(assigns, message, viewer)
+
+    %{
+      deleted_run: run,
+      hidden?: run == :rest and !assigns.can_moderate?,
+      glow: assigns.mention_glows[id],
+      unread: unread_count(unread, id),
+      role: Map.get(assigns.roles, message.author_id),
+      reply_shown?: reply_shown?(assigns, message),
+      forks: Map.get(assigns.forks, id, []),
+      reactions: Map.get(assigns.reactions, id, []),
+      poll: assigns.polls[id],
+      selected: selected,
+      selectable?: selectable?,
+      revealed?: MapSet.member?(assigns.revealed, id),
+      revealed_spoilers: Map.get(spoilers, id, []),
+      committed?: assigns.committed == id,
+      refocus?: assigns.refocus == id,
+      edit: edit_state(assigns, message),
+      own_closed?: own_closed?,
+      mod_edit?: mod_edit?
+    }
+  end
+
+  defp unread_count(%{id: id, count: count}, id), do: count
+  defp unread_count(_unread, _id), do: nil
+
+  defp selection(%{selected: nil}, _message), do: {nil, false}
+
+  defp selection(%{selected: selected} = assigns, message),
+    do: {MapSet.member?(selected, message.id), selectable_in_view?(assigns, message)}
+
+  defp edit_rights(_assigns, _message, nil), do: {false, false}
+
+  defp edit_rights(assigns, message, viewer) do
+    editable? = message.state == "closed" and is_nil(message.deleted_at)
+    own? = viewer.id == message.author_id
+    {editable? and own? and assigns.can_post?, editable? and not own? and assigns.can_moderate?}
+  end
+
+  # TP-15: a quote leading to another topic shows only to readers who may view it.
+  defp reply_shown?(_assigns, %{reply_to: nil}), do: false
+
+  defp reply_shown?(assigns, %{reply_to: reply}),
+    do: reply.topic_id == assigns.topic.id or MapSet.member?(assigns.viewable_replies, reply.id)
+
+  # TP-02: the editor's state, for the message it is open in.
+  defp edit_state(%{editing: {id, form}} = assigns, %{id: id}) do
+    %{
+      form: form,
+      mode: assigns.editor_mode,
+      preview_html: assigns.preview_html,
+      # TP-12: allowed at mount for those who could post then; nil otherwise.
+      upload: (assigns[:uploads] || %{})[:edit_image],
+      image_error: assigns.image_error
+    }
+  end
+
+  defp edit_state(_assigns, _message), do: nil
+
+  # The topic navigator's links: the first message, the last and the viewer's own last one
+  # (not deleted); nil with no messages.
+  defp nav_targets([], _viewer), do: nil
+
+  defp nav_targets([first | _] = messages, viewer) do
+    mine =
+      viewer &&
+        messages
+        |> Enum.reverse()
+        |> Enum.find(&(&1.author_id == viewer.id and is_nil(&1.deleted_at)))
+
+    %{first: first.id, last: List.last(messages).id, mine: mine && mine.id}
   end
 
   # MO-02: for readers, a run of deleted messages shows as one line, one run per kind (by a
@@ -1843,6 +1912,13 @@ defmodule IdejoWeb.TopicLive do
   # Where the composer goes: in the author's open message, or after Reply a new message at
   # the end, the open one reading like the others (steward decision, 2026-10-24). `locked`:
   # the open message a new message waits for, refused on Enter until it may start one.
+  # `answered?`: someone wrote below the message the composer's timer runs for (GM-05).
+  defp composer_layout(assigns) do
+    {mine, locked} = composer_place(assigns)
+    timed = locked || mine
+    [mine: mine, locked: locked, answered?: timed != nil and answered?(assigns.messages, timed)]
+  end
+
   defp composer_place(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
     editing = assigns[:composing_edit] && editing_in_composer(assigns)
@@ -1865,13 +1941,11 @@ defmodule IdejoWeb.TopicLive do
   end
 
   attr :author, :map, required: true
-  attr :roles, :map, required: true
+  attr :role, :any, required: true, doc: "the author's role shown next to the name, or nil"
   attr :role?, :boolean, default: true, doc: "false: the role waits (the composer's status)"
   slot :status, doc: "a bubble at the right of the name, in place of the role"
 
   defp author_line(assigns) do
-    assigns = assign(assigns, :role, Map.get(assigns.roles, assigns.author.id))
-
     ~H"""
     <span class="author-line">
       <UserComponents.avatar user={@author} size={:list} />
@@ -1887,58 +1961,33 @@ defmodule IdejoWeb.TopicLive do
   end
 
   attr :message, :map, required: true
+
+  attr :entry, :map,
+    required: true,
+    doc: "what the entry shows besides the message: its reactions, poll, editor… (`entry/3`)"
+
   attr :topic, :map, required: true
   attr :can_post?, :boolean, required: true
-  attr :roles, :map, required: true
   attr :viewer, :any, required: true
   attr :can_moderate?, :boolean, required: true
   attr :can_fork?, :boolean, required: true
-  attr :forks, :list, required: true
-  attr :deleted_run, :any, default: nil
-  attr :editing, :any, required: true
-  attr :refocus, :string, default: nil, doc: "the message whose editor just closed (AX-01)"
-  attr :editor_mode, :atom, required: true
-  attr :preview_html, :string, required: true
-  attr :edit_upload, :any, default: nil
-  attr :image_error, :string, default: nil
-  attr :reactions, :list, default: []
   attr :can_react?, :boolean, default: false
-  attr :selected, :any, default: nil, doc: "nil outside choosing messages (TP-15, MO-02)"
-  attr :selectable?, :boolean, default: false, doc: "a checkbox while choosing messages"
-  attr :viewable_replies, :any, default: MapSet.new()
-  attr :poll, :map, default: nil, doc: "the message's poll (`!poll`), or nil"
-  attr :now, DateTime, default: nil
   attr :live?, :boolean, default: false
-  attr :revealed?, :boolean, default: false, doc: "a spoiler the viewer revealed"
 
-  attr :committed?, :boolean,
-    default: false,
-    doc: "the viewer's own message, just completed: \"sent & committed\" for a moment"
-
-  attr :revealed_spoilers, :list,
-    default: [],
-    doc: "the `||spoilers||` of the message the viewer revealed, by place"
-
-  # Open and closed messages look the same to readers (GM-07).
+  # Open and closed messages look the same to readers (GM-07). Nothing is worked out here:
+  # everything comes in through attributes, so a change to one of `@entry`'s fields renders
+  # only what shows it (NF-01).
   defp message(assigns) do
-    editing =
-      case assigns.editing do
-        {id, form} when id == assigns.message.id -> form
-        _ -> nil
-      end
-
-    assigns = assign(assigns, [edit_form: editing] ++ edit_rights(assigns))
-
     ~H"""
     <%!-- MO-02: readers see a placeholder for a deleted message, one line for a run of them. --%>
     <p
-      :if={@message.deleted_at && !@can_moderate? && match?({:first, _, _}, @deleted_run)}
+      :if={@message.deleted_at && !@can_moderate? && match?({:first, _, _}, @entry.deleted_run)}
       id={"message-#{@message.id}-deleted"}
       class="message-deleted"
       tabindex="-1"
-      phx-mounted={@refocus == @message.id && JS.focus()}
+      phx-mounted={@entry.refocus? && JS.focus()}
     >
-      {deleted_text(@deleted_run)}
+      {deleted_text(@entry.deleted_run)}
     </p>
     <article
       :if={is_nil(@message.deleted_at) or @can_moderate?}
@@ -1948,11 +1997,11 @@ defmodule IdejoWeb.TopicLive do
     >
       <p id={"message-#{@message.id}-author"} class="message-head">
         <%!-- Choosing messages to move (TP-15) or delete (MO-02). --%>
-        <label :if={@selected != nil and @selectable?} class="move-select">
+        <label :if={@entry.selected != nil and @entry.selectable?} class="move-select">
           <input
             type="checkbox"
             id={"select-#{@message.id}"}
-            checked={@selected}
+            checked={@entry.selected}
             phx-click="toggle_select"
             phx-value-id={@message.id}
           />
@@ -1960,8 +2009,8 @@ defmodule IdejoWeb.TopicLive do
             {gettext("Select the message by %{name}", name: @message.author.display_name)}
           </span>
         </label>
-        <.author_line author={@message.author} roles={@roles} role?={!@committed?}>
-          <:status :if={@committed?}>
+        <.author_line author={@message.author} role={@entry.role} role?={!@entry.committed?}>
+          <:status :if={@entry.committed?}>
             <span class="tutorial-bubble is-always composer-status" data-status="committed">
               {gettext("sent & committed")}
             </span>
@@ -1993,8 +2042,7 @@ defmodule IdejoWeb.TopicLive do
         id={"message-#{@message.id}-reply-to"}
         class="message-quote"
       >
-        <%= if @message.reply_to.topic_id == @topic.id or
-                 MapSet.member?(@viewable_replies, @message.reply_to.id) do %>
+        <%= if @entry.reply_shown? do %>
           <.link href={~p"/m/#{@message.reply_to.id}"} class="font-medium">
             {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
           </.link>
@@ -2012,28 +2060,28 @@ defmodule IdejoWeb.TopicLive do
         </span>
       </blockquote>
       <.form
-        :if={@edit_form}
-        for={@edit_form}
+        :if={@entry.edit}
+        for={@entry.edit.form}
         id={"edit-message-#{@message.id}"}
         phx-change="validate_edit"
         phx-submit="save_edit"
         phx-mounted={JS.focus(to: "#edit-message-#{@message.id} textarea")}
       >
         <MessageComponents.editor
-          field={@edit_form[:body]}
+          field={@entry.edit.form[:body]}
           label={
-            if @mod_edit?,
+            if @entry.mod_edit?,
               do: gettext("Edit this message (Markdown)"),
               else: gettext("Edit your message (Markdown)")
           }
-          mode={@editor_mode}
-          preview_html={@preview_html}
-          upload={@edit_upload}
-          image_error={@image_error}
+          mode={@entry.edit.mode}
+          preview_html={@entry.edit.preview_html}
+          upload={@entry.edit.upload}
+          image_error={@entry.edit.image_error}
         />
         <.input
-          :if={@mod_edit?}
-          field={@edit_form[:reason]}
+          :if={@entry.mod_edit?}
+          field={@entry.edit.form[:reason]}
           type="text"
           label={gettext("Reason (shown in the moderation log)")}
           maxlength="500"
@@ -2050,33 +2098,35 @@ defmodule IdejoWeb.TopicLive do
            stylesheet shows the cover only when scripts run, as the button needs them. --%>
       <div
         id={"message-#{@message.id}-content"}
-        class={["message-content", @message.spoiler && !@revealed? && "is-spoiler"]}
+        class={["message-content", @message.spoiler && !@entry.revealed? && "is-spoiler"]}
       >
         <div
           id={"message-#{@message.id}-hidden"}
           tabindex="-1"
-          inert={@message.spoiler and !@revealed? and @live?}
+          inert={@message.spoiler and !@entry.revealed? and @live?}
         >
           <%!-- A poll posted on its own: its question says it all. --%>
           <MessageComponents.collapsible_body
-            :if={!@edit_form and !Polls.poll_only?(@message, @poll)}
+            :if={!@entry.edit and !Polls.poll_only?(@message, @entry.poll)}
             id={"message-#{@message.id}-body"}
             html={
               if @live?,
-                do: MessageComponents.inline_spoilers(@message.body_html, @revealed_spoilers),
+                do: MessageComponents.inline_spoilers(@message.body_html, @entry.revealed_spoilers),
                 else: @message.body_html
             }
           />
+          <%!-- It reads the clock when it is drawn: a vote, or its closing time
+               (`Idejo.Messages.PollWorker`), sends `{:poll, …}`, which draws it again. --%>
           <PollComponents.poll
-            :if={@poll && (is_nil(@message.deleted_at) or @can_moderate?)}
-            poll={@poll}
+            :if={@entry.poll && (is_nil(@message.deleted_at) or @can_moderate?)}
+            poll={@entry.poll}
             message={@message}
             viewer={@viewer}
             can_vote?={@can_post? and is_nil(@message.deleted_at)}
-            now={@now || DateTime.utc_now()}
+            now={DateTime.utc_now()}
           />
         </div>
-        <div :if={@message.spoiler and !@revealed?} class="spoiler-cover">
+        <div :if={@message.spoiler and !@entry.revealed?} class="spoiler-cover">
           <%!-- `!spoiler:overlay text:` (steward decision, 2026-10-28). --%>
           <p
             :if={@message.spoiler_label}
@@ -2112,15 +2162,15 @@ defmodule IdejoWeb.TopicLive do
       <%!-- TP-17: reactions under the message. --%>
       <ReactionComponents.reaction_bar
         message_id={@message.id}
-        summary={@reactions}
+        summary={@entry.reactions}
         viewer={@viewer}
         can_react?={@can_react? and is_nil(@message.deleted_at)}
       />
       <%!-- TP-09: a "Continue topic" button to each topic started from this message (steward
            decision, 2026-10-23); its title is in the name, and on hover. --%>
-      <p :if={@forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
+      <p :if={@entry.forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
         <.link
-          :for={fork <- @forks}
+          :for={fork <- @entry.forks}
           href={~p"/t/#{fork.id}/#{fork.slug}"}
           class="btn btn-xs"
           title={fork.title}
@@ -2135,11 +2185,11 @@ defmodule IdejoWeb.TopicLive do
           message_id={@message.id}
         />
         <button
-          :if={(@own_closed? or @mod_edit?) and !@edit_form}
+          :if={(@entry.own_closed? or @entry.mod_edit?) and !@entry.edit}
           id={"message-#{@message.id}-edit"}
           type="button"
           class="message-action"
-          phx-mounted={@refocus == @message.id && JS.focus()}
+          phx-mounted={@entry.refocus? && JS.focus()}
           phx-click="edit"
           phx-value-id={@message.id}
         >
@@ -2366,7 +2416,7 @@ defmodule IdejoWeb.TopicLive do
            2026-10-31; the Composer hook keeps it current), hidden until the author types
            (steward decision, 2026-10-31). An edit shows the role. --%>
       <p class="message-head composer-head">
-        <.author_line author={@author} roles={@roles} role?={@editing?}>
+        <.author_line author={@author} role={@roles[@author.id]} role?={@editing?}>
           <:status :if={!@editing?}>
             <span
               id="composer-status"
