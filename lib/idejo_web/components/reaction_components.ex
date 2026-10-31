@@ -189,7 +189,14 @@ defmodule IdejoWeb.ReactionComponents do
   closes it, and so does a click outside it (assets/js/account_menu.js).
   """
   def add_reaction(assigns) do
-    assigns = assign(assigns, :defaults, Emoji.defaults())
+    # The same commands for every message, which keeps topic pages short: what they send
+    # comes from the button's `phx-value-*`, and they close the <details> they are in.
+    assigns =
+      assign(assigns,
+        defaults: Emoji.defaults(),
+        react: JS.push("react") |> JS.remove_attribute("open", to: {:closest, "details"}),
+        more: JS.push("emoji_picker") |> JS.remove_attribute("open", to: {:closest, "details"})
+      )
 
     ~H"""
     <details id={"message-#{@message_id}-react"} class="add-reaction">
@@ -203,10 +210,9 @@ defmodule IdejoWeb.ReactionComponents do
           class="add-reaction-choice"
           aria-label={":#{emoji.name}:"}
           title={":#{emoji.name}:"}
-          phx-click={
-            JS.push("react", value: %{id: @message_id, emoji: emoji.name})
-            |> JS.remove_attribute("open", to: "#message-#{@message_id}-react")
-          }
+          phx-click={@react}
+          phx-value-id={@message_id}
+          phx-value-emoji={emoji.name}
         >
           <.emoji_img emoji={emoji} />
         </button>
@@ -215,10 +221,8 @@ defmodule IdejoWeb.ReactionComponents do
           class="add-reaction-choice"
           aria-label={gettext("More emoji")}
           title={gettext("More emoji")}
-          phx-click={
-            JS.push("emoji_picker", value: %{id: @message_id})
-            |> JS.remove_attribute("open", to: "#message-#{@message_id}-react")
-          }
+          phx-click={@more}
+          phx-value-id={@message_id}
         >
           <span class="add-reaction-more" aria-hidden="true">+</span>
         </button>
