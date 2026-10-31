@@ -227,6 +227,14 @@ defmodule IdejoWeb.ReactionComponents do
     """
   end
 
+  @doc "The address of the + picker's list (`/emoji-index.json`, versioned)."
+  @spec picker_index() :: String.t()
+  def picker_index, do: "/emoji-index.json?v=#{Emoji.index_version()}"
+
+  @doc "The + picker's group names, as JSON for the `EmojiPicker` hook."
+  @spec picker_labels() :: String.t()
+  def picker_labels, do: Jason.encode!(Map.new(Emoji.categories(), &{&1, category_name(&1)}))
+
   attr :picker, :map, required: true, doc: "`%{message_id: id}`"
 
   @doc """
@@ -236,11 +244,7 @@ defmodule IdejoWeb.ReactionComponents do
   connection. A choice is pushed as `"react"`.
   """
   def emoji_picker(assigns) do
-    assigns =
-      assign(assigns,
-        labels: Jason.encode!(Map.new(Emoji.categories(), &{&1, category_name(&1)})),
-        index: "/emoji-index.json?v=#{Emoji.index_version()}"
-      )
+    assigns = assign(assigns, labels: picker_labels(), index: picker_index())
 
     ~H"""
     <dialog

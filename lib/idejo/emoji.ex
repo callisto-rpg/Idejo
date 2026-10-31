@@ -70,6 +70,39 @@ defmodule Idejo.Emoji do
 
   @categories ["Server" | @standard |> Enum.map(& &1.category) |> Enum.uniq()]
 
+  # The + picker's emoji, in its order: by category, the server's own first.
+  @picker for category <- @categories,
+              e <- @own_entries ++ @standard,
+              e.category == category,
+              do: e
+
+  # The + picker's sprite sheet: every picker emoji in one image, in the picker's order, so
+  # the picker loads one file instead of ~1,900 (steward decision, 2026-10-31). Made by
+  # `priv/emoji/sprite.exs`; used only while it matches the images and the list, else the
+  # picker draws each image (and `emoji_test.exs` fails).
+  @sprite_data Path.expand("../../priv/emoji/sprite.json", __DIR__)
+  @sprite_image Path.expand("../../priv/static/emoji/sprite.webp", __DIR__)
+  @external_resource @sprite_data
+  @external_resource @sprite_image
+
+  @sprite_meta (if File.exists?(@sprite_data) and File.exists?(@sprite_image) do
+                  Jason.decode!(File.read!(@sprite_data))
+                end)
+
+  @sprite (if @sprite_meta && @sprite_meta["version"] == @version &&
+                @sprite_meta["names"] == Enum.map(@picker, & &1.name) do
+             hash =
+               :crypto.hash(:sha256, File.read!(@sprite_image))
+               |> Base.url_encode64(padding: false)
+               |> binary_part(0, 12)
+
+             %{
+               src: "/emoji/sprite.webp?vsn=#{hash}",
+               columns: @sprite_meta["columns"],
+               rows: @sprite_meta["rows"]
+             }
+           end)
+
   @doc "The images' version, a hash of every image: the `vsn` of their addresses."
   @spec version() :: String.t()
   def version, do: @version
@@ -111,13 +144,26 @@ defmodule Idejo.Emoji do
   @spec categories() :: [String.t()]
   def categories, do: @categories
 
+  @doc """
+  The + picker's emoji with their image files (under `priv/static`), in the picker's order:
+  the sprite sheet's cells.
+  """
+  @spec picker_images() :: [{String.t(), String.t()}]
+  def picker_images, do: Enum.map(@picker, &{&1.name, URI.parse(&1.src).path})
+
+  @doc "The sprite sheet's address, columns and rows, or nil when it is missing or stale."
+  @spec sprite() :: %{src: String.t(), columns: pos_integer(), rows: pos_integer()} | nil
+  def sprite, do: @sprite
+
   # The + picker's list (TP-17), built once, for the browser: each category with its emoji as
-  # `[name, alt, src, other names]`, so the browser draws and searches it on its own.
+  # `[name, alt, src, other names]`, so the browser draws and searches it on its own, and the
+  # sprite sheet, whose cells follow the emoji in this order.
   @index Jason.encode!(%{
+           sprite: @sprite,
            categories:
              for category <- @categories do
                emoji =
-                 for e <- @own_entries ++ @standard, e.category == category do
+                 for e <- @picker, e.category == category do
                    names = Map.get(e, :names, [e.name])
                    [e.name, e.char || ":#{e.name}:", e.src, tl(names)]
                  end

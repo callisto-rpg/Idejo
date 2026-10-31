@@ -21,7 +21,8 @@ the rights will then transfer.
 
 Third-party works shipped with Idejo:
 
-  Twemoji graphics (priv/static/emoji/), © 2014-2021 Twitter, Inc and other
+  Twemoji graphics (priv/static/emoji/, also drawn with the reaction images in
+  priv/static/emoji/sprite.webp), © 2014-2021 Twitter, Inc and other
   contributors, © 2022-present Jason Sofonia & Justine De Caires, licensed under
   CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/); see
   LICENSES/CC-BY-4.0.txt. https://github.com/jdecked/twemoji

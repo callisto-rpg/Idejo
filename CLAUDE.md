@@ -884,8 +884,15 @@ roles or the permission grid. Every later change must keep it true:
   the `InlineCard` hook with `data-close-event`). The server renders only its frame: the
   `EmojiPicker` hook (`assets/js/emoji_picker.js`, `phx-update="ignore"`) fetches
   `/emoji-index.json?v=` (`EmojiController`, `Emoji.index_json/0`, built at compile time,
-  cached for a year), draws the groups once per page, searches in the browser and pushes
-  `"react"`. Never send the emoji list over the live connection (1,881 emoji, 550 KB).
+  cached for a year), draws the groups once per page (moved, not copied, into each opening),
+  searches in the browser and pushes `"react"`. Never send the emoji list over the live
+  connection (1,881 emoji, 125 KB). Every emoji is drawn from one sprite sheet (steward
+  decision, 2026-10-31; `priv/static/emoji/sprite.webp`, `Emoji.sprite/0`, the index's
+  `sprite`; `.emoji-sprite` cells placed through the DOM), made by
+  `priv/emoji/sprite.exs` (`priv/emoji/README.md`); stale, the picker falls back to one image
+  each. Where the reader may react, `#topic-live` carries `data-emoji-index` and
+  `preloadEmoji()` fetches the list, warms the sheet and builds the groups while the page is
+  idle (not under Save-Data).
   Who reacted (steward decision, 2026-10-28): a right click, the menu key or a long press on
   the bar (`assets/js/reaction_who.js` runs its `data-who`, a push of `"reaction_who"`)
   loads `Reactions.reactors/1` (each user once, with their emoji; asked only then, so the
