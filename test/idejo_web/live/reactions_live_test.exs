@@ -84,6 +84,28 @@ defmodule IdejoWeb.ReactionsLiveTest do
     assert [%{emoji: "tada"}] = Reactions.summary(message.id)
   end
 
+  # Steward decision, 2026-10-31: the picker loads while the page is idle and draws every
+  # emoji from one sprite sheet, so it opens at once.
+  @tag req: "TP-17"
+  test "TP-17 a reader who may react gets the picker loaded while the page is idle", %{
+    topic: topic
+  } do
+    {:ok, lv, _html} = open(log_in_user(build_conn(), user_fixture()), topic)
+
+    assert has_element?(
+             lv,
+             ~s(#topic-live[data-emoji-index="/emoji-index.json?v=#{Idejo.Emoji.index_version()}"][data-emoji-labels])
+           )
+
+    js = File.read!("assets/js/emoji_picker.js")
+    assert js =~ "export const preloadEmoji"
+    assert js =~ "requestIdleCallback"
+    assert js =~ ~s|span.style.setProperty("--x", cell % sprite.columns)|
+    refute js =~ "cloneNode"
+    assert File.read!("assets/js/app.js") =~ "preloadEmoji()"
+    assert File.read!("assets/css/app.css") =~ "background-image: var(--emoji-sprite);"
+  end
+
   @tag req: "TP-17"
   test "TP-17 the picker's list: every emoji by category, kept by the browser" do
     conn = get(build_conn(), "/emoji-index.json?v=#{Idejo.Emoji.index_version()}")
@@ -99,6 +121,14 @@ defmodule IdejoWeb.ReactionsLiveTest do
     assert length(all) == Enum.sum(for {_, e} <- Idejo.Emoji.groups(), do: length(e))
     assert ["+1", "👍", "/emoji/1f44d.svg" <> _, ["thumbsup"]] = Enum.find(all, &(hd(&1) == "+1"))
 
+    # One sprite sheet draws them all, its cells in the list's order (steward decision,
+    # 2026-10-31), kept for a year.
+    assert %{"sprite" => %{"src" => src, "columns" => 40}} = json_response(conn, 200)
+    assert src == Idejo.Emoji.sprite().src
+    sheet = get(build_conn(), src)
+    assert sheet.status == 200
+    assert get_resp_header(sheet, "cache-control") == ["public, max-age=31536000, immutable"]
+
     # An old address is checked each time instead.
     assert build_conn() |> get("/emoji-index.json") |> get_resp_header("cache-control") ==
              ["no-cache"]
@@ -113,6 +143,8 @@ defmodule IdejoWeb.ReactionsLiveTest do
     {:ok, lv, _html} = open(build_conn(), topic)
     assert has_element?(lv, "#message-#{message.id}-reactions span.reaction[role=img]")
     refute has_element?(lv, "#message-#{message.id}-react")
+    # Nothing to preload for a reader who cannot react.
+    refute has_element?(lv, "#topic-live[data-emoji-index]")
 
     assert build_conn() |> get("/emoji/1f602.svg") |> response(200) =~ "<svg"
     assert build_conn() |> get("/reactions/agree.png") |> response(200)

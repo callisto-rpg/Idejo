@@ -35,7 +35,7 @@ import {InlineLinks, InlineCard} from "./inline_cards"
 import {EditorImages} from "./editor_images"
 import {EditorTabs} from "./editor_tabs"
 import {EditorSuggest} from "./suggest"
-import {EmojiPicker} from "./emoji_picker"
+import {EmojiPicker, preloadEmoji} from "./emoji_picker"
 import {ReactionWho} from "./reaction_who"
 import {Notifier} from "./notifier"
 import {RoleColours} from "./role_colours"
@@ -65,6 +65,9 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
+
+// Topic pages: the + reaction picker loads while the page is idle (emoji_picker.js).
+preloadEmoji()
 
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()

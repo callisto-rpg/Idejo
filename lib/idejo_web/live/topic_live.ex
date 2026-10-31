@@ -1432,7 +1432,15 @@ defmodule IdejoWeb.TopicLive do
       )
 
     ~H"""
-    <div id="topic-live" phx-hook="InlineLinks" data-topic-id={@topic && @topic.id}>
+    <%!-- Where the reader may react, the + picker loads while the page is idle
+         (emoji_picker.js `preloadEmoji`). --%>
+    <div
+      id="topic-live"
+      phx-hook="InlineLinks"
+      data-topic-id={@topic && @topic.id}
+      data-emoji-index={@can_react? && ReactionComponents.picker_index()}
+      data-emoji-labels={@can_react? && ReactionComponents.picker_labels()}
+    >
       <dialog
         :if={@card}
         id="inline-card"

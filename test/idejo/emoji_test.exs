@@ -6,6 +6,7 @@ defmodule Idejo.EmojiTest do
 
   alias Idejo.Emoji
   alias Idejo.Markdown
+  alias Vix.Vips.Image
 
   @tag req: "TP-17"
   test "TP-17 :name: and typed emoji are drawn with Twemoji or the server's own images" do
@@ -53,5 +54,22 @@ defmodule Idejo.EmojiTest do
 
     assert [{"Server", [%{name: "bruh"}]}] = Emoji.groups("bruh")
     assert "joy" in (Emoji.groups(":joy:") |> Enum.flat_map(&elem(&1, 1)) |> Enum.map(& &1.name))
+  end
+
+  # Steward decision, 2026-10-31: the + picker draws every emoji from one sprite sheet.
+  @tag req: "TP-17"
+  test "TP-17 the picker's sprite sheet holds every picker emoji, made from the current images" do
+    assert %{src: "/emoji/sprite.webp?vsn=" <> _, columns: columns, rows: rows} = Emoji.sprite(),
+           "priv/emoji/sprite.json is stale: run mix run --no-start priv/emoji/sprite.exs"
+
+    data = "priv/emoji/sprite.json" |> File.read!() |> Jason.decode!()
+    names = Enum.map(Emoji.picker_images(), &elem(&1, 0))
+    assert data["names"] == names
+    assert data["version"] == Emoji.version()
+    assert rows == div(length(names) + columns - 1, columns)
+
+    {:ok, sheet} = Image.new_from_file("priv/static/emoji/sprite.webp")
+    assert Image.width(sheet) == columns * 36
+    assert Image.height(sheet) == rows * 36
   end
 end

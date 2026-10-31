@@ -13,3 +13,9 @@ To update: download the npm tarball of `gemoji` and the Twemoji repository at a 
 then run `python3 -I priv/emoji/build.py <gemoji>/index.js <twemoji>/assets/svg
 priv/emoji/emoji.json` and copy each entry's `file`.svg into `priv/static/emoji/` (replacing
 the folder). Credits are in `NOTICE` and `REUSE.toml`.
+
+After any change to the emoji or to `../static/reactions/`, make the + picker's sprite sheet
+again: `mix run --no-start priv/emoji/sprite.exs` writes `../static/emoji/sprite.webp` (every
+picker emoji in 36 px cells, in the picker's order) and `sprite.json` (the images' version
+and the names, in order). Until then the picker draws each image on its own, and
+`test/idejo/emoji_test.exs` fails.
