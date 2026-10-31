@@ -374,6 +374,27 @@ defmodule IdejoWeb.ComposerTest do
     # The slow mode hint's room under the timer line stays when the hint goes.
     assert css =~ ".composer-timer:has(.composer-timer-hint) { margin-bottom: 2rem; }"
     refute css =~ ".composer-timer:has(.composer-timer-hint:not([hidden]))"
+
+    # The timer line's room is kept from before it starts to after it goes.
+    assert css =~ "[data-js] .composer-timer-slot { min-height: calc(0.875rem + 2px + 2rem); }"
+  end
+
+  # Steward report, 2026-10-31: on phones the box jumped when the timer line started (the
+  # author's name and the line appeared at the first Enter) and when it ended.
+  @tag req: "GM-02"
+  test "GM-02 the first Enter adds nothing above or below the box", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, lv, _html} = watch(conn, topic)
+    assert has_element?(lv, "#composer-slot .message-head .author-name", "Ada")
+    assert has_element?(lv, "#composer-slot .composer-timer-slot")
+    refute has_element?(lv, "#composer-timer")
+
+    enter(lv, "Hello")
+    [_, mine] = Forum.list_messages(topic)
+    assert has_element?(lv, "#message-#{mine.id} .message-head .author-name", "Ada")
+    assert has_element?(lv, "#message-#{mine.id} .composer-timer-slot #composer-timer")
   end
 
   # Steward decision, 2026-10-25.

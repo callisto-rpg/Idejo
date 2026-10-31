@@ -418,7 +418,10 @@ roles or the permission grid. Every later change must keep it true:
   scrolled to its end, a phone with its keyboard open, would be pulled up), then puts the
   scroll back; `fitHint()` keeps the hint's room below the box, the largest it needed, while
   the box has the focus (`hintRoom`), so the hint coming and going does not move the page;
-  the backdrop is `overflow-anchor: none`; the timer line keeps its hint's room once full;
+  the backdrop is `overflow-anchor: none`; the timer line keeps its hint's room once full,
+  and its `.composer-timer-slot` keeps the line's room (with scripts) before it starts and
+  after it goes; the composer shows the author's name before their first Enter too (steward
+  report, 2026-10-31);
   and a box in view when sent (`inView()`) is kept above the keyboard after the send and the
   server's answer (`reveal()`, the visual viewport, `REVEAL_MARGIN`). Ctrl+Enter
   from anywhere else on the page (steward

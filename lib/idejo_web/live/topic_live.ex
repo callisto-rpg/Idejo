@@ -127,6 +127,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
          |> assign(composing_edit: nil, edit_versioned?: false)
          |> put_messages(Forum.list_messages(topic))
+         |> put_poster_role()
          |> put_draft()
          |> put_first_unread(session["first_unread"])
          |> put_mention_glows()
@@ -303,6 +304,15 @@ defmodule IdejoWeb.TopicLive do
 
     if missing == [], do: socket, else: assign_roles(socket, missing)
   end
+
+  # The composer shows its author's name before their first message here (no jump on the
+  # first Enter, steward report, 2026-10-31), so their role is needed at mount.
+  defp put_poster_role(%{assigns: %{can_post?: true, roles: roles}} = socket) do
+    user = user(socket)
+    if Map.has_key?(roles, user.id), do: socket, else: assign_roles(socket, [user])
+  end
+
+  defp put_poster_role(socket), do: socket
 
   defp assign_roles(socket, missing) do
     roles =
@@ -2299,7 +2309,9 @@ defmodule IdejoWeb.TopicLive do
         data-label-other={gettext("%{count} messages above have been appended", count: "%{count}")}
       >
       </div>
-      <p :if={@mine} class="message-head"><.author_line author={@author} roles={@roles} /></p>
+      <%!-- Before the first Enter too, so the box never moves down when the message opens
+           (steward report, 2026-10-31). --%>
+      <p class="message-head"><.author_line author={@author} roles={@roles} /></p>
       <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
         <p>
           {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
@@ -2353,44 +2365,48 @@ defmodule IdejoWeb.TopicLive do
       <%!-- Until Ctrl+Enter may start a new message (steward decision, 2026-10-23): a thin
            line filling up under the box, to the window's end, or while nobody wrote below, to
            the unanswered message time's. The `ComposerTimer` hook draws it; decorative, as
-           #composer-window says the same in words (AX-03). --%>
-      <div
-        :if={@ready_at}
-        id="composer-timer"
-        class="composer-timer"
-        phx-hook="ComposerTimer"
-        data-start={DateTime.to_unix(@timed.opened_at, :millisecond)}
-        data-end={DateTime.to_unix(@ready_at, :millisecond)}
-        data-now={DateTime.to_unix(@now, :millisecond)}
-        aria-hidden="true"
-        hidden
-        phx-mounted={JS.ignore_attributes(["hidden"])}
-      >
-        <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
-        <%!-- In front of the line while it fills, then in the middle (steward decision,
-             2026-10-25). --%>
-        <span
-          id="composer-timer-bubble"
-          class="tutorial-bubble composer-timer-bubble"
-          phx-update="ignore"
-          data-label-done={gettext("Ctrl+Enter to start new message")}
+           #composer-window says the same in words (AX-03). Its slot keeps the line's room
+           from the start, before a message opens and after it closes, so the page never grows
+           or shrinks with it (steward report, 2026-10-31); a private conversation has none. --%>
+      <div :if={!@private?} class="composer-timer-slot">
+        <div
+          :if={@ready_at}
+          id="composer-timer"
+          class="composer-timer"
+          phx-hook="ComposerTimer"
+          data-start={DateTime.to_unix(@timed.opened_at, :millisecond)}
+          data-end={DateTime.to_unix(@ready_at, :millisecond)}
+          data-now={DateTime.to_unix(@now, :millisecond)}
+          aria-hidden="true"
+          hidden
+          phx-mounted={JS.ignore_attributes(["hidden"])}
         >
-          {gettext("slow mode")}
-        </span>
-        <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
+          <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
+          <%!-- In front of the line while it fills, then in the middle (steward decision,
+             2026-10-25). --%>
+          <span
+            id="composer-timer-bubble"
+            class="tutorial-bubble composer-timer-bubble"
+            phx-update="ignore"
+            data-label-done={gettext("Ctrl+Enter to start new message")}
+          >
+            {gettext("slow mode")}
+          </span>
+          <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
              decision, 2026-10-25). --%>
-        <span
-          id="composer-timer-hint"
-          class="composer-hint composer-timer-hint"
-          phx-update="ignore"
-          data-labels={
-            Jason.encode!([
-              gettext("You cannot start a new message..."),
-              gettext("...but you can continue the one above."),
-              gettext("[Enter] to send always works.")
-            ])
-          }
-        ></span>
+          <span
+            id="composer-timer-hint"
+            class="composer-hint composer-timer-hint"
+            phx-update="ignore"
+            data-labels={
+              Jason.encode!([
+                gettext("You cannot start a new message..."),
+                gettext("...but you can continue the one above."),
+                gettext("[Enter] to send always works.")
+              ])
+            }
+          ></span>
+        </div>
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>
