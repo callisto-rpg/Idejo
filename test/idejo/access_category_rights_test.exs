@@ -198,6 +198,94 @@ defmodule Idejo.AccessCategoryRightsTest do
       query = from(c in Category, where: c.slug == ^news.slug)
       assert Repo.all(Access.where_allowed(query, nil, :view)) == []
     end
+
+    @tag req: "RP-04"
+    test "RP-04 a list of rights needs them all, as can?/3 for each", %{
+      admin: admin,
+      team: team,
+      general: general,
+      news: news
+    } do
+      set!(admin, Access.built_in_role!(:member), news, :start, :deny)
+      set!(admin, team, news, :view, :deny)
+      set!(admin, Access.built_in_role!(:member), news, :view, :deny)
+
+      for user <- [user_fixture(), holding(team), user_with_role_fixture(:moderator), admin] do
+        expected =
+          for c <- [general, news],
+              Access.can?(user, :start, c) and Access.can?(user, :view, c),
+              do: c.slug
+
+        listed =
+          from(c in Category, order_by: c.position)
+          |> Access.where_allowed(user, [:start, :view])
+          |> Repo.all()
+          |> Enum.map(& &1.slug)
+
+        assert listed == expected
+      end
+    end
+  end
+
+  describe "filter_allowed/3" do
+    # The queries this test process makes while `fun` runs.
+    defp queries(fun) do
+      me = self()
+      ref = make_ref()
+      handler = "access-queries-#{inspect(ref)}"
+
+      :telemetry.attach(
+        handler,
+        [:idejo, :repo, :query],
+        fn _, _, _, _ -> if self() == me, do: send(me, {ref, :query}) end,
+        nil
+      )
+
+      result = fun.()
+      :telemetry.detach(handler)
+      {result, count_queries(ref, 0)}
+    end
+
+    defp count_queries(ref, n) do
+      receive do
+        {^ref, :query} -> count_queries(ref, n + 1)
+      after
+        0 -> n
+      end
+    end
+
+    @tag req: "RP-04"
+    test "RP-04 filter_allowed/3 gives every user the answer can?/3 gives, in a few queries", %{
+      admin: admin,
+      team: team,
+      general: general,
+      news: news
+    } do
+      set!(admin, Access.built_in_role!(:member), news, :view, :deny)
+      set!(admin, team, news, :view, :allow)
+      set!(admin, Access.built_in_role!(:guest), general, :view, :deny)
+
+      users =
+        [unconfirmed_user_fixture(), holding(team), user_with_role_fixture(:moderator), admin] ++
+          for(_ <- 1..6, do: user_fixture())
+
+      for category <- [general, news], right <- Access.rights() do
+        {allowed, count} = queries(fn -> Access.filter_allowed(users, right, category) end)
+        assert allowed == Enum.filter(users, &Access.can?(&1, right, category))
+        # One for everyone's roles, then one per set of roles: here five, for ten users.
+        assert count <= 6
+      end
+
+      assert Access.filter_allowed(users, :view, nil) == []
+      assert Access.filter_allowed([], :view, general) == []
+    end
+
+    @tag req: "RP-04"
+    test "RP-04 a permission check looks at the user's roles once", %{general: general} do
+      member = user_fixture()
+      {true, count} = queries(fn -> Access.can?(member, :post, general) end)
+      assert count == 2
+    end
   end
 
   describe "set_permission/5" do
