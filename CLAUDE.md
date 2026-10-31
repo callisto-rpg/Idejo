@@ -1066,7 +1066,10 @@ roles or the permission grid. Every later change must keep it true:
   `delete` activity, open messages' timers stopped). The delete is its own form with a
   required confirmation box (`confirm=yes`, checked by `TopicModerationController`). Both
   broadcast `{:topic_changed, id}`. A new table that references topics or messages needs an
-  `on_delete` that lets this work.
+  `on_delete` that lets this work, and an index that starts with the referring column: each
+  deleted message makes PostgreSQL look its references up, reading the whole table without
+  one (a topic of 2,000 messages took 42 s before `messages.reply_to_id` had one).
+  `read_positions.last_read_message_id` has none: it changes at every `mark_read/2`.
 - **Move a topic** (TP-15): `Forum.move_topic(moderator, topic, target, reason)` needs
   `:moderate` in both categories (`Forum.list_move_targets/2`), never into the Archive; open
   messages stay open and links keep working. Logged under the old category with `from`/`to`
