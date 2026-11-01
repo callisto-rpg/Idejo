@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import {syncToggles} from "./toggles"
+
 // The header's button that hides and shows the categories sidebar. On wide screens the
 // sidebar sits beside the page and the choice is remembered (theme.js applies it before
 // the first paint); on narrow ones it opens over the page, for the moment only.
@@ -195,8 +197,10 @@ const setFolded = (category, folded) => {
 }
 
 export function applyFolds() {
-  // A fresh sidebar: the button a bubble pointed at is gone.
+  // A fresh sidebar: the button a bubble pointed at is gone, and its theme toggle (shown to
+  // visitors on phones) needs its state (AX-01).
   hideBubble()
+  syncToggles()
   syncRoll()
   const ids = foldedIds()
   document.querySelectorAll("#sidebar .sidebar-category").forEach(category => {

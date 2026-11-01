@@ -1274,6 +1274,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-bubbles")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-choice="on"
         aria-label={gettext("Show all tutorial bubbles")}
       >
@@ -1282,6 +1283,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-bubbles")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-choice="simple"
         aria-label={gettext("Show only the Enter to send and Sent! bubbles")}
       >
@@ -1290,6 +1292,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-bubbles")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-choice="off"
         aria-label={gettext("Turn tutorial bubbles off")}
       >
@@ -1302,7 +1305,8 @@ defmodule IdejoWeb.Layouts do
   @doc """
   Provides dark vs light theme toggle based on themes defined in app.css.
 
-  See <head> in root.html.heex which applies the theme before page load.
+  See <head> in root.html.heex which applies the theme before page load. The chosen button
+  gets `aria-pressed` from `assets/js/toggles.js` (AX-01), kept across patches.
   """
   attr :class, :any, default: nil
 
@@ -1312,6 +1316,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-theme")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-phx-theme="system"
         aria-label={gettext("Use the system's theme")}
       >
@@ -1320,6 +1325,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-theme")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-phx-theme="light"
         aria-label={gettext("Use the light theme")}
       >
@@ -1328,6 +1334,7 @@ defmodule IdejoWeb.Layouts do
       <button
         type="button"
         phx-click={JS.dispatch("phx:set-theme")}
+        phx-mounted={JS.ignore_attributes(["aria-pressed"])}
         data-phx-theme="dark"
         aria-label={gettext("Use the dark theme")}
       >
