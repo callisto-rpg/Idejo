@@ -983,7 +983,9 @@ roles or the permission grid. Every later change must keep it true:
   by tag, Rules & Roles and Help sit above its categories; the `.sidebar-roll` button at the
   right of All categories (steward decision, 2026-10-28; `aria-pressed`, hidden without
   scripts) rolls the other three into their icons beside it (names `.sidebar-link-label`,
-  visually hidden, and in sidebar bubbles), remembered in `localStorage`
+  visually hidden, and in sidebar bubbles) and shortens All categories to "All"
+  (`.sidebar-all-rolled`, `aria-hidden`, `pgettext("categories", "All")`; its full name
+  `.sidebar-all-label` stays for screen readers; steward decision, 2026-11-01), remembered in `localStorage`
   (`idejo:quicklinks`) and applied by theme.js before paint as `data-quicklinks="rolled"` on
   `<html>`, so swapped sidebars keep it (`applyFolds()` syncs the button). The home page shows no title (its `<h1>`
   is `sr-only`: the header names the server) and its sections open with `.section-divider`

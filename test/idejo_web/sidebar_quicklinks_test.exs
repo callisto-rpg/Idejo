@@ -9,8 +9,13 @@ defmodule IdejoWeb.SidebarQuicklinksTest do
     doc = build_conn() |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
     links = LazyHTML.query(doc, "#sidebar-quicklinks")
 
-    assert links |> LazyHTML.query("a.sidebar-all[href='/']") |> LazyHTML.text() =~
-             "All categories"
+    # Rolled, it reads "All" (steward decision, 2026-11-01), its full name kept for screen
+    # readers: the stylesheet shows one label or the other.
+    all = LazyHTML.query(links, "a.sidebar-all[href='/']")
+    assert all |> LazyHTML.query(".sidebar-all-label") |> LazyHTML.text() == "All categories"
+    rolled = LazyHTML.query(all, ".sidebar-all-rolled")
+    assert LazyHTML.text(rolled) == "All"
+    assert LazyHTML.attribute(rolled, "aria-hidden") == ["true"]
 
     # The three links, each with its name in a label the stylesheet hides once rolled.
     for {id, name} <- [
@@ -32,6 +37,9 @@ defmodule IdejoWeb.SidebarQuicklinksTest do
     css = File.read!("assets/css/app.css")
     assert css =~ ".sidebar-roll { display: none; }"
     assert css =~ ~s([data-quicklinks="rolled"] {)
+    assert css =~ ".sidebar-all-rolled { display: none; }"
+    assert css =~ "& .sidebar-all-rolled { display: inline; }"
+    assert css =~ "& .sidebar-link-label,\n    & .sidebar-all-label {"
 
     # Remembered by the browser, applied before the first paint, kept when the sidebar is
     # swapped for a fresh one.
