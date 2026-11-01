@@ -360,11 +360,13 @@ defmodule IdejoWeb.Layouts do
         <%!-- The button at the right of All categories rolls the other links up into their
              icons, beside it, and down again (steward decision, 2026-10-28; sidebar.js,
              remembered and applied before paint by theme.js). Without scripts it is hidden
-             and the links show in full. --%>
+             and the links show in full. Rolled, All categories reads "All", to take less
+             room, its full name kept for screen readers (steward decision, 2026-11-01). --%>
         <div class="sidebar-quicklinks" id="sidebar-quicklinks">
           <a href={~p"/"} class="sidebar-link sidebar-all">
             <.icon name="hero-squares-2x2" class="size-4" />
-            {gettext("All categories")}
+            <span class="sidebar-all-label">{gettext("All categories")}</span>
+            <span class="sidebar-all-rolled" aria-hidden="true">{pgettext("categories", "All")}</span>
           </a>
           <div id="sidebar-quicklinks-more" class="sidebar-quicklinks-more">
             <%!-- TP-19 --%>

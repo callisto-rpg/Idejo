@@ -835,12 +835,17 @@
     &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
   }
   @media (prefers-reduced-motion: reduce) { .sidebar-roll::after { transition: none; } }
+  /* Rolled, All categories reads "All" (steward decision, 2026-11-01); screen readers keep
+     its full name. */
+  .sidebar-all-rolled { display: none; }
   [data-quicklinks="rolled"] {
     & .sidebar-quicklinks { grid-template-columns: minmax(0, 1fr) auto auto; }
     & .sidebar-quicklinks-more { display: flex; grid-column: 2; grid-row: 1; }
     & .sidebar-roll { grid-column: 3; }
     & .sidebar-quicklinks-more .sidebar-link { padding: 0.4375rem; }
-    & .sidebar-link-label {
+    & .sidebar-all-rolled { display: inline; }
+    & .sidebar-link-label,
+    & .sidebar-all-label {
       position: absolute;
       width: 1px;
       height: 1px;
