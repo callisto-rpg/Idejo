@@ -100,7 +100,8 @@ by migration; a database trigger refuses to delete, rename or un-built-in them. 
 `position` ranks higher. Guest and member are implicit, never stored in `user_roles`: visitors
 and users with an unverified email act as guest (an unverified owner or administrator keeps
 that role too); every verified user holds member on top of their other roles
-(`Idejo.Access.roles_of/1`). Nobody is ever without a role.
+(`Idejo.Access.roles_of/1`). Nobody is ever without a role, except server accounts
+(automessages' senders, `status: "system"`), which hold none and show none.
 
 Role editor (RP-02, **Admin → Roles**): custom roles have a name (unique ignoring case, also
 against built-in names) and an optional `#rrggbb` colour, and can be renamed, moved one place

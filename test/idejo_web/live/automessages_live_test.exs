@@ -117,6 +117,13 @@ defmodule IdejoWeb.AutomessagesLiveTest do
     assert author_id == sender.id
     assert render(view) =~ "Be kind."
     assert render(view) =~ sender.username
+    # A server account holds no role, so none shows next to its name (not "Guest").
+    assert Idejo.Access.roles_of(sender) == []
+
+    [_, posted] = Forum.list_messages(topic)
+    assert has_element?(view, "#message-#{posted.id}-author", sender.username)
+    refute has_element?(view, "#message-#{posted.id}-author .author-role")
+    refute render(view) =~ "Guest"
 
     assert render_hook(view, "automessage", %{"name" => name}) =~
              "It can be used again in 3 minutes."
