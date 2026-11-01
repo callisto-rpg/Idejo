@@ -190,8 +190,9 @@ roles or the permission grid. Every later change must keep it true:
   requirements table by `Idejo.Requirements`) has a tagged test, each tagged test starts with
   its ID, and every tagged ID exists in a sheet. IDs whose tests come with a later PR are in
   its `@pending` (remove the ID when its tests land, or the test fails); process-only IDs
-  (DV-05, LI-08) are in `@by_review`, and NF-04, checked by the load test, in
-  `@by_load_test`. Requirements met by repository files (SP-01, LI-01,
+  (DV-05, LI-08) are in `@by_review`, NF-04, checked by the load test, in
+  `@by_load_test`, and NF-03, measured in a browser (`docs/page-speed.md`, with
+  `load/page_speed_seed.exs`), in `@by_measurement`. Requirements met by repository files (SP-01, LI-01,
   LI-05, DV-01, DV-03, DV-04, DV-06) are tested in `test/idejo/repository_test.exs`.
 - **Async tests and shared rows**: async tests run side by side, each in its own sandbox
   transaction, and a lock taken there lasts until the test ends (`Forum` locks categories,
@@ -1408,6 +1409,7 @@ mix deps.audit && mix hex.audit
 reuse lint                         # SPDX headers (pip install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
 load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
+# page speed (NF-03): Lighthouse on the production build, steps in docs/page-speed.md
 ```
 
 Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:
