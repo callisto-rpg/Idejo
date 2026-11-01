@@ -155,7 +155,7 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
         {gettext("Automessages")}
         <:subtitle>
           {gettext(
-            "Commands for moderators: typing !command in a topic's composer has the server post its text there, sent by the account you choose. Only moderators of the topic's category see them."
+            "Commands for moderators: typing !command in a topic's composer has the server post its text there, sent by the account you choose. Only moderators of the topic's category see them, unless you allow everyone."
           )}
         </:subtitle>
       </.header>
@@ -171,6 +171,14 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
           <span class="font-mono font-semibold">!{automessage.command}</span>
           <UserComponents.avatar user={automessage.sender} />
           <span>{automessage.sender.username}</span>
+          <span :if={automessage.everyone} class="badge badge-sm">{gettext("Everyone")}</span>
+          <span :if={automessage.cooldown_minutes > 0} class="badge badge-sm">
+            {ngettext(
+              "Waits 1 minute",
+              "Waits %{count} minutes",
+              automessage.cooldown_minutes
+            )}
+          </span>
           <span :if={@editing && @editing.id == automessage.id} class="badge badge-sm">
             {gettext("Editing")}
           </span>
@@ -219,6 +227,29 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
             preview_html={@preview_html}
           />
           <.input
+            field={@form[:everyone]}
+            type="checkbox"
+            label={gettext("Allow everyone to use this command")}
+          />
+          <p class="text-sm opacity-70 mb-2">
+            {gettext(
+              "On, anyone who may post in a topic can use it there; off, only its category's moderators."
+            )}
+          </p>
+          <.input
+            field={@form[:cooldown_minutes]}
+            type="number"
+            min="0"
+            max={Idejo.Messages.Automessage.max_cooldown()}
+            label={gettext("Wait before it can be used again (minutes)")}
+            required
+          />
+          <p class="text-sm opacity-70 mb-2">
+            {gettext(
+              "Once posted in a topic, the command waits this long before anyone can use it there again. 0: no wait."
+            )}
+          </p>
+          <.input
             field={@form[:sender_username]}
             type="text"
             label={gettext("Sender's username")}
@@ -226,7 +257,7 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
           />
           <p class="text-sm opacity-70 mb-2">
             {gettext(
-              "A server account with this name sends the message. Automessages with the same name share its account and picture; a new one gets the Idejo picture."
+              "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the Idejo picture."
             )}
           </p>
           <div class="flex items-center gap-3 mb-4">

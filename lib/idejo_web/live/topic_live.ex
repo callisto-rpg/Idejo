@@ -196,9 +196,8 @@ defmodule IdejoWeb.TopicLive do
 
   # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
   # would leave it.
-  # The automessages a moderator of the topic's category may send there (none for others).
-  defp automessages(user, topic),
-    do: if(Automessages.may_send?(user, topic), do: Automessages.commands(), else: [])
+  # The automessages the viewer may send there (steward decisions, 2026-11-01).
+  defp automessages(user, topic), do: Automessages.commands_for(user, topic)
 
   defp can_fork?(_user, %{private: true}), do: false
   defp can_fork?(user, _topic), do: Forum.list_startable_categories(user) != []
@@ -1181,12 +1180,27 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  # An automessage's `!command` (steward decision, 2026-11-01): the server posts its text,
-  # as its sender; the moderator's own text stays in the composer.
+  # An automessage's `!command` (steward decisions, 2026-11-01): the server posts its text,
+  # as its sender; the user's own text stays in the composer.
   def handle_event("automessage", %{"name" => name}, socket) when is_binary(name) do
     case Automessages.post(user(socket), socket.assigns.topic, name) do
       {:ok, _message} ->
         {:noreply, socket}
+
+      {:error, {:cooldown, until}} ->
+        minutes = max(div(DateTime.diff(until, DateTime.utc_now()) + 59, 60), 1)
+
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           ngettext(
+             "!%{command} was posted here lately. It can be used again in a minute.",
+             "!%{command} was posted here lately. It can be used again in %{count} minutes.",
+             minutes,
+             command: name
+           )
+         )}
 
       {:error, :rate_limited} ->
         {:noreply,

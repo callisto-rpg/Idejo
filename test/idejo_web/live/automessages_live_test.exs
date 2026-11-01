@@ -43,8 +43,10 @@ defmodule IdejoWeb.AutomessagesLiveTest do
     admin: admin
   } do
     {:ok, lv, html} = live(log_in_user(conn, admin), ~p"/admin/automessages")
-    assert html =~ "No automessages yet."
+    # The defaults (steward decision, 2026-11-01).
+    assert html =~ "!tutorial-message"
     username = unique_username("bot")
+    name = "faq-#{System.unique_integer([:positive])}"
 
     lv
     |> file_input("#automessage-form", :picture, [
@@ -55,14 +57,24 @@ defmodule IdejoWeb.AutomessagesLiveTest do
     html =
       lv
       |> form("#automessage-form",
-        automessage: %{command: "!faq", body_md: "See /help.", sender_username: username}
+        automessage: %{
+          command: "!" <> name,
+          body_md: "See /help.",
+          sender_username: username,
+          everyone: "true",
+          cooldown_minutes: "5"
+        }
       )
       |> render_submit()
 
-    assert html =~ "Automessage !faq saved."
-    assert [%{command: "faq", sender: sender}] = Automessages.list()
+    assert html =~ "Automessage !#{name} saved."
+
+    assert %{sender: sender, everyone: true, cooldown_minutes: 5} =
+             Enum.find(Automessages.list(), &(&1.command == name))
+
     assert sender.username == username and sender.avatar_id
-    assert has_element?(lv, "#automessages li", "!faq")
+    assert has_element?(lv, "#automessages li", "!#{name}")
+    assert has_element?(lv, "#automessages li", "Waits 5 minutes")
 
     html =
       lv
@@ -80,25 +92,33 @@ defmodule IdejoWeb.AutomessagesLiveTest do
     member: member,
     topic: topic
   } do
+    name = "hello-#{System.unique_integer([:positive])}"
+
     {:ok, automessage} =
       Automessages.create(admin, %{
-        "command" => "rules",
+        "command" => name,
         "body_md" => "Be kind.",
-        "sender_username" => unique_username("bot")
+        "sender_username" => unique_username("bot"),
+        "cooldown_minutes" => "3"
       })
 
     {:ok, view, _html} = watch(conn, member, topic)
+    refute "!#{name}" in commands(view)
     refute "!rules" in commands(view)
 
     moderator = user_with_role_fixture(:moderator)
     {:ok, view, _html} = watch(build_conn(), moderator, topic)
+    assert "!#{name}" in commands(view)
     assert "!rules" in commands(view)
 
-    render_hook(view, "automessage", %{"name" => "rules"})
+    render_hook(view, "automessage", %{"name" => name})
     sender = Accounts.get_user!(automessage.sender_id)
     assert [_, %{author_id: author_id}] = Forum.list_messages(topic)
     assert author_id == sender.id
     assert render(view) =~ "Be kind."
     assert render(view) =~ sender.username
+
+    assert render_hook(view, "automessage", %{"name" => name}) =~
+             "It can be used again in 3 minutes."
   end
 end

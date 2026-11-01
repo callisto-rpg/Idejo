@@ -4,8 +4,9 @@
 defmodule IdejoWeb.ComposerCommands do
   @moduledoc """
   The composer's `!` commands (steward decision, 2026-10-23), in one place: the list the
-  `Suggest` class shows after `!` (`for_composer/2`) and the Help page (`all/0`). A new
-  command is added here, then handled in the `Composer` hook (`assets/js/composer.js`).
+  `Suggest` class shows after `!` (`for_composer/3`) and the Help page (`all/0`). A new
+  command is added here, then handled in the `Composer` hook (`assets/js/composer.js`), and
+  in the `!tutorial-commands` default (`Idejo.Messages.Automessages.Defaults`).
   """
   use Gettext, backend: IdejoWeb.Gettext
 
@@ -61,8 +62,8 @@ defmodule IdejoWeb.ComposerCommands do
 
   @doc """
   The commands an author may use in a composer: `!image` with uploads allowed, `!new-topic`
-  when they may start a topic somewhere, then the `automessages` a moderator may send there
-  (`Idejo.Messages.Automessages.commands/0`; steward decision, 2026-11-01), marked `auto`
+  when they may start a topic somewhere, then the `automessages` they may send there
+  (`Idejo.Messages.Automessages.commands_for/2`; steward decisions, 2026-11-01), marked `auto`
   for the `Composer` hook. Only what the list needs.
   """
   @spec for_composer(boolean(), boolean(), [%{name: String.t(), sender: String.t()}]) :: [map()]

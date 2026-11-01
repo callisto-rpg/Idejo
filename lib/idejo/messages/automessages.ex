@@ -3,21 +3,24 @@
 
 defmodule Idejo.Messages.Automessages do
   @moduledoc """
-  Automessages (steward decision, 2026-11-01): administrators make `!command`s in **Admin →
+  Automessages (steward decisions, 2026-11-01): administrators make `!command`s in **Admin →
   Automessages**, each with a text and a sender; a moderator of a topic's category who
-  types the command in the composer has the server post that text there (`post/3`).
+  types the command in the composer has the server post that text there (`post/3`). With
+  "Allow everyone to use this command" (`everyone`), anyone who may post there may too.
+  After a post, the command waits its `cooldown_minutes` in that topic, for everyone.
+  Every install starts with the ones in `Idejo.Messages.Automessages.Defaults`.
 
   The sender is a server account: a `users` row with `status: "system"`, found or made from
   the username the form gives (`idejo` by default), whose display name is that username. It
   never signs in (an email that cannot be typed, a random password, never confirmed) and,
   not being active, is never mentioned, suggested, notified or emailed. Automessages with
-  the same username share the account and its picture; a new account gets the default
-  picture (`priv/static/images/idejo-pfp.png`) until one is uploaded. A username a member
+  the same username share the account and its picture; an account without one shows the
+  Idejo picture (`Idejo.Uploads.avatar_url/1`) until one is uploaded. A username a member
   already has is refused. Accounts stay when no automessage names them any more: their
   messages keep their author.
 
   Every change is audited (`automessage.create|update|delete`, SP-06); every post is logged
-  as the moderator's (`message.automessage`, MO-03).
+  as its user's (`message.automessage`, MO-03), so moderators see who used one.
   """
   import Ecto.Query
 
@@ -27,6 +30,7 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
+  alias Idejo.Forum
   alias Idejo.Forum.Category
   alias Idejo.Forum.Topic
   alias Idejo.Messages
@@ -50,26 +54,45 @@ defmodule Idejo.Messages.Automessages do
   @spec default_username() :: String.t()
   def default_username, do: @default_username
 
-  @doc "The picture a new server account gets."
-  @spec default_picture() :: Path.t()
-  def default_picture, do: Application.app_dir(:idejo, "priv/static/images/idejo-pfp.png")
-
   @doc "Every automessage, by command, with its sender."
   @spec list() :: [Automessage.t()]
   def list do
     Repo.all(from a in Automessage, order_by: a.command, preload: :sender)
   end
 
-  @doc "The commands' names and what they post, for the composer's list (moderators only)."
-  @spec commands() :: [%{name: String.t(), sender: String.t()}]
-  def commands do
-    Repo.all(
-      from a in Automessage,
-        join: s in assoc(a, :sender),
-        order_by: a.command,
-        select: %{name: a.command, sender: s.username}
-    )
+  @doc """
+  The commands `user` may send in `topic`, with their senders' usernames, for the composer's
+  list: every one for a moderator of its category, the `everyone` ones for anyone else who
+  may post there, none in a private conversation or a locked or archived topic.
+  """
+  @spec commands_for(User.t() | nil, Topic.t()) :: [%{name: String.t(), sender: String.t()}]
+  def commands_for(user, topic) do
+    case who(user, topic) do
+      :none ->
+        []
+
+      who ->
+        Repo.all(
+          from a in Automessage,
+            join: s in assoc(a, :sender),
+            where: ^(who == :moderator) or a.everyone,
+            order_by: a.command,
+            select: %{name: a.command, sender: s.username}
+        )
+    end
   end
+
+  # :moderator (every automessage), :poster (the `everyone` ones) or :none.
+  defp who(%User{} = user, %Topic{state: "open", private: false, category_id: id} = topic)
+       when is_binary(id) do
+    cond do
+      Access.can?(user, :moderate, %Category{id: id}) -> :moderator
+      Forum.can_post?(user, topic) -> :poster
+      true -> :none
+    end
+  end
+
+  defp who(_user, _topic), do: :none
 
   @doc "Returns a changeset for an automessage's form."
   def change(automessage \\ %Automessage{}, attrs \\ %{}) do
@@ -108,7 +131,6 @@ defmodule Idejo.Messages.Automessages do
            {:ok, saved} <-
              changeset
              |> Changeset.put_change(:sender_id, sender.id)
-             |> Changeset.put_change(:body_html, to_html(changeset, admin))
              |> Repo.insert_or_update(),
            saved = %{saved | sender: sender},
            {:ok, _} <- audit(admin, action, automessage, saved) do
@@ -169,9 +191,8 @@ defmodule Idejo.Messages.Automessages do
     {:ok, user}
   end
 
-  # The picture uploaded with the form, else the default one for an account without any.
-  defp set_picture(%User{avatar_id: id} = sender, nil) when id != nil, do: {:ok, sender}
-  defp set_picture(sender, nil), do: Accounts.set_avatar(sender, default_picture())
+  # The picture uploaded with the form, if any.
+  defp set_picture(sender, nil), do: {:ok, sender}
   defp set_picture(sender, picture), do: Accounts.set_avatar(sender, picture)
 
   @doc "Deletes an automessage, as `admin`. Its sender account stays, with its messages."
@@ -195,7 +216,7 @@ defmodule Idejo.Messages.Automessages do
 
   defp snapshot(%Automessage{sender: sender} = automessage) do
     automessage
-    |> Audit.snapshot([:command, :body_md])
+    |> Audit.snapshot([:command, :body_md, :everyone, :cooldown_minutes])
     |> Map.put("sender", sender && sender.username)
   end
 
@@ -203,42 +224,35 @@ defmodule Idejo.Messages.Automessages do
   @spec preview(String.t(), User.t()) :: String.t()
   def preview(markdown, %User{} = admin), do: Body.to_html(markdown, author: admin)
 
-  defp to_html(changeset, admin), do: preview(Changeset.get_field(changeset, :body_md), admin)
-
   @doc """
-  Whether `user` may send automessages in `topic`: the `:moderate` right in its category
-  (owners and administrators always), in an open topic. Never in a private conversation.
-  """
-  @spec may_send?(User.t() | nil, Topic.t()) :: boolean()
-  def may_send?(%User{} = user, %Topic{state: "open", private: false, category_id: id})
-      when is_binary(id),
-      do: Access.can?(user, :moderate, %Category{id: id})
+  Posts the automessage `command` (without `!`) in `topic`, for `user`: a closed message
+  by its sender, notified like any new message (NO-01) and logged as `user`'s
+  (`message.automessage`, MO-03). Its inline links (TP-10) resolve as `user` may view them,
+  but `+role` tags as the sender's, which tag any role (`Idejo.Access.mentionable_roles/1`):
+  the administrators wrote the text. Then broadcast (TP-04).
 
-  def may_send?(_user, _topic), do: false
-
-  @doc """
-  Posts the automessage `command` (without `!`) in `topic`, for `moderator`: a closed
-  message by its sender, with its inline links (TP-10) resolved as the moderator may view
-  them, notified like any new message (NO-01) and logged as the moderator's
-  (`message.automessage`, MO-03). Then broadcast (TP-04).
-
-  `{:error, :forbidden}` without `may_send?/2`, `{:error, :not_found}` for an unknown
-  command, `{:error, :rate_limited}` past the moderator's `:new_message` limit.
+  `{:error, :forbidden}` when `commands_for/2` does not offer it (or it is unknown),
+  `{:error, {:cooldown, until}}` while its wait in this topic runs, `{:error, :rate_limited}`
+  past the user's `:new_message` limit.
   """
   @spec post(User.t(), Topic.t(), String.t()) ::
-          {:ok, Message.t()} | {:error, :forbidden | :not_found | :rate_limited | term()}
-  def post(%User{} = moderator, %Topic{} = topic, command) when is_binary(command) do
+          {:ok, Message.t()}
+          | {:error, :forbidden | :rate_limited | {:cooldown, DateTime.t()} | term()}
+  def post(%User{} = user, %Topic{} = topic, command) when is_binary(command) do
+    now = DateTime.utc_now()
+
     result =
       Repo.transact(fn ->
-        # Locked, so a lock or a move cannot slip in between the check and the insert.
+        # Locked, so a lock or a move cannot slip in between the check and the insert, and
+        # two uses of one command cannot both pass its wait.
         topic = Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
         automessage = Repo.get_by(Automessage, command: command)
 
         cond do
-          not may_send?(moderator, topic) -> {:error, :forbidden}
-          automessage == nil -> {:error, :not_found}
-          RateLimit.check(:new_message, moderator.id) != :ok -> {:error, :rate_limited}
-          true -> insert(moderator, topic, Repo.preload(automessage, :sender))
+          not allowed?(who(user, topic), automessage) -> {:error, :forbidden}
+          until = waits_until(automessage, topic, now) -> {:error, {:cooldown, until}}
+          RateLimit.check(:new_message, user.id) != :ok -> {:error, :rate_limited}
+          true -> insert(user, topic, Repo.preload(automessage, :sender), now)
         end
       end)
 
@@ -246,8 +260,29 @@ defmodule Idejo.Messages.Automessages do
     result
   end
 
-  defp insert(moderator, topic, %Automessage{sender: sender} = automessage) do
-    now = DateTime.utc_now()
+  defp allowed?(_who, nil), do: false
+  defp allowed?(:moderator, _automessage), do: true
+  defp allowed?(:poster, %Automessage{everyone: everyone}), do: everyone
+  defp allowed?(:none, _automessage), do: false
+
+  # When the command may be used again in the topic, or nil: now. Deleted messages do not
+  # hold it back.
+  defp waits_until(%Automessage{cooldown_minutes: 0}, _topic, _now), do: nil
+
+  defp waits_until(%Automessage{id: id, cooldown_minutes: minutes}, topic, now) do
+    since = DateTime.add(now, -minutes, :minute)
+
+    Repo.one(
+      from m in Message,
+        where:
+          m.automessage_id == ^id and m.topic_id == ^topic.id and m.opened_at > ^since and
+            is_nil(m.deleted_at),
+        select: max(m.opened_at)
+    )
+    |> then(&(&1 && DateTime.add(&1, minutes, :minute)))
+  end
+
+  defp insert(user, topic, %Automessage{sender: sender} = automessage, now) do
     id = Federation.generate_id()
 
     with {:ok, message} <-
@@ -256,12 +291,14 @@ defmodule Idejo.Messages.Automessages do
              uri: Federation.uri(:message, id),
              topic_id: topic.id,
              author_id: sender.id,
+             automessage_id: automessage.id,
              opened_at: now,
              closes_at: now,
              closed_at: now
            }
            |> Message.closed_changeset(%{body_md: automessage.body_md},
-             author: moderator,
+             author: user,
+             roles_as: sender,
              topic_id: topic.id
            )
            |> Repo.insert(),
@@ -272,7 +309,7 @@ defmodule Idejo.Messages.Automessages do
          {:ok, _} <- Idejo.Notifications.notify_new(message, topic),
          {:ok, _} <- Repo.insert(activity(sender, message, topic)),
          {:ok, _} <-
-           Moderation.record(moderator, "message.automessage", message,
+           Moderation.record(user, "message.automessage", message,
              details: %{"command" => automessage.command, "sender" => sender.username}
            ) do
       {:ok, message}

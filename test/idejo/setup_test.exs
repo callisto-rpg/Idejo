@@ -125,7 +125,8 @@ defmodule Idejo.SetupTest do
     assert "should be at least 12 character(s)" in errors_on(owner).password
 
     assert Setup.needed?()
-    assert Repo.aggregate(Idejo.Accounts.User, :count) == 0
+    # Only the migrations' server account (Automessages.Defaults).
+    assert Repo.all(from u in Idejo.Accounts.User, select: u.status) == ["system"]
     assert Audit.list_entries() == []
   end
 

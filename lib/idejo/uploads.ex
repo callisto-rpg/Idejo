@@ -94,8 +94,12 @@ defmodule Idejo.Uploads do
     end
   end
 
-  @doc "The public path of a user's avatar, or `nil` when they have none (AC-04)."
+  @doc """
+  The public path of a user's avatar, or `nil` when they have none (AC-04). A server account
+  without one (`Idejo.Messages.Automessages`) shows the Idejo picture.
+  """
   @spec avatar_url(User.t()) :: String.t() | nil
+  def avatar_url(%User{avatar_id: nil, status: "system"}), do: "/images/idejo-pfp.png"
   def avatar_url(%User{avatar_id: nil}), do: nil
   def avatar_url(%User{avatar_id: id}), do: "/uploads/#{id}.webp"
 
