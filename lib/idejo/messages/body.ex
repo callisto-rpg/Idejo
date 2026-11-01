@@ -20,6 +20,8 @@ defmodule Idejo.Messages.Body do
 
   The context says who writes and where: `author:` (a user) or `author_id:`, and
   `category_id:` or `topic_id:`. They are only loaded when the text has something to link.
+  `roles_as:` (a user) resolves `+role` tags as that user instead: an automessage's sender
+  (`Idejo.Messages.Automessages`), as its notifications do.
   """
   import Ecto.Query
 
@@ -94,7 +96,7 @@ defmodule Idejo.Messages.Body do
         &{{:user, String.downcase(&1.username)}, {"/u/" <> &1.id, nil}}
       ) ++
         Enum.map(
-          roles(author, slugs(references, :role)),
+          roles(context[:roles_as] || author, slugs(references, :role)),
           &{{:role, Access.role_slug(&1)}, {"/r/" <> Access.role_slug(&1), "+" <> role_label(&1)}}
         ) ++
         Enum.map(topics(author, slugs(references, :topic)), fn topic ->

@@ -108,6 +108,33 @@ icon** (on by default; off, only the text shows) and a **Text (Markdown)** writt
 message editor, with its **Preview**. **Edit** changes one, the arrows change their
 order, **Delete** removes one.
 
+### Automessages
+
+Ready-made messages that the server posts when someone types their command. Every server
+starts with three, which you can change or delete like your own: `!tutorial-message` (how
+Enter, Ctrl+Enter and `!image` work), `!tutorial-commands` (every `!` command) and `!rules`
+(general rules to adapt), each ending with a link to the Help page or Rules & Roles.
+
+Each automessage has a **Command (typed as !command)**: letters, digits, `-` and `_`, not
+one of the composer's own commands (`!image`, `!new-topic`, `!poll`, `!schedule`,
+`!spoiler`) or another automessage's. Its **Message (Markdown)** is what gets posted.
+**Allow everyone to use this command** lets anyone who may post in a topic use it there;
+off, only moderators of the topic's category (and you) can. **Wait before it can be used
+again (minutes)** holds the command back in a topic once it was posted there, for
+everybody (0: no wait; a deleted one does not count). **Sender's username** (`idejo`
+unless you change it) and **Sender's picture (optional)** are the account it comes from.
+That account belongs to the server: nobody signs in to it, and it is never mentioned,
+suggested or notified. Automessages with the same sender's username share the account and
+its picture; until you upload one, it shows the Idejo picture. A name a member already has
+is refused.
+
+Those who may use them see the commands after `!` in the composer: choosing `!rules` posts
+the `rules` text in the topic as its sender, while what they were writing stays in the
+box. Each use is in the moderation log as **Had the server post an automessage**, with the
+name of whoever used it. Links in the text are resolved as that person may see them;
+`+role` tags notify the role's members whoever sends it, since you wrote the text.
+**Edit** changes one, **Delete** removes it (what it posted stays).
+
 ### Email
 
 New members must verify their email address before they can write, and password resets

@@ -113,8 +113,10 @@ defmodule Idejo.AccountsTest do
 
     @tag req: "AC-01"
     test "AC-01 FD-02 writes no activity when sign-up fails" do
+      # The migrations' server account (Automessages.Defaults) has one already.
+      before = Repo.aggregate(Activity, :count)
       {:error, _} = Accounts.register_user(%{})
-      assert Repo.aggregate(Activity, :count) == 0
+      assert Repo.aggregate(Activity, :count) == before
     end
   end
 

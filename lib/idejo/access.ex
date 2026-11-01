@@ -584,7 +584,8 @@ defmodule Idejo.Access do
           order_by: [asc: r.position]
       )
 
-    if administrator?(user) do
+    # Server accounts post the administrators' automessages (steward decision, 2026-11-01).
+    if user.status == "system" or administrator?(user) do
       candidates
     else
       # Lower position ranks higher; the highest-ranked role that mentions below decides.
