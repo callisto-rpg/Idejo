@@ -80,7 +80,7 @@ defmodule Idejo.Access do
   Returns the roles of several users at once, as a map from user id to the same list
   `roles_of/1` gives. Used by lists such as the admin users page.
   """
-  @spec roles_of_users([User.t()]) :: %{Ecto.UUID.t() => [Role.t(), ...]}
+  @spec roles_of_users([User.t()]) :: %{Ecto.UUID.t() => [Role.t()]}
   def roles_of_users(users) do
     ids = Enum.map(users, & &1.id)
 
@@ -105,8 +105,11 @@ defmodule Idejo.Access do
       held = Map.get(held, user.id, [])
 
       # Unverified users act as guest, but keep owner and administrator (never locked out).
+      # Server accounts (automessages' senders) hold none: they never act on their own, and
+      # no role shows next to their name (steward decision, 2026-11-02).
       roles =
         case user do
+          %User{status: "system"} -> []
           %User{confirmed_at: nil} -> [guest | Enum.filter(held, &(&1.name in @all_rights))]
           _ -> [member | held]
         end
@@ -136,9 +139,9 @@ defmodule Idejo.Access do
   `nil` (a visitor) gets only guest. A user with an unverified email address acts as guest,
   but keeps owner or administrator if they hold it, so owners and administrators are never
   shown or treated as less than they are. A verified user gets member plus every role they
-  hold.
+  hold. A server account (`status: "system"`, `Idejo.Messages.Automessages`) gets none.
   """
-  @spec roles_of(User.t() | nil) :: [Role.t(), ...]
+  @spec roles_of(User.t() | nil) :: [Role.t()]
   def roles_of(nil), do: [built_in_role!(:guest)]
   def roles_of(%User{id: id} = user), do: Map.fetch!(roles_of_users([user]), id)
 
