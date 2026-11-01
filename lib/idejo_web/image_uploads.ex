@@ -111,6 +111,10 @@ defmodule IdejoWeb.ImageUploads do
     end
   end
 
+  @doc "What to tell the user when an image is refused for `reason`."
+  @spec error_text(atom()) :: String.t()
+  def error_text(reason), do: message(reason)
+
   defp message(:too_large),
     do: gettext("This image is larger than %{mb} MB.", mb: div(Uploads.max_bytes(), 1_000_000))
 

@@ -108,6 +108,24 @@ icon** (on by default; off, only the text shows) and a **Text (Markdown)** writt
 message editor, with its **Preview**. **Edit** changes one, the arrows change their
 order, **Delete** removes one.
 
+### Automessages
+
+Ready-made messages that moderators have the server post. Each has a **Command (typed as
+!command)**: letters, digits, `-` and `_`, not one of the composer's own commands (`!image`,
+`!new-topic`, `!poll`, `!schedule`, `!spoiler`) or another automessage's. Its **Message
+(Markdown)** is what gets posted, and **Sender's username** (`idejo` unless you change it)
+and **Sender's picture (optional)** are the account it comes from. That account belongs to
+the server: nobody signs in to it, and it is never mentioned, suggested or notified.
+Automessages with the same sender's username share the account and its picture; a new one
+gets the Idejo picture until you upload another. A name a member already has is refused.
+
+A moderator of a topic's category (and you) sees the commands after `!` in the composer:
+choosing `!rules`, say, posts the `rules` text in the topic as its sender, while what the
+moderator was writing stays in the box. Each one is in the moderation log as **Had the
+server post an automessage**, with the moderator's name. Links in the text are resolved as
+the moderator may see them. **Edit** changes one, **Delete** removes it (what it posted
+stays).
+
 ### Email
 
 New members must verify their email address before they can write, and password resets

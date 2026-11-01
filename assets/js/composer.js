@@ -388,7 +388,16 @@ export const Composer = {
       // The dialog gives the focus back to the box when it closes.
       InlineCard.opener = this.input
       this.pushEvent("open_schedule", {body: this.unsent().trim()})
+    } else if (this.automessage(name)) {
+      // An automessage (steward decision, 2026-11-01): the server posts it; what the
+      // moderator wrote stays in the box.
+      this.pushEvent("automessage", {name})
     }
+  },
+
+  automessage(name) {
+    const commands = JSON.parse(this.el.dataset.commands || "[]")
+    return commands.some(command => command.auto && command.name === name)
   },
 
   // What follows the sent text; nothing when sent text was changed (only an edit, not

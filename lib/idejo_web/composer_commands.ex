@@ -61,13 +61,26 @@ defmodule IdejoWeb.ComposerCommands do
 
   @doc """
   The commands an author may use in a composer: `!image` with uploads allowed, `!new-topic`
-  when they may start a topic somewhere. Only what the list needs.
+  when they may start a topic somewhere, then the `automessages` a moderator may send there
+  (`Idejo.Messages.Automessages.commands/0`; steward decision, 2026-11-01), marked `auto`
+  for the `Composer` hook. Only what the list needs.
   """
-  @spec for_composer(boolean(), boolean()) :: [map()]
-  def for_composer(upload?, can_fork?) do
-    for %{name: name} = command <- all(),
-        name != "image" or upload?,
-        name != "new-topic" or can_fork?,
-        do: Map.take(command, [:name, :label, :detail])
+  @spec for_composer(boolean(), boolean(), [%{name: String.t(), sender: String.t()}]) :: [map()]
+  def for_composer(upload?, can_fork?, automessages \\ []) do
+    own =
+      for %{name: name} = command <- all(),
+          name != "image" or upload?,
+          name != "new-topic" or can_fork?,
+          do: Map.take(command, [:name, :label, :detail])
+
+    own ++
+      for %{name: name, sender: sender} <- automessages do
+        %{
+          name: name,
+          label: "!" <> name,
+          detail: gettext("Automessage: the server posts it, as %{sender}", sender: sender),
+          auto: true
+        }
+      end
   end
 end

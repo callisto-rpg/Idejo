@@ -531,6 +531,22 @@ roles or the permission grid. Every later change must keep it true:
   and sends `"reveal_inline_spoiler"` (`id`, `index`), kept in `revealed` as `{id, index}`
   so patches keep it shown. The stylesheet hides them under `.message-collapsible` as soon
   as scripts run; elsewhere (bios, versions, previews) they are only marked.
+- **Automessages** (steward decision, 2026-11-01; `Idejo.Messages.Automessages`,
+  `automessages`): **Admin → Automessages** (`Admin.AutomessagesLive`; audited
+  `automessage.create|update|delete`) makes `!command`s (unique, ignoring case, never one of
+  `ComposerCommands.all/0`'s names: `Automessages.reserved/0`, a test keeps them equal), each
+  a Markdown text and a sender: a server account, a `users` row with `status: "system"`
+  found or made from the form's username (default `idejo`; a member's name is refused),
+  never signed in to (email without `@`, random password, unconfirmed) and, not active,
+  never mentioned, suggested or notified. Automessages with the same username share the
+  account and its picture (`Accounts.set_avatar/2`; a new account gets
+  `priv/static/images/idejo-pfp.png`). Moderators of the topic's category
+  (`Automessages.may_send?/2`: `:moderate`, an open topic, never private) get them in the
+  composer's `!` list (`for_composer/3`, `auto: true`; `TopicLive`'s `automessages`, read at
+  mount and on `:permissions_changed`); the hook pushes `"automessage"` and leaves the box
+  alone, and `Automessages.post/3` writes a closed message by the sender (links resolved as
+  the moderator), notified, with an activity, logged `message.automessage` as the
+  moderator's (MO-03), then broadcast.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
   server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0`,

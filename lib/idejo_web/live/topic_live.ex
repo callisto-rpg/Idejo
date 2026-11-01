@@ -42,7 +42,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Forum
   alias Idejo.Forum.TopicWindow
   alias Idejo.Messages
-  alias Idejo.Messages.{Polls, Scheduling}
+  alias Idejo.Messages.{Automessages, Polls, Scheduling}
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
@@ -103,6 +103,7 @@ defmodule IdejoWeb.TopicLive do
            tick: nil,
            forks: %{},
            can_fork?: false,
+           automessages: [],
            card: nil,
            image_error: nil,
            reactions: %{},
@@ -149,6 +150,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:committed, nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, can_fork?(user, topic))
+         |> assign(:automessages, automessages(user, topic))
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
@@ -194,6 +196,10 @@ defmodule IdejoWeb.TopicLive do
 
   # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
   # would leave it.
+  # The automessages a moderator of the topic's category may send there (none for others).
+  defp automessages(user, topic),
+    do: if(Automessages.may_send?(user, topic), do: Automessages.commands(), else: [])
+
   defp can_fork?(_user, %{private: true}), do: false
   defp can_fork?(user, _topic), do: Forum.list_startable_categories(user) != []
 
@@ -860,7 +866,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(
            can_post?: Forum.can_post?(user, topic),
            can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
-           can_fork?: can_fork?(user, topic)
+           can_fork?: can_fork?(user, topic),
+           automessages: automessages(user, topic)
          )
          |> put_viewable_replies(socket.assigns.messages)
          |> put_forks()}
@@ -1171,6 +1178,26 @@ defmodule IdejoWeb.TopicLive do
 
       {:error, _changeset} ->
         {:reply, %{error: true}, socket}
+    end
+  end
+
+  # An automessage's `!command` (steward decision, 2026-11-01): the server posts its text,
+  # as its sender; the moderator's own text stays in the composer.
+  def handle_event("automessage", %{"name" => name}, socket) when is_binary(name) do
+    case Automessages.post(user(socket), socket.assigns.topic, name) do
+      {:ok, _message} ->
+        {:noreply, socket}
+
+      {:error, :rate_limited} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("You are sending very fast. Wait a moment, then try again.")
+         )}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("This automessage cannot be posted here."))}
     end
   end
 
@@ -2078,7 +2105,7 @@ defmodule IdejoWeb.TopicLive do
             <.composer
               mine={@mine}
               pending={@pending}
-              commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?)}
+              commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?, @automessages)}
               punctuate?={@punctuate?}
               reply_to={@reply_to}
               locked={@locked}

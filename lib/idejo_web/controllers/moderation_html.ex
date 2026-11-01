@@ -13,6 +13,7 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("message.close"), do: gettext("Closed an open message")
   def action_label("message.delete"), do: gettext("Deleted a message")
   def action_label("message.edit"), do: gettext("Edited a message")
+  def action_label("message.automessage"), do: gettext("Had the server post an automessage")
   def action_label("user.ban"), do: gettext("Banned an account")
   def action_label("user.unban"), do: gettext("Lifted a ban")
   def action_label("topic.lock"), do: gettext("Locked a topic")
