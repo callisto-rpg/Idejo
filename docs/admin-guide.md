@@ -264,13 +264,14 @@ account, open the author's card (their name) for **User actions**.
   back; the moderation log keeps its title and category (**Deleted a topic for good**).
   Archive it instead to keep it.
 
-**From a topic list** (owners and administrators): right-click a topic, press the menu key
-or long-press it, in a list or in the sidebar. Under the usual items:
+**From a topic list** (owners, administrators and moderators): right-click a topic, press
+the menu key or long-press it, in a list or in the sidebar. Under the usual items, for
+topics in categories you moderate:
 
 - **N following**: how many members follow the topic. Click it and it turns red as **Mark
   as inactive**; click again to mark the topic inactive (logged as **Marked a topic
   inactive**). It stays faded until someone sends a message there.
-- **Archive**, **Move to…** (pick the category) and **Delete** (click again on **Delete for
+- **Archive**, **Move to…** (pick one of the categories you moderate) and **Delete** (click again on **Delete for
   good** to confirm), as in **Moderate this topic**. You stay on the page you were on.
 - On an archived topic, **Unarchive to …** in place of Archive and Move: back to the
   category it came from, or **Unarchive to…** and pick one when it has none.
