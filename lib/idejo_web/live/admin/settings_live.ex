@@ -132,6 +132,21 @@ defmodule IdejoWeb.Admin.SettingsLive do
           )}
         </p>
         <.input
+          field={@form[:inactive_after_days]}
+          type="number"
+          label={gettext("Inactive after (days)")}
+          min="7"
+          max="3650"
+          step="1"
+          aria-describedby="inactive-after-help"
+          required
+        />
+        <p id="inactive-after-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "Topics with no new message for this many days are inactive too, even when people follow them. At least 7; a new message makes the topic active again."
+          )}
+        </p>
+        <.input
           field={@form[:upload_max_mb]}
           type="number"
           label={gettext("Largest image upload (MB)")}

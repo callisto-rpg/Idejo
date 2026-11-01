@@ -70,6 +70,8 @@ defmodule Idejo.Settings do
     # Topics nobody follows are shown faded as "inactive" (steward decision, 2026-11-01):
     # Idejo.Reading.put_inactive/1. Admin → Settings.
     inactive_topics: %{type: :boolean, default: true},
+    # Topics with no message for this many days are inactive too, followed or not.
+    inactive_after_days: %{type: :integer, default: 70, required: true, range: 7..3650},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
@@ -134,6 +136,7 @@ defmodule Idejo.Settings do
           | :gm_unanswered_minutes
           | :gm_early_reply
           | :inactive_topics
+          | :inactive_after_days
           | :upload_max_mb
           | :performance
           | :server_about

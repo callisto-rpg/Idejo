@@ -164,6 +164,8 @@ defmodule IdejoWeb.Router do
     # TP-13: follow or unfollow a topic, plain forms that work without JavaScript.
     # TP-14: moderators lock, unlock, pin or unpin a topic (a plain form).
     post "/t/:id/moderate", TopicModerationController, :create
+    # The administrators' topic menu (steward decision, 2026-11-01): followers, inactive.
+    get "/topic-menu/:id", TopicMenuController, :show
     # TP-19: change a topic's tags (the :tag right), a plain form.
     post "/t/:id/tags", TopicTagsController, :update
     # The topic's title, for its starter and moderators (steward decision, 2026-10-23).

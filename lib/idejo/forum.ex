@@ -515,6 +515,31 @@ defmodule Idejo.Forum do
     end
   end
 
+  @doc """
+  Marks a topic inactive, as an administrator (owners and administrators;
+  `{:error, :forbidden}` otherwise; steward decision, 2026-11-01): it shows faded in topic
+  lists, followed or not, until a message is sent there (`last_activity_at` passes
+  `marked_inactive_at`; `Idejo.Reading.put_inactive/1`). Logged as `topic.inactive`
+  (MO-03).
+  """
+  @spec mark_inactive(User.t(), Topic.t()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def mark_inactive(%User{} = admin, %Topic{} = topic) do
+    if Access.administrator?(admin),
+      do: Repo.transact(fn -> save_inactive(admin, topic) end),
+      else: {:error, :forbidden}
+  end
+
+  defp save_inactive(admin, topic) do
+    with {:ok, updated} <-
+           topic
+           |> Ecto.Changeset.change(marked_inactive_at: DateTime.utc_now())
+           |> Repo.update(),
+         {:ok, _} <- Moderation.record(admin, "topic.inactive", updated) do
+      {:ok, updated}
+    end
+  end
+
   ## Moderating topics (TP-14)
 
   @doc """

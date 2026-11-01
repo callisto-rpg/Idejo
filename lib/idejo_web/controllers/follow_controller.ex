@@ -61,17 +61,5 @@ defmodule IdejoWeb.FollowController do
     end
   end
 
-  # The referring page on this server, as a local path, or nil.
-  defp back(conn, %{"return" => "back"}) do
-    with [referer | _] <- get_req_header(conn, "referer"),
-         %URI{host: host, path: "/" <> _ = path} = uri when host == conn.host <-
-           URI.parse(referer),
-         false <- String.starts_with?(path, ["//", "/\\"]) do
-      if uri.query, do: path <> "?" <> uri.query, else: path
-    else
-      _ -> nil
-    end
-  end
-
-  defp back(_conn, _params), do: nil
+  defp back(conn, params), do: IdejoWeb.ReturnBack.path(conn, params)
 end
