@@ -382,13 +382,27 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The opening message pinned first, then the run (alone in a private conversation).
+  # A message posted between the count and the load can make a run start at the opening
+  # message while `pos` says it does not: it is the start, or the opening message would be
+  # shown twice (the same key twice, which crashes the render). The count is never below
+  # what was loaded.
   defp set_window(socket, loaded, pos, total) do
     {pinned, rest, rest_pos} =
       cond do
-        socket.assigns.topic.private or loaded == [] -> {nil, loaded, pos}
-        pos == 0 -> {hd(loaded), tl(loaded), 1}
-        true -> {opening(socket), loaded, pos}
+        socket.assigns.topic.private or loaded == [] ->
+          {nil, loaded, max(pos, 0)}
+
+        pos <= 0 ->
+          {hd(loaded), tl(loaded), 1}
+
+        true ->
+          case {opening(socket), loaded} do
+            {%{id: id} = first, [%{id: id} | rest]} -> {first, rest, 1}
+            {first, _loaded} -> {first, loaded, pos}
+          end
       end
+
+    total = max(total, rest_pos + length(rest))
 
     socket
     |> assign(rest_pos: rest_pos, total: total)
