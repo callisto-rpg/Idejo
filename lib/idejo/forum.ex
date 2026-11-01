@@ -516,17 +516,19 @@ defmodule Idejo.Forum do
   end
 
   @doc """
-  Marks a topic inactive, as an administrator (owners and administrators;
-  `{:error, :forbidden}` otherwise; steward decision, 2026-11-01): it shows faded in topic
+  Marks a topic inactive, as a moderator of its category (owners and administrators
+  always; `{:error, :forbidden}` otherwise; steward decisions, 2026-11-01): it shows faded in topic
   lists, followed or not, until a message is sent there (`last_activity_at` passes
   `marked_inactive_at`; `Idejo.Reading.put_inactive/1`). Logged as `topic.inactive`
   (MO-03).
   """
   @spec mark_inactive(User.t(), Topic.t()) ::
           {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
-  def mark_inactive(%User{} = admin, %Topic{} = topic) do
-    if Access.administrator?(admin),
-      do: Repo.transact(fn -> save_inactive(admin, topic) end),
+  def mark_inactive(%User{} = moderator, %Topic{} = topic) do
+    topic = Repo.preload(topic, :category)
+
+    if Access.can?(moderator, :moderate, topic.category),
+      do: Repo.transact(fn -> save_inactive(moderator, topic) end),
       else: {:error, :forbidden}
   end
 
@@ -1149,8 +1151,9 @@ defmodule Idejo.Forum do
   end
 
   @doc """
-  The categories a moderator may move messages into (TP-15): those they moderate and may
-  view, never the Archive, in order.
+  The categories a moderator may move messages into (TP-15), and the topic menu's "Move to"
+  (steward decision, 2026-11-01): those they moderate and may view, never the Archive, in
+  order.
   """
   @spec list_moderated_categories(User.t()) :: [Category.t()]
   def list_moderated_categories(%User{} = moderator) do

@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.TopicMenuController do
   @moduledoc """
-  What the administrators' part of the topic menu needs about one topic (steward decision,
+  What the moderators' part of the topic menu needs about one topic (steward decisions,
   2026-11-01), asked by `assets/js/topic_menu.js` when the menu opens: how many follow it,
   whether it is inactive, its category (left out of "Move to") and its state, and for an
   archived topic the category it goes back to (`Forum.unarchive_target/1`, or nil: pick
@@ -18,25 +18,32 @@ defmodule IdejoWeb.TopicMenuController do
   def show(conn, %{"id" => id}) do
     user = conn.assigns.current_scope.user
 
-    with true <- Access.administrator?(user),
-         %{} = topic <- Forum.get_viewable_topic(user, id) do
+    with %{} = topic <- Forum.get_viewable_topic(user, id),
+         true <- Access.can?(user, :moderate, topic.category) do
       json(conn, %{
         following: Reading.follower_count(topic),
         inactive: Reading.inactive?(topic),
         inactive_allowed: Idejo.Settings.get(:inactive_topics),
         category_id: topic.category_id,
         archived: topic.state == "archived",
-        unarchive_to: unarchive_to(topic)
+        unarchive_to: unarchive_to(user, topic)
       })
     else
       _ -> conn |> put_status(:not_found) |> json(%{error: "not_found"})
     end
   end
 
-  defp unarchive_to(topic) do
+  # Where it goes back to, when the moderator moderates that category too; else they pick
+  # one of theirs.
+  defp unarchive_to(user, topic) do
     case Forum.unarchive_target(topic) do
-      nil -> nil
-      category -> %{id: category.id, name: category.name}
+      nil ->
+        nil
+
+      category ->
+        if Access.can?(user, :moderate, category),
+          do: %{id: category.id, name: category.name},
+          else: nil
     end
   end
 end

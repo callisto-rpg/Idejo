@@ -140,7 +140,7 @@ defmodule IdejoWeb.Layouts do
 
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
-    <.topic_menu :if={@user} admin={@current_scope.administrator?} />
+    <.topic_menu :if={@user} user={@user} />
     """
   end
 
@@ -151,10 +151,11 @@ defmodule IdejoWeb.Layouts do
   (from the sidebar's `data-following`), Unfollow & mute, Mark unread and Copy link. Plain
   forms with `return=back` to `FollowController`; hidden until a script opens it.
 
-  Owners and administrators also get (steward decision, 2026-11-01), filled in from
-  `GET /topic-menu/{id}` (`TopicMenuController`) when it opens: "N following", which a click
+  Moderators (`:moderate` in some category; owners and administrators always) also get
+  (steward decisions, 2026-11-01), filled in from `GET /topic-menu/{id}`
+  (`TopicMenuController`) when it opens, only for topics of categories they moderate: "N following", which a click
   turns red as "Mark as inactive" and a second click posts (`Forum.mark_inactive/2`), then
-  Archive, "Move to" (the categories, the topic's own left out) and Delete (a second click
+  Archive, "Move to" (the categories they moderate, the topic's own left out) and Delete (a second click
   confirms); on an archived topic, "Unarchive to {category}" (where it was archived from)
   or, without one, "Unarchive to…" over the same category list, all posted to `/t/{id}/moderate` (`TopicModerationController`) with
   `return=back`.
@@ -162,17 +163,11 @@ defmodule IdejoWeb.Layouts do
   Like every menu, it is a `.popup-menu`: see-through and blurred, set by the server
   stylesheet's `--menu-opacity` and `--menu-blur` (`priv/theme/default.css`).
   """
-  attr :admin, :boolean, default: false
+  attr :user, :map, required: true
 
   def topic_menu(assigns) do
     assigns =
-      assign(assigns,
-        move_categories:
-          if(assigns.admin,
-            do: Enum.reject(Idejo.Forum.list_categories(), & &1.archive),
-            else: []
-          )
-      )
+      assign(assigns, :move_categories, Idejo.Forum.list_moderated_categories(assigns.user))
 
     ~H"""
     <div
@@ -222,7 +217,7 @@ defmodule IdejoWeb.Layouts do
       >
         <.icon name="hero-link" class="size-4" /><span class="topic-menu-label">{gettext("Copy link")}</span>
       </button>
-      <div :if={@admin} id="topic-menu-admin" class="topic-menu-admin" hidden>
+      <div :if={@move_categories != []} id="topic-menu-admin" class="topic-menu-admin" hidden>
         <hr role="separator" />
         <.form
           for={%{}}

@@ -619,7 +619,7 @@ roles or the permission grid. Every later change must keep it true:
   **Inactive topics** (steward decisions, 2026-11-01): a topic no active user follows (no
   `follows` row with `following`, and not `autofollow`), with no message for
   `inactive_after_days` ("Inactive after (days)", default 70, at least 7), or marked by an
-  administrator (`Forum.mark_inactive/2`, `topics.marked_inactive_at`, logged
+  moderator of its category (`Forum.mark_inactive/2`, `topics.marked_inactive_at`, logged
   `topic.inactive`) with no message since (`marked_inactive_at > last_activity_at`, so any
   message sent clears it) gets `topic.inactive` (virtual) from `Reading.put_inactive/1`, one
   query per list, called by every controller that renders `topic_row/1` (none while the
@@ -858,10 +858,12 @@ roles or the permission grid. Every later change must keep it true:
   users only) at the pointer (`assets/js/topic_menu.js`: arrows, Escape, focus back). Its
   items are plain forms with `return=back`: unfollow, follow, `POST /t/{id}/mute`
   (`Reading.mute/2`) and `POST /t/{id}/unread` (`Reading.mark_unread/2`: the position goes
-  back before the latest message by someone else), and Copy link. Owners and administrators
-  also get `#topic-menu-admin` (steward decision, 2026-11-01), filled in when it opens from
-  `GET /topic-menu/{id}` (`TopicMenuController`, JSON: `Reading.follower_count/1`, inactive,
-  category, archived): "N following", which a click turns red as "Mark as inactive" and a
+  back before the latest message by someone else), and Copy link. Moderators (steward
+  decisions, 2026-11-01: owners and administrators, and anyone with `:moderate` in a
+  category) also get `#topic-menu-admin`, rendered when `Forum.list_moderated_categories/1`
+  (the "Move to" list) is not empty, filled in when it opens from `GET /topic-menu/{id}`
+  (`TopicMenuController`, JSON, 404 without `:moderate` in the topic's category, so the
+  items stay hidden there: `Reading.follower_count/1`, inactive, category, archived): "N following", which a click turns red as "Mark as inactive" and a
   second click posts; Archive; "Move to…" (every category but the Archive and its own);
   Delete (a second click confirms); on an archived topic, "Unarchive to {category}"
   (`unarchive_to` in the JSON) or "Unarchive to…" over the same category list (the list
