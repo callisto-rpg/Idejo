@@ -8,9 +8,7 @@ defmodule Idejo.RequirementsTest do
 
   # MVP requirements whose tests come with a later pull request of M5 (MVP §7). Remove an ID
   # when its tests land: the last test below fails until then.
-  @pending %{
-    "NF-03" => "page speed on a mid-range phone over 4G: needs a browser measurement, not planned"
-  }
+  @pending %{}
 
   # MVP requirements on how people work, which no test can check: a person verifies them in
   # review (pull request template).
@@ -25,6 +23,11 @@ defmodule Idejo.RequirementsTest do
     "NF-04" => "200 people online on 2 vCPU / 2 GB"
   }
 
+  # MVP requirements measured in a browser, not by mix test; the document holds the result.
+  @by_measurement %{
+    "NF-03" => "docs/page-speed.md"
+  }
+
   @tag req: "DV-02"
   test "DV-02 every MVP requirement has tests named after it" do
     tested = MapSet.new(Requirements.tagged_tests(), &elem(&1, 0))
@@ -35,6 +38,7 @@ defmodule Idejo.RequirementsTest do
           not Map.has_key?(@pending, id),
           not Map.has_key?(@by_review, id),
           not Map.has_key?(@by_load_test, id),
+          not Map.has_key?(@by_measurement, id),
           do: id
 
     assert missing == [], "MVP requirements without a test tagged req: ID: #{inspect(missing)}"
@@ -58,12 +62,20 @@ defmodule Idejo.RequirementsTest do
     mvp = Requirements.mvp()
     tested = MapSet.new(Requirements.tagged_tests(), &elem(&1, 0))
 
-    for id <- Map.keys(@pending) ++ Map.keys(@by_review) ++ Map.keys(@by_load_test) do
+    exceptions =
+      Map.keys(@pending) ++
+        Map.keys(@by_review) ++ Map.keys(@by_load_test) ++ Map.keys(@by_measurement)
+
+    for id <- exceptions do
       assert id in mvp, "#{id} is not an MVP requirement"
     end
 
     for id <- Map.keys(@by_load_test) do
       assert File.read!("docs/load-testing.md") =~ id, "docs/load-testing.md does not cover #{id}"
+    end
+
+    for {id, doc} <- @by_measurement do
+      assert File.read!(doc) =~ id, "#{doc} does not cover #{id}"
     end
 
     for {id, why} <- @pending do
