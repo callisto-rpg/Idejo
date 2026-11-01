@@ -47,12 +47,13 @@ defmodule IdejoWeb.TopicController do
               page_title: topic.title,
               reply_to_id: params["reply_to"],
               first_unread: first_unread,
+              window: window(params),
               following?: Reading.following?(user, topic),
               can_autofollow?: Idejo.Access.administrator?(user),
               can_rename?: Forum.can_rename_topic?(user, topic),
               forked_from: forked_from(user, topic),
-              # Without ?reply_to=, which only opens the form.
-              canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}"),
+              # Without ?reply_to=, which only opens the form; a page from the second on.
+              canonical_url: canonical(topic, params),
               # PN-20: the notifications banner.
               push_banner?: Idejo.Push.banner?(user)
             ] ++ moderator_tools(user, topic)
@@ -64,6 +65,17 @@ defmodule IdejoWeb.TopicController do
         end
     end
   end
+
+  # Long topics (steward decision, 2026-11-01): which messages the page opens with, a page
+  # (`?page=n`) or around a message (`?around=`, from its permalink, TP-06); else where the
+  # reader left off, or the end (IdejoWeb.TopicLive).
+  @doc false
+  def window(params), do: Map.take(params, ["page", "around"])
+
+  defp canonical(topic, %{"page" => page}) when page not in ["", "1"],
+    do: url(~p"/t/#{topic.id}/#{topic.slug}?#{[page: page]}")
+
+  defp canonical(topic, _params), do: url(~p"/t/#{topic.id}/#{topic.slug}")
 
   # TP-14, TP-15: the moderator form; TP-19: the "Edit tags" form, its own right
   # (moderators' by default).

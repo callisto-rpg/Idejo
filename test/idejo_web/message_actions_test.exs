@@ -30,10 +30,10 @@ defmodule IdejoWeb.MessageActionsTest do
     # Touch screens: hidden, not removed (screen readers reach them), only with scripts.
     # (Unless "Show message controls on mobile" is on: then in place.)
     assert css =~
-             ~r/\[data-js\] #messages:not\(\[data-controls-mobile\]\) \.message \.message-actions \{\s*position: absolute;/
+             ~r/\[data-js\] #message-window:not\(\[data-controls-mobile\]\) \.message \.message-actions \{\s*position: absolute;/
 
     assert css =~
-             "[data-js] #messages:not([data-controls-mobile]) .message[data-acting] .message-actions,"
+             "[data-js] #message-window:not([data-controls-mobile]) .message[data-acting] .message-actions,"
 
     js = File.read!("assets/js/message_actions.js")
     assert js =~ ~s|const touch = matchMedia("(hover: none)")|

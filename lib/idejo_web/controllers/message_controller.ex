@@ -28,13 +28,15 @@ defmodule IdejoWeb.MessageController do
 
       %{topic: topic} = message ->
         target = if Map.has_key?(params, "unread"), do: first_unread(user, topic), else: nil
-        redirect(conn, to: page(topic) <> "#message-#{target || message.id}")
+        target = target || message.id
+        redirect(conn, to: page(topic, target) <> "#message-#{target}")
     end
   end
 
-  # Steward decision, 2026-10-27: a private conversation's message, for a participant.
-  defp page(%{private: true} = topic), do: ~p"/p/#{topic.id}"
-  defp page(topic), do: ~p"/t/#{topic.id}/#{topic.slug}"
+  # Long topics load around the message (`?around=`, steward decision, 2026-11-01). Steward
+  # decision, 2026-10-27: a private conversation's message, for a participant.
+  defp page(%{private: true} = topic, id), do: ~p"/p/#{topic.id}?#{[around: id]}"
+  defp page(topic, id), do: ~p"/t/#{topic.id}/#{topic.slug}?#{[around: id]}"
 
   defp first_unread(user, topic) do
     case Reading.first_unread(user, topic) do

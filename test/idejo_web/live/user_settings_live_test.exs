@@ -130,8 +130,8 @@ defmodule IdejoWeb.UserSettingsLiveTest do
     refute has_element?(lv, ~s(#controls-form input[type="checkbox"][checked]))
 
     {:ok, topic_lv, _html} = watch.()
-    refute has_element?(topic_lv, "#messages[data-controls-mobile]")
-    refute has_element?(topic_lv, "#messages[data-controls-desktop]")
+    refute has_element?(topic_lv, "#message-window[data-controls-mobile]")
+    refute has_element?(topic_lv, "#message-window[data-controls-desktop]")
 
     assert lv
            |> form("#controls-form", controls: %{controls_on_mobile: "true"})
@@ -139,8 +139,8 @@ defmodule IdejoWeb.UserSettingsLiveTest do
 
     assert Accounts.get_user(user.id).controls_on_mobile
     {:ok, topic_lv, _html} = watch.()
-    assert has_element?(topic_lv, "#messages[data-controls-mobile]")
-    refute has_element?(topic_lv, "#messages[data-controls-desktop]")
+    assert has_element?(topic_lv, "#message-window[data-controls-mobile]")
+    refute has_element?(topic_lv, "#message-window[data-controls-desktop]")
 
     lv
     |> form("#controls-form",
@@ -149,13 +149,15 @@ defmodule IdejoWeb.UserSettingsLiveTest do
     |> render_submit()
 
     {:ok, topic_lv, _html} = watch.()
-    refute has_element?(topic_lv, "#messages[data-controls-mobile]")
-    assert has_element?(topic_lv, "#messages[data-controls-desktop]")
+    refute has_element?(topic_lv, "#message-window[data-controls-mobile]")
+    assert has_element?(topic_lv, "#message-window[data-controls-desktop]")
 
     # The stylesheet shows them in place or always; the tap script leaves them alone.
     css = File.read!("assets/css/app.css")
     assert css =~ "[data-controls-desktop] .message .message-actions { opacity: 1; }"
-    assert css =~ "[data-js] #messages:not([data-controls-mobile]) .message .message-actions {"
+
+    assert css =~
+             "[data-js] #message-window:not([data-controls-mobile]) .message .message-actions {"
 
     assert File.read!("assets/js/message_actions.js") =~
              ~s|message.closest("[data-controls-mobile]")|

@@ -71,7 +71,7 @@ defmodule IdejoWeb.ConversationControllerTest do
     assert redirected_to(get(conn, ~p"/t/#{topic.id}")) == ~p"/p/#{topic.id}"
 
     assert redirected_to(get(conn, ~p"/m/#{message.id}")) ==
-             ~p"/p/#{topic.id}" <> "#message-#{message.id}"
+             ~p"/p/#{topic.id}?around=#{message.id}" <> "#message-#{message.id}"
 
     for outsider <- [user_fixture(), user_with_role_fixture(:administrator)] do
       conn = log_in_user(build_conn(), outsider)

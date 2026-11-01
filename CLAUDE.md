@@ -307,12 +307,11 @@ roles or the permission grid. Every later change must keep it true:
   topic page is a controller at `/t/{id}/{slug}`; `/t/{id}` (the URI) and stale slugs redirect
   there with 301.
 - **Permalinks** (TP-06): a topic's URI `/t/{id}` 301s to `/t/{id}/{slug}`; a message's URI
-  `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}#message-{id}`, so both survive
-  renames and moves. Each message's time links to its permalink. Notifications (bubbles and
-  pushes, not reactions) link `/m/{id}?unread`, which leads to the reader's oldest unread
-  message of that topic (`Reading.first_unread/2`), or the message itself with nothing
-  unread. When topic pages are paged,
-  `/m/{id}` must lead to the right page.
+  `/m/{id}` (`MessageController`) 302s to `/t/{id}/{slug}?around={id}#message-{id}` (the
+  window around it, see Long topics), so both survive renames and moves. Each message's time
+  links to its permalink. Notifications (bubbles and pushes, not reactions) link
+  `/m/{id}?unread`, which leads to the reader's oldest unread message of that topic
+  (`Reading.first_unread/2`), or the message itself with nothing unread.
   A topic, message or category link the reader may not view (missing, deleted or hidden:
   the same answer, AC-05; steward decision, 2026-10-24) is never a 404: `IdejoWeb.Unavailable`
   sends a visitor to sign-in with the link as `:user_return_to` (signing in or up leads
@@ -355,11 +354,39 @@ roles or the permission grid. Every later change must keep it true:
   (`live_render/3`, session `"topic_id"`, `"reply_to_id"`) for every viewer: the message list
   (a keyed comprehension, `#message-{id}`, kept for permalinks) and the composer for posters.
   Its first render is in the page's HTML (no JavaScript needed to read). Connected, it subscribes before
-  loading; `{:message, m}` events update in place or append; a reconnect mounts again, which
-  is the catch-up. Anything that changes a message must broadcast it after its transaction.
+  loading; `{:message, m}` events update in place or join the window (Long topics); a
+  reconnect mounts again, which is the catch-up. Anything that changes a message must
+  broadcast it after its transaction.
   Rights are checked at mount and again on `:permissions_changed`, which
   `Access.set_permission/5` broadcasts after a grid change (`Access.subscribe_permissions/0`;
   steward decision): a viewer who lost `:view` sees the list emptied and gets no more events.
+- **Long topics** (steward decision, 2026-11-01): a topic page loads a window, never every
+  message. `Idejo.Forum.TopicWindow` reads messages in order (`opened_at`, `id`) from the
+  `(topic_id, opened_at)` index: before or after a message (cursors), the last ones, a page
+  (`?page=n`, offset); `sizes/1` from the `performance` setting ("Performance" in **Admin →
+  Settings**: Light (for smaller servers), Normal (recommended), Heavy (for more powerful
+  servers)): Normal loads 10 messages before the landing one and 30 after, 40 per step, at
+  most 200 at once, pages of 50; Light halves each, Heavy triples each. `TopicLive` lands
+  (`landing/1`, session `"window"` from `?page=` / `?around=`): a page asked for, a message
+  (`?around=`, permalinks), the composer after `?reply_to=`, the first unread message, else
+  the end (back to the viewer's open message). `messages` holds the opening message first
+  (pinned on top in `#opening-message` when the run starts further on; never in a private
+  conversation) and a run from `rest_pos` of `total`; `put_bounds/1` keeps
+  `earlier_count`, `later_count`, `at_end?` and the `?page=` links of the gaps
+  (`#earlier-messages`, `#later-messages`: buttons, links without JavaScript, AX-04).
+  `load_earlier` / `load_later` come from those buttons or LiveView's `phx-viewport-top` /
+  `-bottom` on `#messages` (whose first and last children must be messages); past the cap
+  the far side goes (`trim/2`), never the end while the window reaches it for a viewer who
+  may write (the composer holds what they have not sent), nor what
+  `kept_ids/1` keeps (the open message, the edited one, the moderated one). New messages join
+  the window only at the end (in order), else `#new-messages` counts them ("N new
+  messages", `jump_to_end`) and they are not marked read; changes to earlier messages out of
+  the window are dropped. The composer shows only at the end with the viewer's open message
+  loaded (`own_open`), or in a message its author edits; elsewhere `#jump-to-composer`
+  ("Jump to the end to write"); Reply from further up jumps to the end first. The navigator's
+  links to a message not loaded push `jump` (the window around it, then `scroll_to`);
+  `#topic-live[data-at-end]` lets the page open at its end. `#message-window` wraps the lists
+  and holds `MentionGlow`, `data-mention-tags` and `data-controls-*`.
 - **Messages on phones** (steward decision, 2026-10-26): under 640 px the topic page's
   `.message-list` drops its card (side lines, shadow, background, rounding); the hairlines
   above, between and below messages and the mention glow (`[data-glowing]`) stay.
@@ -372,7 +399,7 @@ roles or the permission grid. Every later change must keep it true:
   mobile" / "on desktop" (steward decision, 2026-10-31; `users.controls_on_mobile`,
   `controls_on_desktop`, off by default, under "Message controls" in Profile and account,
   `Accounts.update_user_controls/2`; `TopicLive` reads them at mount) put
-  `data-controls-mobile` / `-desktop` on `#messages`: always shown, on touch screens in
+  `data-controls-mobile` / `-desktop` on `#message-window`: always shown, on touch screens in
   place as without scripts (no pill).
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
@@ -637,7 +664,7 @@ roles or the permission grid. Every later change must keep it true:
   (`put_mention_glows/1`: links to `/u/{id}` or `/r/{slug}` in the stored HTML, no query
   but the reader's roles; steward decision, 2026-10-25) carry `data-mention-glow`
   (`mention` / `role-mention`); the `MentionGlow` hook (`assets/js/mention_glow.js`, on
-  `#messages`, tags in `data-mention-tags`) glows each once, when scrolled to, in its
+  `#message-window`, tags in `data-mention-tags`) glows each once, when scrolled to, in its
   sidebar dot's colour (`data-glowing`, kept by `JS.ignore_attributes`; medium, bigger in
   0.3 s, held 1 s, faded in 3 s) and pulses the tags naming the reader three times
   (`.mention-pulse`, 0.5 s each).
@@ -647,7 +674,8 @@ roles or the permission grid. Every later change must keep it true:
   the header: a card at the right, half way down the space under the header (steward
   decision, 2026-10-24), when the space beside `#main > div` fits it, else a pill
   at the top right that opens it (`data-shown`, `data-mode`, `data-open`, kept by
-  `JS.ignore_attributes`); a jump centres the message and focuses its first control.
+  `JS.ignore_attributes`); a jump centres the message and focuses its first control, after
+  loading the window around it when the page does not hold it (`jump`, Long topics).
   Hidden without JavaScript.
 - **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
   decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
@@ -932,7 +960,7 @@ roles or the permission grid. Every later change must keep it true:
   do not survive the sanitiser. A new format joins `HelpController.formatting/0`.
 - **Search engines** (SE-04): public pages set `canonical_url` (rendered as
   `<link rel="canonical">` by the root layout): `/`, `/c/{slug}` (`?page=n` from page 2) and
-  `/t/{id}/{slug}` without `?reply_to=`. `/sitemap.xml` and `/robots.txt` come from
+  `/t/{id}/{slug}` without `?reply_to=` or `?around=` (`?page=n` from page 2). `/sitemap.xml` and `/robots.txt` come from
   `SitemapController` (no session); the sitemap lists only what a visitor may view
   (`Forum.list_public_topics/1`, at most 50,000 topics).
 - **Guest reading** (AC-05): the home page and `/c/{slug}` are controllers

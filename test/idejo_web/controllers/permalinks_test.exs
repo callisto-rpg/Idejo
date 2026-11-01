@@ -32,7 +32,9 @@ defmodule IdejoWeb.PermalinksTest do
     assert path(message.uri) == "/m/#{message.id}"
 
     conn = get(conn, path(message.uri))
-    assert redirected_to(conn, 302) == "/t/#{topic.id}/hello#message-#{message.id}"
+
+    assert redirected_to(conn, 302) ==
+             "/t/#{topic.id}/hello?around=#{message.id}#message-#{message.id}"
 
     html = conn |> recycle() |> get(~p"/t/#{topic.id}/hello") |> html_response(200)
     assert html =~ ~s(id="message-#{message.id}")
@@ -54,26 +56,26 @@ defmodule IdejoWeb.PermalinksTest do
     {:ok, latest} = Forum.post_message(author, topic, %{"body" => "Two @#{reader.username}"})
 
     assert redirected_to(get(conn, ~p"/m/#{latest.id}?unread"), 302) ==
-             "/t/#{topic.id}/hello#message-#{oldest.id}"
+             "/t/#{topic.id}/hello?around=#{oldest.id}#message-#{oldest.id}"
 
     # A permalink still names its own message.
     assert redirected_to(get(conn, ~p"/m/#{latest.id}"), 302) ==
-             "/t/#{topic.id}/hello#message-#{latest.id}"
+             "/t/#{topic.id}/hello?around=#{latest.id}#message-#{latest.id}"
 
     # Read now: the notification leads to its message.
     conn |> get(~p"/t/#{topic.id}/hello") |> html_response(200)
 
     assert redirected_to(get(conn, ~p"/m/#{latest.id}?unread"), 302) ==
-             "/t/#{topic.id}/hello#message-#{latest.id}"
+             "/t/#{topic.id}/hello?around=#{latest.id}#message-#{latest.id}"
 
     # Visitors, and a topic never opened, too.
     assert redirected_to(get(build_conn(), ~p"/m/#{first.id}?unread"), 302) ==
-             "/t/#{topic.id}/hello#message-#{first.id}"
+             "/t/#{topic.id}/hello?around=#{first.id}#message-#{first.id}"
 
     stranger = log_in_user(build_conn(), user_fixture())
 
     assert redirected_to(get(stranger, ~p"/m/#{latest.id}?unread"), 302) ==
-             "/t/#{topic.id}/hello#message-#{latest.id}"
+             "/t/#{topic.id}/hello?around=#{latest.id}#message-#{latest.id}"
   end
 
   @tag req: "TP-06"
@@ -94,7 +96,7 @@ defmodule IdejoWeb.PermalinksTest do
     assert redirected_to(get(conn, "/t/#{topic.id}/hello"), 301) == "/t/#{topic.id}/renamed"
 
     assert redirected_to(get(conn, path(message.uri)), 302) ==
-             "/t/#{topic.id}/renamed#message-#{message.id}"
+             "/t/#{topic.id}/renamed?around=#{message.id}#message-#{message.id}"
   end
 
   @tag req: "TP-06"
@@ -109,7 +111,7 @@ defmodule IdejoWeb.PermalinksTest do
     {:ok, _} = Forum.delete_category(admin, general, topics: {:move, other})
 
     assert redirected_to(get(conn, path(message.uri)), 302) ==
-             "/t/#{topic.id}/hello#message-#{message.id}"
+             "/t/#{topic.id}/hello?around=#{message.id}#message-#{message.id}"
 
     assert conn |> get(~p"/t/#{topic.id}/hello") |> html_response(200) =~ ~s(href="/c/other")
   end

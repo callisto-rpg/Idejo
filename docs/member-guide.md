@@ -214,8 +214,15 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   seen, under a red **N unread messages** line that fades after a few seconds. An unread
   message that mentions you (red) or one of your roles (blue) glows in that colour as you
   reach it, and the mention in it pulses.
+- **Long topics** load a part at a time: scrolling up or down brings more, and
+  **N earlier messages** / **N later messages** between the parts load them at once. The
+  topic's first message always stays on top. You write at the end: further up, **Jump to the
+  end to write** takes you there, and **Reply** does too. New messages show at once at the
+  end; while you read further up, **N new messages** counts them and takes you to them.
+  Without JavaScript, the same links open the topic page by page.
 - **Jump to a message**: once you scroll past a topic's title, a card at the right shows the
-  title with **First message**, **First unread**, **Last message** and **My last message**.
+  title with **First message**, **First unread**, **Last message** and **My last message**,
+  and loads that part of the topic when needed.
   Where there is no room beside the conversation (on a phone), it is a small round button at
   the top right that opens the same list.
 - **Follow** / **Unfollow** on a topic. You follow topics you start or write in, until you

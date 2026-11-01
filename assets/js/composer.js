@@ -283,7 +283,7 @@ export const Composer = {
     this.appendedBox = document.getElementById("composer-appended")
     this.onAppended = e => {
       if (document.activeElement !== this.input || !this.appendedBox) return
-      const message = e.detail.closest("#messages > li")
+      const message = e.detail.closest(".message-list > li")
       if (!message || message.contains(this.el)) return
       if (!(message.compareDocumentPosition(this.el) & Node.DOCUMENT_POSITION_FOLLOWING)) return
       this.appended.add(message.id)

@@ -13,6 +13,12 @@
 // instead (a notification names the oldest unread one: `/m/{id}?unread`). The line fades by CSS
 // after 4 s, then the server is told to drop it. With nothing unread, TopicNav opens the
 // page at its end, where the conversation goes on (steward decision, 2026-10-24).
+//
+// Long topics load a window at a time (steward decision, 2026-11-01): a link to a message the
+// page does not hold asks the server for the window around it (`jump`), which answers
+// `scroll_to` once it is there; "N new messages" and "Jump to the end to write" answer
+// `scroll_to_end`. The page opens at its end only when its window reaches the end
+// (`data-at-end` on the topic), never on a page asked for (`?page=n`).
 
 const CARD_REM = 15
 const GAP_REM = 1
@@ -56,6 +62,13 @@ export const TopicNav = {
     }
     document.addEventListener("keydown", this.onKey)
     document.addEventListener("click", this.onOutside)
+    this.handleEvent("scroll_to", ({id}) => {
+      const target = document.getElementById(id)
+      if (target) this.reach(target)
+    })
+    this.handleEvent("scroll_to_end", () =>
+      requestAnimationFrame(() =>
+        window.scrollTo({top: document.documentElement.scrollHeight, behavior: "auto"})))
     this.place()
     this.openAtNamed()
     this.openAtEnd()
@@ -99,8 +112,9 @@ export const TopicNav = {
 
   // Once per page, as UnreadLine does: a reconnect mounts the hook again.
   openAtEnd() {
-    const id = this.el.closest("[data-topic-id]")?.dataset.topicId
-    if (placed.has(`end:${id}`) || window.location.hash) return
+    const topic = this.el.closest("[data-topic-id]")
+    const id = topic?.dataset.topicId
+    if (placed.has(`end:${id}`) || window.location.hash || !topic?.hasAttribute("data-at-end")) return
     placed.add(`end:${id}`)
     requestAnimationFrame(() => {
       if (document.getElementById("unread-line")) return
@@ -117,13 +131,19 @@ export const TopicNav = {
   // message's first control, as the link it came from may be hidden now.
   jump(e) {
     const link = e.target.closest("a[href^='#message-']")
-    const target = link && document.getElementById(link.hash.slice(1))
-    if (!target) return
+    if (!link) return
     e.preventDefault()
     history.replaceState(null, "", link.hash)
+    this.setOpen(false)
+    const target = document.getElementById(link.hash.slice(1))
+    // Not in the window: the server loads the window around it, then `scroll_to`.
+    if (target) this.reach(target)
+    else this.pushEvent("jump", {id: link.hash.slice("#message-".length)})
+  },
+
+  reach(target) {
     scrollToMessage(target)
     visible(target).querySelector("a[href], button, textarea, [tabindex]")?.focus({preventScroll: true})
-    this.setOpen(false)
   },
 }
 

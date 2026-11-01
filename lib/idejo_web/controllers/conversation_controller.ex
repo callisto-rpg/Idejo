@@ -39,7 +39,8 @@ defmodule IdejoWeb.ConversationController do
           others: others,
           page_title: title(others),
           reply_to_id: params["reply_to"],
-          first_unread: first_unread
+          first_unread: first_unread,
+          window: IdejoWeb.TopicController.window(params)
         )
     end
   end

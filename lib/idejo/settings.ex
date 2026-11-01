@@ -70,6 +70,9 @@ defmodule Idejo.Settings do
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
+    # How many messages a topic loads at a time (steward decision, 2026-11-01):
+    # Idejo.Forum.TopicWindow.sizes/1.
+    performance: %{type: :string, default: "normal", required: true, in: ~w(light normal heavy)},
     # The welcome card and "Rules & Roles" (steward decision, 2026-10-23): Markdown.
     server_about: %{type: :string, default: "", max: 20_000},
     server_rules: %{type: :string, default: "", max: 20_000},
@@ -128,6 +131,7 @@ defmodule Idejo.Settings do
           | :gm_unanswered_minutes
           | :gm_early_reply
           | :upload_max_mb
+          | :performance
           | :server_about
           | :server_rules
           | :privacy_notice
