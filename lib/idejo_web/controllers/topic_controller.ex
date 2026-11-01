@@ -90,19 +90,38 @@ defmodule IdejoWeb.TopicController do
   # TP-14, TP-15: the moderator form; TP-19: the "Edit tags" form, its own right
   # (moderators' by default).
   defp moderator_tools(nil, _topic),
-    do: [can_moderate?: false, move_targets: [], can_tag?: false, available_tags: []]
+    do: [
+      can_moderate?: false,
+      move_targets: [],
+      unarchive_to: nil,
+      can_tag?: false,
+      available_tags: []
+    ]
 
   defp moderator_tools(user, topic) do
     can_moderate? = Idejo.Access.can?(user, :moderate, topic.category)
     can_tag? = topic.state != "archived" and Idejo.Access.can?(user, :tag, topic.category)
+    move_targets = if can_moderate?, do: Forum.list_move_targets(user, topic), else: []
 
     [
       can_moderate?: can_moderate?,
-      move_targets: if(can_moderate?, do: Forum.list_move_targets(user, topic), else: []),
+      move_targets: move_targets,
+      # An archived topic goes back where it came from (steward decision, 2026-11-01), when
+      # the moderator moderates it there; else they pick a category.
+      unarchive_to: unarchive_to(topic, move_targets),
       can_tag?: can_tag?,
       available_tags: if(can_tag?, do: Tags.available_tags(topic.category), else: [])
     ]
   end
+
+  defp unarchive_to(%{state: "archived"} = topic, [_ | _] = move_targets) do
+    case Forum.unarchive_target(topic) do
+      nil -> nil
+      original -> Enum.find(move_targets, &(&1.id == original.id))
+    end
+  end
+
+  defp unarchive_to(_topic, _move_targets), do: nil
 
   # TP-09: the message this topic was started from, when the viewer may see it.
   defp forked_from(_user, %{forked_from_message_id: nil}), do: nil

@@ -705,6 +705,75 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  The category an archived topic goes back to when unarchived (steward decision,
+  2026-11-01): the one it was archived from (`Moderation.archived_from/1`), while it exists;
+  else nil, and the moderator picks one.
+  """
+  @spec unarchive_target(Topic.t()) :: Category.t() | nil
+  def unarchive_target(%Topic{state: "archived", id: id}) do
+    with category_id when is_binary(category_id) <- Moderation.archived_from(id),
+         %Category{archive: false} = category <- Repo.get(Category, category_id) do
+      category
+    else
+      _ -> nil
+    end
+  end
+
+  def unarchive_target(%Topic{}), do: nil
+
+  @doc """
+  Takes an archived topic out of the Archive, open again, into `target` (steward decision,
+  2026-11-01; `unarchive_target/1` gives the one it came from). Needs `:moderate` in the
+  Archive and in the target, never the Archive itself (`{:error, :forbidden}` /
+  `{:error, :invalid_target}`); a topic not archived gives `{:error, :not_archived}`.
+
+  Logged (MO-03) as `topic.unarchive` under the target, with `from` and `to`, and an
+  `update` activity, in one transaction; then `{:topic_changed, topic_id}`.
+  """
+  @spec unarchive_topic(User.t(), Topic.t(), Category.t(), String.t() | nil) ::
+          {:ok, Topic.t()}
+          | {:error, :forbidden | :invalid_target | :not_archived | Ecto.Changeset.t()}
+  def unarchive_topic(%User{} = moderator, %Topic{} = topic, %Category{} = target, reason \\ nil) do
+    result = Repo.transact(fn -> unarchive_locked(moderator, topic, target, reason) end)
+    with {:ok, topic} <- result, do: Messages.broadcast(topic.id, {:topic_changed, topic.id})
+    result
+  end
+
+  defp unarchive_locked(moderator, topic, target, reason) do
+    topic =
+      Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
+      |> Repo.preload(:category)
+
+    target = Repo.get(Category, target.id)
+
+    cond do
+      topic.state != "archived" -> {:error, :not_archived}
+      not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+      is_nil(target) or target.archive -> {:error, :invalid_target}
+      not Access.can?(moderator, :moderate, target) -> {:error, :forbidden}
+      true -> save_unarchive(moderator, topic, target, reason)
+    end
+  end
+
+  defp save_unarchive(moderator, topic, target, reason) do
+    details = %{
+      "from" => %{"id" => topic.category.id, "name" => topic.category.name},
+      "to" => %{"id" => target.id, "name" => target.name}
+    }
+
+    # Logged under the category it goes to, where its moderators look for it.
+    with {:ok, open} <-
+           topic
+           |> Ecto.Changeset.change(category_id: target.id, state: "open")
+           |> Repo.update(),
+         {:ok, _} <-
+           Moderation.record(moderator, "topic.unarchive", open, reason: reason, details: details),
+         {:ok, _} <- topic_update_activity(moderator, open) do
+      {:ok, %{open | category: target}}
+    end
+  end
+
+  @doc """
   Deletes a topic for good, as a moderator of its category (steward decision, 2026-10-23;
   `{:error, :forbidden}` otherwise): the topic and everything in it (messages and their
   versions, reactions, polls, reports, notifications, follows, read positions, tags,

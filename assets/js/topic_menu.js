@@ -11,7 +11,8 @@
 // Owners and administrators (steward decision, 2026-11-01) also get `#topic-menu-admin`,
 // filled in from `/topic-menu/{id}` once open: "N following", which a first click turns red
 // as "Mark as inactive" and a second posts; Archive; "Move to…", which shows the categories
-// (the topic's own left out); Delete, which a second click confirms.
+// (the topic's own left out); Delete, which a second click confirms. On an archived topic,
+// "Unarchive to {category}", or "Unarchive to…" over the same category list.
 
 const LONG_PRESS_MS = 500
 // Where the arrow sits from the menu's left, and how far the menu stands from the point.
@@ -86,6 +87,13 @@ function fillAdmin(el, id) {
       following.setAttribute("aria-disabled", String(info.inactive || !info.inactive_allowed))
       admin.querySelector("#topic-menu-archive").hidden = info.archived
       admin.querySelector("#topic-menu-move-toggle").hidden = info.archived
+      const unarchive = admin.querySelector("#topic-menu-unarchive")
+      unarchive.hidden = !(info.archived && info.unarchive_to)
+      if (info.unarchive_to) {
+        const button = unarchive.querySelector("button")
+        labelOf(button).textContent = button.dataset.label.replace("%{category}", info.unarchive_to.name)
+      }
+      admin.querySelector("#topic-menu-unarchive-toggle").hidden = !(info.archived && !info.unarchive_to)
       admin.querySelectorAll("#topic-menu-move [data-category-id]").forEach(b => {
         b.hidden = b.dataset.categoryId === info.category_id
       })
@@ -107,9 +115,13 @@ function disarm(button) {
   delete button.dataset.armed
 }
 
-function showMove(admin, shown) {
+// The category list, for "Move to…" or "Unarchive to…" (the toggle's `data-list-action`).
+function showMove(admin, shown, toggle) {
   admin.querySelector("#topic-menu-move").hidden = !shown
-  admin.querySelector("#topic-menu-move-toggle").setAttribute("aria-expanded", String(shown))
+  admin.querySelectorAll(".topic-menu-list-toggle").forEach(t => {
+    t.setAttribute("aria-expanded", String(shown && t === toggle))
+  })
+  if (toggle) admin.querySelector("#topic-menu-move-action").value = toggle.dataset.listAction
 }
 
 export function close(refocus = true) {
@@ -159,7 +171,7 @@ document.addEventListener("click", e => {
   if (!el || el.hidden) return
   const copy = e.target.closest("#topic-menu-link")
   const confirmable = e.target.closest("#topic-menu-admin button[data-confirm-label]")
-  const moveToggle = e.target.closest("#topic-menu-move-toggle")
+  const moveToggle = e.target.closest("#topic-menu-admin .topic-menu-list-toggle")
   if (copy) {
     copyLink(el, copy)
   } else if (confirmable) {
@@ -173,7 +185,7 @@ document.addEventListener("click", e => {
   } else if (moveToggle) {
     const admin = el.querySelector("#topic-menu-admin")
     const shown = moveToggle.getAttribute("aria-expanded") !== "true"
-    showMove(admin, shown)
+    showMove(admin, shown, moveToggle)
     if (shown) items(admin.querySelector("#topic-menu-move"))[0]?.focus()
   } else if (!el.contains(e.target)) {
     close(false)

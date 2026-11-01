@@ -155,7 +155,8 @@ defmodule IdejoWeb.Layouts do
   `GET /topic-menu/{id}` (`TopicMenuController`) when it opens: "N following", which a click
   turns red as "Mark as inactive" and a second click posts (`Forum.mark_inactive/2`), then
   Archive, "Move to" (the categories, the topic's own left out) and Delete (a second click
-  confirms), all posted to `/t/{id}/moderate` (`TopicModerationController`) with
+  confirms); on an archived topic, "Unarchive to {category}" (where it was archived from)
+  or, without one, "Unarchive to…" over the same category list, all posted to `/t/{id}/moderate` (`TopicModerationController`) with
   `return=back`.
 
   Like every menu, it is a `.popup-menu`: see-through and blurred, set by the server
@@ -260,11 +261,48 @@ defmodule IdejoWeb.Layouts do
             <.icon name="hero-archive-box" class="size-4" />{gettext("Archive")}
           </button>
         </.form>
+        <.form
+          for={%{}}
+          action="/t/:id/moderate"
+          data-action="/moderate"
+          id="topic-menu-unarchive"
+          hidden
+        >
+          <input type="hidden" name="action" value="unarchive" />
+          <input type="hidden" name="return" value="back" />
+          <button
+            role="menuitem"
+            tabindex="-1"
+            data-label={
+              # The script puts the category's name in.
+              gettext("Unarchive to %{category}", category: "%{category}")
+            }
+          >
+            <.icon name="hero-arrow-uturn-left" class="size-4" /><span class="topic-menu-label">{gettext(
+              "Unarchive"
+            )}</span>
+          </button>
+        </.form>
+        <button
+          type="button"
+          role="menuitem"
+          tabindex="-1"
+          id="topic-menu-unarchive-toggle"
+          class="topic-menu-list-toggle"
+          aria-expanded="false"
+          aria-controls="topic-menu-move"
+          data-list-action="unarchive"
+          hidden
+        >
+          <.icon name="hero-arrow-uturn-left" class="size-4" />{gettext("Unarchive to…")}
+        </button>
         <button
           type="button"
           role="menuitem"
           tabindex="-1"
           id="topic-menu-move-toggle"
+          class="topic-menu-list-toggle"
+          data-list-action="move"
           aria-expanded="false"
           aria-controls="topic-menu-move"
         >
@@ -278,7 +316,7 @@ defmodule IdejoWeb.Layouts do
           class="topic-menu-move"
           hidden
         >
-          <input type="hidden" name="action" value="move" />
+          <input type="hidden" name="action" value="move" id="topic-menu-move-action" />
           <input type="hidden" name="return" value="back" />
           <button
             :for={category <- @move_categories}
