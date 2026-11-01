@@ -67,6 +67,9 @@ defmodule Idejo.Settings do
     # Reply starts a new message at any time (steward decision, 2026-10-24): sending it
     # completes the author's open message even while its timer runs. Admin → Settings.
     gm_early_reply: %{type: :boolean, default: true},
+    # Topics nobody follows are shown faded as "inactive" (steward decision, 2026-11-01):
+    # Idejo.Reading.put_inactive/1. Admin → Settings.
+    inactive_topics: %{type: :boolean, default: true},
     # Uploads (TP-12): the one server-wide size limit for an image, in megabytes (steward
     # decision: 3 by default).
     upload_max_mb: %{type: :integer, default: 3, required: true, range: 1..20},
@@ -130,6 +133,7 @@ defmodule Idejo.Settings do
           | :gm_window_seconds
           | :gm_unanswered_minutes
           | :gm_early_reply
+          | :inactive_topics
           | :upload_max_mb
           | :performance
           | :server_about

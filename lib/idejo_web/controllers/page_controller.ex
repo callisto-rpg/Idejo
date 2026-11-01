@@ -5,6 +5,7 @@ defmodule IdejoWeb.PageController do
   use IdejoWeb, :controller
 
   alias Idejo.Forum
+  alias Idejo.Reading
   alias Idejo.Settings.InfoBoxes
 
   @doc """
@@ -16,7 +17,7 @@ defmodule IdejoWeb.PageController do
   def home(conn, params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
     categories = Forum.list_category_summaries(user)
-    active_topics = Forum.list_active_topics(user)
+    active_topics = user |> Forum.list_active_topics() |> Reading.put_inactive()
     # Compact or expanded topic cards (steward decision, 2026-10-23).
     {conn, view} = IdejoWeb.TopicView.choose(conn, params)
     info_boxes = InfoBoxes.list()

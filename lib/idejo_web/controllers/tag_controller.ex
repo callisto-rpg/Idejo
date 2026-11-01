@@ -23,6 +23,7 @@ defmodule IdejoWeb.TagController do
     op = if params["op"] == "or", do: :or, else: :and
     match = if op == :or, do: :any, else: :all
     {topics, more?} = Tags.list_tagged_topics(user, selected, page: page, match: match)
+    topics = Idejo.Reading.put_inactive(topics)
 
     render(conn, :index,
       page_title: gettext("Filter by tag"),
