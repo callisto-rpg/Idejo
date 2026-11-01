@@ -144,14 +144,27 @@ defmodule IdejoWeb.TopicWindowTest do
 
   @tag req: "SE-04"
   test "SE-04 the pages of a long topic name their own canonical address", context do
-    {topic, _} = long_topic(context, 30)
+    {topic, messages} = long_topic(context, 30)
     url = "http://localhost:4000/t/#{topic.id}/#{topic.slug}"
 
-    html = build_conn() |> get(~p"/t/#{topic.id}/#{topic.slug}?page=2") |> html_response(200)
-    assert html =~ ~s(<link rel="canonical" href="#{url}?page=2">)
+    canonical = fn topic, query ->
+      html = build_conn() |> get("/t/#{topic.id}/#{topic.slug}" <> query) |> html_response(200)
+      [_, href] = Regex.run(~r/<link rel="canonical" href="([^"]+)">/, html)
+      href
+    end
 
-    html = build_conn() |> get(~p"/t/#{topic.id}/#{topic.slug}?page=1") |> html_response(200)
-    assert html =~ ~s(<link rel="canonical" href="#{url}">)
+    # Pages of 25. The first is a page of its own: the topic's address opens at its end.
+    assert canonical.(topic, "?page=1") == url <> "?page=1"
+    assert canonical.(topic, "?page=2") == url <> "?page=2"
+    # Past the end, the last page; not a page, the topic's address.
+    assert canonical.(topic, "?page=9") == url <> "?page=2"
+    assert canonical.(topic, "?page=abc") == url
+    assert canonical.(topic, "?around=#{at(messages, 3).id}") == url
+    assert canonical.(topic, "") == url
+
+    # A topic of one page has one address.
+    {short, _} = long_topic(context, 10)
+    assert canonical.(short, "?page=1") == "http://localhost:4000/t/#{short.id}/#{short.slug}"
   end
 
   @tag req: "TP-04"

@@ -17,6 +17,7 @@ defmodule IdejoWeb.TopicController do
 
   alias Idejo.Forum
   alias Idejo.Forum.Tags
+  alias Idejo.Forum.TopicWindow
   alias Idejo.Reading
 
   def show(conn, %{"id" => id} = params) do
@@ -52,7 +53,7 @@ defmodule IdejoWeb.TopicController do
               can_autofollow?: Idejo.Access.administrator?(user),
               can_rename?: Forum.can_rename_topic?(user, topic),
               forked_from: forked_from(user, topic),
-              # Without ?reply_to=, which only opens the form; a page from the second on.
+              # Without ?reply_to=, which only opens the form, or ?around=; a page, its own.
               canonical_url: canonical(topic, params),
               # PN-20: the notifications banner.
               push_banner?: Idejo.Push.banner?(user)
@@ -72,8 +73,17 @@ defmodule IdejoWeb.TopicController do
   @doc false
   def window(params), do: Map.take(params, ["page", "around"])
 
-  defp canonical(topic, %{"page" => page}) when page not in ["", "1"],
-    do: url(~p"/t/#{topic.id}/#{topic.slug}?#{[page: page]}")
+  # SE-04: each page of a long topic is its own, the first too, as the topic's own address
+  # opens at its end, not on page 1. A page past the end shows the last; a topic of one page,
+  # or a page that is not a number, is the topic's address.
+  defp canonical(topic, %{"page" => page}) when is_binary(page) do
+    with {n, ""} when n > 0 <- Integer.parse(page),
+         pages when pages > 1 <- TopicWindow.pages(topic, TopicWindow.sizes().page) do
+      url(~p"/t/#{topic.id}/#{topic.slug}?#{[page: min(n, pages)]}")
+    else
+      _ -> url(~p"/t/#{topic.id}/#{topic.slug}")
+    end
+  end
 
   defp canonical(topic, _params), do: url(~p"/t/#{topic.id}/#{topic.slug}")
 

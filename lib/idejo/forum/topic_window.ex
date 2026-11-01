@@ -155,6 +155,10 @@ defmodule Idejo.Forum.TopicWindow do
   @spec page_of(non_neg_integer(), pos_integer()) :: pos_integer()
   def page_of(position, size), do: div(position, size) + 1
 
+  @doc "How many pages of `size` messages the topic fills: at least one."
+  @spec pages(Topic.t(), pos_integer()) :: pos_integer()
+  def pages(%Topic{} = topic, size), do: page_of(max(count(topic) - 1, 0), size)
+
   @doc "The id of the user's last message in the topic that is not deleted, or nil."
   @spec last_by(Topic.t(), User.t() | nil) :: Ecto.UUID.t() | nil
   def last_by(_topic, nil), do: nil
