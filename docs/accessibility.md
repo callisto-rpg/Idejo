@@ -47,6 +47,7 @@ build:
 | Write / Preview tabs | Arrow keys, Home and End switch tabs; Tab goes on to the text box (added in this audit) |
 | @mention | Enter opens the user card with the focus on "Close"; Escape closes it and the focus returns to the mention |
 | Theme buttons | Now named ("Use the light theme"…); they had no name |
+| Theme and Tutorial bubbles buttons | Now say which choice is on (`aria-pressed`, set by `assets/js/toggles.js`); only the highlight showed it |
 
 Known limits: the composer takes images only by pasting or dropping (no picker, GM-07;
 pasting works from the keyboard). Tab from the user card's only button leaves for the

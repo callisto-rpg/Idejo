@@ -257,6 +257,28 @@ defmodule IdejoWeb.AccessibilityTest do
   end
 
   @tag req: "AX-01"
+  test "AX-01 the Theme and Tutorial bubbles toggles say which choice is on", %{conn: conn} do
+    # A member's account menu holds both toggles; a visitor's header and sidebar the theme's.
+    member = conn |> log_in_user(user_fixture()) |> get(~p"/") |> html_response(200)
+    visitor = build_conn() |> get(~p"/") |> html_response(200)
+    buttons = &(&1 |> LazyHTML.from_document() |> LazyHTML.query(".theme-toggle button"))
+    assert Enum.count(buttons.(member)) == 6
+    assert Enum.count(buttons.(visitor)) == 6
+
+    for html <- [member, visitor], button <- buttons.(html) do
+      # toggles.js sets aria-pressed from <html>; patches keep it.
+      assert [mounted] = LazyHTML.attribute(button, "phx-mounted")
+      assert mounted =~ "ignore_attrs" and mounted =~ "aria-pressed"
+      assert [_] = LazyHTML.attribute(button, "aria-label")
+    end
+
+    js = File.read!("assets/js/toggles.js")
+    assert js =~ ~s(setAttribute("aria-pressed")
+    assert js =~ "data-theme-source" and js =~ "data-bubbles"
+    assert File.read!("assets/js/app.js") =~ ~s(import "./toggles")
+  end
+
+  @tag req: "AX-01"
   test "AX-01 the keyboard focus is always visible" do
     css = File.read!("assets/css/app.css")
     assert css =~ ~r/:focus-visible \{\s*outline: 2px solid/

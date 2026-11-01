@@ -239,7 +239,10 @@ roles or the permission grid. Every later change must keep it true:
   `IdejoWeb.Accessibility.audit/2` (`test/support/accessibility.ex`): add new pages to its
   lists. When markup that has the focus is replaced (an editor opening or closing), move the
   focus on purpose (`phx-mounted={JS.focus(...)}`, as `TopicLive` does with `refocus`). The
-  editor's Write / Preview tabs follow the ARIA tabs pattern (`EditorTabs` hook). Screen
+  editor's Write / Preview tabs follow the ARIA tabs pattern (`EditorTabs` hook). The Theme
+  and Tutorial bubbles toggles' buttons get `aria-pressed` from `assets/js/toggles.js`
+  (read from `<html>`'s `data-theme`, `data-theme-source`, `data-bubbles`; kept by
+  `JS.ignore_attributes`). Screen
   readers are checked by hand before a release (checklist in the doc).
 - **Public pages must work without JavaScript** (AX-04, CL-02). Use controllers, not LiveView.
 - **All UI strings via Gettext** (`gettext/1`), never hard-coded (AX-05 readiness).
