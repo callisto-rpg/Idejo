@@ -255,6 +255,10 @@ account, open the author's card (their name) for **User actions**.
 - **Archive topic**: the topic goes to the **Archive**, read only; its open messages close.
   The Archive is hidden from every role until an administrator shows it in
   **Permissions**, so readers (and moderators) no longer see it there.
+- **Unarchive to …** (on an archived topic, in place of **Move to**): the topic leaves the
+  Archive, open again, back in the category it was archived from (**Unarchived a topic** in
+  the log). If that category no longer exists, pick one under **Unarchive to**, then
+  **Unarchive**.
 - **Permanently delete topic** (under a line, in red): tick **Yes, delete this topic and all
   its messages for good**, then the button. Everything in the topic goes and cannot come
   back; the moderation log keeps its title and category (**Deleted a topic for good**).
@@ -268,6 +272,8 @@ or long-press it, in a list or in the sidebar. Under the usual items:
   inactive**). It stays faded until someone sends a message there.
 - **Archive**, **Move to…** (pick the category) and **Delete** (click again on **Delete for
   good** to confirm), as in **Moderate this topic**. You stay on the page you were on.
+- On an archived topic, **Unarchive to …** in place of Archive and Move: back to the
+  category it came from, or **Unarchive to…** and pick one when it has none.
 
 **Change the title:** point at the title and click the pencil next to it, then **Save**.
 Starters change their own topic's title too, while it is open; moderators may also in

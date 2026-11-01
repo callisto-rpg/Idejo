@@ -53,6 +53,23 @@ defmodule Idejo.Moderation do
     })
   end
 
+  @doc """
+  The id of the category a topic was last archived from (its latest `topic.archive` entry's
+  `details`), or nil: never archived that way (a category deleted with its topics archived
+  logs no entry per topic).
+  """
+  @spec archived_from(Ecto.UUID.t()) :: Ecto.UUID.t() | nil
+  def archived_from(topic_id) do
+    Repo.one(
+      from a in Action,
+        where:
+          a.target_type == "topic" and a.target_id == ^topic_id and a.action == "topic.archive",
+        order_by: [desc: a.created_at, desc: a.id],
+        limit: 1,
+        select: fragment("?->'from'->>'id'", a.details)
+    )
+  end
+
   defp target_of(%Message{topic_id: topic_id}),
     do: {"message", Repo.one!(from t in Topic, where: t.id == ^topic_id, select: t.category_id)}
 

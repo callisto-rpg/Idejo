@@ -39,6 +39,31 @@ defmodule IdejoWeb.TopicModerationController do
     end
   end
 
+  # Back to the category it was archived from, or the one picked (`category_id`) when it has
+  # none (steward decision, 2026-11-01).
+  def create(conn, %{"id" => id, "action" => "unarchive"} = params) do
+    user = conn.assigns.current_scope.user
+
+    topic =
+      Forum.get_viewable_topic(user, id) ||
+        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+
+    case unarchive_target(user, topic, params["category_id"]) do
+      nil ->
+        conn
+        |> put_flash(:error, gettext("Choose the category the topic goes back to."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+
+      target ->
+        unarchived(
+          conn,
+          params,
+          topic,
+          Forum.unarchive_topic(user, topic, target, params["reason"])
+        )
+    end
+  end
+
   def create(conn, %{"id" => id, "action" => "move"} = params) do
     user = conn.assigns.current_scope.user
 
@@ -122,6 +147,34 @@ defmodule IdejoWeb.TopicModerationController do
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
     end
+  end
+
+  defp unarchive_target(user, topic, category_id) when category_id in [nil, ""] do
+    case Forum.unarchive_target(topic) do
+      nil -> nil
+      original -> unarchive_target(user, topic, original.id)
+    end
+  end
+
+  defp unarchive_target(user, topic, category_id),
+    do: Enum.find(Forum.list_move_targets(user, topic), &(&1.id == category_id))
+
+  defp unarchived(conn, params, topic, {:ok, open}) do
+    conn
+    |> put_flash(:info, gettext("Topic unarchived to %{category}.", category: open.category.name))
+    |> redirect(to: back(conn, params, topic) || ~p"/t/#{open.id}/#{open.slug}")
+  end
+
+  defp unarchived(conn, _params, topic, {:error, :not_archived}) do
+    conn
+    |> put_flash(:error, gettext("This topic is not archived."))
+    |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+  end
+
+  defp unarchived(conn, _params, topic, {:error, _}) do
+    conn
+    |> put_flash(:error, gettext("You cannot move this topic there."))
+    |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
   end
 
   defp back(conn, params, _topic), do: IdejoWeb.ReturnBack.path(conn, params)

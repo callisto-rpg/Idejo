@@ -863,7 +863,9 @@ roles or the permission grid. Every later change must keep it true:
   `GET /topic-menu/{id}` (`TopicMenuController`, JSON: `Reading.follower_count/1`, inactive,
   category, archived): "N following", which a click turns red as "Mark as inactive" and a
   second click posts; Archive; "Move to…" (every category but the Archive and its own);
-  Delete (a second click confirms). They post to `/t/{id}/moderate` with `return=back`
+  Delete (a second click confirms); on an archived topic, "Unarchive to {category}"
+  (`unarchive_to` in the JSON) or "Unarchive to…" over the same category list (the list
+  form's `action` set by the toggle's `data-list-action`). They post to `/t/{id}/moderate` with `return=back`
   (`IdejoWeb.ReturnBack.path/2`, the same-host `Referer`; not back to a topic's own page it
   left). **Muted** (`follows.muted`,
   with `following: false`): `Notifications` never notifies a muted user (`may_view/2`, and no
@@ -1114,7 +1116,15 @@ roles or the permission grid. Every later change must keep it true:
   foreign keys' cascades, everything in it (`topic.delete` logged with title and category, a
   `delete` activity, open messages' timers stopped). The delete is its own form with a
   required confirmation box (`confirm=yes`, checked by `TopicModerationController`). Both
-  broadcast `{:topic_changed, id}`. A new table that references topics or messages needs an
+  broadcast `{:topic_changed, id}`. **Unarchive** (steward decision, 2026-11-01):
+  `Forum.unarchive_topic/4` puts an archived topic back, `state: "open"`, in a category
+  (`:moderate` in the Archive and there; logged `topic.unarchive` under it, `from`/`to`,
+  with an `update` activity): by default the one it was archived from
+  (`Forum.unarchive_target/1`, from its latest `topic.archive` entry, `Moderation.archived_from/1`;
+  nil when that category is gone or the topic was archived with its category), else one
+  picked (`category_id`). "Moderate this topic" shows "Unarchive to {category}", or an
+  "Unarchive to" dropdown, in place of "Move to" for archived topics; the topic menu has the
+  same. A new table that references topics or messages needs an
   `on_delete` that lets this work, and an index that starts with the referring column: each
   deleted message makes PostgreSQL look its references up, reading the whole table without
   one (a topic of 2,000 messages took 42 s before `messages.reply_to_id` had one).

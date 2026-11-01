@@ -129,8 +129,39 @@
       <button :if={@topic.pinned} name="action" value="unpin" class="btn btn-sm">
         {gettext("Unpin")}
       </button>
-      <%!-- TP-15: to a category the moderator also moderates. --%>
-      <span :if={@move_targets != []} class="flex items-end gap-2">
+      <%!-- Steward decision, 2026-11-01: out of the Archive, open again, into the category it
+           was archived from; without one (or one the moderator does not moderate), picked. --%>
+      <button
+        :if={@topic.state == "archived" and @unarchive_to}
+        name="action"
+        value="unarchive"
+        id="unarchive-topic"
+        class="btn btn-sm"
+      >
+        <.icon name="hero-arrow-uturn-left" class="size-4" />
+        {gettext("Unarchive to %{category}", category: @unarchive_to.name)}
+      </button>
+      <span
+        :if={@topic.state == "archived" and !@unarchive_to and @move_targets != []}
+        class="flex items-end gap-2"
+      >
+        <span>
+          <span id="unarchive-target-label" class="label mb-1">{gettext("Unarchive to")}</span>
+          <.dropdown
+            id="unarchive-target"
+            name="category_id"
+            labelled_by="unarchive-target-label"
+            class="is-small"
+            options={Enum.map(@move_targets, &{&1.name, &1.id})}
+          />
+        </span>
+        <button name="action" value="unarchive" id="unarchive-topic" class="btn btn-sm">
+          <.icon name="hero-arrow-uturn-left" class="size-4" />{gettext("Unarchive")}
+        </button>
+      </span>
+      <%!-- TP-15: to a category the moderator also moderates. An archived topic is
+           unarchived instead. --%>
+      <span :if={@move_targets != [] and @topic.state != "archived"} class="flex items-end gap-2">
         <span>
           <span id="move-target-label" class="label mb-1">{gettext("Move to")}</span>
           <.dropdown
