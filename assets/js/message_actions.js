@@ -30,7 +30,7 @@ document.addEventListener("pointerdown", e => {
 
 document.addEventListener("click", e => {
   if (!touch.matches) return
-  const message = e.target.closest?.("#messages article.message")
+  const message = e.target.closest?.("#message-window article.message")
   if (!message || message === justClosed || e.target.closest(OWN_TAP)) return
   // "Show message controls on mobile" (steward decision, 2026-10-31): always in place.
   if (message.closest("[data-controls-mobile]")) return

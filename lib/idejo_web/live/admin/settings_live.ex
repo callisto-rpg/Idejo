@@ -128,6 +128,22 @@ defmodule IdejoWeb.Admin.SettingsLive do
           step="1"
           required
         />
+        <%!-- Steward decision, 2026-11-01: Idejo.Forum.TopicWindow. --%>
+        <.input
+          field={@form[:performance]}
+          type="select"
+          label={gettext("Performance")}
+          options={[
+            {gettext("Light (for smaller servers)"), "light"},
+            {gettext("Normal (recommended)"), "normal"},
+            {gettext("Heavy (for more powerful servers)"), "heavy"}
+          ]}
+        />
+        <p class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "How many messages a topic loads at a time; more load as readers scroll. Light loads half as many as Normal, Heavy three times as many."
+          )}
+        </p>
         <%!-- PN-19 --%>
         <.input
           field={@form[:push_enabled]}

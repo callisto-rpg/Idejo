@@ -40,6 +40,7 @@ defmodule IdejoWeb.TopicLive do
 
   alias Idejo.Access
   alias Idejo.Forum
+  alias Idejo.Forum.TopicWindow
   alias Idejo.Messages
   alias Idejo.Messages.{Polls, Scheduling}
   alias Idejo.Reading
@@ -56,6 +57,28 @@ defmodule IdejoWeb.TopicLive do
   # How long a completed message's head says "sent & committed" (steward decision, 2026-10-31).
   @committed_ms 3000
 
+  # The window of a view with nothing to show: no topic, or one the viewer may no longer view
+  # (Long topics, `put_window/2`).
+  @no_window [
+    messages: [],
+    nav: nil,
+    deleted_runs: %{},
+    gap: false,
+    earlier_count: 0,
+    later_count: 0,
+    at_end?: true,
+    new_below: 0,
+    page_before: nil,
+    page_after: nil,
+    last_page: 1,
+    opening_id: nil,
+    latest: nil,
+    mine_last: nil,
+    rest_pos: 0,
+    total: 0,
+    own_open: nil
+  ]
+
   @impl true
   def mount(_params, %{"topic_id" => topic_id} = session, socket) do
     user = user(socket)
@@ -64,11 +87,12 @@ defmodule IdejoWeb.TopicLive do
     case Forum.get_readable_topic(user, topic_id) do
       nil ->
         {:ok,
-         assign(socket,
+         socket
+         |> assign(@no_window)
+         |> assign(
            topic: nil,
            can_post?: false,
            lost_access?: false,
-           messages: [],
            roles: %{},
            committed: nil,
            editing: nil,
@@ -110,9 +134,7 @@ defmodule IdejoWeb.TopicLive do
            too_soon?: false,
            composing_edit: nil,
            edit_versioned?: false,
-           images?: false,
-           nav: nil,
-           deleted_runs: %{}
+           images?: false
          )}
 
       topic ->
@@ -134,7 +156,10 @@ defmodule IdejoWeb.TopicLive do
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
          |> assign(composing_edit: nil, edit_versioned?: false)
-         |> put_messages(Forum.list_messages(topic))
+         |> assign(sizes: TopicWindow.sizes(), new_below: 0)
+         |> assign(:mine_last, TopicWindow.last_by(topic, user))
+         |> assign(:own_open, open_id(can_post? && user, topic))
+         |> put_window(landing(session))
          |> put_poster_role()
          |> put_draft()
          |> put_first_unread(session["first_unread"])
@@ -280,7 +305,161 @@ defmodule IdejoWeb.TopicLive do
     assign(socket, :forks, Forum.list_forks(user(socket), ids))
   end
 
-  # All of the topic's messages: at mount, and after messages moved (TP-15).
+  # Long topics, a window at a time (steward decision, 2026-11-01). Never every message of
+  # the topic: its opening message, pinned on top (not in a private conversation, which has
+  # none), and a run of messages in order, from place `rest_pos` (from 0) of the topic's
+  # `total`. Earlier and later ones load as the reader scrolls (`load_earlier`,
+  # `load_later`), at most `sizes.cap` at once besides the messages kept for the viewer
+  # (`kept_ids/1`). `messages` holds them all, the opening first, so a loaded message is found
+  # as before. How many: the "Performance" setting (`Idejo.Forum.TopicWindow.sizes/1`).
+
+  # Where the reader lands: a page asked for (`?page=n`, the links without JavaScript), a
+  # message (`?around=`, permalinks and notifications), the composer after "Reply" without
+  # JavaScript, their first unread message, else the end, where the conversation goes on.
+  defp landing(session) do
+    window = session["window"] || %{}
+
+    cond do
+      page = positive_integer(window["page"]) -> {:page, page}
+      is_binary(window["around"]) -> {:around, window["around"]}
+      is_binary(session["reply_to_id"]) -> :end
+      match?(%{id: _}, session["first_unread"]) -> {:around, session["first_unread"].id}
+      true -> :end
+    end
+  end
+
+  defp positive_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
+  end
+
+  defp positive_integer(_value), do: nil
+
+  defp put_window(socket, spec) do
+    %{topic: topic, sizes: sizes} = socket.assigns
+    total = TopicWindow.count(topic)
+    {loaded, pos} = load_window(topic, spec, sizes, total, socket.assigns.own_open)
+    set_window(socket, loaded, pos, total)
+  end
+
+  # The messages `spec` asks for, in order, with the place of the first.
+  defp load_window(topic, {:page, page}, %{page: size}, total, _open_id) do
+    page = min(page, TopicWindow.page_of(max(total - 1, 0), size))
+    {TopicWindow.page(topic, page, size), (page - 1) * size}
+  end
+
+  defp load_window(topic, {:around, id}, sizes, total, open_id) do
+    case Forum.get_topic_message(topic, id) do
+      nil ->
+        load_window(topic, :end, sizes, total, open_id)
+
+      message ->
+        loaded = TopicWindow.around(topic, message, sizes.before, sizes.after)
+        index = Enum.find_index(loaded, &(&1.id == message.id))
+        {loaded, TopicWindow.position(topic, message) - index}
+    end
+  end
+
+  # The end, back to the viewer's open message when it is older: the composer is that message
+  # (GM-02), so it is always loaded with it.
+  defp load_window(topic, :end, sizes, total, open_id) do
+    loaded = TopicWindow.last(topic, sizes.before + sizes.after)
+
+    with id when is_binary(id) <- open_id,
+         false <- Enum.any?(loaded, &(&1.id == id)),
+         %Messages.Message{} = open <- Forum.get_topic_message(topic, id) do
+      {TopicWindow.since(topic, open), TopicWindow.position(topic, open)}
+    else
+      _ -> {loaded, total - length(loaded)}
+    end
+  end
+
+  # The opening message pinned first, then the run (alone in a private conversation).
+  defp set_window(socket, loaded, pos, total) do
+    {pinned, rest, rest_pos} =
+      cond do
+        socket.assigns.topic.private or loaded == [] -> {nil, loaded, pos}
+        pos == 0 -> {hd(loaded), tl(loaded), 1}
+        true -> {opening(socket), loaded, pos}
+      end
+
+    socket
+    |> assign(rest_pos: rest_pos, total: total)
+    |> assign(:opening_id, opening_id(socket, pinned, loaded, pos))
+    |> put_messages(List.wrap(pinned) ++ rest)
+    |> put_bounds()
+  end
+
+  # The opening message, from the messages loaded when it is among them.
+  defp opening(socket) do
+    case socket.assigns do
+      %{messages: [%{id: id} = first | _], opening_id: id} -> first
+      _ -> TopicWindow.first(socket.assigns.topic)
+    end
+  end
+
+  defp opening_id(_socket, %{id: id}, _loaded, _pos), do: id
+  defp opening_id(_socket, nil, [first | _], 0), do: first.id
+
+  defp opening_id(socket, nil, _loaded, _pos) do
+    case socket.assigns[:opening_id] || TopicWindow.first(socket.assigns.topic) do
+      %{id: id} -> id
+      id -> id
+    end
+  end
+
+  # The pinned opening message (nil in a private conversation) and the run after it.
+  defp parts(%{topic: %{private: true}, messages: messages}), do: {nil, messages}
+  defp parts(%{messages: []}), do: {nil, []}
+  defp parts(%{messages: [pinned | rest]}), do: {pinned, rest}
+
+  # How many messages are not loaded before and after the run, the pages that hold them for
+  # the links without JavaScript, and the navigator's links: the opening message, the topic's
+  # latest (`latest`, kept current by new messages) and the viewer's own last one.
+  defp put_bounds(socket) do
+    %{messages: messages, rest_pos: rest_pos, total: total, sizes: %{page: size}} =
+      socket.assigns
+
+    {pinned, rest} = parts(socket.assigns)
+    earlier = if pinned, do: max(rest_pos - 1, 0), else: rest_pos
+    later = max(total - rest_pos - length(rest), 0)
+
+    latest =
+      cond do
+        later == 0 -> latest_of(List.last(messages))
+        socket.assigns[:latest] -> socket.assigns.latest
+        true -> TopicWindow.latest(socket.assigns.topic)
+      end
+
+    socket
+    |> assign(
+      gap: pinned != nil and earlier > 0,
+      earlier_count: earlier,
+      later_count: later,
+      at_end?: later == 0,
+      new_below: if(later == 0, do: 0, else: socket.assigns.new_below),
+      latest: latest,
+      page_before: earlier > 0 && TopicWindow.page_of(rest_pos - 1, size),
+      page_after: later > 0 && TopicWindow.page_of(rest_pos + length(rest), size),
+      last_page: TopicWindow.page_of(max(total - 1, 0), size)
+    )
+    |> put_nav()
+  end
+
+  defp put_nav(%{assigns: %{opening_id: nil}} = socket), do: assign(socket, :nav, nil)
+
+  defp put_nav(socket) do
+    %{opening_id: first, latest: latest, mine_last: mine} = socket.assigns
+    assign(socket, :nav, %{first: first, last: latest && latest.id, mine: mine})
+  end
+
+  defp latest_of(nil), do: nil
+  defp latest_of(message), do: %{id: message.id, opened_at: message.opened_at}
+
+  # The loaded messages, changed: their authors' roles, quotes from other topics, the runs of
+  # deleted messages.
   defp put_messages(socket, messages) do
     socket
     |> assign(:messages, messages)
@@ -289,9 +468,9 @@ defmodule IdejoWeb.TopicLive do
     |> put_derived()
   end
 
-  # One message new or changed (NF-01): only it is looked at, for its author's role when new
-  # to this view and its quote when that leads to another topic, so most events cost no
-  # query; the rest is worked out from the messages in memory.
+  # One loaded message new or changed (NF-01): only it is looked at, for its author's role
+  # when new to this view and its quote when that leads to another topic, so most events cost
+  # no query; the rest is worked out from the messages in memory.
   defp put_message(socket, message) do
     socket
     |> assign(:messages, upsert(socket.assigns.messages, message))
@@ -300,12 +479,117 @@ defmodule IdejoWeb.TopicLive do
     |> put_derived()
   end
 
-  # What the page draws from the whole list and nothing else, worked out once per change of
-  # it rather than at each render: the runs of deleted messages and the navigator's links.
-  # Messages change through put_messages/2 and put_message/2 only (or go, with the topic).
+  # What the page draws from the loaded list, worked out once per change of it rather than
+  # at each render: the runs of deleted messages, counted apart for an opening message pinned
+  # away from the run.
   defp put_derived(socket) do
-    %{messages: messages} = socket.assigns
-    assign(socket, deleted_runs: deleted_runs(messages), nav: nav_targets(messages, user(socket)))
+    runs =
+      case parts(socket.assigns) do
+        {pinned, rest} when pinned != nil and rest != [] ->
+          if socket.assigns.rest_pos > 1,
+            do: Map.merge(deleted_runs([pinned]), deleted_runs(rest)),
+            else: deleted_runs(socket.assigns.messages)
+
+        _ ->
+          deleted_runs(socket.assigns.messages)
+      end
+
+    assign(socket, :deleted_runs, runs)
+  end
+
+  # More messages: before the run, or after it. Loading earlier drops the latest ones past
+  # the cap, unless the run reaches the end and the viewer may write (the composer is there,
+  # with what they typed and did not send); loading later drops the earliest ones past it.
+  defp load_more(socket, :earlier) do
+    %{topic: topic, sizes: %{step: step}, earlier_count: earlier, rest_pos: rest_pos} =
+      socket.assigns
+
+    {pinned, rest} = parts(socket.assigns)
+    older = TopicWindow.before(topic, hd(rest), min(step, earlier))
+
+    socket
+    |> assign(:rest_pos, rest_pos - length(older))
+    |> put_messages(List.wrap(pinned) ++ older ++ rest)
+    |> put_bounds()
+    |> then(&if(&1.assigns.at_end? and &1.assigns.can_post?, do: &1, else: trim(&1, :latest)))
+  end
+
+  defp load_more(socket, :later) do
+    %{topic: topic, sizes: %{step: step}, later_count: later} = socket.assigns
+    {pinned, rest} = parts(socket.assigns)
+    newer = TopicWindow.next(topic, List.last(rest) || pinned, min(step, later))
+
+    socket
+    |> put_messages(List.wrap(pinned) ++ rest ++ newer)
+    |> put_bounds()
+    |> trim(:earliest)
+  end
+
+  # At most `sizes.cap` messages in the run, besides what is kept for the viewer. Never the
+  # earliest while the composer edits the opening message: it stays in the run with it.
+  defp trim(%{assigns: %{composing_edit: id, opening_id: id}} = socket, :earliest)
+       when is_binary(id),
+       do: socket
+
+  defp trim(socket, side) do
+    {pinned, rest} = parts(socket.assigns)
+    excess = length(rest) - socket.assigns.sizes.cap
+    kept = kept_ids(socket.assigns)
+
+    if excess > 0, do: drop(socket, side, pinned, rest, excess, kept), else: socket
+  end
+
+  defp drop(socket, :earliest, pinned, rest, excess, kept) do
+    # Up to the first message kept, never past it.
+    keep_from = Enum.find_index(rest, &MapSet.member?(kept, &1.id)) || excess
+    dropped = min(excess, keep_from)
+
+    socket
+    |> assign(:rest_pos, socket.assigns.rest_pos + dropped)
+    |> put_messages(List.wrap(pinned) ++ Enum.drop(rest, dropped))
+    |> put_bounds()
+  end
+
+  defp drop(socket, :latest, pinned, rest, excess, kept) do
+    last_kept =
+      rest
+      |> Enum.with_index()
+      |> Enum.filter(&MapSet.member?(kept, elem(&1, 0).id))
+      |> List.last()
+
+    room = if last_kept, do: length(rest) - elem(last_kept, 1) - 1, else: excess
+    dropped = min(excess, room)
+
+    socket
+    |> put_messages(List.wrap(pinned) ++ Enum.drop(rest, -dropped))
+    |> put_bounds()
+  end
+
+  # Messages the viewer is working on, never dropped from the window: their open message and
+  # what the composer, the editor, the moderation card or the delete dialog has open.
+  defp kept_ids(assigns) do
+    editing = with {id, _form} <- assigns.editing, do: id
+
+    [
+      assigns.own_open,
+      assigns.composing_edit,
+      editing,
+      assigns.moderating,
+      assigns.confirm_delete
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  # What the window's messages carry, for the messages it holds now.
+  defp refresh_window_data(socket) do
+    socket |> put_forks() |> put_reactions() |> put_polls() |> put_mention_glows()
+  end
+
+  # The end of the topic, where the composer is: everything up to it is read now (TP-07).
+  defp to_end(socket) do
+    Reading.mark_read(user(socket), socket.assigns.topic)
+    socket |> put_window(:end) |> refresh_window_data()
   end
 
   # TP-15: a reply may lead to another topic after a move; its quote shows only to readers who
@@ -401,21 +685,44 @@ defmodule IdejoWeb.TopicLive do
     # Loaded once by the broadcast (NF-01); this costs nothing then.
     message = Repo.preload(message, Messages.shown())
     old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
-    # A message that arrives while the topic is open is read (TP-07); appends change nothing.
-    if is_nil(old), do: Reading.mark_read(user(socket), socket.assigns.topic)
 
-    # A new message makes the topic's name glow in the sidebar (the Notifier hook listens
-    # on the window; steward decision, 2026-10-23).
-    socket =
-      if is_nil(old),
-        do: push_event(socket, "topic_activity", %{topic_id: socket.assigns.topic.id}),
-        else: socket
+    cond do
+      old ->
+        {:noreply,
+         socket
+         |> track_mine(message)
+         |> announce(old, message)
+         |> put_message(message)
+         |> schedule_tick()}
 
-    {:noreply,
-     socket
-     |> announce(old, message)
-     |> put_message(message)
-     |> schedule_tick()}
+      # The window reaches the end: a new message joins it (in its place, should the events
+      # of two messages arrive out of order).
+      socket.assigns.at_end? and within_run?(socket.assigns, message) ->
+        # A message that arrives while the topic is open is read (TP-07).
+        Reading.mark_read(user(socket), socket.assigns.topic)
+
+        {:noreply,
+         socket
+         |> arrived(message)
+         |> put_message(message)
+         |> put_bounds()
+         |> trim(:earliest)
+         |> schedule_tick()}
+
+      # The reader is further up: they are told how many came, and go there with
+      # `jump_to_end` (steward decision, 2026-11-01).
+      newer?(message, socket.assigns.latest) ->
+        {:noreply,
+         socket
+         |> arrived(message)
+         |> assign(:new_below, socket.assigns.new_below + 1)
+         |> put_bounds()}
+
+      # An earlier message the window does not hold changed: nothing here shows it (the
+      # viewer's own open message closing is noted).
+      true ->
+        {:noreply, track_mine(socket, message)}
+    end
   end
 
   def handle_info({:committed_shown, id}, %{assigns: %{committed: id}} = socket),
@@ -440,12 +747,13 @@ defmodule IdejoWeb.TopicLive do
         Messages.unsubscribe(topic_id)
 
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(@no_window)
+         |> assign(
            topic: nil,
            can_post?: false,
            can_react?: false,
            lost_access?: true,
-           messages: [],
            reaction_who: nil
          )}
 
@@ -489,17 +797,27 @@ defmodule IdejoWeb.TopicLive do
         {:noreply, socket}
 
       topic ->
-        messages = Forum.list_messages(topic)
-        ids = MapSet.new(messages, & &1.id)
+        # Read again where the reader is: the end, or around the first message they had.
+        spec =
+          case parts(socket.assigns) do
+            _ when socket.assigns.at_end? -> :end
+            {_pinned, [first | _]} -> {:around, first.id}
+            _ -> :end
+          end
+
+        socket =
+          socket
+          |> assign(topic: topic, latest: nil)
+          |> assign(:mine_last, TopicWindow.last_by(topic, user(socket)))
+          |> put_window(spec)
+
+        ids = MapSet.new(socket.assigns.messages, & &1.id)
         selected = socket.assigns.selected && MapSet.intersection(socket.assigns.selected, ids)
 
         {:noreply,
          socket
-         |> assign(topic: topic, selected: selected)
-         |> put_messages(messages)
-         |> put_forks()
-         |> put_reactions()
-         |> put_polls()
+         |> assign(:selected, selected)
+         |> refresh_window_data()
          |> sync_composer()}
     end
   end
@@ -526,12 +844,13 @@ defmodule IdejoWeb.TopicLive do
         Messages.unsubscribe(socket.assigns.topic.id)
 
         {:noreply,
-         assign(socket,
+         socket
+         |> assign(@no_window)
+         |> assign(
            topic: nil,
            can_post?: false,
            can_react?: false,
            lost_access?: true,
-           messages: [],
            reaction_who: nil
          )}
 
@@ -717,12 +1036,84 @@ defmodule IdejoWeb.TopicLive do
     |> Enum.any?(&is_nil(&1.deleted_at))
   end
 
-  # Messages keep their place; a new one goes at the end (GM-08: ordered by first commit).
+  # Messages keep their place; a new one goes in its own, the end but for events that came
+  # out of order (GM-08: ordered by first commit).
   defp upsert(messages, message) do
-    if Enum.any?(messages, &(&1.id == message.id)),
-      do: Enum.map(messages, &if(&1.id == message.id, do: message, else: &1)),
-      else: messages ++ [message]
+    if Enum.any?(messages, &(&1.id == message.id)) do
+      Enum.map(messages, &if(&1.id == message.id, do: message, else: &1))
+    else
+      {before, after_} = Enum.split_while(messages, &(not newer?(&1, message)))
+      before ++ [message | after_]
+    end
   end
+
+  # Whether `message` comes after `ref` in the topic's order (`opened_at`, then `id`).
+  defp newer?(_message, nil), do: true
+
+  defp newer?(message, ref) do
+    case DateTime.compare(message.opened_at, ref.opened_at) do
+      :gt -> true
+      :lt -> false
+      :eq -> message.id > ref.id
+    end
+  end
+
+  # A message the window may hold: one after the start of the run.
+  defp within_run?(assigns, message) do
+    case parts(assigns) do
+      {_pinned, [first | _]} -> newer?(message, first)
+      {pinned, []} -> newer?(message, pinned)
+    end
+  end
+
+  # A new message, shown or not: the topic grew, its name glows in the sidebar (the Notifier
+  # hook listens on the window; steward decision, 2026-10-23), and it is announced (AX-02).
+  defp arrived(socket, message) do
+    %{latest: latest, total: total, topic: topic, mine_last: mine_last} = socket.assigns
+    viewer = user(socket)
+    own? = viewer != nil and message.author_id == viewer.id and is_nil(message.deleted_at)
+
+    socket
+    |> assign(:total, total + 1)
+    |> assign(:latest, if(newer?(message, latest), do: latest_of(message), else: latest))
+    |> assign(:mine_last, if(own?, do: message.id, else: mine_last))
+    |> track_open(viewer, message)
+    |> push_event("topic_activity", %{topic_id: topic.id})
+    |> announce(nil, message)
+  end
+
+  # The navigator's "My last message": deleted, the one before it takes its place. And the
+  # viewer's open message (GM-09: one at most), which the composer is.
+  defp track_mine(socket, message) do
+    viewer = user(socket)
+    socket = track_open(socket, viewer, message)
+
+    if message.deleted_at && message.id == socket.assigns.mine_last do
+      socket
+      |> assign(:mine_last, TopicWindow.last_by(socket.assigns.topic, viewer))
+      |> put_nav()
+    else
+      socket
+    end
+  end
+
+  defp track_open(socket, %{id: author_id}, %{author_id: author_id, state: "open", id: id}),
+    do: assign(socket, :own_open, id)
+
+  defp track_open(%{assigns: %{own_open: id}} = socket, _viewer, %{id: id}),
+    do: assign(socket, :own_open, nil)
+
+  defp track_open(socket, _viewer, _message), do: socket
+
+  # Before the window loads, which needs it (`load_window/5`).
+  defp open_id(user, topic) when is_struct(user) do
+    case Messages.open_message(user, topic) do
+      %{id: id} -> id
+      nil -> nil
+    end
+  end
+
+  defp open_id(_user, _topic), do: nil
 
   @impl true
   def handle_event(
@@ -1042,6 +1433,13 @@ defmodule IdejoWeb.TopicLive do
     case socket.assigns.can_post? &&
            Enum.find(socket.assigns.messages, &(&1.id == id and is_nil(&1.deleted_at))) do
       %Messages.Message{} = message ->
+        # The composer is at the end (steward decision, 2026-11-01): from further up, the
+        # page goes there first.
+        socket =
+          if socket.assigns.at_end?,
+            do: socket,
+            else: socket |> to_end() |> push_event("scroll_to_end", %{})
+
         left? = socket.assigns.draft_over == nil
 
         socket =
@@ -1060,6 +1458,44 @@ defmodule IdejoWeb.TopicLive do
       _ ->
         {:noreply, socket}
     end
+  end
+
+  # Long topics (steward decision, 2026-11-01): the messages before or after the window, when
+  # the reader scrolls to its edge (`phx-viewport-top` / `-bottom`, LiveView's own) or
+  # presses the button between them.
+  def handle_event("load_earlier", _params, %{assigns: %{earlier_count: n}} = socket)
+      when n > 0,
+      do: {:noreply, socket |> load_more(:earlier) |> refresh_window_data()}
+
+  def handle_event("load_earlier", _params, socket), do: {:noreply, socket}
+
+  def handle_event("load_later", _params, %{assigns: %{later_count: n}} = socket) when n > 0 do
+    socket = socket |> load_more(:later) |> refresh_window_data()
+    # At the end: what came meanwhile is read now (TP-07).
+    if socket.assigns.at_end?, do: Reading.mark_read(user(socket), socket.assigns.topic)
+    {:noreply, socket}
+  end
+
+  def handle_event("load_later", _params, socket), do: {:noreply, socket}
+
+  # The navigator's links (TopicNav hook): to a message the window does not hold, the window
+  # around it loads first, then the page goes to it.
+  def handle_event("jump", %{"id" => id}, socket) when is_binary(id) do
+    socket =
+      if socket.assigns.latest && id == socket.assigns.latest.id,
+        do: to_end(socket),
+        else: socket |> put_window({:around, id}) |> refresh_window_data()
+
+    {:noreply, push_event(socket, "scroll_to", %{id: "message-" <> id})}
+  end
+
+  # "N new messages", and "Jump to the end to write", whose composer then takes the focus.
+  def handle_event("jump_to_end", params, socket) do
+    socket = socket |> to_end() |> push_event("scroll_to_end", %{})
+
+    if params["write"],
+      do: {:noreply, push_event(socket, "composer_focus", %{})},
+      else: {:noreply, socket}
   end
 
   # The composer stays a new message (`draft_over`), refused until it may be sent.
@@ -1241,6 +1677,12 @@ defmodule IdejoWeb.TopicLive do
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
   def handle_event("edit", %{"id" => id}, socket) do
     user = user(socket)
+    # The composer opens in the message (steward decision, 2026-10-24): an opening message
+    # pinned away from the run is loaded with the messages after it first.
+    socket =
+      if socket.assigns.gap and id == socket.assigns.opening_id,
+        do: socket |> put_window({:around, id}) |> refresh_window_data(),
+        else: socket
 
     case Enum.find(socket.assigns.messages, &(&1.id == id)) do
       # Steward decision, 2026-10-24: the author edits in the composer, as they wrote it.
@@ -1320,7 +1762,7 @@ defmodule IdejoWeb.TopicLive do
       # Steward decision, 2026-10-23: the author emptied their message, so ask whether to
       # delete it; the editor stays open behind the question. Not the opening message.
       {:error, :blank}
-      when message.author_id == user.id and message.id != hd(socket.assigns.messages).id ->
+      when message.author_id == user.id and message.id != socket.assigns.opening_id ->
         {:noreply,
          assign(socket,
            editing: {id, to_form(%{"body" => body}, as: :edit)},
@@ -1387,7 +1829,7 @@ defmodule IdejoWeb.TopicLive do
 
   defp commit_edit(socket, message, "", _break?) do
     # Emptied: ask whether to delete it, as the editor does (not the opening message).
-    if message.id != hd(socket.assigns.messages).id,
+    if message.id != socket.assigns.opening_id,
       do: {:reply, %{error: true}, assign(socket, :confirm_delete, message.id)},
       else: {:reply, %{error: true}, socket}
   end
@@ -1441,7 +1883,7 @@ defmodule IdejoWeb.TopicLive do
   defp selectable_in_view?(%{select_for: :delete} = assigns, message),
     do: is_nil(message.deleted_at) and message.author_id != assigns.current_scope.user.id
 
-  defp selectable_in_view?(assigns, message), do: message.id != List.first(assigns.messages).id
+  defp selectable_in_view?(assigns, message), do: message.id != assigns.opening_id
 
   defp search_targets(socket, query) do
     results = Forum.search_move_targets(user(socket), query, socket.assigns.topic.id)
@@ -1460,15 +1902,38 @@ defmodule IdejoWeb.TopicLive do
   def render(assigns) do
     # Worked out at each render, as they follow from several assigns: never kept in the
     # socket, so LiveView sees them as changed each time and the composer is always right.
-    layout = composer_layout(assigns)
-    {before, after_} = split(assigns.messages, layout[:mine])
+    # The composer is at the end of the topic, or in a message its author edits (steward
+    # decision, 2026-11-01); elsewhere the messages read as they are.
+    # It is the author's open message, so that message must be loaded with it, which the end
+    # always is (`jump_to_end`).
+    composer? =
+      assigns.can_post? and
+        (assigns.composing_edit != nil or (assigns.at_end? and open_loaded?(assigns)))
+
+    layout =
+      if composer?,
+        do: composer_layout(assigns),
+        else: [mine: nil, locked: nil, answered?: false]
+
+    # The opening message pinned on top, away from the window (never while the composer
+    # is in it).
+    opening_id = assigns.opening_id
+
+    {pinned, window} =
+      if assigns.gap and not match?(%{id: ^opening_id}, layout[:mine]),
+        do: parts(assigns),
+        else: {nil, assigns.messages}
+
+    {before, after_} = split(window, layout[:mine])
 
     assigns =
       assigns
       |> assign(layout)
       |> assign(
+        composer?: composer?,
         moderated:
           assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
+        opening: pinned && entries(assigns, [pinned]),
         before: entries(assigns, before),
         later: entries(assigns, after_)
       )
@@ -1480,6 +1945,7 @@ defmodule IdejoWeb.TopicLive do
       id="topic-live"
       phx-hook="InlineLinks"
       data-topic-id={@topic && @topic.id}
+      data-at-end={@at_end?}
       data-emoji-index={@can_react? && ReactionComponents.picker_index()}
       data-emoji-labels={@can_react? && ReactionComponents.picker_labels()}
     >
@@ -1548,27 +2014,25 @@ defmodule IdejoWeb.TopicLive do
         {gettext("You can no longer view this topic.")}
       </p>
 
-      <ol
-        id="messages"
-        class={["message-list", @topic && "cat-#{@topic.category_id}"]}
+      <%!-- Long topics, a window at a time (steward decision, 2026-11-01): the opening message
+           pinned on top when the window starts further on, then the window, with what is not
+           loaded before and after it (buttons, links without JavaScript; LiveView's
+           `phx-viewport-top` / `-bottom` load more as the reader scrolls to an edge). --%>
+      <div
+        id="message-window"
         phx-hook="MentionGlow"
         data-mention-tags={@mention_glows != %{} && Jason.encode!(@mention_tags)}
         data-controls-mobile={@current_scope && @current_scope.user.controls_on_mobile}
         data-controls-desktop={@current_scope && @current_scope.user.controls_on_desktop}
       >
-        <%!-- NF-01: an entry reads only its message, its `entry` (entry/3) and what does not
-             change between updates, so an update renders and sends the entries it changed
-             and no others. --%>
-        <li
-          :for={{message, entry} <- @before}
-          :key={message.id}
-          id={"message-#{message.id}"}
-          hidden={entry.hidden?}
-          data-mention-glow={entry.glow}
-          phx-mounted={entry.glow && JS.ignore_attributes(["data-glowing"])}
+        <ol
+          :if={@opening}
+          id="opening-message"
+          class={["message-list", @topic && "cat-#{@topic.category_id}"]}
         >
-          <.unread_line :if={entry.unread} message_id={message.id} count={entry.unread} />
-          <.message
+          <.message_item
+            :for={{message, entry} <- @opening}
+            :key={message.id}
             message={message}
             entry={entry}
             topic={@topic}
@@ -1579,37 +2043,27 @@ defmodule IdejoWeb.TopicLive do
             can_react?={@can_react?}
             live?={@live?}
           />
-        </li>
-        <li :if={@can_post?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
-          <.composer
-            mine={@mine}
-            pending={@pending}
-            commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?)}
-            punctuate?={@punctuate?}
-            reply_to={@reply_to}
-            locked={@locked}
-            editing?={@mine != nil and @mine.id == @composing_edit}
-            roles={@roles}
-            author={@current_scope.user}
-            now={@now}
-            upload={if @images?, do: @uploads.composer_image}
-            image_error={@image_error}
-            poll={@mine && @polls[@mine.id]}
-            answered?={@answered?}
-            unanswered_minutes={@unanswered_minutes}
-            private?={@topic.private}
-          />
-        </li>
-        <li
-          :for={{message, entry} <- @later}
-          :key={message.id}
-          id={"message-#{message.id}"}
-          hidden={entry.hidden?}
-          data-mention-glow={entry.glow}
-          phx-mounted={entry.glow && JS.ignore_attributes(["data-glowing"])}
+        </ol>
+        <.window_gap
+          :if={@earlier_count > 0}
+          id="earlier-messages"
+          label={ngettext("1 earlier message", "%{count} earlier messages", @earlier_count)}
+          event="load_earlier"
+          href={page_path(@topic, @page_before)}
+          live?={@live?}
+        />
+        <ol
+          id="messages"
+          class={["message-list", @topic && "cat-#{@topic.category_id}"]}
+          phx-viewport-top={@live? && @earlier_count > 0 && "load_earlier"}
+          phx-viewport-bottom={@live? && @later_count > 0 && "load_later"}
         >
-          <.unread_line :if={entry.unread} message_id={message.id} count={entry.unread} />
-          <.message
+          <%!-- NF-01: an entry reads only its message, its `entry` (entry/3) and what does
+               not change between updates, so an update renders and sends the entries it
+               changed and no others. --%>
+          <.message_item
+            :for={{message, entry} <- @before}
+            :key={message.id}
             message={message}
             entry={entry}
             topic={@topic}
@@ -1620,8 +2074,78 @@ defmodule IdejoWeb.TopicLive do
             can_react?={@can_react?}
             live?={@live?}
           />
-        </li>
-      </ol>
+          <li :if={@composer?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
+            <.composer
+              mine={@mine}
+              pending={@pending}
+              commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?)}
+              punctuate?={@punctuate?}
+              reply_to={@reply_to}
+              locked={@locked}
+              editing?={@mine != nil and @mine.id == @composing_edit}
+              roles={@roles}
+              author={@current_scope.user}
+              now={@now}
+              upload={if @images?, do: @uploads.composer_image}
+              image_error={@image_error}
+              poll={@mine && @polls[@mine.id]}
+              answered?={@answered?}
+              unanswered_minutes={@unanswered_minutes}
+              private?={@topic.private}
+            />
+          </li>
+          <.message_item
+            :for={{message, entry} <- @later}
+            :key={message.id}
+            message={message}
+            entry={entry}
+            topic={@topic}
+            can_post?={@can_post?}
+            viewer={@current_scope && @current_scope.user}
+            can_moderate?={@can_moderate?}
+            can_fork?={@can_fork?}
+            can_react?={@can_react?}
+            live?={@live?}
+          />
+        </ol>
+        <.window_gap
+          :if={@later_count > 0}
+          id="later-messages"
+          label={ngettext("1 later message", "%{count} later messages", @later_count)}
+          event="load_later"
+          href={page_path(@topic, @page_after)}
+          live?={@live?}
+        />
+        <%!-- New messages while the reader is further up: they go there with it. --%>
+        <button
+          :if={@new_below > 0}
+          id="new-messages"
+          type="button"
+          class="new-messages btn btn-sm btn-primary"
+          phx-click="jump_to_end"
+        >
+          <.icon name="hero-arrow-down-micro" class="size-4" />{ngettext(
+            "1 new message",
+            "%{count} new messages",
+            @new_below
+          )}
+        </button>
+        <%!-- The composer is at the end of the topic. --%>
+        <p :if={@can_post? and !@composer?} id="jump-to-composer" class="window-gap">
+          <button
+            :if={@live?}
+            type="button"
+            class="btn btn-sm"
+            phx-click="jump_to_end"
+            phx-value-write="true"
+          >
+            {gettext("Jump to the end to write")}
+          </button>
+          <.link :if={!@live?} href={page_path(@topic, @last_page)} class="btn btn-sm">
+            {gettext("Jump to the end to write")}
+          </.link>
+        </p>
+      </div>
 
       <p :if={@flash["error"]} role="alert" class="alert alert-error mt-4">{@flash["error"]}</p>
       <%!-- TP-15: what a move did, for the moderator who did it. --%>
@@ -1648,8 +2172,75 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  attr :message, :map, required: true
+  attr :entry, :map, required: true
+  attr :topic, :map, required: true
+  attr :can_post?, :boolean, required: true
+  attr :viewer, :any, required: true
+  attr :can_moderate?, :boolean, required: true
+  attr :can_fork?, :boolean, required: true
+  attr :can_react?, :boolean, required: true
+  attr :live?, :boolean, required: true
+
+  # A message of the list, with the "N unread messages" line above it when it is the first
+  # unread one (TP-07). `:key`ed by the comprehensions that render it (NF-01).
+  defp message_item(assigns) do
+    ~H"""
+    <li
+      id={"message-#{@message.id}"}
+      hidden={@entry.hidden?}
+      data-mention-glow={@entry.glow}
+      phx-mounted={@entry.glow && JS.ignore_attributes(["data-glowing"])}
+    >
+      <.unread_line :if={@entry.unread} message_id={@message.id} count={@entry.unread} />
+      <.message
+        message={@message}
+        entry={@entry}
+        topic={@topic}
+        can_post?={@can_post?}
+        viewer={@viewer}
+        can_moderate?={@can_moderate?}
+        can_fork?={@can_fork?}
+        can_react?={@can_react?}
+        live?={@live?}
+      />
+    </li>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+
+  attr :event, :string,
+    required: true,
+    doc: "what the button pushes: `load_earlier`, `load_later`"
+
+  attr :href, :string, required: true, doc: "the page that holds them, without JavaScript"
+  attr :live?, :boolean, required: true
+
+  # Between the window and the messages not loaded (steward decision, 2026-11-01): a button
+  # that loads them (they also load when the reader scrolls to the edge), or, without
+  # JavaScript, a link to the page that holds them (AX-04).
+  defp window_gap(assigns) do
+    ~H"""
+    <p id={@id} class="window-gap">
+      <button :if={@live?} type="button" class="btn btn-sm btn-ghost" phx-click={@event}>
+        {@label}
+      </button>
+      <.link :if={!@live?} href={@href} class="btn btn-sm btn-ghost">{@label}</.link>
+    </p>
+    """
+  end
+
+  defp open_loaded?(%{own_open: nil}), do: true
+  defp open_loaded?(%{own_open: id, messages: messages}), do: Enum.any?(messages, &(&1.id == id))
+
+  # A page of the topic (`?page=n`, AX-04, SE-04), or of the private conversation.
+  defp page_path(%{private: true, id: id}, page), do: ~p"/p/#{id}?#{[page: page]}"
+  defp page_path(%{id: id, slug: slug}, page), do: ~p"/t/#{id}/#{slug}?#{[page: page]}"
+
   attr :title, :string, required: true
-  attr :nav, :map, required: true, doc: "the messages it links to (`nav_targets/2`)"
+  attr :nav, :map, required: true, doc: "the messages it links to (`put_nav/1`)"
   attr :first_unread, :map, default: nil
 
   # The topic navigator (steward decision, 2026-10-23): once the title has scrolled away, a
@@ -1839,20 +2430,6 @@ defmodule IdejoWeb.TopicLive do
 
   defp edit_state(_assigns, _message), do: nil
 
-  # The topic navigator's links: the first message, the last and the viewer's own last one
-  # (not deleted); nil with no messages.
-  defp nav_targets([], _viewer), do: nil
-
-  defp nav_targets([first | _] = messages, viewer) do
-    mine =
-      viewer &&
-        messages
-        |> Enum.reverse()
-        |> Enum.find(&(&1.author_id == viewer.id and is_nil(&1.deleted_at)))
-
-    %{first: first.id, last: List.last(messages).id, mine: mine && mine.id}
-  end
-
   # MO-02: for readers, a run of deleted messages shows as one line, one run per kind (by a
   # moderator, or by their authors). Maps each deleted message's id to `{:first, count,
   # kind}` for the first of its run, `:rest` for the others.
@@ -1936,8 +2513,10 @@ defmodule IdejoWeb.TopicLive do
   defp split(messages, nil), do: {messages, []}
 
   defp split(messages, mine) do
-    {before, [_mine | after_]} = Enum.split_while(messages, &(&1.id != mine.id))
-    {before, after_}
+    case Enum.split_while(messages, &(&1.id != mine.id)) do
+      {before, [_mine | after_]} -> {before, after_}
+      {before, []} -> {before, []}
+    end
   end
 
   attr :author, :map, required: true

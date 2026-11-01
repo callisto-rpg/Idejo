@@ -1546,6 +1546,21 @@
     & > li:not([hidden]) ~ li:not([hidden]) { border-top: 1px solid var(--hairline); }
     & > li:first-child { border-top-left-radius: inherit; border-top-right-radius: inherit; }
   }
+  /* Long topics (steward decision, 2026-11-01): between the opening message, the window and
+     the end, what is not loaded yet; and, further up, how many new messages came. */
+  .window-gap {
+    display: flex;
+    justify-content: center;
+    margin-block: 0.75rem;
+  }
+  .new-messages {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 20;
+    display: flex;
+    margin: 0.75rem auto 0;
+    box-shadow: var(--shadow-lift);
+  }
   .message {
     display: block;
     padding: 1rem 1.25rem 0.875rem;
@@ -1690,8 +1705,8 @@
   /* Touch screens: the pill, unless "Show message controls on mobile" is on (steward
      decision, 2026-10-31): then in place, as without scripts. */
   @media (hover: none) {
-    [data-js] #messages:not([data-controls-mobile]) .message { position: relative; }
-    [data-js] #messages:not([data-controls-mobile]) .message .message-actions {
+    [data-js] #message-window:not([data-controls-mobile]) .message { position: relative; }
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions {
       position: absolute;
       z-index: 30;
       top: calc(100% - 0.75rem);
@@ -1709,10 +1724,10 @@
       pointer-events: none;
       transition: opacity 150ms ease;
     }
-    [data-js] #messages:not([data-controls-mobile]) .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
-    [data-js] #messages:not([data-controls-mobile]) .message[data-acting] .message-actions,
-    [data-js] #messages:not([data-controls-mobile]) .message .message-actions:focus-within,
-    [data-js] #messages:not([data-controls-mobile]) .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
+    [data-js] #message-window:not([data-controls-mobile]) .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
+    [data-js] #message-window:not([data-controls-mobile]) .message[data-acting] .message-actions,
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:focus-within,
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   /* A long press opens who reacted (assets/js/reaction_who.js), not the phone's own menu. */

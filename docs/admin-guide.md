@@ -66,6 +66,12 @@ corner. It has ten tabs.
   once. Off, a reply waits like Ctrl+Enter: until the active-thread patience timer (and,
   while nobody wrote below, the unanswered-message one) has passed.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
+- **Performance**: how many messages a topic loads at a time; more load as readers scroll.
+  **Normal (recommended)**, the default, loads 10 messages before the one a reader lands on
+  and 30 after, 40 more at each scroll, and keeps at most 200 on the page; without
+  JavaScript, a topic reads in pages of 50. **Light (for smaller servers)** loads half as
+  many, **Heavy (for more powerful servers)** three times as many. It applies to pages
+  opened after you change it.
 - **Push notifications**: **On** (the default) or **Off**. On, members can turn on
   browser notifications for replies, mentions and topics they follow. Off, they are not
   offered and none are sent.

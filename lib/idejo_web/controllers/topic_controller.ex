@@ -17,6 +17,7 @@ defmodule IdejoWeb.TopicController do
 
   alias Idejo.Forum
   alias Idejo.Forum.Tags
+  alias Idejo.Forum.TopicWindow
   alias Idejo.Reading
 
   def show(conn, %{"id" => id} = params) do
@@ -47,12 +48,13 @@ defmodule IdejoWeb.TopicController do
               page_title: topic.title,
               reply_to_id: params["reply_to"],
               first_unread: first_unread,
+              window: window(params),
               following?: Reading.following?(user, topic),
               can_autofollow?: Idejo.Access.administrator?(user),
               can_rename?: Forum.can_rename_topic?(user, topic),
               forked_from: forked_from(user, topic),
-              # Without ?reply_to=, which only opens the form.
-              canonical_url: url(~p"/t/#{topic.id}/#{topic.slug}"),
+              # Without ?reply_to=, which only opens the form, or ?around=; a page, its own.
+              canonical_url: canonical(topic, params),
               # PN-20: the notifications banner.
               push_banner?: Idejo.Push.banner?(user)
             ] ++ moderator_tools(user, topic)
@@ -64,6 +66,26 @@ defmodule IdejoWeb.TopicController do
         end
     end
   end
+
+  # Long topics (steward decision, 2026-11-01): which messages the page opens with, a page
+  # (`?page=n`) or around a message (`?around=`, from its permalink, TP-06); else where the
+  # reader left off, or the end (IdejoWeb.TopicLive).
+  @doc false
+  def window(params), do: Map.take(params, ["page", "around"])
+
+  # SE-04: each page of a long topic is its own, the first too, as the topic's own address
+  # opens at its end, not on page 1. A page past the end shows the last; a topic of one page,
+  # or a page that is not a number, is the topic's address.
+  defp canonical(topic, %{"page" => page}) when is_binary(page) do
+    with {n, ""} when n > 0 <- Integer.parse(page),
+         pages when pages > 1 <- TopicWindow.pages(topic, TopicWindow.sizes().page) do
+      url(~p"/t/#{topic.id}/#{topic.slug}?#{[page: min(n, pages)]}")
+    else
+      _ -> url(~p"/t/#{topic.id}/#{topic.slug}")
+    end
+  end
+
+  defp canonical(topic, _params), do: url(~p"/t/#{topic.id}/#{topic.slug}")
 
   # TP-14, TP-15: the moderator form; TP-19: the "Edit tags" form, its own right
   # (moderators' by default).
