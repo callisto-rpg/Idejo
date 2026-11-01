@@ -20,6 +20,8 @@ const ARROW_GAP = 10
 const MOVE_TOLERANCE = 10
 
 const menu = () => document.getElementById("topic-menu")
+// An item's words: never just "span", which is the icon (CoreComponents.icon/1).
+const labelOf = button => button.querySelector(".topic-menu-label")
 const items = el => Array.from(el.querySelectorAll("[role=menuitem]")).filter(i => i.offsetParent !== null)
 
 let opener = null
@@ -38,7 +40,7 @@ export function open(row, x, y) {
   const following = document.querySelector(`#sidebar [data-topic-id="${id}"][data-following]`)
   el.toggleAttribute("data-following", following !== null)
   el.dataset.path = path
-  const link = el.querySelector("#topic-menu-link span")
+  const link = labelOf(el.querySelector("#topic-menu-link"))
   link.textContent = link.dataset.label ||= link.textContent
 
   opener = document.activeElement
@@ -74,7 +76,7 @@ function fillAdmin(el, id) {
       // Another topic's menu opened meanwhile, or the menu closed.
       if (!info || el.hidden || admin.dataset.topic !== id) return
       const following = admin.querySelector("#topic-menu-following")
-      const text = following.querySelector("span")
+      const text = labelOf(following)
       const count = (info.following === 1 ? following.dataset.one : following.dataset.many)
         .replace("%{count}", info.following)
       following.dataset.label = info.inactive ? `${count} · ${following.dataset.inactive}` : count
@@ -95,13 +97,13 @@ function fillAdmin(el, id) {
 
 // A first click turns the item red with what a second click does.
 function arm(button) {
-  const span = button.querySelector("span")
+  const span = labelOf(button)
   button.dataset.armed = span.textContent
   span.textContent = button.dataset.confirmLabel
 }
 
 function disarm(button) {
-  button.querySelector("span").textContent = button.dataset.armed
+  labelOf(button).textContent = button.dataset.armed
   delete button.dataset.armed
 }
 
@@ -181,7 +183,7 @@ document.addEventListener("click", e => {
 function copyLink(el, button) {
   const url = new URL(el.dataset.path, location.origin).href
   const done = () => {
-    button.querySelector("span").textContent = button.dataset.copied
+    labelOf(button).textContent = button.dataset.copied
     setTimeout(() => close(), 800)
   }
   if (navigator.clipboard) {

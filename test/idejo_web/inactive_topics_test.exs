@@ -140,6 +140,28 @@ defmodule IdejoWeb.InactiveTopicsTest do
     refute member_conn |> get(~p"/") |> html_response(200) =~ ~s(id="topic-menu-admin")
   end
 
+  # topic_menu.js writes the count, "Mark as inactive", "Delete for good" and "Link copied"
+  # into each item's `.topic-menu-label`: the item's first <span> is its icon.
+  @tag req: "TP-13"
+  test "TP-13 every topic menu item the script relabels has its own label", %{
+    conn: conn,
+    admin: admin
+  } do
+    menu =
+      conn
+      |> log_in_user(admin)
+      |> get(~p"/")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#topic-menu")
+
+    for selector <- ["#topic-menu-link", "#topic-menu-following", "#topic-menu-delete button"] do
+      item = LazyHTML.query(menu, selector)
+      assert Enum.count(item) == 1, selector
+      assert item |> LazyHTML.query(".topic-menu-label") |> Enum.count() == 1, selector
+    end
+  end
+
   @tag req: "TP-13"
   test "TP-13 the topic menu's actions lead back to the page it was opened on", %{
     conn: conn,
