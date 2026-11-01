@@ -219,7 +219,7 @@ defmodule IdejoWeb.Layouts do
         id="topic-menu-link"
         data-copied={gettext("Link copied")}
       >
-        <.icon name="hero-link" class="size-4" /><span>{gettext("Copy link")}</span>
+        <.icon name="hero-link" class="size-4" /><span class="topic-menu-label">{gettext("Copy link")}</span>
       </button>
       <div :if={@admin} id="topic-menu-admin" class="topic-menu-admin" hidden>
         <hr role="separator" />
@@ -236,11 +236,16 @@ defmodule IdejoWeb.Layouts do
             tabindex="-1"
             id="topic-menu-following"
             data-one={gettext("1 following")}
-            data-many={gettext("%{count} following")}
+            data-many={
+              # The script puts the count in: the placeholder passes through as is.
+              gettext("%{count} following", count: "%{count}")
+            }
             data-inactive={gettext("inactive")}
             data-confirm-label={gettext("Mark as inactive")}
           >
-            <.icon name="hero-users" class="size-4" /><span>{gettext("… following")}</span>
+            <.icon name="hero-users" class="size-4" /><span class="topic-menu-label">{gettext(
+              "… following"
+            )}</span>
           </button>
         </.form>
         <.form
@@ -296,7 +301,9 @@ defmodule IdejoWeb.Layouts do
           <input type="hidden" name="confirm" value="yes" />
           <input type="hidden" name="return" value="back" />
           <button role="menuitem" tabindex="-1" data-confirm-label={gettext("Delete for good")}>
-            <.icon name="hero-trash" class="size-4" /><span>{gettext("Delete")}</span>
+            <.icon name="hero-trash" class="size-4" /><span class="topic-menu-label">{gettext(
+              "Delete"
+            )}</span>
           </button>
         </.form>
       </div>
