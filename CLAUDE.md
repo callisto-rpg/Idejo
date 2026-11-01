@@ -616,6 +616,12 @@ roles or the permission grid. Every later change must keep it true:
   child of the `<li>` (tests read `#topics li > a`). The home page's active topics pass
   `lead={:category}`: the category's mark and name instead of the starter's avatar and name.
   Its tags sit at the right, above the message count (steward decision, 2026-10-23).
+  **Inactive topics** (steward decision, 2026-11-01): a topic no active user follows (no
+  `follows` row with `following`, and not `autofollow`) gets `topic.inactive` (virtual) from
+  `Reading.put_inactive/1`, one query per list, called by every controller that renders
+  `topic_row/1` (none while the `inactive_topics` setting, "Allow inactive topics" in
+  **Admin → Settings**, on by default, is off); the row takes `.is-inactive` (80%
+  desaturated, 50% opacity) and an `sr-only` "Inactive".
   **View** (steward decision, 2026-10-23): the home page (beside its "Active topics" title)
   and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`: a "View"
   label, then two links drawn as joined buttons (`btn join-item`, the chosen one

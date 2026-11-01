@@ -17,6 +17,7 @@ defmodule IdejoWeb.UnreadController do
     user = conn.assigns.current_scope.user
     followed = if page == 1, do: Reading.list_unread_followed_topics(user), else: []
     {rows, more?} = Reading.list_unread_topics(user, page: page, following: false)
+    rows = Reading.put_inactive(rows)
 
     render(conn, :index,
       page_title: gettext("Unread"),

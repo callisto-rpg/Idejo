@@ -23,6 +23,8 @@ defmodule Idejo.Forum.Topic do
     # Followed by everyone who may view it, unless they unfollow it (steward decision,
     # 2026-10-23; Idejo.Reading).
     field :autofollow, :boolean, default: false
+    # Nobody follows it (steward decision, 2026-11-01): set by Idejo.Reading.put_inactive/1.
+    field :inactive, :boolean, virtual: true, default: false
     field :message_count, :integer, default: 0
     # A private conversation (steward decision, 2026-10-27; Idejo.Conversations): no
     # category, read only by its participants.

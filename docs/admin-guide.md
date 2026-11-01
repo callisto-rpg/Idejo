@@ -65,6 +65,9 @@ corner. It has ten tabs.
   starts a new message; with this on, sending it completes the author's open message at
   once. Off, a reply waits like Ctrl+Enter: until the active-thread patience timer (and,
   while nobody wrote below, the unanswered-message one) has passed.
+- **Allow inactive topics**: on by default. A topic nobody follows (no member follows it,
+  and it is not followed by everyone) is marked inactive and shown faded in topic lists;
+  following it again makes it active. Off, every topic looks the same.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **Performance**: how many messages a topic loads at a time; more load as readers scroll.
   **Normal (recommended)**, the default, loads 10 messages before the one a reader lands on

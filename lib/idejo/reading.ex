@@ -32,6 +32,7 @@ defmodule Idejo.Reading do
   alias Idejo.Messages.Message
   alias Idejo.Reading.{Follow, ReadPosition}
   alias Idejo.Repo
+  alias Idejo.Settings
 
   @doc """
   Marks everything in the topic read for the user: their position moves to its latest
@@ -234,6 +235,50 @@ defmodule Idejo.Reading do
       from [t, f] in followed(user),
         where: t.category_id in subquery(viewable),
         order_by: [asc: coalesce(f.created_at, t.created_at), asc: t.id]
+    )
+  end
+
+  @doc """
+  Marks the topics nobody follows as inactive (`topic.inactive`; steward decision,
+  2026-11-01): no active user has a `follows` row with `following`, and the topic is not
+  followed by everyone (`autofollow`). One query for the whole list, and none while the
+  "Allow inactive topics" setting (`inactive_topics`) is off. Takes topics or
+  `{topic, extra}` tuples, as the lists hold them.
+  """
+  @spec put_inactive([Topic.t() | {Topic.t(), term()}]) :: [Topic.t() | {Topic.t(), term()}]
+  def put_inactive([]), do: []
+
+  def put_inactive(rows) do
+    if Settings.get(:inactive_topics) do
+      ids = Enum.map(rows, &(&1 |> row_topic() |> Map.fetch!(:id)))
+      inactive = MapSet.new(inactive_topic_ids(ids))
+      Enum.map(rows, &mark_inactive(&1, inactive))
+    else
+      rows
+    end
+  end
+
+  defp row_topic({%Topic{} = topic, _extra}), do: topic
+  defp row_topic(%Topic{} = topic), do: topic
+
+  defp mark_inactive({topic, extra}, inactive), do: {mark_inactive(topic, inactive), extra}
+
+  defp mark_inactive(%Topic{} = topic, inactive),
+    do: %{topic | inactive: MapSet.member?(inactive, topic.id)}
+
+  defp inactive_topic_ids(ids) do
+    followed =
+      from f in Follow,
+        join: u in User,
+        on: u.id == f.user_id,
+        where: f.topic_id == parent_as(:topic).id and f.following and u.status == "active",
+        select: 1
+
+    Repo.all(
+      from t in Topic,
+        as: :topic,
+        where: t.id in ^ids and not t.autofollow and not exists(subquery(followed)),
+        select: t.id
     )
   end
 

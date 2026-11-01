@@ -127,7 +127,12 @@ defmodule IdejoWeb.TopicComponents do
     ~H"""
     <li
       id={"topic-#{@topic.id}"}
-      class={["topic-row", "cat-#{@topic.category_id}", @preview && "is-expanded"]}
+      class={[
+        "topic-row",
+        "cat-#{@topic.category_id}",
+        @preview && "is-expanded",
+        @topic.inactive && "is-inactive"
+      ]}
       data-topic-menu={@topic.id}
       data-topic-path={~p"/t/#{@topic.id}/#{@topic.slug}"}
     >
@@ -137,6 +142,8 @@ defmodule IdejoWeb.TopicComponents do
       </span>
       <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="topic-row-title">{@topic.title}</a>
       <span class="topic-row-badges">
+        <%!-- Nobody follows it (steward decision, 2026-11-01): faded, and said in words. --%>
+        <span :if={@topic.inactive} class="sr-only topic-inactive">{gettext("Inactive")}</span>
         <span :if={@unread} class="badge badge-sm badge-primary unread-marker">
           {ngettext("1 new", "%{count} new", @unread)}
         </span>

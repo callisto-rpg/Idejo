@@ -119,6 +119,18 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "Reply then starts a new message at any time, completing the author's open message. When off, a reply waits like Ctrl+Enter."
           )}
         </p>
+        <%!-- Steward decision, 2026-11-01: Idejo.Reading.put_inactive/1. --%>
+        <.input
+          field={@form[:inactive_topics]}
+          type="checkbox"
+          label={gettext("Allow inactive topics")}
+          aria-describedby="inactive-topics-help"
+        />
+        <p id="inactive-topics-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "Topics nobody follows are marked inactive and shown faded in topic lists. When off, every topic looks the same."
+          )}
+        </p>
         <.input
           field={@form[:upload_max_mb]}
           type="number"
