@@ -239,11 +239,13 @@ defmodule Idejo.Reading do
   end
 
   @doc """
-  Marks the topics nobody follows as inactive (`topic.inactive`; steward decision,
-  2026-11-01): no active user has a `follows` row with `following`, and the topic is not
-  followed by everyone (`autofollow`). One query for the whole list, and none while the
-  "Allow inactive topics" setting (`inactive_topics`) is off. Takes topics or
-  `{topic, extra}` tuples, as the lists hold them.
+  Marks the inactive topics (`topic.inactive`; steward decisions, 2026-11-01): nobody
+  follows them (no active user has a `follows` row with `following`, and the topic is not
+  followed by everyone, `autofollow`), or no message was sent there for
+  `inactive_after_days`, or an administrator marked them inactive (`Forum.mark_inactive/2`)
+  and no message was sent since. One query for the whole list, and none while the "Allow
+  inactive topics" setting (`inactive_topics`) is off. Takes topics or `{topic, extra}`
+  tuples, as the lists hold them.
   """
   @spec put_inactive([Topic.t() | {Topic.t(), term()}]) :: [Topic.t() | {Topic.t(), term()}]
   def put_inactive([]), do: []
@@ -274,11 +276,49 @@ defmodule Idejo.Reading do
         where: f.topic_id == parent_as(:topic).id and f.following and u.status == "active",
         select: 1
 
+    cutoff = DateTime.add(DateTime.utc_now(), -Settings.get(:inactive_after_days), :day)
+
     Repo.all(
       from t in Topic,
         as: :topic,
-        where: t.id in ^ids and not t.autofollow and not exists(subquery(followed)),
+        where:
+          t.id in ^ids and
+            ((not t.autofollow and not exists(subquery(followed))) or
+               t.last_activity_at < ^cutoff or
+               t.marked_inactive_at > t.last_activity_at),
         select: t.id
+    )
+  end
+
+  @doc """
+  Whether the topic is inactive now (see `put_inactive/1`); false while the setting is off.
+  """
+  @spec inactive?(Topic.t()) :: boolean()
+  def inactive?(%Topic{} = topic), do: hd(put_inactive([topic])).inactive
+
+  @doc """
+  How many users follow the topic: active users with a `follows` row saying so, or, for a
+  topic followed by everyone, every active user who did not unfollow it. For the
+  administrators' topic menu (steward decision, 2026-11-01).
+  """
+  @spec follower_count(Topic.t()) :: non_neg_integer()
+  def follower_count(%Topic{id: topic_id, autofollow: true}) do
+    Repo.one(
+      from u in User,
+        left_join: f in Follow,
+        on: f.user_id == u.id and f.topic_id == ^topic_id,
+        where: u.status == "active" and (is_nil(f.user_id) or f.following),
+        select: count(u.id)
+    )
+  end
+
+  def follower_count(%Topic{id: topic_id}) do
+    Repo.one(
+      from f in Follow,
+        join: u in User,
+        on: u.id == f.user_id,
+        where: f.topic_id == ^topic_id and f.following and u.status == "active",
+        select: count(f.user_id)
     )
   end
 

@@ -645,6 +645,16 @@
     &[hidden] { display: none; }
     &:not([data-following]) #topic-menu-unfollow,
     &[data-following] #topic-menu-follow { display: none; }
+    /* The administrators' items (steward decision, 2026-11-01). */
+    & [hidden] { display: none; }
+    & hr { margin: 0.25rem 0.375rem; border: 0; border-top: 1px solid var(--hairline); }
+    & .topic-menu-move { padding-left: 1.625rem; max-height: 12rem; overflow-y: auto; }
+    & button[data-armed] {
+      background: var(--color-error);
+      color: var(--color-error-content);
+      &:hover, &:focus-visible { background: color-mix(in oklab, var(--color-error) 85%, black); }
+    }
+    & button[data-final] { cursor: default; color: var(--ink-soft); }
   }
   .account-panel {
     position: absolute;

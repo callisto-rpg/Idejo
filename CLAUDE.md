@@ -616,12 +616,16 @@ roles or the permission grid. Every later change must keep it true:
   child of the `<li>` (tests read `#topics li > a`). The home page's active topics pass
   `lead={:category}`: the category's mark and name instead of the starter's avatar and name.
   Its tags sit at the right, above the message count (steward decision, 2026-10-23).
-  **Inactive topics** (steward decision, 2026-11-01): a topic no active user follows (no
-  `follows` row with `following`, and not `autofollow`) gets `topic.inactive` (virtual) from
-  `Reading.put_inactive/1`, one query per list, called by every controller that renders
-  `topic_row/1` (none while the `inactive_topics` setting, "Allow inactive topics" in
-  **Admin → Settings**, on by default, is off); the row takes `.is-inactive` (80%
-  desaturated, 50% opacity) and an `sr-only` "Inactive".
+  **Inactive topics** (steward decisions, 2026-11-01): a topic no active user follows (no
+  `follows` row with `following`, and not `autofollow`), with no message for
+  `inactive_after_days` ("Inactive after (days)", default 70, at least 7), or marked by an
+  administrator (`Forum.mark_inactive/2`, `topics.marked_inactive_at`, logged
+  `topic.inactive`) with no message since (`marked_inactive_at > last_activity_at`, so any
+  message sent clears it) gets `topic.inactive` (virtual) from `Reading.put_inactive/1`, one
+  query per list, called by every controller that renders `topic_row/1` (none while the
+  `inactive_topics` setting, "Allow inactive topics" in **Admin → Settings**, on by
+  default, is off); the row takes `.is-inactive` (80% desaturated, 50% opacity) and an
+  `sr-only` "Inactive".
   **View** (steward decision, 2026-10-23): the home page (beside its "Active topics" title)
   and the category page (beside its `<h1>`) carry `TopicComponents.view_toggle/1`: a "View"
   label, then two links drawn as joined buttons (`btn join-item`, the chosen one
@@ -854,7 +858,14 @@ roles or the permission grid. Every later change must keep it true:
   users only) at the pointer (`assets/js/topic_menu.js`: arrows, Escape, focus back). Its
   items are plain forms with `return=back`: unfollow, follow, `POST /t/{id}/mute`
   (`Reading.mute/2`) and `POST /t/{id}/unread` (`Reading.mark_unread/2`: the position goes
-  back before the latest message by someone else), and Copy link. **Muted** (`follows.muted`,
+  back before the latest message by someone else), and Copy link. Owners and administrators
+  also get `#topic-menu-admin` (steward decision, 2026-11-01), filled in when it opens from
+  `GET /topic-menu/{id}` (`TopicMenuController`, JSON: `Reading.follower_count/1`, inactive,
+  category, archived): "N following", which a click turns red as "Mark as inactive" and a
+  second click posts; Archive; "Move to…" (every category but the Archive and its own);
+  Delete (a second click confirms). They post to `/t/{id}/moderate` with `return=back`
+  (`IdejoWeb.ReturnBack.path/2`, the same-host `Referer`; not back to a topic's own page it
+  left). **Muted** (`follows.muted`,
   with `following: false`): `Notifications` never notifies a muted user (`may_view/2`, and no
   reaction bubble), `Reading.for_you/1` and `list_unread_topics/2` leave it out, and only
   `Reading.follow/2` lifts it. **Every menu is a `.popup-menu`** (the account panel too): one

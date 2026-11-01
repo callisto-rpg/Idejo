@@ -68,6 +68,8 @@ corner. It has ten tabs.
 - **Allow inactive topics**: on by default. A topic nobody follows (no member follows it,
   and it is not followed by everyone) is marked inactive and shown faded in topic lists;
   following it again makes it active. Off, every topic looks the same.
+- **Inactive after (days)**: at least 7, 70 by default. A topic with no new message for
+  this long is inactive too, even when people follow it; a new message makes it active.
 - **Largest image upload (MB)**: from 1 to 20, 3 by default.
 - **Performance**: how many messages a topic loads at a time; more load as readers scroll.
   **Normal (recommended)**, the default, loads 10 messages before the one a reader lands on
@@ -257,6 +259,15 @@ account, open the author's card (their name) for **User actions**.
   its messages for good**, then the button. Everything in the topic goes and cannot come
   back; the moderation log keeps its title and category (**Deleted a topic for good**).
   Archive it instead to keep it.
+
+**From a topic list** (owners and administrators): right-click a topic, press the menu key
+or long-press it, in a list or in the sidebar. Under the usual items:
+
+- **N following**: how many members follow the topic. Click it and it turns red as **Mark
+  as inactive**; click again to mark the topic inactive (logged as **Marked a topic
+  inactive**). It stays faded until someone sends a message there.
+- **Archive**, **Move to…** (pick the category) and **Delete** (click again on **Delete for
+  good** to confirm), as in **Moderate this topic**. You stay on the page you were on.
 
 **Change the title:** point at the title and click the pencil next to it, then **Save**.
 Starters change their own topic's title too, while it is open; moderators may also in

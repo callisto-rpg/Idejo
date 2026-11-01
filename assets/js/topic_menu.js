@@ -7,6 +7,11 @@
 // Its items are plain forms, so the server does the rest; Copy link copies the topic's
 // address. Arrow keys move between the items, Escape or a click elsewhere closes it and the
 // focus goes back where it was.
+//
+// Owners and administrators (steward decision, 2026-11-01) also get `#topic-menu-admin`,
+// filled in from `/topic-menu/{id}` once open: "N following", which a first click turns red
+// as "Mark as inactive" and a second posts; Archive; "Move to…", which shows the categories
+// (the topic's own left out); Delete, which a second click confirms.
 
 const LONG_PRESS_MS = 500
 // Where the arrow sits from the menu's left, and how far the menu stands from the point.
@@ -50,7 +55,59 @@ export function open(row, x, y) {
   if (below) delete el.dataset.arrow
   else el.dataset.arrow = "bottom"
   items(el)[0]?.focus()
+  fillAdmin(el, id)
   return true
+}
+
+// The administrators' items: hidden until the server says what they need.
+function fillAdmin(el, id) {
+  const admin = el.querySelector("#topic-menu-admin")
+  if (!admin) return
+  admin.hidden = true
+  admin.dataset.topic = id
+  admin.querySelectorAll("[data-armed]").forEach(disarm)
+  showMove(admin, false)
+
+  fetch(`/topic-menu/${encodeURIComponent(id)}`)
+    .then(r => (r.ok ? r.json() : null))
+    .then(info => {
+      // Another topic's menu opened meanwhile, or the menu closed.
+      if (!info || el.hidden || admin.dataset.topic !== id) return
+      const following = admin.querySelector("#topic-menu-following")
+      const text = following.querySelector("span")
+      const count = (info.following === 1 ? following.dataset.one : following.dataset.many)
+        .replace("%{count}", info.following)
+      following.dataset.label = info.inactive ? `${count} · ${following.dataset.inactive}` : count
+      text.textContent = following.dataset.label
+      // Nothing to mark: inactive already, or inactive topics not allowed.
+      following.toggleAttribute("data-final", info.inactive || !info.inactive_allowed)
+      following.setAttribute("aria-disabled", String(info.inactive || !info.inactive_allowed))
+      admin.querySelector("#topic-menu-archive").hidden = info.archived
+      admin.querySelector("#topic-menu-move-toggle").hidden = info.archived
+      admin.querySelectorAll("#topic-menu-move [data-category-id]").forEach(b => {
+        b.hidden = b.dataset.categoryId === info.category_id
+      })
+      admin.hidden = false
+    })
+    .catch(() => {})
+}
+
+
+// A first click turns the item red with what a second click does.
+function arm(button) {
+  const span = button.querySelector("span")
+  button.dataset.armed = span.textContent
+  span.textContent = button.dataset.confirmLabel
+}
+
+function disarm(button) {
+  button.querySelector("span").textContent = button.dataset.armed
+  delete button.dataset.armed
+}
+
+function showMove(admin, shown) {
+  admin.querySelector("#topic-menu-move").hidden = !shown
+  admin.querySelector("#topic-menu-move-toggle").setAttribute("aria-expanded", String(shown))
 }
 
 export function close(refocus = true) {
@@ -99,8 +156,23 @@ document.addEventListener("click", e => {
   const el = menu()
   if (!el || el.hidden) return
   const copy = e.target.closest("#topic-menu-link")
+  const confirmable = e.target.closest("#topic-menu-admin button[data-confirm-label]")
+  const moveToggle = e.target.closest("#topic-menu-move-toggle")
   if (copy) {
     copyLink(el, copy)
+  } else if (confirmable) {
+    if (confirmable.hasAttribute("data-final")) {
+      e.preventDefault()
+    } else if (!confirmable.hasAttribute("data-armed")) {
+      e.preventDefault()
+      arm(confirmable)
+    }
+    // Armed: the click posts its form.
+  } else if (moveToggle) {
+    const admin = el.querySelector("#topic-menu-admin")
+    const shown = moveToggle.getAttribute("aria-expanded") !== "true"
+    showMove(admin, shown)
+    if (shown) items(admin.querySelector("#topic-menu-move"))[0]?.focus()
   } else if (!el.contains(e.target)) {
     close(false)
   }

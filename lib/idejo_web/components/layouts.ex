@@ -140,7 +140,7 @@ defmodule IdejoWeb.Layouts do
 
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
-    <.topic_menu :if={@user} />
+    <.topic_menu :if={@user} admin={@current_scope.administrator?} />
     """
   end
 
@@ -151,10 +151,28 @@ defmodule IdejoWeb.Layouts do
   (from the sidebar's `data-following`), Unfollow & mute, Mark unread and Copy link. Plain
   forms with `return=back` to `FollowController`; hidden until a script opens it.
 
+  Owners and administrators also get (steward decision, 2026-11-01), filled in from
+  `GET /topic-menu/{id}` (`TopicMenuController`) when it opens: "N following", which a click
+  turns red as "Mark as inactive" and a second click posts (`Forum.mark_inactive/2`), then
+  Archive, "Move to" (the categories, the topic's own left out) and Delete (a second click
+  confirms), all posted to `/t/{id}/moderate` (`TopicModerationController`) with
+  `return=back`.
+
   Like every menu, it is a `.popup-menu`: see-through and blurred, set by the server
   stylesheet's `--menu-opacity` and `--menu-blur` (`priv/theme/default.css`).
   """
+  attr :admin, :boolean, default: false
+
   def topic_menu(assigns) do
+    assigns =
+      assign(assigns,
+        move_categories:
+          if(assigns.admin,
+            do: Enum.reject(Idejo.Forum.list_categories(), & &1.archive),
+            else: []
+          )
+      )
+
     ~H"""
     <div
       id="topic-menu"
@@ -203,6 +221,85 @@ defmodule IdejoWeb.Layouts do
       >
         <.icon name="hero-link" class="size-4" /><span>{gettext("Copy link")}</span>
       </button>
+      <div :if={@admin} id="topic-menu-admin" class="topic-menu-admin" hidden>
+        <hr role="separator" />
+        <.form
+          for={%{}}
+          action="/t/:id/moderate"
+          data-action="/moderate"
+          id="topic-menu-inactive"
+        >
+          <input type="hidden" name="action" value="inactive" />
+          <input type="hidden" name="return" value="back" />
+          <button
+            role="menuitem"
+            tabindex="-1"
+            id="topic-menu-following"
+            data-one={gettext("1 following")}
+            data-many={gettext("%{count} following")}
+            data-inactive={gettext("inactive")}
+            data-confirm-label={gettext("Mark as inactive")}
+          >
+            <.icon name="hero-users" class="size-4" /><span>{gettext("… following")}</span>
+          </button>
+        </.form>
+        <.form
+          for={%{}}
+          action="/t/:id/moderate"
+          data-action="/moderate"
+          id="topic-menu-archive"
+        >
+          <input type="hidden" name="action" value="archive" />
+          <input type="hidden" name="return" value="back" />
+          <button role="menuitem" tabindex="-1">
+            <.icon name="hero-archive-box" class="size-4" />{gettext("Archive")}
+          </button>
+        </.form>
+        <button
+          type="button"
+          role="menuitem"
+          tabindex="-1"
+          id="topic-menu-move-toggle"
+          aria-expanded="false"
+          aria-controls="topic-menu-move"
+        >
+          <.icon name="hero-arrow-right-circle" class="size-4" />{gettext("Move to…")}
+        </button>
+        <.form
+          for={%{}}
+          action="/t/:id/moderate"
+          data-action="/moderate"
+          id="topic-menu-move"
+          class="topic-menu-move"
+          hidden
+        >
+          <input type="hidden" name="action" value="move" />
+          <input type="hidden" name="return" value="back" />
+          <button
+            :for={category <- @move_categories}
+            role="menuitem"
+            tabindex="-1"
+            name="category_id"
+            value={category.id}
+            data-category-id={category.id}
+          >
+            {category.name}
+          </button>
+        </.form>
+        <.form
+          for={%{}}
+          action="/t/:id/moderate"
+          data-action="/moderate"
+          id="topic-menu-delete"
+        >
+          <input type="hidden" name="action" value="delete" />
+          <input type="hidden" name="confirm" value="yes" />
+          <input type="hidden" name="return" value="back" />
+          <button role="menuitem" tabindex="-1" data-confirm-label={gettext("Delete for good")}>
+            <.icon name="hero-trash" class="size-4" /><span>{gettext("Delete")}</span>
+          </button>
+        </.form>
+      </div>
     </div>
     """
   end

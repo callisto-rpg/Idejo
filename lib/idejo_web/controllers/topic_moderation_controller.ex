@@ -7,12 +7,37 @@ defmodule IdejoWeb.TopicModerationController do
   category (TP-15), archive, or delete for good (steward decision, 2026-10-23; only with its
   confirmation box ticked), with an optional reason for the moderation log (MO-03). A plain
   form post, so it works without JavaScript.
+
+  The administrators' topic menu (steward decision, 2026-11-01) posts here too, with
+  `return=back`: mark inactive (`Forum.mark_inactive/2`), archive, move and delete lead back
+  to the page the menu was opened on, unless that was the topic's own page and the topic
+  left it (archived out of view, or deleted).
   """
   use IdejoWeb, :controller
 
   alias Idejo.Forum
 
   @actions %{"lock" => :lock, "unlock" => :unlock, "pin" => :pin, "unpin" => :unpin}
+
+  def create(conn, %{"id" => id, "action" => "inactive"} = params) do
+    user = conn.assigns.current_scope.user
+
+    topic =
+      Forum.get_viewable_topic(user, id) ||
+        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+
+    case Forum.mark_inactive(user, topic) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, gettext("Topic marked inactive."))
+        |> redirect(to: back(conn, params, topic) || ~p"/t/#{topic.id}/#{topic.slug}")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, gettext("You cannot moderate this topic."))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+    end
+  end
 
   def create(conn, %{"id" => id, "action" => "move"} = params) do
     user = conn.assigns.current_scope.user
@@ -24,7 +49,7 @@ defmodule IdejoWeb.TopicModerationController do
         {:ok, _} ->
           conn
           |> put_flash(:info, gettext("Topic moved to %{category}.", category: target.name))
-          |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+          |> redirect(to: back(conn, params, topic) || ~p"/t/#{topic.id}/#{topic.slug}")
 
         {:error, _} ->
           conn
@@ -47,7 +72,7 @@ defmodule IdejoWeb.TopicModerationController do
       {:ok, archived} ->
         conn
         |> put_flash(:info, gettext("Topic archived: it is read only now."))
-        |> redirect(to: back_to(user, archived))
+        |> redirect(to: back_after_leaving(conn, params, archived) || back_to(user, archived))
 
       {:error, :archived} ->
         conn
@@ -77,7 +102,7 @@ defmodule IdejoWeb.TopicModerationController do
       match?({:ok, _}, Forum.delete_topic(user, topic, params["reason"])) ->
         conn
         |> put_flash(:info, gettext("Topic deleted for good."))
-        |> redirect(to: ~p"/c/#{topic.category.slug}")
+        |> redirect(to: back_after_leaving(conn, params, topic) || ~p"/c/#{topic.category.slug}")
 
       true ->
         conn
@@ -96,6 +121,17 @@ defmodule IdejoWeb.TopicModerationController do
       |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
     else
       _ -> raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
+    end
+  end
+
+  defp back(conn, params, _topic), do: IdejoWeb.ReturnBack.path(conn, params)
+
+  # Back, unless back is the topic's own page, which it left.
+  defp back_after_leaving(conn, params, topic) do
+    case back(conn, params, topic) do
+      "/t/" <> rest = path -> if String.starts_with?(rest, topic.id), do: nil, else: path
+      "/p/" <> _ -> nil
+      path -> path
     end
   end
 
