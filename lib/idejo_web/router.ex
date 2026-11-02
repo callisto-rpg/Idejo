@@ -27,7 +27,7 @@ defmodule IdejoWeb.Router do
 
   # SE-04: for search engines; no session, nothing personal.
   scope "/", IdejoWeb do
-    # AD-15: for container and Idejo Hub health checks; no session, nothing personal, and
+    # AD-15: for container health checks and monitoring; no session, nothing personal, and
     # before setup too (no RequireSetup outside the browser pipeline).
     get "/health", HealthController, :show
     get "/sitemap.xml", SitemapController, :sitemap
