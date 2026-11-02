@@ -313,7 +313,9 @@ The contract (M6; mark each item done here when its PR merges):
   written in the same page with the message editor (Write / Preview, `@` suggestions) and
   saved by `Accounts.update_user_bio/2`, which renders it with `Body.to_html/2` as the user
   and records an `update` activity carrying it as `summary`; the user card shows it under the
-  roles (`#user-card-bio`, `.user-bio`). `Uploads.delete_unused/1` reads it. The same page sets and removes the avatar
+  roles (`#user-card-bio`, `.user-bio`); in a topic's card overlay (`bio_limit={200}`) a
+  longer one shows as its first 200 characters in plain text, cut on a word with "…"
+  (`Forum.html_excerpt/2`), the whole one under "Open profile". `Uploads.delete_unused/1` reads it. The same page sets and removes the avatar
   (`Accounts.set_avatar/2`, `remove_avatar/1`, with an `update` activity carrying `icon`):
   `Uploads.store_avatar/2` makes a 256 px WebP square without metadata, so its URL is
   `/uploads/<avatar_id>.webp` (`Uploads.avatar_url/1`, no preload needed); a replaced picture's

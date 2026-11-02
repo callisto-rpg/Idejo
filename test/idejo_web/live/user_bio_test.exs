@@ -72,6 +72,38 @@ defmodule IdejoWeb.UserBioTest do
     assert Accounts.get_user(user.id).bio_md == nil
   end
 
+  @tag req: "AC-04"
+  test "AC-04 in a topic, the card shows a long bio's first 200 characters", %{user: user} do
+    admin = user_with_role_fixture(:administrator)
+    {:ok, general} = Idejo.Forum.create_category(admin, %{"name" => "General"})
+
+    {:ok, topic} =
+      Idejo.Forum.create_topic(user_fixture(), general, %{"title" => "Chat", "body" => "Hi"})
+
+    long = String.duplicate("Beans are **good**. ", 20) <> "The end."
+    {:ok, user} = Accounts.update_user_bio(user, %{"bio_md" => long})
+
+    {:ok, lv, _html} =
+      live_isolated(build_conn(), IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+
+    render_hook(lv, "show_card", %{"kind" => "user", "ref" => user.id})
+    text = lv |> element("#inline-card-bio") |> render() |> LazyHTML.from_fragment()
+    text = LazyHTML.text(text) |> String.trim()
+
+    assert String.starts_with?(text, "Beans are good. Beans")
+    assert String.ends_with?(text, "…")
+    assert String.length(text) <= 201
+    refute text =~ "The end."
+
+    # The whole bio stays on the profile page.
+    assert card(user) |> LazyHTML.query("#user-card-bio") |> LazyHTML.text() =~ "The end."
+
+    # A short one shows whole, formatted.
+    {:ok, user} = Accounts.update_user_bio(user, %{"bio_md" => "Loves **beans**."})
+    render_hook(lv, "show_card", %{"kind" => "user", "ref" => user.id})
+    assert has_element?(lv, "#inline-card-bio strong", "beans")
+  end
+
   @tag req: "AC-07"
   test "AC-07 deleting the account removes the bio", %{user: user} do
     {:ok, user} = Accounts.update_user_bio(user, %{"bio_md" => "Hello"})
