@@ -20,6 +20,7 @@ defmodule IdejoWeb.SidebarQuicklinksTest do
     # The three links, each with its name in a label the stylesheet hides once rolled.
     for {id, name} <- [
           {"tags-link", "Filter by tag"},
+          {"search-link", "Search"},
           {"rules-link", "Rules & Roles"},
           {"help-link", "Help"}
         ] do

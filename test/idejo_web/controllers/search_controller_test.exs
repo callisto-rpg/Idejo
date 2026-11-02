@@ -28,7 +28,18 @@ defmodule IdejoWeb.SearchControllerTest do
     topic: topic
   } do
     [message] = Forum.list_messages(topic)
-    assert conn |> get(~p"/") |> html_response(200) =~ ~s(id="search-link")
+    # The search box sits in the sidebar, after Filter by tag (steward decision, 2026-11-02).
+    home = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+    form = LazyHTML.query(home, "#sidebar-quicklinks-more form#sidebar-search[role=search]")
+    assert LazyHTML.attribute(form, "action") == ["/search"]
+    assert LazyHTML.attribute(form, "method") == ["get"]
+    assert form |> LazyHTML.query("input#sidebar-search-q[name=q]") |> Enum.count() == 1
+    assert home |> LazyHTML.query("header form[role=search]") |> Enum.count() == 0
+
+    assert home
+           |> LazyHTML.query("#sidebar-quicklinks-more > *")
+           |> Enum.map(&(LazyHTML.attribute(&1, "id") |> List.first()))
+           |> Enum.take(3) == ["tags-link", "sidebar-search", "search-link"]
 
     page = conn |> get(~p"/search") |> html_response(200)
     assert page =~ ~s(id="search-form")
