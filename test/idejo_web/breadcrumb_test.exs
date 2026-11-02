@@ -71,4 +71,36 @@ defmodule IdejoWeb.BreadcrumbTest do
 
     assert ~p"/" |> page() |> LazyHTML.query("#breadcrumb") |> Enum.count() == 0
   end
+
+  test "a private conversation reads Server › Private Conversations › the other person" do
+    ada = user_fixture(%{display_name: "Ada"})
+    bo = user_fixture(%{display_name: "Bo Builder"})
+    {:ok, topic} = Idejo.Conversations.start(ada, bo)
+    conn = log_in_user(build_conn(), ada)
+
+    doc = conn |> get(~p"/p/#{topic.id}") |> html_response(200) |> LazyHTML.from_document()
+    crumbs = LazyHTML.query(doc, "header nav#breadcrumb[aria-label=Breadcrumb]")
+
+    list = LazyHTML.query(crumbs, "a#breadcrumb-conversations")
+    assert LazyHTML.attribute(list, "href") == ["/p"]
+    assert LazyHTML.attribute(list, "aria-current") == []
+    # On phones, the chat icon; the name stays for screen readers.
+    assert list |> LazyHTML.query(".header-crumb-icon") |> Enum.count() == 1
+
+    assert list |> LazyHTML.query(".header-crumb-name") |> LazyHTML.text() =~
+             "Private Conversations"
+
+    other = LazyHTML.query(crumbs, "li.header-crumb.is-last a#breadcrumb-conversation")
+    assert LazyHTML.text(other) =~ "Bo Builder"
+    refute LazyHTML.text(other) =~ "Ada"
+    assert LazyHTML.attribute(other, "href") == ["/p/#{topic.id}"]
+    assert LazyHTML.attribute(other, "aria-current") == ["page"]
+
+    # The list of conversations: its name, the current page.
+    doc = conn |> get(~p"/p") |> html_response(200) |> LazyHTML.from_document()
+    list = LazyHTML.query(doc, "#breadcrumb a#breadcrumb-conversations")
+    assert LazyHTML.attribute(list, "aria-current") == ["page"]
+    assert list |> LazyHTML.query(".header-crumb-icon") |> Enum.count() == 0
+    assert doc |> LazyHTML.query("#breadcrumb-conversation") |> Enum.count() == 0
+  end
 end

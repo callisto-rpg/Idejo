@@ -1187,7 +1187,10 @@ The contract (M6; mark each item done here when its PR merges):
   (steward decision, 2026-11-03): on a topic, logo › category mark › title, the server's and
   the category's names visually hidden but read, the title fading out over its last 1.5rem
   when `assets/js/breadcrumb.js` marks it `data-cut` (cut only; "…" without scripts); on a
-  category page, its name; Unread, Moderation, and the account menu: a `<details>` holding
+  category page, its name. Private conversations (`conversation=`, steward decision,
+  2026-11-03): "› Private Conversations › the other participant's name" on `/p/{id}`
+  (`ConversationController.title/1`), on phones the chat icon (`.header-crumb-icon`) in place
+  of "Private Conversations"; `/p` itself shows "› Private Conversations"; Unread, Moderation, and the account menu: a `<details>` holding
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript; with it, a
   click outside or Escape closes it, `assets/js/account_menu.js`), the
   categories sidebar (each category with the topics the user follows there,

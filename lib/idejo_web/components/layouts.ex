@@ -49,6 +49,12 @@ defmodule IdejoWeb.Layouts do
     default: nil,
     doc: "the topic shown: highlighted in the sidebar, and listed there even when not followed"
 
+  attr :conversation, :any,
+    default: nil,
+    doc:
+      "on private conversation pages, for the breadcrumb: `:list` on `/p`, or " <>
+        "`%{id: id, title: names}` on one conversation"
+
   attr :push_banner, :boolean,
     default: false,
     doc: "offer browser notifications (PN-20: category and topic pages, `Push.banner?/1`)"
@@ -79,7 +85,7 @@ defmodule IdejoWeb.Layouts do
         <span class="brand-name">{server_name()}</span>
       </a>
 
-      <.breadcrumb category={@category} topic={@topic} />
+      <.breadcrumb category={@category} topic={@topic} conversation={@conversation} />
 
       <nav aria-label={gettext("Site")} class="header-nav">
         <.unread_link :if={@user} user={@user} />
@@ -130,9 +136,42 @@ defmodule IdejoWeb.Layouts do
   # name is the brand before it). The category links to its page; the topic is the page
   # itself. Nothing on pages of neither. On phones, on a topic (steward decision,
   # 2026-11-03): "logo › category icon › title", the names of both kept for screen readers,
-  # the title fading out at the right when too long.
+  # the title fading out at the right when too long. Private conversations (steward
+  # decision, 2026-11-03): "Server › Private Conversations › the other person's name", on
+  # phones the chat icon in place of "Private Conversations".
   attr :category, :any, required: true
   attr :topic, :any, required: true
+  attr :conversation, :any, required: true
+
+  defp breadcrumb(%{conversation: conversation} = assigns) when conversation != nil do
+    assigns = assign(assigns, :one, if(is_map(conversation), do: conversation))
+
+    ~H"""
+    <nav aria-label={gettext("Breadcrumb")} class="header-crumbs" id="breadcrumb">
+      <ol>
+        <li class={["header-crumb", @one && "is-parent"]}>
+          <span class="header-crumb-sep" aria-hidden="true">›</span>
+          <a
+            href={~p"/p"}
+            aria-current={if is_nil(@one), do: "page"}
+            id="breadcrumb-conversations"
+          >
+            <span :if={@one} class="header-crumb-icon" aria-hidden="true">
+              <.icon name="hero-chat-bubble-left-right" class="size-5" />
+            </span>
+            <span class="header-crumb-name">{gettext("Private Conversations")}</span>
+          </a>
+        </li>
+        <li :if={@one} class="header-crumb is-last">
+          <span class="header-crumb-sep" aria-hidden="true">›</span>
+          <a href={~p"/p/#{@one.id}"} aria-current="page" id="breadcrumb-conversation">
+            {@one.title}
+          </a>
+        </li>
+      </ol>
+    </nav>
+    """
+  end
 
   defp breadcrumb(assigns) do
     ~H"""
