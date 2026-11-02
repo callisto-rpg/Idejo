@@ -375,5 +375,12 @@ guide](deploying.md) has the commands.
   view does not appear at all, not even its name.
 - People delete their own account from **Profile and account**; their messages stay, shown
   as "Deleted user". The last owner cannot delete their account.
+- With sign-in through an OpenID Connect provider (set by whoever installed the server,
+  [deployment guide](deploying.md#sign-in-through-an-openid-connect-provider)), the sign-in
+  and sign-up pages show its button. People who sign up with it become members under the
+  usual **Who can sign up** rule (an invite link still needed when invite-only); the
+  provider never gives a role: roles, bans and moderation stay yours, here. When passwords
+  are switched off, owners and administrators can still sign in with a password, from the
+  link under the button.
 - Changes in the admin panel are recorded in an audit log in the database (who changed
   what, and when).

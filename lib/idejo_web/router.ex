@@ -221,6 +221,10 @@ defmodule IdejoWeb.Router do
     pipe_through [:browser]
 
     delete "/sign-out", UserSessionController, :delete
+    # AC-09: sign-in through the OpenID Connect provider (404 while it is not set up), and
+    # where it sends the browser back; also linking and confirming from the profile.
+    get "/oidc", OIDCController, :start
+    get "/oidc/callback", OIDCController, :callback
     get "/confirm/:token", UserConfirmationController, :edit
     post "/confirm/:token", UserConfirmationController, :update
   end

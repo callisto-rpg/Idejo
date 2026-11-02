@@ -96,6 +96,57 @@ case System.get_env("IDEJO_TRUSTED_PROXIES", "") |> String.trim() do
     config :idejo, :trusted_proxies, proxies
 end
 
+# AC-09: sign-in through one OpenID Connect provider (Idejo.Accounts.OIDC), on when its
+# issuer, client id, client secret and button label are all set; some but not all stops the
+# boot. IDEJO_LOCAL_ACCOUNTS=off (default on) hides password sign-in, sign-up and reset, and
+# needs OpenID Connect, or nobody could sign in. The secret is read from here only.
+oidc_env = fn name ->
+  case System.get_env("IDEJO_OIDC_" <> name, "") |> String.trim() do
+    "" -> nil
+    value -> value
+  end
+end
+
+oidc = [
+  issuer: oidc_env.("ISSUER"),
+  client_id: oidc_env.("CLIENT_ID"),
+  client_secret: oidc_env.("CLIENT_SECRET"),
+  label: oidc_env.("LABEL")
+]
+
+oidc_missing = for {key, nil} <- oidc, do: "IDEJO_OIDC_" <> String.upcase(Atom.to_string(key))
+
+cond do
+  oidc_missing == [] ->
+    config :idejo, :oidc, oidc
+
+  length(oidc_missing) < length(oidc) ->
+    raise """
+    OpenID Connect is only partly set up: #{Enum.join(oidc_missing, ", ")} missing.
+    Set IDEJO_OIDC_ISSUER, IDEJO_OIDC_CLIENT_ID, IDEJO_OIDC_CLIENT_SECRET and IDEJO_OIDC_LABEL
+    together, or none of them.
+    """
+
+  true ->
+    :ok
+end
+
+local_accounts =
+  case System.get_env("IDEJO_LOCAL_ACCOUNTS", "") |> String.trim() |> String.downcase() do
+    value when value in ["", "on"] -> true
+    "off" -> false
+    _ -> raise "environment variable IDEJO_LOCAL_ACCOUNTS must be on or off."
+  end
+
+if not local_accounts and oidc_missing != [] do
+  raise """
+  IDEJO_LOCAL_ACCOUNTS=off needs OpenID Connect set up (IDEJO_OIDC_ISSUER, IDEJO_OIDC_CLIENT_ID,
+  IDEJO_OIDC_CLIENT_SECRET, IDEJO_OIDC_LABEL): without either, nobody could sign in.
+  """
+end
+
+config :idejo, :local_accounts, local_accounts
+
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")

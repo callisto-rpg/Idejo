@@ -222,25 +222,11 @@ defmodule Idejo.Setup do
 
     %{
       "email" => email,
-      "username" => username_from(local),
+      "username" => Accounts.free_username(local, "owner"),
       "display_name" =>
         local |> String.slice(0, 60) |> then(&if(&1 == "", do: "Owner", else: &1)),
       "password" => Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
     }
-  end
-
-  defp username_from(local) do
-    base = local |> String.replace(~r/[^A-Za-z0-9_]/, "_") |> String.slice(0, 30)
-    base = if String.length(base) < 3, do: "owner", else: base
-
-    taken? =
-      &Repo.exists?(
-        from u in User, where: fragment("lower(?)", u.username) == ^String.downcase(&1)
-      )
-
-    if taken?.(base),
-      do: String.slice(base, 0, 25) <> "_" <> Integer.to_string(:rand.uniform(9999)),
-      else: base
   end
 
   defp ensure_needed, do: if(needed?(), do: :ok, else: {:error, :already_set_up})

@@ -243,7 +243,13 @@ defmodule IdejoWeb.AD13EnvironmentTest do
           do: name
 
     smtp = for name <- @smtp_names, into: MapSet.new(), do: "IDEJO_SMTP_" <> name
-    read = MapSet.union(read, smtp)
+    # AC-09's, read the same way.
+    oidc =
+      for name <- ~w(ISSUER CLIENT_ID CLIENT_SECRET LABEL),
+          into: MapSet.new(),
+          do: "IDEJO_OIDC_" <> name
+
+    read = read |> MapSet.union(smtp) |> MapSet.union(oidc)
     assert "PHX_HOST" in read
 
     example = File.read!("deploy/.env.example")
@@ -252,7 +258,7 @@ defmodule IdejoWeb.AD13EnvironmentTest do
 
     # The bundled Compose file passes the optional ones on to the app.
     compose = File.read!("deploy/docker-compose.yml")
-    for name <- smtp, do: assert(compose =~ "#{name}: ${#{name}:-}", name)
+    for name <- MapSet.union(smtp, oidc), do: assert(compose =~ "#{name}: ${#{name}:-}", name)
 
     deploying = File.read!("docs/deploying.md")
     for name <- read, do: assert(deploying =~ "`#{name}`", "docs/deploying.md: #{name}")

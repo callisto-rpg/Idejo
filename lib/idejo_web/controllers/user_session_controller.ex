@@ -7,18 +7,32 @@ defmodule IdejoWeb.UserSessionController do
   # SP-05: password guessing is slowed per IP address.
   plug IdejoWeb.Plugs.RateLimit, :sign_in when action == :create
 
+  alias Idejo.Access
   alias Idejo.Accounts
+  alias Idejo.Accounts.OIDC
   alias IdejoWeb.UserAuth
 
-  def new(conn, _params) do
+  def new(conn, params) do
+    render_new(conn, Phoenix.Component.to_form(%{}, as: "user"), params["with"] == "password")
+  end
+
+  # AC-09: with OpenID Connect, its button comes first; with IDEJO_LOCAL_ACCOUNTS=off, the
+  # password form only on ?with=password, for owners and administrators.
+  defp render_new(conn, form, asked_password? \\ true) do
     render(conn, :new,
       page_title: gettext("Sign in"),
-      form: Phoenix.Component.to_form(%{}, as: "user")
+      form: form,
+      oidc?: OIDC.enabled?(),
+      local_accounts?: OIDC.local_accounts?(),
+      password?: OIDC.local_accounts?() or asked_password?
     )
   end
 
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
-    user = Accounts.get_user_by_email_and_password(email, password)
+    user =
+      email
+      |> Accounts.get_user_by_email_and_password(password)
+      |> password_allowed()
 
     cond do
       # MO-02: told only once the password is right, so nobody learns of a ban by guessing.
@@ -27,7 +41,7 @@ defmodule IdejoWeb.UserSessionController do
 
         conn
         |> put_flash(:error, banned_message(user))
-        |> render(:new, page_title: gettext("Sign in"), form: form)
+        |> render_new(form)
 
       user ->
         conn
@@ -40,13 +54,23 @@ defmodule IdejoWeb.UserSessionController do
         # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
         conn
         |> put_flash(:error, gettext("Invalid email or password"))
-        |> render(:new, page_title: gettext("Sign in"), form: form)
+        |> render_new(form)
     end
   end
 
-  defp banned_message(%{banned_until: nil}), do: gettext("This account is banned.")
+  # AC-09: local accounts off, a password still signs in owners and administrators, whom the
+  # command line can always let in (AD-09); nobody else.
+  defp password_allowed(nil), do: nil
 
-  defp banned_message(%{banned_until: until}),
+  defp password_allowed(user) do
+    if OIDC.local_accounts?() or Access.administrator?(user), do: user
+  end
+
+  @doc false
+  # Also told by the OpenID Connect sign-in (AC-09).
+  def banned_message(%{banned_until: nil}), do: gettext("This account is banned.")
+
+  def banned_message(%{banned_until: until}),
     do:
       gettext("This account is banned until %{time}.",
         time: Calendar.strftime(until, "%Y-%m-%d %H:%M UTC")

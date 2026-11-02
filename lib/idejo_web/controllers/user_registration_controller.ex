@@ -8,7 +8,7 @@ defmodule IdejoWeb.UserRegistrationController do
   plug IdejoWeb.Plugs.RateLimit, :sign_up when action == :create
 
   alias Idejo.Accounts
-  alias Idejo.Accounts.User
+  alias Idejo.Accounts.{OIDC, User}
   alias Idejo.Settings
   alias IdejoWeb.UserAuth
 
@@ -18,7 +18,14 @@ defmodule IdejoWeb.UserRegistrationController do
     render_form(conn, changeset)
   end
 
+  # AC-09: with IDEJO_LOCAL_ACCOUNTS=off, accounts come only from the OpenID Connect provider.
   def create(conn, %{"user" => user_params}) do
+    if OIDC.local_accounts?(),
+      do: register(conn, user_params),
+      else: redirect(conn, to: ~p"/users/sign-up")
+  end
+
+  defp register(conn, user_params) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
         conn
@@ -49,7 +56,9 @@ defmodule IdejoWeb.UserRegistrationController do
       page_title: gettext("Create an account"),
       changeset: changeset,
       invite_only?: Settings.get(:registration_mode) == "invite_only",
-      closed?: not Accounts.sign_ups_open?()
+      closed?: not Accounts.sign_ups_open?(),
+      local_accounts?: OIDC.local_accounts?(),
+      invite: Ecto.Changeset.get_field(changeset, :invite_code)
     )
   end
 end

@@ -207,7 +207,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output | Done (M5) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | Done (`deploy/docker-compose.external-proxy.yml`, `ClientIp.trusted?/1`; `test/idejo_web/ad_16_proxy_test.exs`) |
-| Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. **Matching an existing local account with the same email: ask the steward first.** Extra review (DV-06) | To build |
+| Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. Matching an existing local account with the same email: never automatic; the member links from their profile while signed in (steward decision, 2026-11-02). Extra review (DV-06) | Done (`Idejo.Accounts.OIDC`, `IdejoWeb.OIDCController`; `test/idejo_web/ac_09_openid_connect_test.exs`) |
 | Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
 | Footprint | NF-12 | Idle production container under 200 MB; method and figure in `docs/load-testing.md`. Measured, not enforced | To build |
 
@@ -324,8 +324,32 @@ The contract (M6; mark each item done here when its PR merges):
   picture", a `<details>` folded until one exists; `avatar/1` then renders both images
   (lazy, `.avatar-has-dark`) and the stylesheet shows the theme's; with one picture only,
   both themes show it. The same page changes the password (AC-01, below).
+- **OpenID Connect** (AC-09; extra review: DV-06): `Idejo.Accounts.OIDC` on `oidcc`
+  (Apache-2.0; its worker, started by `Idejo.Application` from `OIDC.child_specs/0`,
+  discovers and refreshes the provider's settings and keys, retrying when it is down).
+  `IDEJO_OIDC_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_LABEL` all or none
+  (`config :idejo, :oidc`), `IDEJO_LOCAL_ACCOUNTS` (`:local_accounts`), checked by
+  `config/runtime.exs`. `IdejoWeb.OIDCController`: `GET /users/oidc` (`intent` `sign_in`
+  with an optional `invite`, `link`, `reauth`) keeps `OIDC.new_request/2` (state, nonce,
+  PKCE verifier, time) in the encrypted session, used once within ten minutes; `GET
+  /users/oidc/callback` gets the checked claims (`OIDC.claims/3`: `Oidcc.retrieve_token/5`
+  checks signature, `iss`, `aud`, `exp`, `iat`, `nonce`). `user_identities` (issuer,
+  subject; no tokens) links accounts, never email: `OIDC.sign_in/2` finds the link or
+  registers a member through `Accounts.register_user/2` (registration mode and invites
+  apply; `email_verified` or Idejo's verification email; username from
+  `Accounts.free_username/2`; a random password nobody knows), refuses an email an account
+  already has (`:email_taken`; the member links from Profile and account, `OIDC.link/2`)
+  and reads no other claim: no role ever comes from the provider; bans hold. Local accounts
+  off: no password sign-up or reset by email and the sign-in form only at
+  `?with=password`, for owners and administrators only (`Access.administrator?/1`), so the
+  command line can always let the owner in (AD-09); a reset link works for them too
+  (AD-14's owner). Sign-out is local. Only the kind of a failure is logged, never a token,
+  claim or the secret. Tests use `Idejo.FakeOIDCProvider` (Bandit, a test key, plain http
+  allowed only there).
 - **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
-  password. The row stays (its `uri` and the records naming it keep working) but is
+  password, or, for a member linked to the provider, `{:oidc, at}`: a sign-in there again
+  (`intent=reauth`, `prompt=login`, `oidc_reauth_at` in the session) within five minutes
+  (steward decision, 2026-11-02); the account's `user_identities` rows are deleted. The row stays (its `uri` and the records naming it keep working) but is
   anonymised: placeholder email and username that sign-up can never produce, "Deleted user",
   random password, roles, tokens, links and avatar deleted, `status: "deleted"`, and a
   `delete` activity. `Access.ensure_not_last_owner/1` refuses the last owner.

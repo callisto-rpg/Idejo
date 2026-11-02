@@ -11,9 +11,14 @@ defmodule IdejoWeb.UserResetPasswordController do
   # SP-05: reset emails and attempts are limited per IP address.
   plug IdejoWeb.Plugs.RateLimit, :reset_password when action in [:create, :update]
 
+  alias Idejo.Access
   alias Idejo.Accounts
+  alias Idejo.Accounts.OIDC
   alias IdejoWeb.UserAuth
 
+  # AC-09: with IDEJO_LOCAL_ACCOUNTS=off nobody asks for a reset link here; a link still
+  # works for owners and administrators (the owner made by `bin/idejo-admin setup`, AD-14).
+  plug :require_local_accounts when action in [:new, :create]
   plug :get_user_by_reset_password_token when action in [:edit, :update]
 
   def new(conn, _params) do
@@ -67,8 +72,35 @@ defmodule IdejoWeb.UserResetPasswordController do
     )
   end
 
+  defp require_local_accounts(conn, _opts) do
+    if OIDC.local_accounts?() do
+      conn
+    else
+      conn
+      |> put_flash(:error, no_passwords_message())
+      |> redirect(to: ~p"/users/sign-in")
+      |> halt()
+    end
+  end
+
+  defp no_passwords_message,
+    do: gettext("Passwords are not used here: sign in with %{provider}.", provider: OIDC.label())
+
   defp get_user_by_reset_password_token(conn, _opts) do
-    if user = Accounts.get_user_by_reset_password_token(conn.params["token"]) do
+    user = Accounts.get_user_by_reset_password_token(conn.params["token"])
+
+    if user != nil and not OIDC.local_accounts?() and not Access.administrator?(user) do
+      conn
+      |> put_flash(:error, no_passwords_message())
+      |> redirect(to: ~p"/users/sign-in")
+      |> halt()
+    else
+      reset_page(conn, user)
+    end
+  end
+
+  defp reset_page(conn, user) do
+    if user do
       assign(conn, :user, user)
     else
       conn

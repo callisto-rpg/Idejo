@@ -13,7 +13,9 @@ defmodule IdejoWeb.UserSettingsLive do
   """
   use IdejoWeb, :live_view
 
+  alias Idejo.Access
   alias Idejo.Accounts
+  alias Idejo.Accounts.OIDC
   alias Idejo.Messages.Body
   alias Idejo.Notifications.Digest
   alias Idejo.Push
@@ -44,8 +46,19 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:this_endpoint, nil)
      |> assign(:devices, Push.list_subscriptions(user))
      |> assign(:image_error, nil)
+     |> assign_oidc(user, session["oidc_reauth_at"])
      |> allow_avatar(:avatar)
      |> allow_avatar(:dark_avatar)}
+  end
+
+  # AC-09: the OpenID Connect link, whether a password is used here, and a fresh sign-in
+  # through the provider confirming a deletion (five minutes, `OIDC.fresh_reauth?/1`).
+  defp assign_oidc(socket, user, reauth_at) do
+    socket
+    |> assign(:oidc_label, OIDC.label())
+    |> assign(:identity, OIDC.enabled?() && OIDC.identity(user))
+    |> assign(:password?, OIDC.local_accounts?() or Access.administrator?(user))
+    |> assign(:reauth_at, if(OIDC.fresh_reauth?(reauth_at), do: reauth_at))
   end
 
   defp allow_avatar(socket, name) do
@@ -316,9 +329,17 @@ defmodule IdejoWeb.UserSettingsLive do
   end
 
   def handle_event("delete_account", %{"delete" => %{"password" => password}}, socket) do
+    delete_account(socket, password)
+  end
+
+  def handle_event("delete_account_oidc", _params, socket) do
+    delete_account(socket, {:oidc, socket.assigns.reauth_at})
+  end
+
+  defp delete_account(socket, confirmation) do
     own_socket_id = Accounts.session_socket_id(socket.assigns.session_token)
 
-    case Accounts.delete_user(socket.assigns.current_scope.user, password) do
+    case Accounts.delete_user(socket.assigns.current_scope.user, confirmation) do
       {:ok, {_user, socket_ids}} ->
         # This page goes to the home page by itself; the other sessions are disconnected.
         UserAuth.disconnect_sessions(Enum.reject(socket_ids, &(&1 == own_socket_id)))
@@ -337,6 +358,12 @@ defmodule IdejoWeb.UserSettingsLive do
   end
 
   defp delete_error(:invalid_password), do: gettext("That is not your current password.")
+
+  defp delete_error(:reauthentication),
+    do:
+      gettext("Confirm with %{provider} again: the confirmation lasts five minutes.",
+        provider: OIDC.label()
+      )
 
   defp delete_error(:last_owner),
     do:
@@ -732,7 +759,29 @@ defmodule IdejoWeb.UserSettingsLive do
         </button>
       </section>
 
-      <section class="mt-10" aria-labelledby="password-heading">
+      <section :if={@oidc_label} id="oidc-section" class="mt-10" aria-labelledby="oidc-heading">
+        <h2 id="oidc-heading" class="font-semibold mb-2">
+          {gettext("Sign in with %{provider}", provider: @oidc_label)}
+        </h2>
+        <p :if={@identity} id="oidc-linked" class="text-sm">
+          {gettext("Your account is linked to %{provider}: you can sign in with it.",
+            provider: @oidc_label
+          )}
+        </p>
+        <div :if={!@identity}>
+          <p class="text-sm mb-2">
+            {gettext(
+              "Link your account to %{provider} to sign in with it. You will be asked to sign in there.",
+              provider: @oidc_label
+            )}
+          </p>
+          <a id="oidc-link" href={~p"/users/oidc?intent=link"} class="btn">
+            {gettext("Link %{provider}", provider: @oidc_label)}
+          </a>
+        </div>
+      </section>
+
+      <section :if={@password?} class="mt-10" aria-labelledby="password-heading">
         <h2 id="password-heading" class="font-semibold mb-2">{gettext("Change password")}</h2>
         <.form
           for={@password_form}
@@ -772,7 +821,34 @@ defmodule IdejoWeb.UserSettingsLive do
             "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
           )}
         </p>
-        <.form for={@delete_form} id="delete-account-form" phx-submit="delete_account">
+        <div :if={@identity} id="delete-with-oidc" class="mb-4">
+          <a
+            :if={!@reauth_at}
+            id="delete-reauth"
+            href={~p"/users/oidc?intent=reauth"}
+            class="btn"
+          >
+            {gettext("Confirm with %{provider}", provider: @oidc_label)}
+          </a>
+          <button
+            :if={@reauth_at}
+            id="delete-account-oidc"
+            type="button"
+            class="btn btn-error"
+            phx-click="delete_account_oidc"
+            data-confirm={gettext("Delete your account for good?")}
+          >
+            {gettext("Delete my account")}
+          </button>
+          <p :if={@password?} class="text-sm mt-2">{gettext("Or with your password:")}</p>
+        </div>
+
+        <.form
+          :if={@password?}
+          for={@delete_form}
+          id="delete-account-form"
+          phx-submit="delete_account"
+        >
           <.input
             field={@delete_form[:password]}
             type="password"
