@@ -40,11 +40,22 @@ defmodule IdejoWeb.PollComponents do
       )
 
     ~H"""
-    <.form for={%{}} id={@id} class="poll" phx-submit="vote">
+    <%!-- Narrow screens (steward decision, 2026-11-02): the columns shrink to stay on one
+         line (CSS); when an answer's text no longer fits its column, the `PollLayout` hook
+         sets data-layout="list": bars, counts and emojis stay columns, and each answer is a
+         row under them, its button, emoji and text. --%>
+    <.form
+      for={%{}}
+      id={@id}
+      class="poll"
+      phx-submit="vote"
+      phx-hook="PollLayout"
+      phx-mounted={JS.ignore_attributes(["data-layout", "data-measuring"])}
+    >
       <input type="hidden" name="message_id" value={@message.id} />
       <fieldset disabled={!@voting?}>
         <legend id={"#{@id}-question"} class="poll-question">{@poll.question}</legend>
-        <div class="poll-options">
+        <div class={["poll-options", "poll-options-n#{length(@poll.options)}"]}>
           <label :for={option <- @poll.options} class="poll-option">
             <%!-- The bar: an SVG whose height and fill are attributes, never a style
                  (SP-05); without a colour of its own, the theme's (.is-theme). --%>
@@ -74,14 +85,25 @@ defmodule IdejoWeb.PollComponents do
               emoji={emoji(option)}
               class="emoji poll-emoji"
             />
-            <span class="poll-answer-text">{option.text}</span>
-            <input
-              type={if @poll.multiple, do: "checkbox", else: "radio"}
-              class={if @poll.multiple, do: "checkbox checkbox-sm", else: "radio radio-sm"}
-              name="options[]"
-              value={option.id}
-              checked={option.id in @mine}
-            />
+            <%!-- The answer: under its column, or a row of its own in the list layout, where
+                 its emoji is drawn again beside it (decorative there: alt=""). --%>
+            <span class="poll-choice">
+              <input
+                type={if @poll.multiple, do: "checkbox", else: "radio"}
+                class={if @poll.multiple, do: "checkbox checkbox-sm", else: "radio radio-sm"}
+                name="options[]"
+                value={option.id}
+                checked={option.id in @mine}
+              />
+              <img
+                :if={emoji(option)}
+                src={emoji(option).src}
+                alt=""
+                class="emoji poll-emoji-inline"
+                loading="lazy"
+              />
+              <span class="poll-answer-text">{option.text}</span>
+            </span>
           </label>
         </div>
       </fieldset>

@@ -159,7 +159,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
     results until the poll closes** keeps the counts from everyone, you included, until
     then. Anyone who may post in the topic votes, and may **Change vote** until it closes.
     The answers stand side by side, each over a bar that fills up with its share of the
-    votes. You see the counts from the start, others once they voted, and everyone once it
+    votes; on a narrow screen the bars stay on one line, and when the answers do not fit
+    under them they are listed below, each with its button and emoji. You see the counts from the start, others once they voted, and everyone once it
     closed (with hidden results, everyone once it closed); nobody sees who voted for what.
   - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
     work, such as `0.5` for half an hour; at most 168, a week). Only you see it until then,

@@ -544,7 +544,15 @@ roles or the permission grid. Every later change must keep it true:
   `PollComponents.poll/1` shows it under the message (under the composer for the author's
   open message): a form posting `"vote"`, its answers side by side (`.poll-options`), each
   a column with a thick vertical bar (an SVG whose `height` and `fill` are attributes, never
-  a style; `.is-theme` without a colour), its count, emoji, text and button. Anyone with the
+  a style; `.is-theme` without a colour), its count, emoji, text and button. Narrow screens
+  (steward decision, 2026-11-02): the columns shrink (5.5rem with room, so desktops are as
+  before) to stay on one line; when one had to shrink and an answer's text does not fit (a
+  word wider than its column, or past three lines), the `PollLayout` hook
+  (`assets/js/poll_layout.js`, measured again on width changes and patches) sets
+  `data-layout="list"` (kept by `JS.ignore_attributes`): a grid whose first rows are the
+  bars, counts and emojis in columns (`.poll-options-n{N}` sets `--poll-n`, labels are
+  `display: contents`), then each answer's `.poll-choice` as a row, button, its emoji again
+  (`.poll-emoji-inline`, `alt=""`) and text. Anyone with the
   post right votes (`Forum.can_post?/2`, not on deleted messages), changes or takes back
   their vote until `closes_at`. Votes are anonymous; counts show to voters, the author and,
   once closed, everyone; with `hide_results` to nobody before it closes

@@ -36,6 +36,7 @@ import {EditorImages} from "./editor_images"
 import {EditorTabs} from "./editor_tabs"
 import {EditorSuggest} from "./suggest"
 import {EmojiPicker, preloadEmoji} from "./emoji_picker"
+import {PollLayout} from "./poll_layout"
 import {ReactionWho} from "./reaction_who"
 import {Notifier} from "./notifier"
 import {RoleColours} from "./role_colours"
@@ -56,7 +57,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, ReactionWho, Notifier, TopicNav, UnreadLine, MentionGlow, PushSettings},
+  hooks: {...colocatedHooks, Composer, ComposerTimer, ShowAll, InlineLinks, InlineCard, EditorImages, EditorTabs, EditorSuggest, RoleColours, EmojiPicker, PollLayout, ReactionWho, Notifier, TopicNav, UnreadLine, MentionGlow, PushSettings},
 })
 
 // Show progress bar on live navigation and form submits
