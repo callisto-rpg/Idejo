@@ -73,7 +73,7 @@ defmodule IdejoWeb.GraphicalComposerTest do
       assert has_element?(lv, selector), selector
     end
 
-    for format <- ~w(bold italic strike link code quote list numbered) do
+    for format <- ~w(newline bold italic strike link code quote list numbered) do
       assert has_element?(lv, "#composer-format[hidden] [data-format=#{format}][aria-label]")
     end
 

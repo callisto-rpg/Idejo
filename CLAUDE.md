@@ -500,8 +500,8 @@ roles or the permission grid. Every later change must keep it true:
   heroicons, each named: at the left emoji (`"emoji_picker"` with no id opens the reaction
   picker for the composer, `picker.message_id` nil, "Insert an emoji"; `EmojiPicker` then
   sends `idejo:emoji` and the box gets `:name:`), image (the composer's file input, at the
-  caret), the text controls (`#composer-format`: Markdown around the selection,
-  `formatEdit/4`) and + (`#composer-more`: the `ComposerCommands` the author may use among
+  caret), the text controls (`#composer-format`: a new line, as Shift+Enter, then Markdown around
+  the selection, `formatEdit/4`) and + (`#composer-more`: the `ComposerCommands` the author may use among
   spoiler, poll, schedule, new-topic, run by the hook's `command/1`); at the right Send
   (`#composer-send`): a click is Enter (`send(false)`); a right click, a double click, a
   long press (touch, 500 ms) or the menu key opens `#composer-send-menu`, whose item is

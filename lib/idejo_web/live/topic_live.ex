@@ -3205,6 +3205,7 @@ defmodule IdejoWeb.TopicLive do
     assigns =
       assign(assigns,
         formats: [
+          {"newline", "hero-arrow-turn-down-left", gettext("New line")},
           {"bold", "hero-bold", gettext("Bold")},
           {"italic", "hero-italic", gettext("Italic")},
           {"strike", "hero-strikethrough", gettext("Strikethrough")},

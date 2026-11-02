@@ -5,8 +5,8 @@
 // "Use the graphical composer": a bar under the box (#composer-toolbar, TopicLive's
 // composer_toolbar/1) that the Composer hook mounts. At the left: an emoji (the + reaction
 // picker, which then inserts `:name:`), an image (as !image, at the caret), the text controls
-// (Markdown around the selection) and + (the other commands: !spoiler, !poll, !schedule,
-// !new-topic). At the right, Send: a click is Enter; a right click, a double click, a long
+// (a new line, and Markdown around the selection) and + (the other commands: !spoiler,
+// !poll, !schedule, !new-topic). At the right, Send: a click is Enter; a right click, a double click, a long
 // press or the menu key opens its menu, whose one item is Ctrl+Enter ("Commit and start new
 // message", or ends an edit). Buttons never take the focus from the box when clicked, so the
 // caret, the selection and a phone's keyboard stay.
@@ -27,6 +27,8 @@ export function formatEdit(action, value, start, end) {
     const text = `${lead}\`\`\`\n${selected}\n\`\`\`\n`
     return {text, from: start, to: end, select: [start + lead.length + 4, start + lead.length + 4 + selected.length]}
   }
+  // A line break at the caret, in place of the selection: Shift+Enter, nothing sent.
+  if (action === "newline") return {text: "\n", from: start, to: end, select: [start + 1, start + 1]}
   if (WRAPS[action]) {
     const [open, close] = WRAPS[action]
     const text = open + selected + close
