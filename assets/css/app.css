@@ -407,12 +407,14 @@
   }
   .header-crumb-sep { flex: none; margin: 0 0.5rem; color: var(--ink-faint); }
   .header-crumb-name { overflow: hidden; text-overflow: ellipsis; }
-  .header-crumb .category-mark { display: none; }
+  .header-crumb .category-mark,
+  .header-crumb .header-crumb-icon { display: none; }
   @media (max-width: 639px) {
     .header-crumb.is-parent {
       flex: none;
       max-width: none;
       & .category-mark { display: inline-grid; }
+      & .header-crumb-icon { display: inline-flex; flex: none; }
       & .header-crumb-name {
         position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%);
       }

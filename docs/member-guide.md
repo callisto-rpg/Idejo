@@ -269,7 +269,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 - **Search**, the box in the sidebar under **Filter by tag**, finds words in messages and
   titles. The bar at the top always shows where you are: the server, the category, then
   the topic, each a link. On a phone it shows the server's logo, the category's icon and
-  the topic's title.
+  the topic's title. In a private conversation it shows **Private Conversations**, then
+  the other person's name.
 
 ## Private conversations
 

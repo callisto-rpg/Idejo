@@ -2,7 +2,11 @@
   SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
-<Layouts.app flash={@flash} current_scope={@current_scope}>
+<Layouts.app
+  flash={@flash}
+  current_scope={@current_scope}
+  conversation={%{id: @topic.id, title: IdejoWeb.ConversationController.title(@others)}}
+>
   <.header>
     <span id="topic-title" class="topic-title">
       {IdejoWeb.ConversationController.title(@others)}
