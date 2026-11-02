@@ -252,17 +252,25 @@ defmodule Load.Viewer do
       })
 
     Process.send_after(self(), :heartbeat, 30_000)
-    if args.writer?, do: Process.send_after(self(), :write, 3_000 + :rand.uniform(3_000))
     loop(state)
   end
 
   defp push(ws, message), do: Load.WebSocket.send_text(ws, Jason.encode!(message))
+
+  defp start_writing(%{writer?: true} = state) do
+    Process.send_after(self(), :write, :rand.uniform(3_000))
+    state
+  end
+
+  defp start_writing(state), do: state
 
   defp loop(state) do
     receive do
       {:ws, _ws, text} -> state |> received(text) |> loop()
       :heartbeat -> state |> heartbeat() |> loop()
       :write -> state |> write() |> loop()
+      # Writers start once everyone has joined (see the warm-up in Load.run/1).
+      :start_writing -> state |> start_writing() |> loop()
       :stop -> :ok
     end
   end
@@ -432,6 +440,12 @@ defmodule Load.Run do
         {pid, topic_index}
       end
 
+    # Everyone joins first, then the writers start: the test measures the conversation, not
+    # the arrival of 200 people at once. Joined while 30 people already wrote, a viewer lands
+    # on their first unread message, further up, where new messages are counted instead of
+    # shown (Long topics), and would receive none of them.
+    Process.sleep(5_000)
+    for {pid, _} <- viewers, do: send(pid, :start_writing)
     IO.puts("connected; warming up 10 s")
     Process.sleep(10_000)
     :ets.delete_all_objects(:load_latency)

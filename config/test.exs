@@ -70,3 +70,6 @@ config :idejo, Oban, testing: :manual
 # Views end with each test; their disconnect grace (GM-12) must not fire during the run.
 # Tests that need one pass `grace_ms:` to Idejo.Messages.Authors.
 config :idejo, gm_disconnect_grace_ms: :timer.hours(1)
+
+# TP-07: a topic view marks new messages read at once in tests (2 to 4 s later otherwise).
+config :idejo, read_mark_ms: {0, 0}

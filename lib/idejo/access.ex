@@ -47,12 +47,15 @@ defmodule Idejo.Access do
   def administrator?(nil), do: false
 
   def administrator?(%User{id: user_id}) do
-    Repo.exists?(
-      from r in Role,
-        join: ur in UserRole,
-        on: ur.role_id == r.id,
-        where: ur.user_id == ^user_id and r.built_in and r.name in @all_rights
-    )
+    # Asked by the scope, the page and the header in one request: once (Idejo.Memo).
+    Idejo.Memo.fetch({:administrator?, user_id}, fn ->
+      Repo.exists?(
+        from r in Role,
+          join: ur in UserRole,
+          on: ur.role_id == r.id,
+          where: ur.user_id == ^user_id and r.built_in and r.name in @all_rights
+      )
+    end)
   end
 
   @doc """
@@ -81,7 +84,17 @@ defmodule Idejo.Access do
   `roles_of/1` gives. Used by lists such as the admin users page.
   """
   @spec roles_of_users([User.t()]) :: %{Ecto.UUID.t() => [Role.t()]}
-  def roles_of_users(users) do
+  def roles_of_users([%User{} = user]) do
+    # One user's roles, asked for at every permission check: read once per request or
+    # mount (Idejo.Memo). The key changes with what decides them besides the roles held.
+    Idejo.Memo.fetch({:roles, user.id, user.confirmed_at, user.status}, fn ->
+      load_roles_of_users([user])
+    end)
+  end
+
+  def roles_of_users(users), do: load_roles_of_users(users)
+
+  defp load_roles_of_users(users) do
     ids = Enum.map(users, & &1.id)
 
     # One query: the roles the users hold, with guest and member, which nobody holds.
@@ -155,6 +168,7 @@ defmodule Idejo.Access do
     do: {:error, :implicit_role}
 
   def grant_role(%User{id: user_id}, %Role{id: role_id}) do
+    :ok = Idejo.Memo.forget()
     Repo.insert_all(UserRole, [%{user_id: user_id, role_id: role_id}], on_conflict: :nothing)
     :ok
   end
@@ -275,6 +289,8 @@ defmodule Idejo.Access do
 
   # Nothing changes, and nothing is audited, when the user already holds the role (or not).
   defp insert_assignment(admin, user, role) do
+    :ok = Idejo.Memo.forget()
+
     case Repo.insert_all(UserRole, [%{user_id: user.id, role_id: role.id}], on_conflict: :nothing) do
       {0, _} -> {:ok, role}
       {1, _} -> audit_assignment(admin, "role.grant", nil, assignment(user, role), role)
@@ -282,6 +298,8 @@ defmodule Idejo.Access do
   end
 
   defp delete_assignment(admin, user, role) do
+    :ok = Idejo.Memo.forget()
+
     case Repo.delete_all(
            from ur in UserRole, where: ur.user_id == ^user.id and ur.role_id == ^role.id
          ) do
@@ -604,7 +622,11 @@ defmodule Idejo.Access do
   end
 
   # Positions are rewritten as a whole; one change at a time.
-  defp lock_roles, do: Repo.query!("LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE")
+  # Every change to roles takes this lock first: what the request read of them is forgotten.
+  defp lock_roles do
+    :ok = Idejo.Memo.forget()
+    Repo.query!("LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE")
+  end
 
   ## Category rights (RP-04)
 
@@ -634,9 +656,14 @@ defmodule Idejo.Access do
 
   def can?(user, right, %Category{id: category_id})
       when right in @rights do
-    from(c in Category, where: c.id == ^category_id)
-    |> where_allowed(user, right)
-    |> Repo.exists?()
+    roles = roles_of(user)
+
+    # The same check is asked several times by one page: once per request (Idejo.Memo).
+    Idejo.Memo.fetch({:can, Enum.map(roles, & &1.id), right, category_id}, fn ->
+      from(c in Category, where: c.id == ^category_id)
+      |> where_roles(roles, [right])
+      |> Repo.exists?()
+    end)
   end
 
   @doc """
@@ -753,6 +780,8 @@ defmodule Idejo.Access do
 
   def set_permission(%User{} = admin, %Role{} = role, scope, right, effect)
       when right in @rights and effect in [:allow, :deny, :unset] do
+    :ok = Idejo.Memo.forget()
+
     result =
       Repo.transact(fn ->
         existing =
