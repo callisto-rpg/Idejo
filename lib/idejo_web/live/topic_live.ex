@@ -142,7 +142,9 @@ defmodule IdejoWeb.TopicLive do
            composing_edit: nil,
            edit_versioned?: false,
            images?: false
-         )}
+         )
+         |> assign(:listed, nil)
+         |> sync_entries()}
 
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
@@ -192,13 +194,184 @@ defmodule IdejoWeb.TopicLive do
          # TP-12: `@uploads` exists only when they were allowed here, at mount.
          |> assign(:images?, can_post?)
          |> ImageUploads.allow(:composer_image, can_post?)
-         |> ImageUploads.allow(:edit_image, can_post?)
+         # The editor's image error is in its message's entry (sync_entries/1).
+         |> ImageUploads.allow(:edit_image, can_post?, after: &sync_entries/1)
          |> sync_composer()
-         |> schedule_tick()}
+         |> schedule_tick()
+         |> assign(:listed, nil)
+         |> sync_entries()}
     end
   end
 
   defp user(socket), do: socket.assigns.current_scope && socket.assigns.current_scope.user
+
+  ## The message list's entries, kept between updates (NF-01)
+  #
+  # Each message is drawn from its `{message, entry}` pair (entry/3). Every viewer handles
+  # every Enter, so the pairs are kept and, after each event, made again only for messages
+  # that are new or changed, or whose entry reads something that changed (`dirty_ids/3`);
+  # the others are the very same terms, which LiveView's keyed list compares at once. What
+  # all entries read (the viewer, rights, the topic, the selection's mode) makes them all
+  # again. The layout around the composer is worked out here too, once per event.
+
+  # Where the composer goes, and what it splits: the opening message pinned on top (when the
+  # run starts further on and the composer is not in it), the messages before the composer
+  # and those after. The composer is at the end of the topic, or in a message its author edits
+  # (steward decision, 2026-11-01); it is the author's open message, so that message is loaded
+  # with it, which the end always is (`jump_to_end`).
+  defp list_layout(assigns) do
+    composer? =
+      assigns.can_post? and
+        (assigns.composing_edit != nil or (assigns.at_end? and open_loaded?(assigns)))
+
+    place =
+      if composer?,
+        do: composer_layout(assigns),
+        else: [mine: nil, locked: nil, answered?: false]
+
+    opening_id = assigns.opening_id
+
+    {pinned, window} =
+      if assigns.gap and not match?(%{id: ^opening_id}, place[:mine]),
+        do: parts(assigns),
+        else: {nil, assigns.messages}
+
+    {before, later} = split(window, place[:mine])
+    %{composer?: composer?, place: place, pinned: pinned, before: before, later: later}
+  end
+
+  defp sync_entries(socket) do
+    assigns = socket.assigns
+    layout = list_layout(assigns)
+    inputs = entry_inputs(assigns)
+
+    pairs =
+      case assigns.listed do
+        %{global: global, inputs: old, pairs: pairs} when global === inputs.global ->
+          dirty = dirty_ids(old, inputs, assigns)
+          kept_pairs(assigns, pairs, dirty)
+
+        _changed ->
+          kept_pairs(assigns, %{}, %{})
+      end
+
+    pair = &Map.fetch!(pairs, &1.id)
+
+    socket
+    |> assign(layout.place)
+    |> assign(
+      composer?: layout.composer?,
+      opening: layout.pinned && [pair.(layout.pinned)],
+      before: Enum.map(layout.before, pair),
+      later: Enum.map(layout.later, pair),
+      listed: %{global: inputs.global, inputs: inputs, pairs: pairs}
+    )
+  end
+
+  # A pair for every loaded message: the one kept, unless its message changed or its entry
+  # is dirty.
+  defp kept_pairs(assigns, pairs, dirty) do
+    context = nil
+
+    {pairs, _context} =
+      Enum.reduce(assigns.messages, {%{}, context}, fn %{id: id} = message, {acc, context} ->
+        case pairs do
+          %{^id => {^message, _entry} = pair} when not is_map_key(dirty, id) ->
+            {Map.put(acc, id, pair), context}
+
+          _ ->
+            context = context || entry_context(assigns)
+            {Map.put(acc, id, {message, entry(assigns, message, context)}), context}
+        end
+      end)
+
+    pairs
+  end
+
+  # What `entry/3` reads. `global`: what every entry reads, whose change makes them all
+  # again; the rest names the messages it changes for (`dirty_ids/3`).
+  defp entry_inputs(assigns) do
+    editing = with {id, _form} <- assigns.editing, do: id
+
+    %{
+      global: {
+        assigns.current_scope,
+        assigns.topic,
+        assigns.can_post?,
+        assigns.can_moderate?,
+        assigns.viewable_replies,
+        assigns.select_for,
+        assigns.selected == nil,
+        assigns.opening_id
+      },
+      deleted_runs: assigns.deleted_runs,
+      mention_glows: assigns.mention_glows,
+      forks: assigns.forks,
+      reactions: assigns.reactions,
+      polls: assigns.polls,
+      roles: assigns.roles,
+      selected: assigns.selected,
+      revealed: assigns.revealed,
+      committed: assigns.committed,
+      refocus: assigns.refocus,
+      unread: assigns.unread_line? && assigns.first_unread && assigns.first_unread.id,
+      editing: editing,
+      edit:
+        editing &&
+          {assigns.editing, assigns.editor_mode, assigns.preview_html, assigns.image_error,
+           (assigns[:uploads] || %{})[:edit_image]}
+    }
+  end
+
+  # The messages whose entry reads something that changed, as a map of their ids.
+  defp dirty_ids(old, new, assigns) do
+    []
+    |> changed_keys(old.deleted_runs, new.deleted_runs)
+    |> changed_keys(old.mention_glows, new.mention_glows)
+    |> changed_keys(old.forks, new.forks)
+    |> changed_keys(old.reactions, new.reactions)
+    |> changed_keys(old.polls, new.polls)
+    |> changed_members(old.selected, new.selected)
+    |> changed_members(old.revealed, new.revealed)
+    |> changed_values(old.committed, new.committed)
+    |> changed_values(old.refocus, new.refocus)
+    |> changed_values(old.unread, new.unread)
+    |> changed_values(old.editing, new.editing)
+    |> then(&if(old.edit !== new.edit and new.editing, do: [new.editing | &1], else: &1))
+    |> by_author(old.roles, new.roles, assigns.messages)
+    |> Map.new(&{&1, true})
+  end
+
+  defp changed_keys(ids, same, same), do: ids
+
+  defp changed_keys(ids, old, new) do
+    (Map.keys(old) ++ Map.keys(new))
+    |> Enum.uniq()
+    |> Enum.filter(&(Map.get(old, &1) !== Map.get(new, &1)))
+    |> Kernel.++(ids)
+  end
+
+  defp changed_members(ids, same, same), do: ids
+
+  defp changed_members(ids, old, new) do
+    MapSet.symmetric_difference(old || MapSet.new(), new || MapSet.new())
+    |> Enum.map(fn
+      {id, _index} -> id
+      id -> id
+    end)
+    |> Kernel.++(ids)
+  end
+
+  defp changed_values(ids, same, same), do: ids
+  defp changed_values(ids, old, new), do: Enum.reject([old, new], &is_nil/1) ++ ids
+
+  # A role loaded for an author changes their messages.
+  defp by_author(ids, same, same, _messages), do: ids
+
+  defp by_author(ids, old, new, messages) do
+    authors = changed_keys([], old, new)
+    for(%{author_id: author} = m <- messages, author in authors, do: m.id) ++ ids
+  end
 
   # TP-09: never from a private conversation (steward decision, 2026-10-27), whose words
   # would leave it.
@@ -723,8 +896,18 @@ defmodule IdejoWeb.TopicLive do
   defp open_message(messages, user),
     do: Enum.find(messages, &(&1.state == "open" and &1.author_id == user.id))
 
+  # Every event and message goes through `sync_entries/1` afterwards, which brings the
+  # message list's entries up to date with what changed (NF-01).
   @impl true
-  def handle_info({:message, message}, socket) do
+  def handle_info(message, socket), do: message |> info(socket) |> synced()
+
+  @impl true
+  def handle_event(event, params, socket), do: event |> event(params, socket) |> synced()
+
+  defp synced({:noreply, socket}), do: {:noreply, sync_entries(socket)}
+  defp synced({:reply, reply, socket}), do: {:reply, reply, sync_entries(socket)}
+
+  defp info({:message, message}, socket) do
     # Loaded once by the broadcast (NF-01); this costs nothing then.
     message = Repo.preload(message, Messages.shown())
     old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
@@ -768,28 +951,28 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The read mark a new message asked for (`mark_read_soon/1`), while the end is still shown.
-  def handle_info(:mark_read, socket) do
+  defp info(:mark_read, socket) do
     if socket.assigns.at_end?, do: Reading.mark_read(user(socket), socket.assigns.topic)
     {:noreply, assign(socket, :read_timer, nil)}
   end
 
-  def handle_info({:committed_shown, id}, %{assigns: %{committed: id}} = socket),
+  defp info({:committed_shown, id}, %{assigns: %{committed: id}} = socket),
     do: {:noreply, assign(socket, :committed, nil)}
 
-  def handle_info({:committed_shown, _id}, socket), do: {:noreply, socket}
+  defp info({:committed_shown, _id}, socket), do: {:noreply, socket}
 
   # The time left in the author's window, for the composer's description (AX-03).
-  def handle_info(:tick, socket) do
+  defp info(:tick, socket) do
     {:noreply, socket |> assign(now: DateTime.utc_now(), tick: nil) |> schedule_tick()}
   end
 
   # A moderator locked, unlocked, pinned, unpinned (TP-14) or moved (TP-15) the topic: the
   # composer goes or comes back with the post right, and a viewer who may not view its new
   # category loses it, as when permissions change.
-  def handle_info({:topic_changed, _topic_id}, %{assigns: %{topic: nil}} = socket),
+  defp info({:topic_changed, _topic_id}, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
 
-  def handle_info({:topic_changed, topic_id}, socket) do
+  defp info({:topic_changed, topic_id}, socket) do
     case Forum.get_readable_topic(user(socket), topic_id) do
       nil ->
         Messages.unsubscribe(topic_id)
@@ -817,7 +1000,7 @@ defmodule IdejoWeb.TopicLive do
 
   # TP-17: someone reacted; the summary was worked out once, by them (NF-01).
   # An open list of who reacted is read again; only this viewer's, who has it open.
-  def handle_info({:reactions, message_id, summary}, socket) do
+  defp info({:reactions, message_id, summary}, socket) do
     socket = assign(socket, :reactions, Map.put(socket.assigns.reactions, message_id, summary))
 
     case socket.assigns.reaction_who do
@@ -827,7 +1010,7 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # `!poll`: someone voted, or a poll was added or closed; worked out once (NF-01).
-  def handle_info({:poll, message_id, summary}, socket),
+  defp info({:poll, message_id, summary}, socket),
     do:
       {:noreply,
        assign(socket,
@@ -836,10 +1019,10 @@ defmodule IdejoWeb.TopicLive do
        )}
 
   # TP-15: messages moved into or out of this topic: read it again.
-  def handle_info({:messages_moved, _topic_id}, %{assigns: %{topic: nil}} = socket),
+  defp info({:messages_moved, _topic_id}, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
 
-  def handle_info({:messages_moved, topic_id}, socket) do
+  defp info({:messages_moved, topic_id}, socket) do
     case Forum.get_viewable_topic(user(socket), topic_id) do
       nil ->
         {:noreply, socket}
@@ -871,20 +1054,20 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # Someone started a topic from one of these messages (TP-09).
-  def handle_info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
+  defp info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
 
   # A scheduled message was added, cancelled or posted: only its author's views reload.
-  def handle_info({:scheduled, author_id}, socket) do
+  defp info({:scheduled, author_id}, socket) do
     if mine?(socket, %{author_id: author_id}),
       do: {:noreply, put_pending(socket)},
       else: {:noreply, socket}
   end
 
   # The grid changed: the viewer may have lost the view or post right since mount.
-  def handle_info(:permissions_changed, %{assigns: %{topic: nil}} = socket),
+  defp info(:permissions_changed, %{assigns: %{topic: nil}} = socket),
     do: {:noreply, socket}
 
-  def handle_info(:permissions_changed, socket) do
+  defp info(:permissions_changed, socket) do
     user = user(socket)
 
     case Forum.get_readable_topic(user, socket.assigns.topic.id) do
@@ -918,7 +1101,7 @@ defmodule IdejoWeb.TopicLive do
 
   # No countdown is shown (GM-07); the window's end only matters to Ctrl+Enter, which the
   # server checks. Its text equivalent is the composer's description (AX-03).
-  def handle_info({:window_ended, _message_id}, socket),
+  defp info({:window_ended, _message_id}, socket),
     do: {:noreply, assign(socket, :now, DateTime.utc_now())}
 
   # AX-02: a message is announced when it opens and when it closes, never at an append or
@@ -1164,20 +1347,19 @@ defmodule IdejoWeb.TopicLive do
 
   defp open_id(_user, _topic), do: nil
 
-  @impl true
-  def handle_event(
-        "commit",
-        %{"body" => body} = params,
-        %{assigns: %{composing_edit: id}} = socket
-      )
-      when is_binary(id) do
+  defp event(
+         "commit",
+         %{"body" => body} = params,
+         %{assigns: %{composing_edit: id}} = socket
+       )
+       when is_binary(id) do
     case editing_in_composer(socket.assigns) do
       nil -> {:reply, %{error: true}, end_composer_edit(socket)}
       message -> commit_edit(socket, message, body, params["break"] == true)
     end
   end
 
-  def handle_event("commit", %{"body" => body} = params, socket) do
+  defp event("commit", %{"body" => body} = params, socket) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
 
     opts = [
@@ -1225,7 +1407,7 @@ defmodule IdejoWeb.TopicLive do
 
   # An automessage's `!command` (steward decisions, 2026-11-01): the server posts its text,
   # as its sender; the user's own text stays in the composer.
-  def handle_event("automessage", %{"name" => name}, socket) when is_binary(name) do
+  defp event("automessage", %{"name" => name}, socket) when is_binary(name) do
     case Automessages.post(user(socket), socket.assigns.topic, name) do
       {:ok, _message} ->
         {:noreply, socket}
@@ -1259,7 +1441,7 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # `!new-topic` with nothing new to send: the topic starts from the open message.
-  def handle_event("new_topic", _params, socket) do
+  defp event("new_topic", _params, socket) do
     case open_message(socket.assigns.messages, user(socket)) do
       nil ->
         {:noreply,
@@ -1273,7 +1455,7 @@ defmodule IdejoWeb.TopicLive do
   # `!poll` and `!spoiler` with nothing new to send: for the open message.
   # With nothing open, `!poll` posts the poll as a message of its own (steward decision,
   # 2026-10-24); `!spoiler` needs a message.
-  def handle_event(command, params, socket) when command in ["open_poll", "spoiler"] do
+  defp event(command, params, socket) when command in ["open_poll", "spoiler"] do
     case open_message(socket.assigns.messages, user(socket)) do
       nil when command == "open_poll" ->
         {:noreply, open_poll(socket, nil)}
@@ -1291,20 +1473,20 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The poll dialog keeps what is typed, so adding an answer loses nothing.
-  def handle_event("poll_change", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
-      when is_map(params) and form != nil,
-      do: {:noreply, assign(socket, :poll_form, %{form | params: params})}
+  defp event("poll_change", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
+       when is_map(params) and form != nil,
+       do: {:noreply, assign(socket, :poll_form, %{form | params: params})}
 
-  def handle_event("poll_add_option", _params, %{assigns: %{poll_form: form}} = socket)
-      when form != nil,
-      do:
-        {:noreply,
-         assign(socket, :poll_form, %{form | count: min(form.count + 1, Polls.max_options())})}
+  defp event("poll_add_option", _params, %{assigns: %{poll_form: form}} = socket)
+       when form != nil,
+       do:
+         {:noreply,
+          assign(socket, :poll_form, %{form | count: min(form.count + 1, Polls.max_options())})}
 
-  def handle_event("hide_poll", _params, socket), do: {:noreply, assign(socket, :poll_form, nil)}
+  defp event("hide_poll", _params, socket), do: {:noreply, assign(socket, :poll_form, nil)}
 
-  def handle_event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
-      when is_map(params) and form != nil do
+  defp event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
+       when is_map(params) and form != nil do
     case add_poll(socket, form.message_id, params) do
       {:ok, _summary} ->
         {:noreply, assign(socket, :poll_form, nil)}
@@ -1330,20 +1512,20 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("create_poll", _params, socket), do: {:noreply, socket}
+  defp event("create_poll", _params, socket), do: {:noreply, socket}
 
   # `!spoiler`: this viewer sees the message plainly from now on.
-  def handle_event("reveal_spoiler", %{"id" => id}, socket) when is_binary(id),
+  defp event("reveal_spoiler", %{"id" => id}, socket) when is_binary(id),
     do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, id))}
 
   # A `||spoiler||` in a message (steward decision, 2026-10-28), by its place among the
   # message's spoilers: this viewer sees it from now on, also as the message grows.
-  def handle_event("reveal_inline_spoiler", %{"id" => id, "index" => index}, socket)
-      when is_binary(id) and is_integer(index) and index >= 0,
-      do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, {id, index}))}
+  defp event("reveal_inline_spoiler", %{"id" => id, "index" => index}, socket)
+       when is_binary(id) and is_integer(index) and index >= 0,
+       do: {:noreply, assign(socket, :revealed, MapSet.put(socket.assigns.revealed, {id, index}))}
 
   # `!poll`: a vote, or a changed one; the new counts reach every viewer as an event.
-  def handle_event("vote", %{"message_id" => id} = params, socket) when is_binary(id) do
+  defp event("vote", %{"message_id" => id} = params, socket) when is_binary(id) do
     options = for option <- List.wrap(params["options"]), is_binary(option), do: option
 
     with %{} = user <- user(socket),
@@ -1364,7 +1546,7 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # `!schedule`: the text not sent yet, asked for its delay in a dialog.
-  def handle_event("open_schedule", %{"body" => body}, socket) when is_binary(body) do
+  defp event("open_schedule", %{"body" => body}, socket) when is_binary(body) do
     if String.trim(body) == "",
       do:
         {:noreply,
@@ -1378,14 +1560,14 @@ defmodule IdejoWeb.TopicLive do
       else: {:noreply, assign(socket, schedule: %{body: body}, schedule_error: nil)}
   end
 
-  def handle_event("hide_schedule", _params, socket),
+  defp event("hide_schedule", _params, socket),
     do: {:noreply, assign(socket, schedule: nil, schedule_error: nil)}
 
-  def handle_event(
-        "schedule",
-        %{"hours" => hours},
-        %{assigns: %{schedule: %{body: body}}} = socket
-      ) do
+  defp event(
+         "schedule",
+         %{"hours" => hours},
+         %{assigns: %{schedule: %{body: body}}} = socket
+       ) do
     %{topic: topic, reply_to: reply_to} = socket.assigns
 
     with {:ok, seconds} <- Scheduling.parse_hours(hours),
@@ -1421,17 +1603,17 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("schedule", _params, socket), do: {:noreply, socket}
+  defp event("schedule", _params, socket), do: {:noreply, socket}
 
-  def handle_event("cancel_scheduled", %{"id" => id}, socket) when is_binary(id) do
+  defp event("cancel_scheduled", %{"id" => id}, socket) when is_binary(id) do
     if user(socket), do: Scheduling.cancel(user(socket), id)
     {:noreply, put_pending(socket)}
   end
 
   # TP-10: a click on an inline link opens its card in a dialog. The reply says whether it
   # did; when not (the reader may not view it), the browser follows the link.
-  def handle_event("show_card", %{"kind" => kind, "ref" => ref}, socket)
-      when is_binary(kind) and is_binary(ref) do
+  defp event("show_card", %{"kind" => kind, "ref" => ref}, socket)
+       when is_binary(kind) and is_binary(ref) do
     topic = socket.assigns.topic
     return_to = topic && ~p"/t/#{topic.id}/#{topic.slug}"
 
@@ -1441,15 +1623,15 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("hide_card", _params, socket), do: {:noreply, assign(socket, :card, nil)}
+  defp event("hide_card", _params, socket), do: {:noreply, assign(socket, :card, nil)}
 
   # The "N unread messages" line has faded (`UnreadLine` hook): it goes for good.
-  def handle_event("unread_line_done", _params, socket),
+  defp event("unread_line_done", _params, socket),
     do: {:noreply, assign(socket, :unread_line?, false)}
 
   # TP-17: add a reaction, or take it back. The new summary reaches every viewer as an event.
-  def handle_event("react", %{"id" => id, "emoji" => emoji}, socket)
-      when is_binary(id) and is_binary(emoji) do
+  defp event("react", %{"id" => id, "emoji" => emoji}, socket)
+       when is_binary(id) and is_binary(emoji) do
     with true <- socket.assigns.can_react?,
          %Messages.Message{} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
          {:ok, _summary} <- Idejo.Reactions.toggle(user(socket), message, emoji) do
@@ -1469,14 +1651,14 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The + picker: the server only opens and closes it; the browser draws and searches it.
-  def handle_event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
+  defp event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
     do: {:noreply, assign(socket, :picker, %{message_id: id})}
 
-  def handle_event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
+  defp event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
 
   # Who reacted with what (steward decision, 2026-10-28): a right click or a long press on a
   # message's reactions; only for messages on screen, whose reactions the viewer sees.
-  def handle_event("reaction_who", %{"id" => id}, socket) when is_binary(id) do
+  defp event("reaction_who", %{"id" => id}, socket) when is_binary(id) do
     if Map.get(socket.assigns.reactions, id, []) != [] and
          Enum.any?(socket.assigns.messages, &(&1.id == id)),
        do: {:noreply, put_reaction_who(socket, %{message_id: id, all?: false})},
@@ -1484,18 +1666,18 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # "Show more": the same people, all of them, in a card.
-  def handle_event("reaction_who_all", _params, socket) do
+  defp event("reaction_who_all", _params, socket) do
     case socket.assigns.reaction_who do
       %{} = who -> {:noreply, assign(socket, :reaction_who, %{who | all?: true})}
       nil -> {:noreply, socket}
     end
   end
 
-  def handle_event("close_reaction_who", _params, socket),
+  defp event("close_reaction_who", _params, socket),
     do: {:noreply, assign(socket, :reaction_who, nil)}
 
   # A topic's card: Follow / Unfollow (TP-13), then the card again.
-  def handle_event("card_" <> action, %{"id" => id}, socket) when action in ~w(follow unfollow) do
+  defp event("card_" <> action, %{"id" => id}, socket) when action in ~w(follow unfollow) do
     user = user(socket)
 
     with %{} <- user,
@@ -1513,7 +1695,7 @@ defmodule IdejoWeb.TopicLive do
 
   # TP-08: Reply without a page load. With the author's message open, the composer leaves
   # it for a new message at the end (`put_draft/1`), keeping only what was not sent yet.
-  def handle_event("reply", %{"id" => id}, socket) do
+  defp event("reply", %{"id" => id}, socket) do
     case socket.assigns.can_post? &&
            Enum.find(socket.assigns.messages, &(&1.id == id and is_nil(&1.deleted_at))) do
       %Messages.Message{} = message ->
@@ -1547,24 +1729,24 @@ defmodule IdejoWeb.TopicLive do
   # Long topics (steward decision, 2026-11-01): the messages before or after the window, when
   # the reader scrolls to its edge (`phx-viewport-top` / `-bottom`, LiveView's own) or
   # presses the button between them.
-  def handle_event("load_earlier", _params, %{assigns: %{earlier_count: n}} = socket)
-      when n > 0,
-      do: {:noreply, socket |> load_more(:earlier) |> refresh_window_data()}
+  defp event("load_earlier", _params, %{assigns: %{earlier_count: n}} = socket)
+       when n > 0,
+       do: {:noreply, socket |> load_more(:earlier) |> refresh_window_data()}
 
-  def handle_event("load_earlier", _params, socket), do: {:noreply, socket}
+  defp event("load_earlier", _params, socket), do: {:noreply, socket}
 
-  def handle_event("load_later", _params, %{assigns: %{later_count: n}} = socket) when n > 0 do
+  defp event("load_later", _params, %{assigns: %{later_count: n}} = socket) when n > 0 do
     socket = socket |> load_more(:later) |> refresh_window_data()
     # At the end: what came meanwhile is read now (TP-07).
     if socket.assigns.at_end?, do: Reading.mark_read(user(socket), socket.assigns.topic)
     {:noreply, socket}
   end
 
-  def handle_event("load_later", _params, socket), do: {:noreply, socket}
+  defp event("load_later", _params, socket), do: {:noreply, socket}
 
   # The navigator's links (TopicNav hook): to a message the window does not hold, the window
   # around it loads first, then the page goes to it.
-  def handle_event("jump", %{"id" => id}, socket) when is_binary(id) do
+  defp event("jump", %{"id" => id}, socket) when is_binary(id) do
     socket =
       if socket.assigns.latest && id == socket.assigns.latest.id,
         do: to_end(socket),
@@ -1574,7 +1756,7 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # "N new messages", and "Jump to the end to write", whose composer then takes the focus.
-  def handle_event("jump_to_end", params, socket) do
+  defp event("jump_to_end", params, socket) do
     socket = socket |> to_end() |> push_event("scroll_to_end", %{})
 
     if params["write"],
@@ -1583,14 +1765,14 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The composer stays a new message (`draft_over`), refused until it may be sent.
-  def handle_event("cancel_reply", _params, socket),
+  defp event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
 
-  def handle_event("hide_too_soon", _params, socket),
+  defp event("hide_too_soon", _params, socket),
     do: {:noreply, assign(socket, :too_soon?, false)}
 
   # Back to the open message: what was typed follows its text, unsent.
-  def handle_event("append_to_open", _params, socket) do
+  defp event("append_to_open", _params, socket) do
     case draft_over(socket.assigns) do
       nil ->
         {:noreply, assign(socket, too_soon?: false)}
@@ -1605,7 +1787,7 @@ defmodule IdejoWeb.TopicLive do
 
   # A moderator closes someone's open message (GM-16) or deletes a message (MO-02), with an
   # optional reason for the log. The changed message arrives as an event.
-  def handle_event("moderate_message", %{"message_id" => id, "do" => action} = params, socket) do
+  defp event("moderate_message", %{"message_id" => id, "do" => action} = params, socket) do
     message = Enum.find(socket.assigns.messages, &(&1.id == id))
     reason = params["reason"]
 
@@ -1624,33 +1806,33 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # A message's "Moderate", as a card over the page (steward decision, 2026-10-23).
-  def handle_event("open_moderate", %{"id" => id}, socket) when is_binary(id) do
+  defp event("open_moderate", %{"id" => id}, socket) when is_binary(id) do
     if socket.assigns.can_moderate? and Enum.any?(socket.assigns.messages, &(&1.id == id)),
       do: {:noreply, assign(socket, :moderating, id)},
       else: {:noreply, socket}
   end
 
-  def handle_event("close_moderate", _params, socket),
+  defp event("close_moderate", _params, socket),
     do: {:noreply, assign(socket, :moderating, nil)}
 
   # Choose messages to move (TP-15; the opening message never moves) or to delete (MO-02;
   # steward decision, 2026-10-23: not the moderator's own messages, nor deleted ones).
-  def handle_event(
-        "start_selecting",
-        %{"id" => id} = params,
-        %{assigns: %{can_moderate?: true}} = socket
-      ) do
+  defp event(
+         "start_selecting",
+         %{"id" => id} = params,
+         %{assigns: %{can_moderate?: true}} = socket
+       ) do
     select_for = if params["for"] == "delete", do: :delete, else: :move
     socket = assign(socket, moderating: nil, select_for: select_for)
     selected = if selectable?(socket, id), do: MapSet.new([id]), else: MapSet.new()
     {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event(
-        "toggle_select",
-        %{"id" => id},
-        %{assigns: %{selected: %MapSet{} = selected}} = socket
-      ) do
+  defp event(
+         "toggle_select",
+         %{"id" => id},
+         %{assigns: %{selected: %MapSet{} = selected}} = socket
+       ) do
     selected =
       cond do
         not selectable?(socket, id) -> selected
@@ -1661,14 +1843,14 @@ defmodule IdejoWeb.TopicLive do
     {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event("cancel_selecting", _params, socket),
+  defp event("cancel_selecting", _params, socket),
     do: {:noreply, assign(socket, selected: nil, select_for: nil, move_to: nil, move_error: nil)}
 
-  def handle_event(
-        "delete_selected",
-        params,
-        %{assigns: %{selected: %MapSet{} = selected, select_for: :delete}} = socket
-      ) do
+  defp event(
+         "delete_selected",
+         params,
+         %{assigns: %{selected: %MapSet{} = selected, select_for: :delete}} = socket
+       ) do
     case Messages.delete_many_as_moderator(
            user(socket),
            socket.assigns.topic,
@@ -1689,10 +1871,10 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("delete_selected", _params, socket), do: {:noreply, socket}
+  defp event("delete_selected", _params, socket), do: {:noreply, socket}
 
-  def handle_event("move_to", %{"to" => to}, %{assigns: %{selected: %MapSet{}}} = socket)
-      when to in ~w(new existing) do
+  defp event("move_to", %{"to" => to}, %{assigns: %{selected: %MapSet{}}} = socket)
+       when to in ~w(new existing) do
     socket = assign(socket, move_to: String.to_existing_atom(to), move_error: nil, move_query: "")
 
     if to == "existing",
@@ -1700,17 +1882,17 @@ defmodule IdejoWeb.TopicLive do
       else: {:noreply, socket}
   end
 
-  def handle_event("search_targets", %{"q" => query}, socket) when is_binary(query),
+  defp event("search_targets", %{"q" => query}, socket) when is_binary(query),
     do: {:noreply, search_targets(socket, String.slice(query, 0, 200))}
 
-  def handle_event("close_move", _params, socket),
+  defp event("close_move", _params, socket),
     do: {:noreply, assign(socket, move_to: nil, move_error: nil)}
 
-  def handle_event(
-        "move_selected",
-        params,
-        %{assigns: %{selected: %MapSet{} = selected}} = socket
-      ) do
+  defp event(
+         "move_selected",
+         params,
+         %{assigns: %{selected: %MapSet{} = selected}} = socket
+       ) do
     target =
       case params do
         %{"to" => "new"} ->
@@ -1756,10 +1938,10 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("move_selected", _params, socket), do: {:noreply, socket}
+  defp event("move_selected", _params, socket), do: {:noreply, socket}
 
   # Editing one's own closed message (GM-10); open ones are edited in the composer.
-  def handle_event("edit", %{"id" => id}, socket) do
+  defp event("edit", %{"id" => id}, socket) do
     user = user(socket)
     # The composer opens in the message (steward decision, 2026-10-24): an opening message
     # pinned away from the run is loaded with the messages after it first.
@@ -1789,28 +1971,28 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("cancel_edit", _params, socket), do: {:noreply, close_editor(socket)}
+  defp event("cancel_edit", _params, socket), do: {:noreply, close_editor(socket)}
 
-  def handle_event(
-        "validate_edit",
-        %{"edit" => params},
-        %{assigns: %{editing: {id, _}}} = socket
-      ),
-      do:
-        {:noreply,
-         socket
-         |> assign(:editing, {id, to_form(params, as: :edit)})
-         |> ImageUploads.check(:edit_image)}
+  defp event(
+         "validate_edit",
+         %{"edit" => params},
+         %{assigns: %{editing: {id, _}}} = socket
+       ),
+       do:
+         {:noreply,
+          socket
+          |> assign(:editing, {id, to_form(params, as: :edit)})
+          |> ImageUploads.check(:edit_image)}
 
   # TP-12: an image pasted or dropped into the composer was refused before uploading.
-  def handle_event("validate_image", _params, socket),
+  defp event("validate_image", _params, socket),
     do: {:noreply, ImageUploads.check(socket, :composer_image)}
 
-  def handle_event(
-        "editor_mode",
-        %{"mode" => "preview"},
-        %{assigns: %{editing: {_, form}}} = socket
-      ) do
+  defp event(
+         "editor_mode",
+         %{"mode" => "preview"},
+         %{assigns: %{editing: {_, form}}} = socket
+       ) do
     html =
       Messages.Body.to_html(form.params["body"] || "",
         author: user(socket),
@@ -1821,13 +2003,13 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # TP-10: suggestions while typing an inline link, the people of this topic first.
-  def handle_event("suggest", params, socket),
+  defp event("suggest", params, socket),
     do: IdejoWeb.Suggestions.reply(socket, params, topic_id: socket.assigns.topic.id)
 
-  def handle_event("editor_mode", %{"mode" => "write"}, socket),
+  defp event("editor_mode", %{"mode" => "write"}, socket),
     do: {:noreply, assign(socket, :editor_mode, :write)}
 
-  def handle_event("save_edit", %{"edit" => %{"body" => body} = params}, socket) do
+  defp event("save_edit", %{"edit" => %{"body" => body} = params}, socket) do
     {id, _form} = socket.assigns.editing
     message = Enum.find(socket.assigns.messages, &(&1.id == id))
     user = user(socket)
@@ -1868,8 +2050,8 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("delete_own", _params, %{assigns: %{confirm_delete: id}} = socket)
-      when is_binary(id) do
+  defp event("delete_own", _params, %{assigns: %{confirm_delete: id}} = socket)
+       when is_binary(id) do
     message = Enum.find(socket.assigns.messages, &(&1.id == id))
     socket = assign(socket, :confirm_delete, nil)
 
@@ -1890,10 +2072,10 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  def handle_event("delete_own", _params, socket), do: {:noreply, socket}
+  defp event("delete_own", _params, socket), do: {:noreply, socket}
 
   # "No", Escape or a click outside: back to the editor, the text still empty.
-  def handle_event("cancel_delete_own", _params, socket),
+  defp event("cancel_delete_own", _params, socket),
     do: {:noreply, assign(socket, :confirm_delete, nil)}
 
   # AX-01: the keyboard focus goes back to the message's Edit button, which the editor
@@ -1984,42 +2166,12 @@ defmodule IdejoWeb.TopicLive do
 
   @impl true
   def render(assigns) do
-    # Worked out at each render, as they follow from several assigns: never kept in the
-    # socket, so LiveView sees them as changed each time and the composer is always right.
-    # The composer is at the end of the topic, or in a message its author edits (steward
-    # decision, 2026-11-01); elsewhere the messages read as they are.
-    # It is the author's open message, so that message must be loaded with it, which the end
-    # always is (`jump_to_end`).
-    composer? =
-      assigns.can_post? and
-        (assigns.composing_edit != nil or (assigns.at_end? and open_loaded?(assigns)))
-
-    layout =
-      if composer?,
-        do: composer_layout(assigns),
-        else: [mine: nil, locked: nil, answered?: false]
-
-    # The opening message pinned on top, away from the window (never while the composer
-    # is in it).
-    opening_id = assigns.opening_id
-
-    {pinned, window} =
-      if assigns.gap and not match?(%{id: ^opening_id}, layout[:mine]),
-        do: parts(assigns),
-        else: {nil, assigns.messages}
-
-    {before, after_} = split(window, layout[:mine])
-
+    # The layout (`composer?`, `mine`, `locked`, `answered?`) and the lists of pairs
+    # (`opening`, `before`, `later`) come from `sync_entries/1`, run after every event.
     assigns =
-      assigns
-      |> assign(layout)
-      |> assign(
-        composer?: composer?,
+      assign(assigns,
         moderated:
-          assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating)),
-        opening: pinned && entries(assigns, [pinned]),
-        before: entries(assigns, before),
-        later: entries(assigns, after_)
+          assigns.moderating && Enum.find(assigns.messages, &(&1.id == assigns.moderating))
       )
 
     ~H"""
@@ -2435,13 +2587,14 @@ defmodule IdejoWeb.TopicLive do
   # list is a keyed comprehension, which renders an entry again only when its message or
   # this map changed: a change to one message (an Enter, a reaction, a vote, a spoiler
   # revealed) renders that entry alone, in every view, however long the topic.
-  defp entries(assigns, messages) do
+  # What every entry reads, worked out once for those made together.
+  defp entry_context(assigns) do
     spoilers =
       Enum.group_by(for({id, n} <- assigns.revealed, do: {id, n}), &elem(&1, 0), &elem(&1, 1))
 
     unread = assigns.unread_line? && assigns.first_unread
     viewer = assigns.current_scope && assigns.current_scope.user
-    Enum.map(messages, &{&1, entry(assigns, &1, {spoilers, unread, viewer})})
+    {spoilers, unread, viewer}
   end
 
   # `refocus?`: the message whose editor just closed, which takes the focus back (AX-01).

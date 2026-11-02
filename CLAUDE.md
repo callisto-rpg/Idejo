@@ -351,7 +351,11 @@ roles or the permission grid. Every later change must keep it true:
   assigns that stay put between updates (rights, `live?`). Never a per-message map
   (`@reactions[message.id]`), a value `render/1` works out (always changed) or `assigns`
   itself, or every entry is rendered and sent again at each update: put what a message
-  shows in `entry/3`. `put_derived/1` keeps the deleted runs and the navigator's links;
+  shows in `entry/3`. The `{message, entry}` pairs are kept between updates
+  (`sync_entries/1`, run after every `handle_event`/`handle_info` and upload progress):
+  made again only for messages that changed or whose entry reads something that changed
+  (`entry_inputs/1`, `dirty_ids/3`; a new assign that `entry/3` reads must join them, or its
+  change will not show). The layout around the composer is worked out there too. `put_derived/1` keeps the deleted runs and the navigator's links;
   polls read the clock when drawn. `test/idejo_web/live/live_update_size_test.exs` checks
   the size of an update. Keep it so: check with `load/run.sh --hot --writers 10` (p95
   within 200 ms) and `load/top.exs`.
