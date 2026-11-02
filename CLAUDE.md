@@ -22,6 +22,9 @@ with Ctrl+Enter, so conversations read like a forum while feeling like a chat.
   requirements, flows, screens, data model, milestones, definition of done.
 - `Community Platform — Spec Sheet v1.md` — full v1 requirements. Anything the MVP sheet
   does not mention follows v1.
+- `Idejo Hub — Spec Sheet.md` — lives in the separate `idejo-hub` repository, not here. It
+  explains why M6 exists; its BI-01 to BI-08 map to Idejo's AD-13 to AD-16, AD-09, AC-09,
+  SP-10 and NF-12. Idejo is built from its own IDs only; never cite a Hub ID in this repo.
 
 Requirement IDs (e.g. `GM-03`) are stable. Never renumber them. If a task is not covered by
 an ID, stop and ask; do not invent behaviour. The specs are written by the steward, not by
@@ -51,7 +54,7 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 | NO | `lib/idejo/notifications/` | In-app only in v0.1 |
 | PN | `lib/idejo/push/` | Web push (refines NO-05) |
 | FD | `lib/idejo/federation/` | URIs, activities outbox |
-| AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard, backup, CLI recovery |
+| AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard and headless setup (AD-14), backup, CLI recovery; `/health` (AD-15) is a plain controller in `lib/idejo_web/controllers/` |
 | SP | `lib/idejo/audit/`, `lib/idejo_web/plugs/` | Audit log, CSP, rate limits |
 | AX, CL, SE-04 | `lib/idejo_web/` | Accessibility, public rendering |
 
@@ -172,6 +175,39 @@ roles or the permission grid. Every later change must keep it true:
 - the last owner cannot delete their account (AC-07) and owners and administrators cannot be
   banned (MO-02);
 - the command line can always reset the owner's password (AD-09).
+
+## Running under Idejo Hub
+
+**One community per instance; several instances may share a host** (v1 §2 and §13, "Running
+several forums on one host"). Idejo Hub, a separate program in the `idejo-hub` repository,
+runs many ordinary Idejo instances on one server, each on its own subdomain with its own
+database, uploads and secrets, and can sign people in through one shared OpenID Connect
+provider. It drives Idejo **only** through the contract below; it never reads or writes a
+forum's database. Milestone M6 builds this contract.
+
+Rules for every change in this repo:
+
+- **No multi-forum code in Idejo**: no tenant or forum column, no list of other forums, no
+  `if hub` branch, no Hub-specific setting. Everything below must make sense for a standalone
+  install too.
+- The interfaces below are a **public contract**. Changing or removing one (a variable, a
+  command, its flags or exit codes, the `/health` JSON shape) needs a steward decision and a
+  release note; adding is fine. Keep `deploy/.env.example`, `docs/deploying.md` and the
+  `usage` text in `rel/overlays/bin/idejo-admin` in step with it (DV-01).
+- Never hard-code a domain. Development and tests use `*.idejo.test`.
+
+The contract (M6; mark each item done here when its PR merges):
+
+| Interface | Requirement | Contract | Status |
+| --- | --- | --- | --- |
+| Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Settings has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | To build (`PHX_HOST` still defaults to `example.com`; no SMTP variables yet) |
+| Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | To build |
+| Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output | Done (M5) |
+| Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | To build |
+| Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | To build |
+| Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. **Matching an existing local account with the same email: ask the steward first.** Extra review (DV-06) | To build |
+| Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | To build |
+| Footprint | NF-12 | Idle production container under 200 MB; method and figure in `docs/load-testing.md`. Measured, not enforced | To build |
 
 ## Conventions
 
@@ -1503,8 +1539,19 @@ in the same pull request (DV-01).
 - [x] M3 — Growing messages
 - [x] M4 — Around the conversation
 - [ ] **M5 — Moderation and operations**
+- [ ] **M6 — Ready for Idejo Hub** — SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12 (see Running under Idejo Hub)
 
-Current milestone: **M5**. Do not start work belonging to a later milestone.
+Current milestone: **M5**. **M6 is also authorised now** (steward decision, 2026-11-02) and may
+be worked on alongside M5, in the order SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12, one PR
+each. Do not start any other later work.
+
+M6 exit check (MVP §7), an automated check runnable locally and in CI (Docker required):
+two instances from the same image behind one Caddy on `a.idejo.test` and `b.idejo.test`, own
+database and volumes each; both set up with `bin/idejo-admin setup`, no wizard; 200 from
+`/health` on both; one member signs in to both through one test OpenID Connect provider
+(open-source, licence-checked, LI-06) and holds a different role on each; a session cookie from
+one host is never sent to the other; the "admin sets up the server" flow still passes. When it
+passes: tick M6 here, add its commands to Commands, and stop.
 
 M4 exit check (MVP §7): search finds a message by a word added in its last commit
 (`test/idejo/search_test.exs`, SE-03); a growing message produces one notification
