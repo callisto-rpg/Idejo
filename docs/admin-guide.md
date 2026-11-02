@@ -128,6 +128,11 @@ suggested or notified. Automessages with the same sender's username share the ac
 its picture; until you upload one, it shows the Idejo picture. A name a member already has
 is refused.
 
+**Post a poll** makes the automessage carry a poll, with the same fields as a poll in a
+topic (question, answers with their emoji and colour, several answers, hidden results,
+hours). Each use posts a new poll, open for those hours from then. With a poll, the
+**Message** may be left empty: the question is then the message.
+
 Those who may use them see the commands after `!` in the composer: choosing `!rules` posts
 the `rules` text in the topic as its sender, while what they were writing stays in the
 box. Each use is in the moderation log as **Had the server post an automessage**, with the

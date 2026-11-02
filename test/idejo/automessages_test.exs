@@ -15,6 +15,7 @@ defmodule Idejo.AutomessagesTest do
   alias Idejo.Messages
   alias Idejo.Messages.Automessages
   alias Idejo.Messages.Automessages.Defaults
+  alias Idejo.Messages.Polls
   alias Idejo.Moderation.Action
   alias Idejo.Notifications.Notification
   alias Idejo.Reading
@@ -256,5 +257,50 @@ defmodule Idejo.AutomessagesTest do
     message = Repo.get!(Idejo.Messages.Message, message.id)
     assert message.author_id == automessage.sender_id
     assert message.automessage_id == nil
+  end
+
+  # Steward decision, 2026-11-02: an automessage may post a poll.
+  test "an automessage may post a poll, new at each use, its question the text when empty", %{
+    admin: admin,
+    topic: topic
+  } do
+    poll = %{
+      "question" => "Lunch?",
+      "options" => ["Pizza", "Soup", ""],
+      "emojis" => ["pizza", "", ""],
+      "colours" => ["#aa0000", Polls.default_colour(), ""],
+      "multiple" => "false",
+      "hide_results" => "true",
+      "hours" => "2"
+    }
+
+    assert {:error, changeset} = create(admin, %{"poll_on" => "true", "poll" => %{}})
+    assert %{poll: ["needs a question"]} = errors_on(changeset)
+
+    assert {:ok, automessage} =
+             create(admin, %{"body_md" => "", "poll_on" => "true", "poll" => poll})
+
+    assert %{"question" => "Lunch?", "hide_results" => true, "hours" => "2"} = automessage.poll
+
+    assert [%{"text" => "Pizza", "emoji" => "pizza", "colour" => "#aa0000"}, %{"text" => "Soup"}] =
+             automessage.poll["options"]
+
+    # Off, the poll goes; a text is needed again.
+    assert {:error, changeset} = Automessages.update(admin, automessage, %{"poll_on" => "false"})
+    assert %{body_md: ["can't be blank"]} = errors_on(changeset)
+
+    Messages.subscribe(topic.id)
+    assert {:ok, message} = Automessages.post(admin, topic, automessage.command)
+    assert message.body_md == "Lunch?"
+    message_id = message.id
+    assert_receive {:message, %{id: ^message_id}}
+    assert_receive {:poll, ^message_id, summary}
+    assert summary.hide_results
+
+    assert [%{text: "Pizza", emoji: "pizza", colour: "#aa0000"}, %{text: "Soup"}] =
+             summary.options
+
+    assert_in_delta DateTime.diff(summary.closes_at, DateTime.utc_now()), 2 * 3600, 5
+    assert Polls.poll_only?(message, summary)
   end
 end

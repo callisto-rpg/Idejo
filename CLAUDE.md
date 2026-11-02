@@ -531,11 +531,23 @@ roles or the permission grid. Every later change must keep it true:
   go under (steward decision, 2026-10-24) as a closed message of its own whose text is the
   question (`post/4`, checked before posting; `poll_only?/2`: the body is not shown twice).
   Dialogs of the `InlineCard` hook keep the `open` that `showModal()` set
-  (`ignoreAttributes`), or a patch would close them. `PollComponents.poll/1`
-  shows it under the message (under the composer for the author's open message): a form
-  posting `"vote"`; anyone with the post right votes (`Forum.can_post?/2`, not on deleted
-  messages), changes or takes back their vote until `closes_at`. Votes are anonymous; counts
-  (`<progress>` bars) show to voters, the author and, once closed, everyone
+  (`ignoreAttributes`), or a patch would close them; each returns the focus to its own
+  opener (`InlineCard.opener` set before it opens, or with `data-return-focus` the last
+  focused element), so the emoji picker over the poll dialog works. Since 2026-11-02 (steward
+  decision): the fields are `PollComponents.poll_fields/1` (also in Admin → Automessages);
+  each answer has an emoji (`poll_options.emoji`, a gemoji name; the emoji picker with
+  `poll_option`, then `"poll_emoji"`, `"poll_emoji_clear"`) and a bar colour
+  (`poll_options.colour`, `#rrggbb`; the theme's, `Polls.default_colour/0`, is stored as nil
+  so the bar follows the theme), and "Hide the results until the poll closes"
+  (`polls.hide_results`). `Polls.validate/1` checks a form (or an automessage's stored
+  poll), `attach/3` adds it without rights checks, `announce/2` broadcasts.
+  `PollComponents.poll/1` shows it under the message (under the composer for the author's
+  open message): a form posting `"vote"`, its answers side by side (`.poll-options`), each
+  a column with a thick vertical bar (an SVG whose `height` and `fill` are attributes, never
+  a style; `.is-theme` without a colour), its count, emoji, text and button. Anyone with the
+  post right votes (`Forum.can_post?/2`, not on deleted messages), changes or takes back
+  their vote until `closes_at`. Votes are anonymous; counts show to voters, the author and,
+  once closed, everyone; with `hide_results` to nobody before it closes
   (`results_shown?/4`). `{:poll, message_id, summary}` goes to the topic after each change,
   worked out once (NF-01); `Idejo.Messages.PollWorker` (queue `messages`) sends it again at
   `closes_at`. Votes are rate-limited (`:vote`).
@@ -576,7 +588,11 @@ roles or the permission grid. Every later change must keep it true:
   (`Automessages.Defaults`, written by a migration, sent by `idejo`; plain automessages
   after that). `Automessages.commands_for/2`: every one for moderators of the topic's
   category (`:moderate`), the `everyone` ones for others who may post, none in locked,
-  archived or private topics; they join the composer's `!` list (`for_composer/3`,
+  archived or private topics. An automessage may post a poll (steward decision, 2026-11-02;
+  `automessages.poll`, JSON, "Post a poll" in the form, checked by `Polls.validate/1`;
+  `Automessages.poll_params/1` fills the form back): each use attaches a new one to the
+  message (open its hours from then; the question is the text when the text is empty) and
+  announces it after the message. They join the composer's `!` list (`for_composer/3`,
   `auto: true`; `TopicLive`'s `automessages`, read at mount and on `:permissions_changed`);
   the hook pushes `"automessage"` and leaves the box alone, and `Automessages.post/3`
   writes a closed message by the sender (links resolved as the user, `+role` as the sender:

@@ -241,14 +241,17 @@ defmodule IdejoWeb.ReactionComponents do
 
   attr :picker, :map,
     required: true,
-    doc: "`%{message_id: id}`, or `%{message_id: nil}` for the graphical composer (TP-11)"
+    doc:
+      "`%{message_id: id}`, `%{message_id: nil}` for the graphical composer (TP-11), or with `poll_option: index` for a poll answer"
 
   @doc """
   Every emoji, in groups, with a search box: the + of `add_reaction/1`. Only its frame is
   rendered here; the `EmojiPicker` hook fetches the list (`/emoji-index.json`, kept by the
   browser), draws it and searches it, so opening the picker sends nothing over the live
   connection. A choice is pushed as `"react"`; without a message, it goes into the composer
-  (the graphical composer's emoji button, TP-11) as `:name:`.
+  (the graphical composer's emoji button, TP-11) as `:name:`, or with `poll_option` to the
+  poll form, as `"poll_emoji"` (steward decision, 2026-11-02). The focus goes back where it
+  was when it closes (`data-return-focus`).
   """
   def emoji_picker(assigns) do
     assigns = assign(assigns, labels: picker_labels(), index: picker_index())
@@ -259,11 +262,16 @@ defmodule IdejoWeb.ReactionComponents do
       class="modal"
       phx-hook="InlineCard"
       data-close-event="close_picker"
+      data-return-focus
       aria-labelledby="emoji-picker-title"
     >
       <div class="modal-box emoji-picker">
         <h2 id="emoji-picker-title" class="inline-card-title">
-          {if @picker.message_id, do: gettext("Add a reaction"), else: gettext("Insert an emoji")}
+          {cond do
+            @picker.message_id -> gettext("Add a reaction")
+            Map.has_key?(@picker, :poll_option) -> gettext("Choose an emoji")
+            true -> gettext("Insert an emoji")
+          end}
         </h2>
         <div
           id="emoji-picker-body"
@@ -272,6 +280,7 @@ defmodule IdejoWeb.ReactionComponents do
           phx-update="ignore"
           data-src={@index}
           data-message-id={@picker.message_id}
+          data-poll-option={Map.get(@picker, :poll_option)}
           data-labels={@labels}
         >
           <label for="emoji-search" class="sr-only">{gettext("Search emoji")}</label>

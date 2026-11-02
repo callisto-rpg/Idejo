@@ -154,9 +154,13 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
     for more than two, at most ten), whether **several answers** may be chosen, and in how
     many hours it closes (decimals work; at most 168). The poll goes under your message, one
     per message; with nothing written, the poll is posted on its own, its question as the
-    message. Anyone who may post in the topic votes, and may **Change vote** until it
-    closes. You see the counts from the start, others once they voted, and everyone once it
-    closed; nobody sees who voted for what.
+    message. Each answer can have an emoji (the smiley beside it) and a bar colour (the
+    square at its right; the server's main colour unless you pick another). **Hide the
+    results until the poll closes** keeps the counts from everyone, you included, until
+    then. Anyone who may post in the topic votes, and may **Change vote** until it closes.
+    The answers stand side by side, each over a bar that fills up with its share of the
+    votes. You see the counts from the start, others once they voted, and everyone once it
+    closed (with hidden results, everyone once it closed); nobody sees who voted for what.
   - **!schedule** posts what you have not sent yet later: enter in how many hours (decimals
     work, such as `0.5` for half an hour; at most 168, a week). Only you see it until then,
     under the box, where **Cancel** takes it back. It is posted as one finished message,

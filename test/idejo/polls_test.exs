@@ -139,4 +139,53 @@ defmodule Idejo.PollsTest do
     assert {:ok, %{spoiler: false}} = Messages.set_spoiler(author, message, false)
     assert topic.id == message.topic_id
   end
+
+  # Steward decision, 2026-11-02: an emoji and a bar colour per answer, hidden results.
+  test "answers keep an emoji and a colour; unknown ones and the theme's colour are none", %{
+    author: author,
+    message: message
+  } do
+    default = Polls.default_colour()
+    assert default =~ ~r/^#[0-9a-f]{6}$/
+
+    assert {:ok, summary} =
+             poll(author, message, %{
+               "options" => ["Sat", " ", "Sun", "Mon"],
+               "emojis" => ["tada", "", "no-such-emoji", ""],
+               "colours" => ["#FF0000", "#00ff00", default, "red"]
+             })
+
+    # The blank answer goes, with its emoji and colour.
+    assert [
+             %{text: "Sat", emoji: "tada", colour: "#ff0000"},
+             %{text: "Sun", emoji: nil, colour: nil},
+             %{text: "Mon", emoji: nil, colour: nil}
+           ] = summary.options
+
+    # Answers as maps, as an automessage keeps them.
+    assert {:ok, %{options: [%{text: "A", emoji: "tada"}, %{text: "B", colour: "#123456"}]}} =
+             Polls.validate(%{
+               "question" => "Q",
+               "hours" => "1",
+               "options" => [
+                 %{"text" => "A", "emoji" => "tada"},
+                 %{"text" => "B", "colour" => "#123456"}
+               ]
+             })
+  end
+
+  test "with hidden results, nobody sees the counts before the poll closes", %{
+    author: author,
+    message: message
+  } do
+    {:ok, summary} = poll(author, message, %{"hide_results" => "true"})
+    assert summary.hide_results
+    voter = user_fixture()
+    [first | _] = summary.options
+    {:ok, summary} = Polls.vote(voter, message, [first.id])
+
+    refute Polls.results_shown?(summary, author, message)
+    refute Polls.results_shown?(summary, voter, message)
+    assert Polls.results_shown?(summary, voter, message, DateTime.add(summary.closes_at, 1))
+  end
 end

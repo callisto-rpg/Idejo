@@ -8,7 +8,8 @@
 // idle (`preloadEmoji`, from the `data-emoji-index` element), so the picker opens at once;
 // the built groups move from one opening to the next. The server only hears the choice, as
 // "react". Opened by the graphical composer's emoji button (TP-11; no data-message-id), the
-// choice goes to the composer instead (`idejo:emoji`, as `:name:`) and the picker closes.
+// choice goes to the composer instead (`idejo:emoji`, as `:name:`) and the picker closes;
+// opened for a poll answer (data-poll-option), it goes to the poll form ("poll_emoji").
 // The element is phx-update="ignore".
 
 let loading = null  // the fetch, shared by every opening on the page
@@ -112,6 +113,9 @@ export const EmojiPicker = {
       const id = this.el.dataset.messageId
       if (id) {
         this.pushEvent("react", {id, emoji: choice.dataset.emoji})
+      } else if (this.el.dataset.pollOption != null) {
+        // A poll answer's emoji (steward decision, 2026-11-02): the form keeps it.
+        this.pushEvent("poll_emoji", {emoji: choice.dataset.emoji})
       } else {
         window.dispatchEvent(new CustomEvent("idejo:emoji", {detail: choice.dataset.emoji}))
         this.el.closest("dialog")?.close()

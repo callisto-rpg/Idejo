@@ -1501,6 +1501,36 @@ defmodule IdejoWeb.TopicLive do
 
   defp event("hide_poll", _params, socket), do: {:noreply, assign(socket, :poll_form, nil)}
 
+  defp event(
+         "poll_emoji",
+         %{"emoji" => emoji},
+         %{assigns: %{poll_form: %{} = form, picker: %{poll_option: i}}} = socket
+       )
+       when is_binary(emoji) do
+    params = PollComponents.put_emoji(form.params, i, emoji)
+    {:noreply, assign(socket, picker: nil, poll_form: %{form | params: params})}
+  end
+
+  defp event("poll_emoji", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
+
+  defp event(
+         "poll_emoji_clear",
+         %{"index" => index},
+         %{assigns: %{poll_form: %{} = form}} = socket
+       ) do
+    case Integer.parse(to_string(index)) do
+      {i, ""} when i >= 0 ->
+        {:noreply,
+         assign(socket, :poll_form, %{
+           form
+           | params: PollComponents.put_emoji(form.params, i, nil)
+         })}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
   defp event("create_poll", %{"poll" => params}, %{assigns: %{poll_form: form}} = socket)
        when is_map(params) and form != nil do
     case add_poll(socket, form.message_id, params) do
@@ -1669,6 +1699,18 @@ defmodule IdejoWeb.TopicLive do
   # The + picker: the server only opens and closes it; the browser draws and searches it.
   defp event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
     do: {:noreply, assign(socket, :picker, %{message_id: id})}
+
+  # A poll answer's emoji (steward decision, 2026-11-02): the picker, over the poll dialog,
+  # sends its choice back as "poll_emoji".
+  defp event("emoji_picker", %{"poll_option" => index}, %{assigns: %{poll_form: %{}}} = socket) do
+    case Integer.parse(to_string(index)) do
+      {i, ""} when i >= 0 ->
+        {:noreply, assign(socket, :picker, %{message_id: nil, poll_option: i})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
 
   # TP-11: the graphical composer's emoji button; the picker inserts into the box instead.
   defp event("emoji_picker", _params, %{assigns: %{can_post?: true}} = socket),
