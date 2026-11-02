@@ -4,8 +4,10 @@
 defmodule Idejo.Mailer do
   @moduledoc """
   Sends email. In production the SMTP server comes from the admin panel's email settings
-  (AD-08), read at each send, so a change applies at once. Development keeps Swoosh's local
-  mailbox (`/dev/mailbox`) and tests the test adapter.
+  (AD-08), read at each send, so a change applies at once. While the panel has no SMTP host,
+  the server set in the environment (`IDEJO_SMTP_*`, AD-13) is used instead, whole: the two
+  are never mixed. Development keeps Swoosh's local mailbox (`/dev/mailbox`) and tests the
+  test adapter.
   """
   use Swoosh.Mailer, otp_app: :idejo
 
@@ -18,13 +20,56 @@ defmodule Idejo.Mailer do
   @spec deliver_email(Swoosh.Email.t()) :: {:ok, term()} | {:error, term()}
   def deliver_email(%Swoosh.Email{} = email) do
     if smtp?() do
-      with {:ok, config} <- smtp_config(Settings.all()), do: deliver(email, config)
+      with {:ok, config} <- smtp_config(smtp_settings(Settings.all())),
+           do: deliver(email, config)
     else
       deliver(email)
     end
   end
 
   defp smtp?, do: Application.get_env(:idejo, __MODULE__)[:adapter] == Swoosh.Adapters.SMTP
+
+  @doc """
+  The SMTP server from the environment (`IDEJO_SMTP_*`, read by `config/runtime.exs`), or
+  nil when none is set.
+  """
+  @spec environment() :: keyword() | nil
+  def environment, do: Application.get_env(:idejo, :smtp_environment)
+
+  @doc """
+  The SMTP settings email goes through: the panel's (`settings`, from `Settings.all/0`) once
+  they have a host, else the environment's (AD-13), else the panel's empty ones.
+  """
+  @spec smtp_settings(map(), keyword() | nil) :: map()
+  def smtp_settings(settings, environment \\ environment())
+
+  def smtp_settings(%{smtp_host: ""} = settings, [_ | _] = env) do
+    %{
+      settings
+      | smtp_host: env[:host],
+        smtp_port: env[:port],
+        smtp_security: env[:security],
+        smtp_username: env[:username],
+        smtp_password: env[:password]
+    }
+  end
+
+  def smtp_settings(settings, _environment), do: settings
+
+  @doc """
+  The sender address of the server's emails: `IDEJO_SMTP_FROM` while the environment's SMTP
+  server is in use and it is set, else the panel's sender address.
+  """
+  @spec from_address() :: String.t()
+  def from_address do
+    with [_ | _] = env <- environment(),
+         from when is_binary(from) <- env[:from],
+         "" <- Settings.get(:smtp_host) do
+      from
+    else
+      _ -> Settings.get(:mail_from)
+    end
+  end
 
   @doc """
   Builds the Swoosh SMTP adapter options from the email settings.

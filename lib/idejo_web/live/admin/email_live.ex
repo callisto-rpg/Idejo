@@ -9,6 +9,7 @@ defmodule IdejoWeb.Admin.EmailLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts.UserNotifier
+  alias Idejo.Mailer
   alias Idejo.Settings
 
   @keys ~w(mail_from smtp_host smtp_port smtp_security smtp_username smtp_password)
@@ -26,6 +27,18 @@ defmodule IdejoWeb.Admin.EmailLive do
     socket
     |> assign(:form, to_form(changeset, as: :settings))
     |> assign(:password_saved?, Settings.secret_set?(:smtp_password))
+    |> assign(:environment, environment_in_use())
+  end
+
+  # AD-13: the environment's SMTP server, while no host is saved here. Only its host and
+  # port are shown, never the login.
+  defp environment_in_use do
+    with [_ | _] = env <- Mailer.environment(),
+         "" <- Settings.get(:smtp_host) do
+      %{host: env[:host], port: env[:port]}
+    else
+      _ -> nil
+    end
   end
 
   @impl true
@@ -100,6 +113,14 @@ defmodule IdejoWeb.Admin.EmailLive do
           {gettext("The server sends sign-up verification and other emails through this SMTP server.")}
         </:subtitle>
       </.header>
+
+      <p :if={@environment} id="email-environment" class="alert alert-info mb-6">
+        {gettext(
+          "No SMTP host is saved here, so the server sends email through %{host} (port %{port}), set in its environment. Saving a host here replaces it.",
+          host: @environment.host,
+          port: @environment.port
+        )}
+      </p>
 
       <.form for={@form} id="email-form" phx-change="validate" phx-submit="save">
         <.input field={@form[:mail_from]} type="email" label={gettext("Sender address")} required />

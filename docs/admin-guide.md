@@ -146,7 +146,10 @@ New members must verify their email address before they can write, and password 
 come by email. **Until email works, nobody new can take part.** Fill in what your email
 provider gives you (sender address, SMTP host, port, encryption, username, password), save,
 then press **Send test email**: it goes to your own address, and the page shows why if it
-fails. [The deployment guide](deploying.md#outgoing-email) has more detail.
+fails. If the person who installed the server gave it an SMTP server in its environment,
+the page says so above the form, with its host and port: email already works, and saving a
+host here replaces that server. [The deployment guide](deploying.md#outgoing-email) has more
+detail.
 
 ### Users
 

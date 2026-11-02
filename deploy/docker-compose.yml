@@ -28,6 +28,14 @@ services:
       DATABASE_URL: ecto://idejo:${POSTGRES_PASSWORD}@db/idejo
       IDEJO_UPLOADS_DIR: /data/uploads
       IDEJO_BACKUP_DIR: /data/backups
+      # AD-13: optional, empty when not set in .env (see .env.example).
+      POOL_SIZE: ${POOL_SIZE:-}
+      IDEJO_SMTP_HOST: ${IDEJO_SMTP_HOST:-}
+      IDEJO_SMTP_PORT: ${IDEJO_SMTP_PORT:-}
+      IDEJO_SMTP_SECURITY: ${IDEJO_SMTP_SECURITY:-}
+      IDEJO_SMTP_USERNAME: ${IDEJO_SMTP_USERNAME:-}
+      IDEJO_SMTP_PASSWORD: ${IDEJO_SMTP_PASSWORD:-}
+      IDEJO_SMTP_FROM: ${IDEJO_SMTP_FROM:-}
     volumes:
       - uploads:/data/uploads   # TP-12: images on local disk
       - backups:/data/backups   # AD-05: nightly backups on local disk

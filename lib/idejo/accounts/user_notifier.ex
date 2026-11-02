@@ -11,12 +11,13 @@ defmodule Idejo.Accounts.UserNotifier do
   alias Idejo.Mailer
   alias Idejo.Settings
 
-  # Sent from the server name and sender address set in the admin panel (AD-02, AD-08).
+  # Sent from the server name and sender address set in the admin panel (AD-02, AD-08), or
+  # IDEJO_SMTP_FROM while the environment's SMTP server is in use (AD-13).
   defp deliver(recipient, subject, body) do
     email =
       new()
       |> to(recipient)
-      |> from({Settings.get(:server_name), Settings.get(:mail_from)})
+      |> from({Settings.get(:server_name), Mailer.from_address()})
       |> subject(subject)
       |> text_body(body)
 

@@ -193,14 +193,16 @@ Rules for every change in this repo:
 - The interfaces below are a **public contract**. Changing or removing one (a variable, a
   command, its flags or exit codes, the `/health` JSON shape) needs a steward decision and a
   release note; adding is fine. Keep `deploy/.env.example`, `docs/deploying.md` and the
-  `usage` text in `rel/overlays/bin/idejo-admin` in step with it (DV-01).
+  `usage` text in `rel/overlays/bin/idejo-admin` in step with it (DV-01); the AD-13 test
+  fails when a variable the app reads is missing from `.env.example` or the table of
+  `docs/deploying.md`.
 - Never hard-code a domain. Development and tests use `*.idejo.test`.
 
 The contract (M6; mark each item done here when its PR merges):
 
 | Interface | Requirement | Contract | Status |
 | --- | --- | --- | --- |
-| Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Settings has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | To build (`PHX_HOST` still defaults to `example.com`; no SMTP variables yet) |
+| Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_SECURITY` (added: `starttls`, `tls`, `none`; by default `tls` on 465, else `starttls`), `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Settings has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | Done (`config/runtime.exs`, `Idejo.Mailer.smtp_settings/2`; `test/idejo_web/ad_13_environment_test.exs`) |
 | Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | To build |
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output | Done (M5) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | To build |
@@ -1219,7 +1221,11 @@ The contract (M6; mark each item done here when its PR merges):
   one locked transaction. Tests run with the redirect off (`setup_redirect: false`); a test
   that needs it turns it on, is not async and calls `RequireSetup.forget/0` before and after.
 - **Email** (AD-08): send with `Idejo.Mailer.deliver_email/1`, never `deliver/1`, so production
-  uses the SMTP settings from **Admin → Email** (read at each send). Secret settings are
+  uses the SMTP settings from **Admin → Email** (read at each send). While the panel has no
+  SMTP host, the environment's server is used whole (AD-13: `IDEJO_SMTP_*`, read by
+  `config/runtime.exs` into `:smtp_environment`, `Mailer.smtp_settings/2`; never stored,
+  shown or audited; Admin → Email names its host and port), and emails come from
+  `Mailer.from_address/0` (`IDEJO_SMTP_FROM` then, else the panel's sender address). Secret settings are
   declared with `secret: true` in `Idejo.Settings`: stored encrypted (`Settings.Secret`), never
   put in a form, audited as "[changed]". Tests can use `Idejo.SMTPCapture` for a real SMTP
   server.
@@ -1520,7 +1526,7 @@ mix test --only flow:live-conversation           # the M3 exit flow (with --only
 mix format --check-formatted
 mix credo --strict
 mix dialyzer
-mix sobelow --config
+mix sobelow --config               # reviewed findings in .sobelow-skips (AD-13's origin list)
 mix deps.audit && mix hex.audit
 reuse lint                         # SPDX headers (pip install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
