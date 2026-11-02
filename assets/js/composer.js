@@ -130,6 +130,7 @@ export function keptAfterReload(value, sent) {
 import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
 import {mayStartNew} from "./composer_timer"
+import {mountToolbar} from "./composer_toolbar"
 
 // Where Ctrl+Enter keeps its own meaning (typing elsewhere, a link opening in a new tab), so
 // it never reaches the composer from there.
@@ -316,10 +317,14 @@ export const Composer = {
       this.input.setSelectionRange(this.sent.length, this.sent.length)
       this.paint()
     })
+    // TP-11: the graphical composer's buttons, for authors who chose it (steward decision,
+    // 2026-11-02; assets/js/composer_toolbar.js).
+    this.unmountToolbar = mountToolbar(this)
     this.paint()
   },
 
   destroyed() {
+    this.unmountToolbar?.()
     document.removeEventListener("selectionchange", this.onSelection)
     document.removeEventListener("keydown", this.onPageKey)
     window.removeEventListener("idejo:appended", this.onAppended)

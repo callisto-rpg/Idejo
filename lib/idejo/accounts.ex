@@ -381,8 +381,9 @@ defmodule Idejo.Accounts do
 
   @doc """
   Updates the user's writing preferences: "Automatic punctuation" (steward decision,
-  2026-10-26), which `Idejo.Messages.commit/4` and the composer read from the author. A
-  private preference: no activity.
+  2026-10-26), which `Idejo.Messages.commit/4` and the composer read from the author, and
+  "Use the graphical composer" (TP-11; steward decision, 2026-11-02), which `IdejoWeb.TopicLive`
+  reads at mount. A private preference: no activity.
   """
   @spec update_user_writing(User.t(), map()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def update_user_writing(%User{} = user, attrs),

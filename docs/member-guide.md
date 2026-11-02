@@ -32,6 +32,24 @@ Once you start typing, a bubble beside them says where your message stands: **un
 finished says **sent & committed** for three seconds, then shows your role like any other.
 This bubble stays whatever **Tutorial bubbles** is set to.
 
+### The graphical composer
+
+Prefer buttons to keys? Turn on **Use the graphical composer** under **Writing** in
+**Profile and account** (off at first; a topic page already open shows it once reloaded). A
+row of small icons then sits under the box:
+
+- at the left, the **smiley** picks an emoji (it goes in as `:name:`), the **picture** adds
+  an image where the cursor is, the **pencil** shows the text controls (**Bold**,
+  **Italic**, **Strikethrough**, **Insert link**, **Code**, **Quote**, **Bulleted list**,
+  **Numbered list**: select words first to format them) and **+** shows the commands
+  (**Spoiler**, **Poll**, **Schedule**, **New topic from this**), the same as typing `!`;
+- at the right, the **paper plane** sends, like **Enter**. Right-click it, double-click it,
+  hold it on a phone, or press the menu key on it for **Commit and start new message**, like
+  **Ctrl+Enter** (while you are editing a message, **Save and end the edit**). While you cannot
+  start a new message yet, it says so instead.
+
+The keys keep working as well.
+
 ## How a message grows
 
 1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
@@ -263,6 +281,8 @@ that, shown as "Deleted user".
 **Writing**, on the same page, has **Automatic punctuation** (on at first): a full stop
 after a line you send without punctuation at its end, never after code. Turn it off to keep
 your messages exactly as typed; a topic page already open follows the change once reloaded.
+**Use the graphical composer** adds buttons under the box (see "The graphical composer"
+above).
 
 **Email notifications**, on the same page: when you have not been on the server for 24
 hours, you get one email counting what you missed, for what you tick: **@you mentions and

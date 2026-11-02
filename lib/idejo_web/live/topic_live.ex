@@ -138,6 +138,7 @@ defmodule IdejoWeb.TopicLive do
            draft_over: nil,
            early_reply?: true,
            punctuate?: true,
+           graphical?: false,
            too_soon?: false,
            composing_edit: nil,
            edit_versioned?: false,
@@ -165,6 +166,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
+         |> assign(:graphical?, user != nil and user.graphical_composer)
          |> assign(composing_edit: nil, edit_versioned?: false)
          |> assign(sizes: TopicWindow.sizes(), new_below: 0)
          |> assign(:mine_last, TopicWindow.last_by(topic, user))
@@ -1668,6 +1670,12 @@ defmodule IdejoWeb.TopicLive do
   defp event("emoji_picker", %{"id" => id}, socket) when is_binary(id),
     do: {:noreply, assign(socket, :picker, %{message_id: id})}
 
+  # TP-11: the graphical composer's emoji button; the picker inserts into the box instead.
+  defp event("emoji_picker", _params, %{assigns: %{can_post?: true}} = socket),
+    do: {:noreply, assign(socket, :picker, %{message_id: nil})}
+
+  defp event("emoji_picker", _params, socket), do: {:noreply, socket}
+
   defp event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
 
   # Who reacted with what (steward decision, 2026-10-28): a right click or a long press on a
@@ -2215,7 +2223,10 @@ defmodule IdejoWeb.TopicLive do
           </div>
         </div>
       </dialog>
-      <ReactionComponents.emoji_picker :if={@picker && @can_react?} picker={@picker} />
+      <ReactionComponents.emoji_picker
+        :if={@picker && (@can_react? or (@picker.message_id == nil and @can_post?))}
+        picker={@picker}
+      />
       <ReactionComponents.reaction_who :if={@reaction_who && !@reaction_who.all?} who={@reaction_who} />
       <ReactionComponents.reaction_card :if={@reaction_who && @reaction_who.all?} who={@reaction_who} />
       <.delete_own_dialog :if={@confirm_delete} />
@@ -2330,6 +2341,7 @@ defmodule IdejoWeb.TopicLive do
               pending={@pending}
               commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?, @automessages)}
               punctuate?={@punctuate?}
+              graphical?={@graphical?}
               reply_to={@reply_to}
               locked={@locked}
               editing?={@mine != nil and @mine.id == @composing_edit}
@@ -3176,6 +3188,173 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # TP-11, "Use the graphical composer" (steward decision, 2026-11-02): under the box, at the
+  # left an emoji button, an image button, a button showing the text controls (Markdown around
+  # the selection) and + showing the other commands; at the right Send, which is Enter, and
+  # whose menu (a right click, a double click, a long press or the menu key) holds Ctrl+Enter.
+  # Monochrome icons, each named. The `Composer` hook runs them; without scripts nothing
+  # would, so the bar is hidden until the hook shows it (phx-update="ignore" keeps that and
+  # the open panels).
+  attr :commands, :list, required: true
+  attr :editing?, :boolean, required: true
+  attr :upload?, :boolean, required: true
+
+  defp composer_toolbar(assigns) do
+    names = MapSet.new(assigns.commands, & &1.name)
+
+    assigns =
+      assign(assigns,
+        formats: [
+          {"bold", "hero-bold", gettext("Bold")},
+          {"italic", "hero-italic", gettext("Italic")},
+          {"strike", "hero-strikethrough", gettext("Strikethrough")},
+          {"link", "hero-link", gettext("Insert link")},
+          {"code", "hero-code-bracket", gettext("Code")},
+          {"quote", "hero-chat-bubble-bottom-center-text", gettext("Quote")},
+          {"list", "hero-list-bullet", gettext("Bulleted list")},
+          {"numbered", "hero-numbered-list", gettext("Numbered list")}
+        ],
+        more:
+          for(
+            {name, icon, label} <- [
+              {"spoiler", "hero-eye-slash", gettext("Spoiler")},
+              {"poll", "hero-chart-bar", gettext("Poll")},
+              {"schedule", "hero-clock", gettext("Schedule")},
+              {"new-topic", "hero-document-plus", gettext("New topic from this")}
+            ],
+            MapSet.member?(names, name),
+            do: {name, icon, label}
+          )
+      )
+
+    ~H"""
+    <div
+      id="composer-toolbar"
+      class="composer-toolbar"
+      phx-update="ignore"
+      hidden
+      data-label-new={gettext("Commit and start new message")}
+      data-label-end-edit={gettext("Save and end the edit")}
+      data-label-too-soon={gettext("You cannot start a new message yet")}
+    >
+      <div
+        id="composer-format"
+        class="composer-toolbar-panel"
+        role="toolbar"
+        aria-label={gettext("Text formatting")}
+        hidden
+      >
+        <button
+          :for={{action, icon, label} <- @formats}
+          type="button"
+          class="composer-tool"
+          data-format={action}
+          aria-label={label}
+          title={label}
+        >
+          <.icon name={icon} class="size-5" />
+        </button>
+      </div>
+      <div
+        :if={@more != []}
+        id="composer-more"
+        class="composer-toolbar-panel"
+        role="toolbar"
+        aria-label={gettext("More")}
+        hidden
+      >
+        <button
+          :for={{name, icon, label} <- @more}
+          type="button"
+          class="composer-tool composer-tool-labelled"
+          data-command={name}
+        >
+          <.icon name={icon} class="size-5" /><span>{label}</span>
+        </button>
+      </div>
+      <div class="composer-toolbar-row" role="toolbar" aria-label={gettext("Composer")}>
+        <button
+          type="button"
+          id="composer-emoji"
+          class="composer-tool"
+          data-tool="emoji"
+          aria-label={gettext("Insert an emoji")}
+          title={gettext("Insert an emoji")}
+        >
+          <.icon name="hero-face-smile" class="size-5" />
+        </button>
+        <button
+          :if={@upload?}
+          type="button"
+          id="composer-image"
+          class="composer-tool"
+          data-tool="image"
+          aria-label={gettext("Add an image")}
+          title={gettext("Add an image")}
+        >
+          <.icon name="hero-photo" class="size-5" />
+        </button>
+        <button
+          type="button"
+          id="composer-format-toggle"
+          class="composer-tool"
+          data-panel="composer-format"
+          aria-controls="composer-format"
+          aria-expanded="false"
+          aria-label={gettext("Text formatting")}
+          title={gettext("Text formatting")}
+        >
+          <.icon name="hero-pencil" class="size-5" />
+        </button>
+        <button
+          :if={@more != []}
+          type="button"
+          id="composer-more-toggle"
+          class="composer-tool"
+          data-panel="composer-more"
+          aria-controls="composer-more"
+          aria-expanded="false"
+          aria-label={gettext("More")}
+          title={gettext("More")}
+        >
+          <.icon name="hero-plus" class="size-5" />
+        </button>
+        <span class="composer-toolbar-gap"></span>
+        <div class="composer-send-wrap">
+          <button
+            type="button"
+            id="composer-send"
+            class="composer-tool composer-send"
+            aria-label={if @editing?, do: gettext("Save"), else: gettext("Send")}
+            aria-describedby="composer-send-help"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            title={if @editing?, do: gettext("Save"), else: gettext("Send")}
+          >
+            <.icon name="hero-paper-airplane" class="size-5" />
+          </button>
+          <span id="composer-send-help" class="sr-only">
+            {gettext("Right-click, double-click, long-press or the menu key for more.")}
+          </span>
+          <div
+            id="composer-send-menu"
+            class="popup-menu composer-send-menu"
+            role="menu"
+            aria-label={gettext("Send options")}
+            hidden
+          >
+            <button type="button" role="menuitem" id="composer-send-new">
+              {if @editing?,
+                do: gettext("Save and end the edit"),
+                else: gettext("Commit and start new message")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :mine, :any, required: true
   attr :pending, :list, default: [], doc: "the author's scheduled messages here"
   attr :commands, :list, default: [], doc: "the `!` commands, for the Composer hook"
@@ -3183,6 +3362,10 @@ defmodule IdejoWeb.TopicLive do
   attr :punctuate?, :boolean,
     default: true,
     doc: "the author's \"Automatic punctuation\", for the Composer hook's dot rule"
+
+  attr :graphical?, :boolean,
+    default: false,
+    doc: "the author's \"Use the graphical composer\": buttons under the box (TP-11)"
 
   attr :reply_to, :any, required: true
 
@@ -3204,7 +3387,8 @@ defmodule IdejoWeb.TopicLive do
   attr :unanswered_minutes, :integer, default: 10
   attr :private?, :boolean, default: false, doc: "a private conversation: no slow mode"
 
-  # No countdown, button or status around it (GM-07): only the text box. The hook owns its
+  # No countdown, button or status around it (GM-07): only the text box, and the graphical
+  # composer's buttons for an author who chose them (TP-11; steward decision, 2026-11-02). The hook owns its
   # contents (phx-update="ignore"); `data-sent` gives it the open message after a reload.
   # The open state and the time left are hidden text describing the box (AX-03).
   defp composer(assigns) do
@@ -3314,6 +3498,12 @@ defmodule IdejoWeb.TopicLive do
         >
         </ul>
       </div>
+      <.composer_toolbar
+        :if={@graphical?}
+        commands={@commands}
+        editing?={@editing?}
+        upload?={@upload != nil}
+      />
       <%!-- Until Ctrl+Enter may start a new message (steward decision, 2026-10-23): a thin
            line filling up under the box, to the window's end, or while nobody wrote below, to
            the unanswered message time's. The `ComposerTimer` hook draws it; decorative, as
@@ -3392,7 +3582,7 @@ defmodule IdejoWeb.TopicLive do
         <% end %>
       </p>
       <%!-- TP-12: images pasted or dropped into the composer upload through this input; the
-           composer shows no button (GM-07). --%>
+           composer shows no button (GM-07), but the graphical composer's image button (TP-11). --%>
       <form :if={@upload} id="composer-image-form" phx-change="validate_image" class="hidden">
         <.live_file_input upload={@upload} />
       </form>

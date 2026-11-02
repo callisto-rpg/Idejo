@@ -75,7 +75,8 @@ The engine is `Idejo.Messages`: the composer sends the author's whole message af
 and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunctuated text
 (not after code) while the author's "Automatic punctuation" (`users.auto_punctuation`, on by
 default, under "Writing" in Profile and account, `Accounts.update_user_writing/2`; steward
-decision, 2026-10-26, moved from Admin → Settings) is on; off, the text is stored as typed
+decision, 2026-10-26, moved from Admin → Settings; "Use the graphical composer" sits beside it,
+see Graphical composer) is on; off, the text is stored as typed
 (the composer's `finishSentence/2` reads it from `data-punctuate`; `TopicLive` reads it at
 mount, so an open page picks up a change when reloaded). Each commit overwrites `body_md`/`body_html`; one that changes text already
 sent first keeps the old text in `message_versions` (GM-11). History is kept only for edits
@@ -413,7 +414,8 @@ roles or the permission grid. Every later change must keep it true:
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or
-  status, and no box (steward decision, 2026-10-23), but a thin orange line under it
+  status, and no box (steward decision, 2026-10-23; buttons only for authors who chose the
+  graphical composer, below), but a thin orange line under it
   (`#composer-timer`, `ComposerTimer` hook, `aria-hidden`; steward decision, 2026-10-23)
   that fills up until Ctrl+Enter may start a new message (the window's end, or the
   unanswered message time's while nobody wrote below: `start_new_at/3`), its front glowing
@@ -490,6 +492,23 @@ roles or the permission grid. Every later change must keep it true:
   open dialogs) sends with `break` when a new message may start (an edit, or
   `mayStartNew()` from `composer_timer.js`: the line's end has passed, or there is none),
   then puts the caret at the end of the box (`focusEnd()`); otherwise only the caret.
+- **Graphical composer** (TP-11; steward decision, 2026-11-02): "Use the graphical composer"
+  (`users.graphical_composer`, off by default, under "Writing" in Profile and account,
+  `Accounts.update_user_writing/2`; `TopicLive` reads it at mount, `graphical?`) puts
+  `composer_toolbar/1` under the box (`#composer-toolbar`, `phx-update="ignore"`, `hidden`
+  until the `Composer` hook shows it: without scripts nothing would run it). Monochrome
+  heroicons, each named: at the left emoji (`"emoji_picker"` with no id opens the reaction
+  picker for the composer, `picker.message_id` nil, "Insert an emoji"; `EmojiPicker` then
+  sends `idejo:emoji` and the box gets `:name:`), image (the composer's file input, at the
+  caret), the text controls (`#composer-format`: Markdown around the selection,
+  `formatEdit/4`) and + (`#composer-more`: the `ComposerCommands` the author may use among
+  spoiler, poll, schedule, new-topic, run by the hook's `command/1`); at the right Send
+  (`#composer-send`): a click is Enter (`send(false)`); a right click, a double click, a
+  long press (touch, 500 ms) or the menu key opens `#composer-send-menu`, whose item is
+  Ctrl+Enter (`send(true)`): "Commit and start new message", "Save and end the edit" while
+  editing, disabled with "You cannot start a new message yet" before `mayStartNew()`.
+  Clicks never move the focus out of the box. `assets/js/composer_toolbar.js`
+  (`mountToolbar/1`, from the hook).
 - **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the
   `Suggest` list shows the composer's commands (`data-commands` from `TopicLive.commands/2`:
   only those the author may use; no server question; Enter picks one only once a letter
