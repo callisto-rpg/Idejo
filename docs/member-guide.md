@@ -111,7 +111,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 **Message controls** in **Profile and account** (both off at first).
 
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
-  reply** to undo it), and the box is a new message, shown as a reply to theirs. If your
+  reply** to undo it, until your first Enter), and the box is a new message, shown as a
+  reply to theirs. The quote stays above your message while you go on writing it. If your
   own message is still open, sending the reply completes it (when the server allows replies
   while the timer runs, as it does unless an administrator turned it off). Cancel the reply
   and the box stays a new message: Enter then says **You cannot post a new message yet**

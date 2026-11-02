@@ -3396,6 +3396,14 @@ defmodule IdejoWeb.TopicLive do
   defp carried(%{mine: %{forwarded_from: %Messages.Message{} = carried}}), do: carried
   defp carried(_assigns), do: nil
 
+  # What the composer shows replied to: the message chosen with Reply, else the one the
+  # author's open message replies to, so the quote stays while they go on typing after the
+  # first Enter (only the chosen one can be cancelled: a sent reply is stored).
+  defp replying(%{editing?: true}), do: nil
+  defp replying(%{reply_to: %Messages.Message{} = reply_to}), do: reply_to
+  defp replying(%{mine: %{reply_to: %Messages.Message{} = reply_to}}), do: reply_to
+  defp replying(_assigns), do: nil
+
   # Forward (steward decision, 2026-11-02): "NAME message forwarded from TOPIC" over the
   # forwarded message, whole; a long one is cut, with "Show full message" (once connected:
   # without scripts it shows whole). `text?` false: the reader may not read it (only the
@@ -3750,6 +3758,7 @@ defmodule IdejoWeb.TopicLive do
         # What the box shows forwarded: the message chosen to go with the new one, else what
         # the author's open message carries (they may read it: they forwarded it).
         carried: carried(assigns),
+        replying: replying(assigns),
         timed: mine,
         left: mine && DateTime.diff(mine.closes_at, now),
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
@@ -3797,14 +3806,14 @@ defmodule IdejoWeb.TopicLive do
           </:status>
         </.author_line>
       </p>
-      <div :if={@reply_to && !@editing?} id="replying-to" class="message-quote">
+      <div :if={@replying} id="replying-to" class="message-quote">
         <p>
-          {gettext("Replying to %{name}:", name: @reply_to.author.display_name)}
-          <button type="button" class="link ml-2" phx-click="cancel_reply">
+          {gettext("Replying to %{name}:", name: @replying.author.display_name)}
+          <button :if={@reply_to} type="button" class="link ml-2" phx-click="cancel_reply">
             {gettext("Cancel reply")}
           </button>
         </p>
-        <p class="opacity-70">{Forum.excerpt(@reply_to)}</p>
+        <p class="opacity-70">{Forum.excerpt(@replying)}</p>
       </div>
       <%!-- Forward (steward decision, 2026-11-02): the message the new one carries, whole. --%>
       <div :if={@carried} id="forwarding" class="message-quote message-forward">
