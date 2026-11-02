@@ -22,7 +22,7 @@ defmodule Idejo.Forum.TopicWindow do
   alias Idejo.Settings
 
   # What a topic view shows of each message, as Idejo.Forum.list_messages/1.
-  @preload [:author, :versions, reply_to: :author]
+  @preload Idejo.Messages.shown()
 
   @normal %{before: 10, after: 30, step: 40, cap: 200, page: 50}
 

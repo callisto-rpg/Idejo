@@ -42,7 +42,8 @@ row of small icons then sits under the box:
   an image where the cursor is, the **pencil** shows the text controls (**New line**, like Shift+Enter, **Bold**,
   **Italic**, **Strikethrough**, **Insert link**, **Code**, **Quote**, **Bulleted list**,
   **Numbered list**: select words first to format them) and **+** shows the commands
-  (**Spoiler**, **Poll**, **Schedule**, **New topic from this**), the same as typing `!`;
+  (**Spoiler**, **Poll**, **Schedule**, **Forward**, **New topic from this**), the same as
+  typing `!`;
 - at the right, the **paper plane** sends, like **Enter**. Right-click it, double-click it,
   hold it on a phone, or press the menu key on it for **Commit and start new message**, like
   **Ctrl+Enter** (while you are editing a message, **Save and end the edit**). While you cannot
@@ -116,6 +117,14 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   and the box stays a new message: Enter then says **You cannot post a new message yet**
   until your open message could be completed with Ctrl+Enter. **Append to my message** puts
   what you typed back after your open message instead.
+- **Forward** under someone's message (or under your own, once it is finished) sends it to
+  another topic or private conversation: a card lists the ones you read last, and a search
+  box finds others. Choose one and it opens with the message in a box above your box,
+  "**Name** message forwarded from **Topic**", whole (a long one is cut, with **Show full
+  message**); write what you want to say with it and send, or **Cancel forward**. Readers
+  who cannot see the topic it came from see only that a message was forwarded, unless you
+  wrote it yourself: then they read it, without the topic's name. `!forward` in the box does
+  the same for the message you are replying to.
 - **Inline links**, highlighted in the message:
   - **@username** mentions someone: they get a notification and follow the topic (unless
     they unfollowed it).

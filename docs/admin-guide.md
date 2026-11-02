@@ -116,7 +116,7 @@ Enter, Ctrl+Enter and `!image` work), `!tutorial-commands` (every `!` command) a
 (general rules to adapt), each ending with a link to the Help page or Rules & Roles.
 
 Each automessage has a **Command (typed as !command)**: letters, digits, `-` and `_`, not
-one of the composer's own commands (`!image`, `!new-topic`, `!poll`, `!schedule`,
+one of the composer's own commands (`!image`, `!forward`, `!new-topic`, `!poll`, `!schedule`,
 `!spoiler`) or another automessage's. Its **Message (Markdown)** is what gets posted.
 **Allow everyone to use this command** lets anyone who may post in a topic use it there;
 off, only moderators of the topic's category (and you) can. **Wait before it can be used

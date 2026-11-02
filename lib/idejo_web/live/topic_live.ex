@@ -117,6 +117,9 @@ defmodule IdejoWeb.TopicLive do
            picker: nil,
            reaction_who: nil,
            viewable_replies: MapSet.new(),
+           forward_access: %{},
+           forward: nil,
+           forward_card: nil,
            moderating: nil,
            confirm_delete: nil,
            selected: nil,
@@ -156,6 +159,7 @@ defmodule IdejoWeb.TopicLive do
         {:ok,
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
+         |> assign(forward_access: %{}, forward_card: nil)
          |> assign(committed: nil, read_timer: nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, can_fork?(user, topic))
@@ -163,7 +167,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
-         |> assign(:reply_to, can_post? && Forum.get_topic_message(topic, session["reply_to_id"]))
+         |> put_quoted(can_post?, session)
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
          |> assign(:graphical?, user != nil and user.graphical_composer)
@@ -302,6 +306,7 @@ defmodule IdejoWeb.TopicLive do
         assigns.can_post?,
         assigns.can_moderate?,
         assigns.viewable_replies,
+        assigns.forward_access,
         assigns.select_for,
         assigns.selected == nil,
         assigns.opening_id
@@ -389,8 +394,18 @@ defmodule IdejoWeb.TopicLive do
   # Without the reply, or with replies waiting for the timer (`gm_early_reply` off), Enter is
   # refused until Ctrl+Enter could start a new message.
   defp put_draft(socket) do
-    open = socket.assigns.reply_to && open_message(socket.assigns.messages, user(socket))
+    quoting? = socket.assigns.reply_to || socket.assigns.forward
+    open = quoting? && open_message(socket.assigns.messages, user(socket))
     assign(socket, :draft_over, open && open.id)
+  end
+
+  defp open_forward(socket, message) do
+    if Forum.Forwards.may_forward?(user(socket), message) do
+      targets = Forum.Forwards.targets(user(socket), "", socket.assigns.topic.id)
+      assign(socket, :forward_card, %{message: message, query: "", targets: targets})
+    else
+      socket
+    end
   end
 
   # The open message the composer left, while it is still open.
@@ -508,7 +523,7 @@ defmodule IdejoWeb.TopicLive do
     cond do
       page = positive_integer(window["page"]) -> {:page, page}
       is_binary(window["around"]) -> {:around, window["around"]}
-      is_binary(session["reply_to_id"]) -> :end
+      is_binary(session["reply_to_id"]) or is_binary(session["forward_id"]) -> :end
       match?(%{id: _}, session["first_unread"]) -> {:around, session["first_unread"].id}
       true -> :end
     end
@@ -665,6 +680,7 @@ defmodule IdejoWeb.TopicLive do
     |> assign(:messages, messages)
     |> add_roles(messages)
     |> put_viewable_replies(messages)
+    |> put_forward_access(messages)
     |> put_derived()
   end
 
@@ -676,6 +692,7 @@ defmodule IdejoWeb.TopicLive do
     |> assign(:messages, upsert(socket.assigns.messages, message))
     |> add_roles([message])
     |> add_viewable_reply(message)
+    |> put_forward_access([message])
     |> put_derived()
   end
 
@@ -814,6 +831,57 @@ defmodule IdejoWeb.TopicLive do
         if MapSet.member?(Forum.viewable_message_ids(user(socket), [id]), id),
           do: assign(socket, :viewable_replies, MapSet.put(viewable, id)),
           else: assign(socket, :viewable_replies, MapSet.delete(viewable, id))
+    end
+  end
+
+  # Forward (steward decision, 2026-11-02): whether the reader may read each forwarded
+  # message, kept by its id. Looked up once per message, so its later appends cost no query
+  # (NF-01); messages of this topic need none.
+  defp put_forward_access(socket, messages) do
+    known = socket.assigns.forward_access
+    topic_id = socket.assigns.topic.id
+
+    unknown =
+      for %{forwarded_from: %Messages.Message{id: id, topic_id: other}} <- messages,
+          other != topic_id,
+          not Map.has_key?(known, id),
+          uniq: true,
+          do: id
+
+    case unknown do
+      [] ->
+        socket
+
+      ids ->
+        readable = Forum.Forwards.readable_ids(user(socket), ids)
+        assign(socket, :forward_access, Map.merge(known, Map.new(ids, &{&1, &1 in readable})))
+    end
+  end
+
+  # After "Reply" (`?reply_to=`) or Forward (`?forward=`) without a live page: what the
+  # composer starts with.
+  defp put_quoted(socket, false, _session), do: assign(socket, reply_to: nil, forward: nil)
+
+  defp put_quoted(socket, true, session) do
+    %{topic: topic} = socket.assigns
+
+    assign(socket,
+      reply_to: Forum.get_topic_message(topic, session["reply_to_id"]),
+      forward: forward_source(user(socket), session["forward_id"])
+    )
+  end
+
+  # A message the user may forward into this topic's composer (`?forward=`): one they may
+  # read, not deleted.
+  defp forward_source(_user, id) when not is_binary(id), do: nil
+
+  defp forward_source(user, id) do
+    case Forum.get_readable_message(user, id) do
+      %Messages.Message{deleted_at: nil} = message ->
+        Repo.preload(message, [:author, :topic])
+
+      _ ->
+        nil
     end
   end
 
@@ -1111,6 +1179,8 @@ defmodule IdejoWeb.TopicLive do
            automessages: automessages(user, topic)
          )
          |> put_viewable_replies(socket.assigns.messages)
+         |> assign(:forward_access, %{})
+         |> put_forward_access(socket.assigns.messages)
          |> put_forks()}
     end
   end
@@ -1169,12 +1239,13 @@ defmodule IdejoWeb.TopicLive do
   defp after_send(socket, "new_topic", message, _params), do: new_topic_from(socket, message)
 
   defp after_send(socket, "poll", message, _params),
-    do: socket |> assign(:reply_to, nil) |> open_poll(message)
+    do: socket |> assign(reply_to: nil, forward: nil) |> open_poll(message)
 
   defp after_send(socket, "spoiler", message, params),
-    do: socket |> assign(:reply_to, nil) |> toggle_spoiler(message, params["label"])
+    do: socket |> assign(reply_to: nil, forward: nil) |> toggle_spoiler(message, params["label"])
 
-  defp after_send(socket, _then, _message, _params), do: assign(socket, :reply_to, nil)
+  defp after_send(socket, _then, _message, _params),
+    do: assign(socket, reply_to: nil, forward: nil)
 
   # The message a commit completed: this one (Ctrl+Enter), or the open one a new message
   # closed (after Reply).
@@ -1381,6 +1452,7 @@ defmodule IdejoWeb.TopicLive do
     opts = [
       break: params["break"] == true,
       reply_to_id: reply_to && reply_to.id,
+      forwarded_from_id: socket.assigns.forward && socket.assigns.forward.id,
       new: draft_over(socket.assigns) != nil
     ]
 
@@ -1829,6 +1901,44 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # The composer stays a new message (`draft_over`), refused until it may be sent.
+  # Forward (steward decision, 2026-11-02): the card that sends a message to another topic.
+  defp event("forward", %{"id" => id}, socket) when is_binary(id) do
+    case Enum.find(socket.assigns.messages, &(&1.id == id)) do
+      %Messages.Message{} = message -> {:noreply, open_forward(socket, message)}
+      nil -> {:noreply, socket}
+    end
+  end
+
+  # `!forward`: the message the author is replying to.
+  defp event("forward_quoted", _params, socket) do
+    case socket.assigns.reply_to do
+      %Messages.Message{} = message ->
+        {:noreply, open_forward(socket, message)}
+
+      nil ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           gettext("Choose Reply on a message to forward it, or Forward under the message.")
+         )}
+    end
+  end
+
+  defp event("forward_search", %{"q" => query}, %{assigns: %{forward_card: %{} = card}} = socket)
+       when is_binary(query) do
+    query = String.slice(query, 0, 200)
+    targets = Forum.Forwards.targets(user(socket), query, socket.assigns.topic.id)
+    {:noreply, assign(socket, :forward_card, %{card | query: query, targets: targets})}
+  end
+
+  defp event("forward_search", _params, socket), do: {:noreply, socket}
+
+  defp event("close_forward", _params, socket), do: {:noreply, assign(socket, :forward_card, nil)}
+
+  # The composer stays a new message (`draft_over`), as after Cancel reply.
+  defp event("cancel_forward", _params, socket), do: {:noreply, assign(socket, :forward, nil)}
+
   defp event("cancel_reply", _params, socket),
     do: {:noreply, assign(socket, :reply_to, nil)}
 
@@ -1844,7 +1954,7 @@ defmodule IdejoWeb.TopicLive do
       open ->
         {:noreply,
          socket
-         |> assign(too_soon?: false, draft_over: nil, reply_to: nil)
+         |> assign(too_soon?: false, draft_over: nil, reply_to: nil, forward: nil)
          |> push_event("composer_sent", %{body: open.body_md})}
     end
   end
@@ -2274,6 +2384,7 @@ defmodule IdejoWeb.TopicLive do
       <.delete_own_dialog :if={@confirm_delete} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
+      <.forward_dialog :if={@forward_card} card={@forward_card} />
       <.too_soon_dialog :if={@too_soon?} />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
@@ -2385,6 +2496,8 @@ defmodule IdejoWeb.TopicLive do
               punctuate?={@punctuate?}
               graphical?={@graphical?}
               reply_to={@reply_to}
+              forward={@forward}
+              topic_id={@topic.id}
               locked={@locked}
               editing?={@mine != nil and @mine.id == @composing_edit}
               roles={@roles}
@@ -2684,6 +2797,8 @@ defmodule IdejoWeb.TopicLive do
       unread: unread_count(unread, id),
       role: Map.get(assigns.roles, message.author_id),
       reply_shown?: reply_shown?(assigns, message),
+      forward: forward_view(assigns, message),
+      may_forward?: assigns.live? and Forum.Forwards.may_forward?(viewer, message),
       forks: Map.get(assigns.forks, id, []),
       reactions: Map.get(assigns.reactions, id, []),
       poll: assigns.polls[id],
@@ -2714,6 +2829,22 @@ defmodule IdejoWeb.TopicLive do
     own? = viewer.id == message.author_id
     {editable? and own? and assigns.can_post?, editable? and not own? and assigns.can_moderate?}
   end
+
+  # Forward (steward decision, 2026-11-02): what the box shows this reader. The text to readers
+  # who may read it, and to everyone when the forwarder wrote it (their own words), then
+  # without the topic's name for those who may not view it; else only that it was forwarded.
+  defp forward_view(assigns, %{forwarded_from: %Messages.Message{} = source} = message) do
+    readable? =
+      source.topic_id == assigns.topic.id or Map.get(assigns.forward_access, source.id, false)
+
+    %{
+      source: source,
+      text?: is_nil(source.deleted_at) and (readable? or message.author_id == source.author_id),
+      topic?: readable?
+    }
+  end
+
+  defp forward_view(_assigns, _message), do: nil
 
   # TP-15: a quote leading to another topic shows only to readers who may view it.
   defp reply_shown?(_assigns, %{reply_to: nil}), do: false
@@ -2801,6 +2932,9 @@ defmodule IdejoWeb.TopicLive do
     [mine: mine, locked: locked, answered?: timed != nil and answered?(assigns.messages, timed)]
   end
 
+  # A new message replying to or forwarding another.
+  defp quoting?(assigns), do: assigns.reply_to != nil or assigns[:forward] != nil
+
   defp composer_place(assigns) do
     mine = open_message(assigns.messages, assigns.current_scope && assigns.current_scope.user)
     editing = assigns[:composing_edit] && editing_in_composer(assigns)
@@ -2808,7 +2942,7 @@ defmodule IdejoWeb.TopicLive do
     cond do
       editing -> {editing, nil}
       is_nil(mine) or mine.id != assigns[:draft_over] -> {mine, nil}
-      assigns.reply_to && assigns.early_reply? -> {nil, nil}
+      quoting?(assigns) && assigns.early_reply? -> {nil, nil}
       true -> {nil, mine}
     end
   end
@@ -2942,6 +3076,19 @@ defmodule IdejoWeb.TopicLive do
             do: gettext("Message deleted by user"),
             else: gettext("Message deleted by a moderator")}
         </span>
+      </blockquote>
+      <blockquote
+        :if={@entry.forward}
+        id={"message-#{@message.id}-forward"}
+        class="message-quote message-forward"
+      >
+        <.forward_quote
+          id={"message-#{@message.id}-forwarded"}
+          source={@entry.forward.source}
+          text?={@entry.forward.text?}
+          topic?={@entry.forward.topic?}
+          live?={@live?}
+        />
       </blockquote>
       <.form
         :if={@entry.edit}
@@ -3119,6 +3266,19 @@ defmodule IdejoWeb.TopicLive do
         >
           <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
         </.link>
+        <%!-- Forward (steward decision, 2026-11-02): others' messages, and one's own once
+             committed; a card to choose the topic. --%>
+        <button
+          :if={@entry.may_forward?}
+          type="button"
+          id={"message-#{@message.id}-forward-action"}
+          class="message-action"
+          phx-click="forward"
+          phx-value-id={@message.id}
+          aria-label={gettext("Forward the message of %{name}", name: @message.author.display_name)}
+        >
+          <.icon name="hero-arrow-uturn-right-micro" class="size-4" />{gettext("Forward")}
+        </button>
         <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
         <button
           :if={@can_moderate?}
@@ -3230,6 +3390,146 @@ defmodule IdejoWeb.TopicLive do
     """
   end
 
+  # What the composer shows forwarded: the message chosen to go with the new one, else what
+  # the author's open message carries (they may read it: they forwarded it).
+  defp carried(%{editing?: false, forward: %Messages.Message{} = forward}), do: forward
+  defp carried(%{mine: %{forwarded_from: %Messages.Message{} = carried}}), do: carried
+  defp carried(_assigns), do: nil
+
+  # Forward (steward decision, 2026-11-02): "NAME message forwarded from TOPIC" over the
+  # forwarded message, whole; a long one is cut, with "Show full message" (once connected:
+  # without scripts it shows whole). `text?` false: the reader may not read it (only the
+  # head); `topic?` false: the topic's name is not for this reader.
+  attr :id, :string, required: true
+  attr :source, :map, required: true
+  attr :text?, :boolean, required: true
+  attr :topic?, :boolean, required: true
+  attr :live?, :boolean, required: true
+
+  defp forward_quote(assigns) do
+    source = assigns.source
+    body = source.body_md || ""
+
+    assigns =
+      assign(assigns,
+        long?:
+          assigns.live? and (String.length(body) > 600 or length(String.split(body, "\n")) > 8),
+        place:
+          cond do
+            !assigns.topic? -> nil
+            source.topic.private -> gettext("a private conversation")
+            true -> source.topic.title
+          end
+      )
+
+    ~H"""
+    <p class="message-forward-head">
+      <.icon name="hero-arrow-uturn-right-micro" class="size-4" />
+      <%= cond do %>
+        <% @text? and @place -> %>
+          {gettext("%{name} message forwarded from", name: @source.author.display_name)}
+          <.link href={~p"/m/#{@source.id}"} class="font-medium">{@place}</.link>
+        <% @text? -> %>
+          {gettext("%{name} message forwarded from a topic you cannot view",
+            name: @source.author.display_name
+          )}
+        <% true -> %>
+          {gettext("A message forwarded from a topic you cannot view")}
+      <% end %>
+    </p>
+    <p :if={@source.deleted_at} class="italic opacity-70">
+      {if Messages.deleted_by_author?(@source),
+        do: gettext("Message deleted by user"),
+        else: gettext("Message deleted by a moderator")}
+    </p>
+    <%= if @text? and is_nil(@source.deleted_at) do %>
+      <p :if={@source.spoiler} class="opacity-70">{gettext("(spoiler)")}</p>
+      <div
+        :if={!@source.spoiler}
+        id={"#{@id}-body"}
+        class={["message-forward-body", @long? && "is-clamped"]}
+      >
+        <MessageComponents.body html={@source.body_html} />
+      </div>
+      <button
+        :if={@long? and !@source.spoiler}
+        type="button"
+        id={"#{@id}-show-full"}
+        class="link text-sm"
+        aria-controls={"#{@id}-body"}
+        phx-click={
+          JS.remove_class("is-clamped", to: "##{@id}-body")
+          |> JS.hide()
+          |> JS.focus(to: "##{@id}-body")
+        }
+      >
+        {gettext("Show full message")}
+      </button>
+    <% end %>
+    """
+  end
+
+  attr :card, :map, required: true, doc: "`message`, `query`, `targets`"
+
+  # The card Forward opens: the message, a search box and the topics to send it to, each a
+  # link that opens that topic with the message in its composer (`?forward=`).
+  defp forward_dialog(assigns) do
+    ~H"""
+    <dialog
+      id="forward-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="close_forward"
+      data-return-focus
+      aria-labelledby="forward-dialog-title"
+    >
+      <div class="modal-box forward-card">
+        <h2 id="forward-dialog-title" class="inline-card-title">{gettext("Forward message")}</h2>
+        <p class="inline-card-meta">
+          {@card.message.author.display_name}: {Forum.excerpt(@card.message)}
+        </p>
+        <.form for={%{}} id="forward-search" phx-change="forward_search" phx-submit="forward_search">
+          <label for="forward-query" class="sr-only">{gettext("Find a topic")}</label>
+          <input
+            id="forward-query"
+            name="q"
+            type="search"
+            value={@card.query}
+            placeholder={gettext("Find a topic")}
+            autocomplete="off"
+            phx-debounce="250"
+            class="input input-sm w-full"
+            phx-mounted={JS.focus()}
+          />
+        </.form>
+        <p class="inline-card-meta" id="forward-targets-title">
+          {if @card.query == "", do: gettext("Recent topics"), else: gettext("Topics found")}
+        </p>
+        <ul id="forward-targets" class="forward-targets" aria-labelledby="forward-targets-title">
+          <li :for={target <- @card.targets}>
+            <.link href={"#{target.path}?forward=#{@card.message.id}#composer"} class="forward-target">
+              <span class="forward-target-title">{target.title}</span>
+              <span class="forward-target-place">
+                {if target.place == :private,
+                  do: gettext("Private conversation"),
+                  else: target.place}
+              </span>
+            </.link>
+          </li>
+        </ul>
+        <p :if={@card.targets == []} id="forward-none" class="inline-card-meta">
+          {gettext("No topic you may write in matches.")}
+        </p>
+        <div class="modal-action">
+          <button type="button" class="btn btn-sm btn-ghost" phx-click="close_forward">
+            {gettext("Cancel")}
+          </button>
+        </div>
+      </div>
+    </dialog>
+    """
+  end
+
   # TP-11, "Use the graphical composer" (steward decision, 2026-11-02): under the box, at the
   # left an emoji button, an image button, a button showing the text controls (Markdown around
   # the selection) and + showing the other commands; at the right Send, which is Enter, and
@@ -3261,6 +3561,7 @@ defmodule IdejoWeb.TopicLive do
           for(
             {name, icon, label} <- [
               {"spoiler", "hero-eye-slash", gettext("Spoiler")},
+              {"forward", "hero-arrow-uturn-right", gettext("Forward")},
               {"poll", "hero-chart-bar", gettext("Poll")},
               {"schedule", "hero-clock", gettext("Schedule")},
               {"new-topic", "hero-document-plus", gettext("New topic from this")}
@@ -3411,6 +3712,8 @@ defmodule IdejoWeb.TopicLive do
     doc: "the author's \"Use the graphical composer\": buttons under the box (TP-11)"
 
   attr :reply_to, :any, required: true
+  attr :forward, :any, default: nil, doc: "the message forwarded with the new message"
+  attr :topic_id, :string, default: nil
 
   attr :locked, :any,
     default: nil,
@@ -3444,6 +3747,9 @@ defmodule IdejoWeb.TopicLive do
 
     assigns =
       assign(assigns,
+        # What the box shows forwarded: the message chosen to go with the new one, else what
+        # the author's open message carries (they may read it: they forwarded it).
+        carried: carried(assigns),
         timed: mine,
         left: mine && DateTime.diff(mine.closes_at, now),
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
@@ -3499,6 +3805,24 @@ defmodule IdejoWeb.TopicLive do
           </button>
         </p>
         <p class="opacity-70">{Forum.excerpt(@reply_to)}</p>
+      </div>
+      <%!-- Forward (steward decision, 2026-11-02): the message the new one carries, whole. --%>
+      <div :if={@carried} id="forwarding" class="message-quote message-forward">
+        <.forward_quote
+          id="forwarding-quote"
+          source={@carried}
+          text?={true}
+          topic?={true}
+          live?={true}
+        />
+        <button
+          :if={@forward && !@editing?}
+          type="button"
+          class="link text-sm"
+          phx-click="cancel_forward"
+        >
+          {gettext("Cancel forward")}
+        </button>
       </div>
       <div
         id="composer"

@@ -1643,6 +1643,42 @@
     & a:hover { text-decoration: underline; }
     & .opacity-70, & > p + p { color: var(--ink-soft); opacity: 1; }
   }
+  /* Forward (steward decision, 2026-11-02): the head, then the forwarded message whole, in
+     the message's own type; a long one cut with a fade until "Show full message". */
+  .message-forward {
+    display: grid;
+    gap: 0.375rem;
+    border-left-color: color-mix(in oklab, var(--color-secondary) 70%, transparent);
+    & > * + * { margin-left: 0; }
+    & > p + p { color: inherit; }
+    & .link { justify-self: start; }
+  }
+  .message-forward-head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--ink-soft);
+  }
+  .message-forward-body {
+    font-size: 0.9375rem;
+    overflow-wrap: anywhere;
+    &.is-clamped {
+      max-height: 12rem;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent);
+      mask-image: linear-gradient(to bottom, black 70%, transparent);
+    }
+  }
+  .forward-card { max-width: 30rem; display: grid; gap: 0.625rem; }
+  .forward-targets { display: grid; gap: 0.125rem; max-height: 50vh; overflow-y: auto; }
+  .forward-target {
+    display: grid;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-field);
+    &:hover, &:focus-visible { background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
+  }
+  .forward-target-title { font-weight: 500; overflow-wrap: anywhere; }
+  .forward-target-place { color: var(--ink-faint); font-size: 0.75rem; }
   .message-deleted {
     padding: 0.75rem 1.25rem;
     color: var(--ink-faint);

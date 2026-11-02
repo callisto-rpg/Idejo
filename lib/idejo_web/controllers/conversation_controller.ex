@@ -39,6 +39,7 @@ defmodule IdejoWeb.ConversationController do
           others: others,
           page_title: title(others),
           reply_to_id: params["reply_to"],
+          forward_id: params["forward"],
           first_unread: first_unread,
           window: IdejoWeb.TopicController.window(params)
         )

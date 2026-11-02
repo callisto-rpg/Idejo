@@ -926,6 +926,27 @@ roles or the permission grid. Every later change must keep it true:
   "Continued from …"; the source message shows a "Continue topic" button per topic
   (`Forum.list_forks/2`; its title in the name; steward decision, 2026-10-23). Both only when
   the viewer may view the other topic.
+- **Forward** (steward decision, 2026-11-02; `Idejo.Forum.Forwards`,
+  `messages.forwarded_from_id`, nilified when the original is deleted): "Forward" next to
+  Reply (`#message-{id}-forward-action`, connected only; others' messages, and one's own once
+  closed: `Forwards.may_forward?/2`) opens `#forward-dialog` (`InlineCard`, `"forward"`,
+  `"forward_search"`, `"close_forward"`): the topics the user may view and post in, and
+  their private conversations (named after the other person), the ones read last first, or
+  matching a search (`Forwards.targets/3`, the current topic left out). Each is a link
+  `?forward={id}#composer` (`TopicController`, `ConversationController` pass
+  `"forward_id"`), which opens the topic like `?reply_to=`: `TopicLive`'s `forward` (a message
+  the user may read, `Forum.get_readable_message/2`, not deleted) shows in `#forwarding`
+  over the composer ("NAME message forwarded from TOPIC", the message whole,
+  `forward_quote/1`; past 600 characters or 8 lines cut, `.is-clamped`, with "Show full
+  message" once connected; "Cancel forward"), and like a reply starts a new message
+  (`draft_over`, `gm_early_reply`); `Messages.commit/4` takes `forwarded_from_id`, checked
+  again. `!forward` (`ComposerCommands`, the toolbar's +; `"forward_quoted"`) opens the card
+  for the message replied to. Readers see the box (`forward_view/2`) with the text when they
+  may read the original (`forward_access`, `Forwards.readable_ids/2`, one query per message
+  first seen, NF-01) or when the forwarder wrote it (then "a topic you cannot view" in place
+  of the topic); else only "A message forwarded from a topic you cannot view". The author's
+  open message shows what it carries in `#forwarding`. `Messages.shown/0` preloads
+  `forwarded_from: [:author, :topic]` (also `TopicWindow` and `Forum.list_messages/1`).
 - **Topic menu** (steward decision, 2026-10-23): right click, the menu key or a long press
   on a topic row (`TopicComponents.topic_row/1`) or a sidebar topic (`data-topic-menu`,
   `data-topic-path`; the sidebar's `data-following` tells Follow from Unfollow) opens

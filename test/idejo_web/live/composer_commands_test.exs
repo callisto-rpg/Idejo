@@ -57,14 +57,22 @@ defmodule IdejoWeb.ComposerCommandsTest do
     topic: topic
   } do
     {:ok, view, _html} = watch(conn, topic)
-    assert commands(view) == ["!image", "!new-topic", "!poll", "!schedule", "!spoiler"]
+
+    assert commands(view) == [
+             "!image",
+             "!forward",
+             "!new-topic",
+             "!poll",
+             "!schedule",
+             "!spoiler"
+           ]
 
     # Without the start right anywhere (General is the only category) there is no !new-topic.
     {:ok, _} =
       Access.set_permission(admin, Access.built_in_role!(:member), general, :start, :deny)
 
     {:ok, view, _html} = watch(conn, topic)
-    assert commands(view) == ["!image", "!poll", "!schedule", "!spoiler"]
+    assert commands(view) == ["!image", "!forward", "!poll", "!schedule", "!spoiler"]
   end
 
   @tag req: "TP-09"
