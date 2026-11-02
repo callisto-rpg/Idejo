@@ -870,7 +870,8 @@ The contract (M6; mark each item done here when its PR merges):
   `websearch_to_tsquery`; results are filtered by view right in the query and optionally by
   category. Excerpts come from `ts_headline` with `\x01`/`\x02` markers split into segments
   (`Search.excerpt/1`), never raw HTML. `/search` (`SearchController`, public, GET form, no
-  JavaScript), linked from the header.
+  JavaScript); its box (`#sidebar-search`, a GET form) sits in the sidebar after Filter by
+  tag (steward decision, 2026-11-02), rolled up as the `#search-link` icon.
 - **Notifications** (NO-01, NO-02, `Idejo.Notifications`, in-app only): one `notifications`
   row per user and message (`kind`: mention, reply, role_mention, follow; older `reaction`
   rows stay unused). A new message notifies the users it @mentions, the author it replies
@@ -1180,8 +1181,10 @@ The contract (M6; mark each item done here when its PR merges):
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
   `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
-- **Page frame and look**: `Layouts.app` draws the header bar (server name, search box,
-  Unread, Moderation, and the account menu: a `<details>` holding
+- **Page frame and look**: `Layouts.app` draws the header bar (server name, then where the
+  reader is, `breadcrumb/1`: `#breadcrumb`, "› Category › Topic" from its `category=` and
+  `topic=`, the last `aria-current="page"`, cut with "…", only the last part under 640 px;
+  steward decision, 2026-11-02; Unread, Moderation, and the account menu: a `<details>` holding
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript; with it, a
   click outside or Escape closes it, `assets/js/account_menu.js`), the
   categories sidebar (each category with the topics the user follows there,
@@ -1210,9 +1213,10 @@ The contract (M6; mark each item done here when its PR merges):
   strongest wins) and a bolder
   name; and (`swipe/5`: not from the left edge, not in code,
   tables, text boxes or the emoji picker; steward decision, 2026-10-23); All categories, Filter
-  by tag, Rules & Roles and Help sit above its categories; the `.sidebar-roll` button at the
+  by tag, the search box, Rules & Roles and Help sit above its categories; the `.sidebar-roll` button at the
   right of All categories (steward decision, 2026-10-28; `aria-pressed`, hidden without
-  scripts) rolls the other three into their icons beside it (names `.sidebar-link-label`,
+  scripts) rolls the others into their icons beside it (the search box into a link to
+  `/search`) (names `.sidebar-link-label`,
   visually hidden, and in sidebar bubbles) and shortens All categories to "All"
   (`.sidebar-all-rolled`, `aria-hidden`, `pgettext("categories", "All")`; its full name
   `.sidebar-all-label` stays for screen readers; steward decision, 2026-11-01), remembered in `localStorage`

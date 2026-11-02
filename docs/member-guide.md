@@ -266,7 +266,9 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   link**. A muted topic tells you nothing at all, even when someone mentions you
   (`@you` or one of your `+roles`) or replies to you, and stays off **Unread**, until you
   follow it again. **Mark unread** makes its latest message by someone else new again.
-- **Search**, the box at the top, finds words in messages and titles.
+- **Search**, the box in the sidebar under **Filter by tag**, finds words in messages and
+  titles. The bar at the top always shows where you are: the server, the category, then
+  the topic, each a link.
 
 ## Private conversations
 

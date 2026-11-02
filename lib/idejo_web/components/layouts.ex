@@ -79,27 +79,9 @@ defmodule IdejoWeb.Layouts do
         <span class="brand-name">{server_name()}</span>
       </a>
 
-      <form action={~p"/search"} method="get" role="search" class="header-search">
-        <label for="header-search-q" class="sr-only">{gettext("Search")}</label>
-        <.icon name="hero-magnifying-glass" class="size-4 header-search-icon" />
-        <input
-          type="search"
-          name="q"
-          id="header-search-q"
-          placeholder={gettext("Search")}
-          class="header-search-input"
-        />
-      </form>
+      <.breadcrumb category={@category} topic={@topic} />
 
       <nav aria-label={gettext("Site")} class="header-nav">
-        <a
-          href={~p"/search"}
-          id="search-link"
-          class="header-icon md:hidden"
-          aria-label={gettext("Search")}
-        >
-          <.icon name="hero-magnifying-glass" class="size-5" />
-        </a>
         <.unread_link :if={@user} user={@user} />
         <.moderation_link :if={@user} user={@user} />
       </nav>
@@ -141,6 +123,42 @@ defmodule IdejoWeb.Layouts do
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
     <.topic_menu :if={@user} user={@user} />
+    """
+  end
+
+  # Where the reader is, always in the header: "Server › Category › Topic" (the server's
+  # name is the brand before it). The category links to its page; the topic is the page
+  # itself. Nothing on pages of neither.
+  attr :category, :any, required: true
+  attr :topic, :any, required: true
+
+  defp breadcrumb(assigns) do
+    ~H"""
+    <nav :if={@category} aria-label={gettext("Breadcrumb")} class="header-crumbs" id="breadcrumb">
+      <ol>
+        <li class={["header-crumb", @topic && "is-parent"]}>
+          <span class="header-crumb-sep" aria-hidden="true">›</span>
+          <a
+            href={~p"/c/#{@category.slug}"}
+            aria-current={if is_nil(@topic), do: "page"}
+            id="breadcrumb-category"
+          >
+            {@category.name}
+          </a>
+        </li>
+        <li :if={@topic} class="header-crumb">
+          <span class="header-crumb-sep" aria-hidden="true">›</span>
+          <a
+            href={~p"/t/#{@topic.id}/#{@topic.slug}"}
+            aria-current="page"
+            id="breadcrumb-topic"
+          >
+            {@topic.title}
+          </a>
+        </li>
+      </ol>
+    </nav>
+    <span :if={is_nil(@category)} class="header-spacer"></span>
     """
   end
 
@@ -519,6 +537,34 @@ defmodule IdejoWeb.Layouts do
             >
               <.icon name="hero-tag" class="size-4" />
               <span class="sidebar-link-label">{gettext("Filter by tag")}</span>
+            </a>
+            <%!-- Search (SE-01), after Filter by tag: a plain GET form, no JavaScript needed.
+                 Rolled up, only its icon shows, a link to the search page. --%>
+            <form
+              action={~p"/search"}
+              method="get"
+              role="search"
+              class="sidebar-search"
+              id="sidebar-search"
+            >
+              <label for="sidebar-search-q" class="sr-only">{gettext("Search")}</label>
+              <.icon name="hero-magnifying-glass" class="size-4 sidebar-search-icon" />
+              <input
+                type="search"
+                name="q"
+                id="sidebar-search-q"
+                placeholder={gettext("Search")}
+                class="sidebar-search-input"
+              />
+            </form>
+            <a
+              href={~p"/search"}
+              class="sidebar-link sidebar-search-link"
+              id="search-link"
+              data-bubble={gettext("Search")}
+            >
+              <.icon name="hero-magnifying-glass" class="size-4" />
+              <span class="sidebar-link-label">{gettext("Search")}</span>
             </a>
             <%!-- The server's About, Rules and self-select roles (steward decision,
                  2026-10-23). --%>

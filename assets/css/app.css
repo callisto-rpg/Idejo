@@ -371,38 +371,32 @@
   }
 
   @media (min-width: 400px) { .brand-name { display: inline; } }
-  .header-search {
-    position: relative;
-    display: none;
+  /* Where the reader is: "› Category › Topic" after the server's name, cut with "…" when
+     long. On narrow screens only the last part shows. */
+  .header-crumbs {
     flex: 1;
-    max-width: 28rem;
-    margin: 0 auto;
+    min-width: 0;
+    & ol { display: flex; align-items: center; min-width: 0; }
   }
-  @media (min-width: 768px) { .header-search { display: block; } }
-  .header-search-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--ink-faint);
-    pointer-events: none;
-  }
-  .header-search-input {
-    width: 100%;
-    height: 2.25rem;
-    padding: 0 0.875rem 0 2.25rem;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
-    font-size: 0.875rem;
-    transition: background 120ms, border-color 120ms;
-    &::placeholder { color: var(--ink-faint); }
-    &:hover { background: color-mix(in oklab, var(--color-base-content) 8%, transparent); }
-    &:focus {
-      background: var(--color-base-100);
-      border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  .header-spacer { flex: 1; }
+  .header-crumb {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+    & a {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--ink-soft);
+      border-radius: var(--radius-field);
+      &:hover { color: var(--color-base-content); text-decoration: underline; }
     }
+    & a[aria-current="page"] { color: var(--color-base-content); font-weight: 600; }
+    &.is-parent { flex: 0 1 auto; max-width: 40%; }
   }
+  .header-crumb-sep { flex: none; margin: 0 0.5rem; color: var(--ink-faint); }
+  @media (max-width: 639px) { .header-crumb.is-parent { display: none; } }
 
   .header-nav {
     display: flex;
@@ -410,7 +404,6 @@
     gap: 0.25rem;
     margin-left: auto;
   }
-  @media (min-width: 768px) { .header-nav { margin-left: 0; } }
 
   .header-link,
   .header-icon {
@@ -796,6 +789,33 @@
       box-shadow: var(--shadow-soft);
     }
   }
+  /* Search (SE-01), after Filter by tag; rolled up, its icon is a link to /search. */
+  .sidebar-search { position: relative; margin: 0.125rem 0; }
+  .sidebar-search-icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-faint);
+    pointer-events: none;
+  }
+  .sidebar-search-input {
+    width: 100%;
+    height: 2.125rem;
+    padding: 0 0.75rem 0 2.125rem;
+    border-radius: var(--radius-field);
+    border: 1px solid transparent;
+    background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+    font-size: 0.875rem;
+    transition: background 120ms, border-color 120ms;
+    &::placeholder { color: var(--ink-faint); }
+    &:hover { background: color-mix(in oklab, var(--color-base-content) 8%, transparent); }
+    &:focus {
+      background: var(--color-base-100);
+      border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
+    }
+  }
+  .sidebar-search-link { display: none; }
   .sidebar-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sidebar-when { color: var(--ink-faint); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
   /* Links above the categories, a hairline under them. */
@@ -854,6 +874,8 @@
     & .sidebar-roll { grid-column: 3; }
     & .sidebar-quicklinks-more .sidebar-link { padding: 0.4375rem; }
     & .sidebar-all-rolled { display: inline; }
+    & .sidebar-search { display: none; }
+    & .sidebar-search-link { display: flex; }
     & .sidebar-link-label,
     & .sidebar-all-label {
       position: absolute;
