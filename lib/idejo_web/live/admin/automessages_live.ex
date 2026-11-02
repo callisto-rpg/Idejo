@@ -147,6 +147,9 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
       end
     end
 
+    # The picture's size, for a message saying how far over the limit it is.
+    size = Enum.find_value(socket.assigns.uploads.picture.entries, & &1.client_size)
+
     result =
       case consume_uploaded_entries(socket, :picture, fn %{path: path}, _entry ->
              {:ok, save.(path)}
@@ -171,7 +174,7 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
          assign(socket, form: to_form(changeset, as: :automessage), editor_mode: :write)}
 
       {:error, reason} ->
-        {:noreply, assign(socket, :image_error, ImageUploads.error_text(reason))}
+        {:noreply, assign(socket, :image_error, ImageUploads.error_text(reason, size))}
     end
   end
 

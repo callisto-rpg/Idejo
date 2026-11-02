@@ -769,7 +769,11 @@ roles or the permission grid. Every later change must keep it true:
   through `IdejoWeb.ImageUploads` (`allow/3`, `check/2` in `phx-change`): paste or drop into
   the composer (`composer_image`, hidden input, no button: GM-07) or the editor
   (`EditorImages` hook), plus the editor's "Add image" picker; `"image_uploaded"` brings the
-  Markdown back to the caret, unsent. Tests make images with `Idejo.ImageFixtures`.
+  Markdown back to the caret, unsent. Refusals read from `ImageUploads.error_text/2`, one
+  wording for every upload (avatars and automessage pictures too): too large says "Your image
+  is N MB, which is above the server limit of N MB." (the entry's `client_size`); an image
+  libvips opened but could not write again is `:not_saved`, never the wrong-format message.
+  Tests make images with `Idejo.ImageFixtures`.
   Uploads nothing uses (inserted, then removed before sending; avatars never set) are deleted
   with their files at 04:00 UTC (`Idejo.Uploads.CleanupWorker`, queue `maintenance`) once a
   day old: `Uploads.delete_unused/1` keeps avatars and every `/uploads/<name>` named in

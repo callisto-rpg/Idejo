@@ -77,19 +77,9 @@ defmodule IdejoWeb.UserSettingsLive do
            |> put_flash(:info, saved_text(theme))
            |> redirect(to: ~p"/users/settings")}
 
-        {:error, :too_large} ->
-          {:noreply, assign(socket, :image_error, gettext("This image is too large."))}
-
-        {:error, :too_many_pixels} ->
-          {:noreply, assign(socket, :image_error, gettext("This image has too many pixels."))}
-
-        {:error, _} ->
+        {:error, reason} ->
           {:noreply,
-           assign(
-             socket,
-             :image_error,
-             gettext("Only JPEG, PNG, GIF and WebP images can be added.")
-           )}
+           assign(socket, :image_error, ImageUploads.error_text(reason, entry.client_size))}
       end
     else
       {:noreply, socket}
