@@ -32,7 +32,7 @@ defmodule IdejoWeb.ReactionsLiveTest do
     do: live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
 
   @tag req: "TP-17"
-  test "TP-17 React offers eight emoji and +; a reaction shows under the message, live", %{
+  test "TP-17 React offers ten emoji and +; a reaction shows under the message, live", %{
     topic: topic,
     message: message
   } do
@@ -57,6 +57,20 @@ defmodule IdejoWeb.ReactionsLiveTest do
 
     lv |> element("#message-#{message.id}-reactions button") |> render_click()
     refute has_element?(lv, "#message-#{message.id}-reactions button[aria-pressed=true]")
+
+    # 👍 and 👎 among them (steward decision, 2026-11-03), after joy and heart.
+    choices = lv |> element("#message-#{message.id}-react .add-reaction-panel") |> render()
+
+    assert Regex.scan(~r/aria-label="(:[^"]+:)"/, choices, capture: :all_but_first)
+           |> List.flatten() ==
+             ~w(:agree: :disagree: :this: :same: :yes: :no: :joy: :heart: :+1: :-1:)
+
+    assert choices =~ ~s(src="/emoji/1f44d.svg?vsn=)
+    assert choices =~ ~s(src="/emoji/1f44e.svg?vsn=)
+
+    lv |> element("#message-#{message.id}-react button[aria-label=':+1:']") |> render_click()
+    assert "+1" in (Idejo.Messages.Reaction |> Idejo.Repo.all() |> Enum.map(& &1.emoji))
+    assert has_element?(lv, "#message-#{message.id}-reactions button[aria-pressed=true]")
   end
 
   @tag req: "TP-17"
