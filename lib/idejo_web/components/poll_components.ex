@@ -55,7 +55,11 @@ defmodule IdejoWeb.PollComponents do
       <input type="hidden" name="message_id" value={@message.id} />
       <fieldset disabled={!@voting?}>
         <legend id={"#{@id}-question"} class="poll-question">{@poll.question}</legend>
-        <div class={["poll-options", "poll-options-n#{length(@poll.options)}"]}>
+        <div class={[
+          "poll-options",
+          "poll-options-n#{length(@poll.options)}",
+          @results? && "has-results"
+        ]}>
           <label :for={option <- @poll.options} class="poll-option">
             <%!-- The bar: an SVG whose height and fill are attributes, never a style
                  (SP-05); without a colour of its own, the theme's (.is-theme). --%>

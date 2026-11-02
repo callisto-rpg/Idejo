@@ -528,6 +528,23 @@ defmodule IdejoWeb.ComposerCommandsTest do
 
     assert mounted =~ "data-layout"
     assert has_element?(reader, "#{poll}[phx-hook=PollLayout] .poll-options.poll-options-n3")
+    # Before voting there are no bars: the emojis above the answers are hidden then, and every
+    # answer has a row of its own under the bars' rows (steward report, 2026-11-02: emojis
+    # showed between the answers).
+    refute has_element?(reader, "#{poll} .poll-options.has-results")
+
+    reader
+    |> form(poll, %{"options" => [hd(Polls.summary(sent.id).options).id]})
+    |> render_submit()
+
+    assert has_element?(reader, "#{poll} .poll-options.has-results")
+    css = File.read!("assets/css/app.css")
+    assert css =~ ~S[.poll-options:not(.has-results) .poll-emoji { display: none; }]
+
+    for k <- 1..10 do
+      assert css =~ ".poll-option:nth-child(#{k}) > .poll-choice { grid-row: #{k + 3}; }"
+    end
+
     # Each answer's button and text together, with its emoji again, decorative.
     assert has_element?(reader, ~s(#{poll} .poll-choice img.poll-emoji-inline[alt=""]))
     assert has_element?(reader, "#{poll} .poll-choice input + img + .poll-answer-text", "Apple")
