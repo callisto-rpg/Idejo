@@ -82,3 +82,77 @@ views dropped when the database pool timed out. The time goes to rendering the t
 message list in every view (LiveView's keyed list and the JSON of each change), not to the
 database. Rendering the list as a LiveView stream would cut that cost; it is a larger change
 to the topic page, for a later release.
+
+## Idle memory (NF-12)
+
+An idle instance, with no one online, should use under 200 MB of memory, so that several can
+share a host (NF-12, M6). It is measured, not enforced.
+
+### Method
+
+On the production image (`docker build .`, the release as the bundle runs it), with
+`deploy/docker-compose.yml` and `deploy/docker-compose.external-proxy.yml` (app and
+PostgreSQL, no Caddy):
+
+1. start the app and wait until it is healthy, then set it up with
+   `bin/idejo-admin setup --name "Idle Club" --owner-email …`;
+2. for the **warmed** runs, load what visitors load once: the home page, sign-in, sign-up,
+   help, rules, search, privacy, a category, a topic page (its LiveView rendered on the
+   server), the manifest, the stylesheet, the emoji index, the sitemap, and a failed sign-in.
+   (A signed-in session was not reached: curl, over plain http, does not send the `Secure`
+   session cookie back.)
+3. leave it alone for **5 minutes** (only its own health check every 15 s);
+4. take **10 readings 30 s apart** with `docker stats --no-stream` (the container's memory:
+   its cgroup's usage less inactive file cache), then `:erlang.memory()` through
+   `bin/idejo rpc`, and the cgroup's `memory.stat`.
+
+Machine: Intel Core i5-6400 (4 cores), 7.2 GiB RAM, Linux 7.0, Docker 29.9.2 (cgroup v2),
+Erlang/OTP 29.1.2, Elixir 1.20.4; the image built from main at `cf55ad1` (2026-11-02). The
+VM runs 4 schedulers (one per core) and the default `POOL_SIZE` of 10.
+
+### Results (2026-11-02)
+
+| Run | App container (`docker stats`, 10 readings) | VM (`:erlang.memory`): total · code · processes | PostgreSQL |
+| --- | --- | --- | --- |
+| Default release, just set up | **202.7–204.1 MiB** (≈ 214 MB) | 129 MiB · 64 MiB · 23 MiB | 62 MiB |
+| Default release, warmed | **226.0–227.1 MiB** (≈ 238 MB) | 129 MiB · 64 MiB · 23 MiB | 73 MiB |
+| `RELEASE_MODE=interactive`, just set up | 62.5–63.4 MiB (≈ 66 MB) | 59 MiB · 19 MiB · 19 MiB | 52 MiB |
+| `RELEASE_MODE=interactive`, warmed | **98.5–98.7 MiB** (≈ 103 MB) | 67 MiB · 23 MiB · 19 MiB | 84 MiB |
+
+Each run was flat over its five minutes (a spread under 1 MiB): nothing grows while idle.
+
+**As released today, an idle instance is over the target: about 204 MiB (214 MB), 227 MiB
+(238 MB) once pages have been served.** With `RELEASE_MODE=interactive` it is well under it.
+
+### Where it goes (default release, warmed)
+
+- **Loaded code, 64 MiB, and its JIT-compiled native code, about 50 MiB** (the cgroup's
+  `shmem`: the JIT maps its code twice, through shared memory). A release starts in
+  *embedded* mode and loads every module of the app and all its dependencies at boot, used or
+  not (the admin panel, image processing, push encryption, OpenID Connect, backups, Swoosh's
+  adapters, the dev-time LiveDashboard plug's modules…).
+- **Processes, 23 MiB**, 579 of them: the database pool, Oban's queues and plugins, PubSub,
+  the endpoint's acceptors, per-scheduler allocator carriers.
+- **The rest of the VM**: ETS 5 MiB, binaries 4 MiB, atoms 2 MiB, and the allocators' unused
+  carrier space (the cgroup's anonymous memory, 163 MiB, is more than the VM's 129 MiB).
+- The **page cache** of the release's files (84 MiB) is mostly not counted (inactive) and the
+  kernel takes it back under pressure.
+
+### Cheapest reductions (not applied: a steward decision)
+
+1. **`RELEASE_MODE=interactive`** (measured above): modules load the first time they are
+   used instead of all at boot. Warmed, **227 → 99 MiB**. One line (`ENV
+   RELEASE_MODE=interactive` in the Dockerfile's runtime stage, or in a new `rel/env.sh.eex`). Costs: the first use of each module takes a few milliseconds more (a
+   page's first visit after a restart), and memory grows towards the embedded figure as more
+   features are used: an instance whose members use everything ends between the two.
+2. **`POOL_SIZE`**: 10 database connections per instance (each also a PostgreSQL backend,
+   several MiB on the database side). 5 is plenty for an idle or small forum. Not measured.
+3. **Schedulers**: the VM starts one scheduler per core of the host, each with its own
+   allocator carriers; on a shared host with many instances, `+S 2:2` (in a new `rel/vm.args.eex`)
+   would cap that. Not measured.
+4. **Fewer modules in the release**: `Phoenix.LiveDashboard.RequestLogger` is plugged in
+   every environment though the dashboard is development-only. Small; only worth it with
+   embedded mode.
+
+Reproduce: the scripts that took these readings are not in the repository; the steps above
+are all they do. `deploy/test/m6/run.sh` starts the same layout for two instances.
