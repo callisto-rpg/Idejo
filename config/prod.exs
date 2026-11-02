@@ -11,13 +11,14 @@ import Config
 config :idejo, IdejoWeb.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Force using SSL in production. This also sets the "strict-security-transport" header,
-# known as HSTS. If you have a health check endpoint, you may want to exclude it below.
+# known as HSTS. `/health` (AD-15) answers over plain http too, for the container's own
+# health check and a proxy on the same network: it carries nothing personal.
 # Note `:force_ssl` is required to be set at compile-time.
 config :idejo, IdejoWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # paths: ["/health"],
+      paths: ["/health"],
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]

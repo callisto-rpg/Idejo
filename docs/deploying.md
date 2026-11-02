@@ -209,12 +209,13 @@ app runs its database migrations and starts, and Caddy requests the certificate.
 Follow progress:
 
 ```sh
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env ps        # all three "running"/"healthy"
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env ps        # app and db "healthy", caddy "running"
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env logs -f   # Ctrl+C to stop following
 ```
 
 Look for `Access IdejoWeb.Endpoint at https://forum.example.org` from `app` and
-`certificate obtained successfully` from `caddy`.
+`certificate obtained successfully` from `caddy`. Caddy starts only once `app` is healthy:
+its health check asks `/health` every 15 seconds (see [Health endpoint](#health-endpoint)).
 
 ## 9. Check it
 
@@ -226,6 +227,7 @@ curl -I https://forum.example.org
 
 You should see `HTTP/2 302` with `location: /setup` (the server is not set up yet) and the
 headers `strict-transport-security` (from Caddy) and `x-content-type-options` (from the app).
+`curl https://forum.example.org/health` should answer `"status":"ok"`.
 Open the address in a browser: the padlock should show a valid Let's Encrypt certificate,
 and `http://` should redirect to `https://`.
 
@@ -408,12 +410,36 @@ subscribe with. Every install makes its key pair when it first starts; backups c
 browser's push subscription ends; each subscribes again the next time its member opens a
 page. The rotation is recorded in the audit log.
 
+## Health endpoint
+
+`GET /health` tells a monitoring tool, a container health check or an uptime service
+whether the server works (AD-15). It needs no sign-in, sets no cookie, works before setup
+and says nothing about your members:
+
+```json
+{"status": "ok", "version": "0.1.0", "checks": {"database": "ok", "migrations": "ok"}}
+```
+
+| Field | Values |
+| --- | --- |
+| `status` | `ok` when every check is ok, else `error` |
+| `version` | the Idejo version running |
+| `checks.database` | `ok`, or `error` when the database does not answer within 2 seconds |
+| `checks.migrations` | `ok`; `pending` when the release has a migration not applied yet; `error` when they cannot be read |
+
+The answer is `200 OK` when the status is `ok`, else `503 Service Unavailable`. It counts
+toward the per-address limit of every request (300 a minute), far above any health check.
+Unlike other pages it also answers over plain `http`, so the container's own check (in
+`deploy/docker-compose.yml`) can ask it directly. For the reason behind an error, run
+`bin/idejo-admin health` ([Recovery](#recovery-from-the-command-line)).
+
 ## Troubleshooting
 
 | Symptom | Likely cause and fix |
 | --- | --- |
 | Caddy logs `challenge failed` or `no such host` | DNS does not point at the server yet (re-check `dig`, step 1), or ports 80/443 are closed in the provider's firewall. Caddy retries by itself. |
 | Owner password lost, or email not set up for a reset link | `idejo exec app bin/idejo-admin reset-owner-password` (see [Recovery](#recovery-from-the-command-line)). |
+| `app` stays "unhealthy" and Caddy does not start | `curl` cannot reach the app from outside yet, so look inside: `idejo logs app`, then `idejo exec app bin/idejo-admin health`. A database that does not answer or migrations that did not run are the usual causes. |
 | `app` keeps restarting | `idejo logs app`. `SECRET_KEY_BASE is missing` or `DATABASE_URL` errors mean an empty value in `deploy/.env`. |
 | `password authentication failed for user "idejo"` | `POSTGRES_PASSWORD` was changed after the first start. The database keeps the first password: restore the old value. |
 | Build stops with `Killed` or exit code 137 | Out of memory: add swap (step 4) and run the `up` command again. |
