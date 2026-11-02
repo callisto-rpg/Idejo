@@ -53,6 +53,49 @@ if source_url = System.get_env("IDEJO_SOURCE_URL") do
   config :idejo, :source_url, source_url
 end
 
+# AD-16: the reverse proxies whose X-Forwarded-For, -Proto and -Host are believed
+# (IdejoWeb.Plugs.ClientIp): IP addresses and CIDR ranges, separated by commas. Unset, peers
+# on a private network are, which covers the bundled Caddy. A malformed list stops the boot.
+case System.get_env("IDEJO_TRUSTED_PROXIES", "") |> String.trim() do
+  "" ->
+    :ok
+
+  list ->
+    invalid = fn entry ->
+      raise """
+      environment variable IDEJO_TRUSTED_PROXIES has an invalid entry: #{inspect(entry)}.
+      Give IP addresses or CIDR ranges separated by commas, for example
+      IDEJO_TRUSTED_PROXIES=10.0.0.5,172.18.0.0/16,fd00::/8
+      """
+    end
+
+    proxies =
+      for entry <- String.split(list, ","), entry = String.trim(entry) do
+        {address, prefix} =
+          case String.split(entry, "/") do
+            [address] -> {address, nil}
+            [address, prefix] -> {address, prefix}
+            _ -> invalid.(entry)
+          end
+
+        ip =
+          case :inet.parse_strict_address(String.to_charlist(address)) do
+            {:ok, ip} -> ip
+            {:error, _} -> invalid.(entry)
+          end
+
+        bits = if tuple_size(ip) == 4, do: 32, else: 128
+
+        case prefix && Integer.parse(prefix) do
+          nil -> {ip, bits}
+          {length, ""} when length in 0..bits//1 -> {ip, length}
+          _ -> invalid.(entry)
+        end
+      end
+
+    config :idejo, :trusted_proxies, proxies
+end
+
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")

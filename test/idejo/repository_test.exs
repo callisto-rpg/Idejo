@@ -27,8 +27,12 @@ defmodule Idejo.RepositoryTest do
     assert caddy =~ ~s(Strict-Transport-Security "max-age=31536000)
 
     prod = Config.Reader.read!("config/prod.exs", env: :prod)
-    force_ssl = prod[:idejo][IdejoWeb.Endpoint][:force_ssl]
-    assert force_ssl[:rewrite_on] == [:x_forwarded_proto]
+    # Plugged by the endpoint after ClientIp (AD-16), which sets the scheme from a trusted
+    # proxy's X-Forwarded-Proto: no rewrite_on of its own.
+    force_ssl = prod[:idejo][:force_ssl]
+    assert force_ssl[:exclude]
+    refute Keyword.has_key?(force_ssl, :rewrite_on)
+    assert File.read!("lib/idejo_web/endpoint.ex") =~ "plug Plug.SSL"
     # Plug.SSL sends HSTS unless told not to.
     refute Keyword.get(force_ssl, :hsts) == false
 

@@ -206,7 +206,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | Done (`Idejo.Setup.complete_headless/1`, `Idejo.Release.setup/1`; `test/idejo_web/ad_14_headless_setup_test.exs`) |
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output | Done (M5) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
-| Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | To build |
+| Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | Done (`deploy/docker-compose.external-proxy.yml`, `ClientIp.trusted?/1`; `test/idejo_web/ad_16_proxy_test.exs`) |
 | Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. **Matching an existing local account with the same email: ask the steward first.** Extra review (DV-06) | To build |
 | Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
 | Footprint | NF-12 | Idle production container under 200 MB; method and figure in `docs/load-testing.md`. Measured, not enforced | To build |
@@ -1365,9 +1365,16 @@ The contract (M6; mark each item done here when its PR merges):
   `:sign_up`, `:reset_password` in their controllers; 429 with `Retry-After`), per user in the
   contexts (`:commit`, `:new_message`, `:new_topic`, `:report`, `:upload`, `:push_subscribe` →
   `{:error, :rate_limited}`, which every caller must handle). Limits are in
-  `Idejo.RateLimit`. `IdejoWeb.Plugs.ClientIp` takes the visitor's address from the rightmost
-  `X-Forwarded-For` only when the peer is on a private network (Caddy); `:behind_proxy` turns
-  it off. Off in tests (`config :idejo, :rate_limits, enabled: false`); `rate_limit_test.exs`
+  `Idejo.RateLimit`. `IdejoWeb.Plugs.ClientIp` is the one trust check for
+  proxies (AD-16, `ClientIp.trusted?/1`): from a trusted peer, `X-Forwarded-For` gives
+  `remote_ip`, `-Proto` the scheme and `-Host` the host (never used for links: URLs come from
+  `PHX_HOST`); from others they are ignored. Trusted: the addresses and ranges of
+  `IDEJO_TRUSTED_PROXIES` (`:trusted_proxies`, parsed by `config/runtime.exs`, which stops
+  the boot on a bad one; through a chain, the rightmost untrusted address), else private
+  networks (Caddy; the rightmost address). `:behind_proxy` false trusts nobody. `Plug.SSL`
+  (production, `config :idejo, :force_ssl`, no `rewrite_on`) is plugged by the endpoint after
+  it and before `Plug.Static`, not by Phoenix's `force_ssl`, so only a trusted proxy's
+  `X-Forwarded-Proto` counts. `deploy/docker-compose.external-proxy.yml` runs without Caddy. Off in tests (`config :idejo, :rate_limits, enabled: false`); `rate_limit_test.exs`
   turns them on (not async) and uses addresses and accounts of its own.
 - **Command-line recovery** (AD-09, `Idejo.Release`; extra review: DV-06):
   `rel/overlays/bin/idejo-admin` (`reset-owner-password [USERNAME]`, `backup`,

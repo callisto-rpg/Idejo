@@ -1,2 +1,3 @@
 Config.CSWH: Cross-Site Websocket Hijacking,lib/idejo_web/endpoint.ex:19,3FCCB9C
-Config.CSWH: Cross-Site Websocket Hijacking,lib/idejo_web/endpoint.ex:38,7B05E16
+Config.CSWH: Cross-Site Websocket Hijacking,lib/idejo_web/endpoint.ex:47,46C1C63
+Config.HTTPS: HTTPS Not Enabled,config/prod.exs:0,2B5C077

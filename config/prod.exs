@@ -13,14 +13,13 @@ config :idejo, IdejoWeb.Endpoint, cache_static_manifest: "priv/static/cache_mani
 # Force using SSL in production. This also sets the "strict-security-transport" header,
 # known as HSTS. `/health` (AD-15) answers over plain http too, for the container's own
 # health check and a proxy on the same network: it carries nothing personal.
-# Note `:force_ssl` is required to be set at compile-time.
-config :idejo, IdejoWeb.Endpoint,
-  force_ssl: [
-    rewrite_on: [:x_forwarded_proto],
-    exclude: [
-      paths: ["/health"],
-      hosts: ["localhost", "127.0.0.1"]
-    ]
+# Not the endpoint's own `force_ssl`, which Phoenix plugs before everything: IdejoWeb.Endpoint
+# plugs Plug.SSL with these options after IdejoWeb.Plugs.ClientIp, which sets the scheme from
+# X-Forwarded-Proto only for a trusted proxy (AD-16). Read at compile time.
+config :idejo, :force_ssl,
+  exclude: [
+    paths: ["/health"],
+    hosts: ["localhost", "127.0.0.1"]
   ]
 
 # Configure Swoosh API Client

@@ -20,6 +20,15 @@ defmodule IdejoWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # SP-05, AD-16: what a trusted proxy says about the request (visitor's address, https, host),
+  # then forced https in production. Plug.SSL comes after ClientIp, not first as Phoenix's own
+  # `force_ssl` would put it, so only a trusted proxy's X-Forwarded-Proto counts.
+  plug IdejoWeb.Plugs.ClientIp
+
+  if force_ssl = Application.compile_env(:idejo, :force_ssl) do
+    plug Plug.SSL, Keyword.put_new(force_ssl, :host, {__MODULE__, :host, []})
+  end
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
@@ -46,8 +55,7 @@ defmodule IdejoWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  # SP-05: the visitor's real address behind Caddy, then a limit on every request.
-  plug IdejoWeb.Plugs.ClientIp
+  # SP-05: a limit on every request, per visitor address (ClientIp, above).
   plug IdejoWeb.Plugs.RateLimit, :request
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
