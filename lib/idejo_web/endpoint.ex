@@ -59,5 +59,7 @@ defmodule IdejoWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  # What a request reads again and again, read once (Idejo.Memo).
+  plug IdejoWeb.Plugs.Memo
   plug IdejoWeb.Router
 end

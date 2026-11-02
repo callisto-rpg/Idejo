@@ -171,8 +171,21 @@ defmodule Idejo.Settings do
   """
   @spec get(key()) :: String.t() | integer() | boolean()
   def get(key) when is_map_key(@definitions, key) do
-    stored = Repo.get(Setting, Atom.to_string(key))
-    decode(key, stored && stored.value)
+    name = Atom.to_string(key)
+
+    # A page reads a dozen settings: all of them at once while Idejo.Memo is on (one request
+    # or mount), else this one alone.
+    if Idejo.Memo.on?() do
+      decode(key, stored()[name])
+    else
+      stored = Repo.get(Setting, name)
+      decode(key, stored && stored.value)
+    end
+  end
+
+  # Every stored value, read once while Idejo.Memo is on.
+  defp stored do
+    Idejo.Memo.fetch(:settings, fn -> Map.new(Repo.all(Setting), &{&1.key, &1.value}) end)
   end
 
   @doc """
@@ -180,7 +193,7 @@ defmodule Idejo.Settings do
   """
   @spec all() :: %{key() => String.t() | integer() | boolean()}
   def all do
-    stored = Map.new(Repo.all(Setting), &{&1.key, &1.value})
+    stored = stored()
     Map.new(@definitions, fn {key, _} -> {key, decode(key, stored[Atom.to_string(key)])} end)
   end
 
@@ -190,8 +203,7 @@ defmodule Idejo.Settings do
   """
   @spec theme() :: %{atom() => String.t()}
   def theme do
-    names = Enum.map(@theme_keys, &Atom.to_string/1)
-    stored = Map.new(Repo.all(from s in Setting, where: s.key in ^names), &{&1.key, &1.value})
+    stored = stored()
 
     Map.new(@theme_names, fn {key, name} -> {name, decode(key, stored[Atom.to_string(key)])} end)
   end
@@ -254,6 +266,8 @@ defmodule Idejo.Settings do
           updated_at: now
         }
       end)
+
+    :ok = Idejo.Memo.forget()
 
     Repo.insert_all(Setting, rows,
       on_conflict: {:replace, [:value, :updated_at]},

@@ -80,7 +80,12 @@ defmodule IdejoWeb.TopicLive do
   ]
 
   @impl true
-  def mount(_params, %{"topic_id" => topic_id} = session, socket) do
+  # The viewer's roles, the settings and permission checks are read once for the whole mount
+  # (Idejo.Memo; in the page's request it is on already); later events read them afresh.
+  def mount(params, session, socket),
+    do: Idejo.Memo.run(fn -> do_mount(params, session, socket) end)
+
+  defp do_mount(_params, %{"topic_id" => topic_id} = session, socket) do
     user = user(socket)
 
     # A private conversation too, for its participants (steward decision, 2026-10-27).
