@@ -73,10 +73,21 @@ export const InlineLinks = {
 
 // The card's <dialog> (and the emoji picker's), rendered while the server holds one: shown as a modal (focus moves
 // into it, Escape closes it), and on closing the focus goes back to the link.
+// The element that last had the focus: the patch that adds a dialog can leave the focus on
+// <body> before the dialog's hook mounts.
+let lastFocused = null
+document.addEventListener("focusin", e => { lastFocused = e.target })
+
 export const InlineCard = {
   opener: null,
 
   mounted() {
+    // Where the focus goes back when it closes: the opener set before it opened, or with
+    // data-return-focus where the focus was (the emoji picker, also over the poll dialog).
+    // Kept per dialog, so one dialog over another gives each its own.
+    const focused = document.activeElement !== document.body ? document.activeElement : lastFocused
+    this.opener = InlineCard.opener || (this.el.hasAttribute("data-return-focus") ? focused : null)
+    InlineCard.opener = null
     // The emoji picker (TP-17) reuses this dialog behaviour with its own close event.
     const closeEvent = this.el.dataset.closeEvent || "hide_card"
     this.el.addEventListener("close", () => this.pushEvent(closeEvent, {}))
@@ -88,7 +99,13 @@ export const InlineCard = {
   },
 
   destroyed() {
-    if (InlineCard.opener && document.contains(InlineCard.opener)) InlineCard.opener.focus()
-    InlineCard.opener = null
+    // A frame later: a dialog over another one (the emoji picker over the poll dialog) keeps
+    // what is under it inert until it is gone, and an inert button takes no focus.
+    const opener = this.opener
+    if (!opener) return
+    if (document.contains(opener)) opener.focus()
+    requestAnimationFrame(() => {
+      if (document.contains(opener) && document.activeElement !== opener) opener.focus()
+    })
   },
 }

@@ -16,6 +16,8 @@ defmodule Idejo.Messages.Poll do
   schema "polls" do
     field :question, :string
     field :multiple, :boolean, default: false
+    # Nobody sees the counts until it closes (steward decision, 2026-11-02).
+    field :hide_results, :boolean, default: false
     field :closes_at, :utc_datetime_usec
     belongs_to :message, Idejo.Messages.Message
     has_many :options, Idejo.Messages.PollOption, preload_order: [asc: :position]

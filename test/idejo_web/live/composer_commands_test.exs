@@ -225,10 +225,12 @@ defmodule IdejoWeb.ComposerCommandsTest do
     |> form("#poll-#{sent.id}", %{"options" => [park.id]})
     |> render_submit()
 
-    assert has_element?(theirs, "#poll-#{sent.id} .poll-count", "1 vote (100%)")
+    assert has_element?(theirs, "#poll-#{sent.id} .poll-count", "1 vote")
+    assert has_element?(theirs, "#poll-#{sent.id} .poll-percent", "100%")
     assert has_element?(theirs, "#poll-#{sent.id} button", "Change vote")
     # The author sees the counts as they come.
-    assert has_element?(view, "#poll-#{sent.id} .poll-count", "1 vote (100%)")
+    assert has_element?(view, "#poll-#{sent.id} .poll-count", "1 vote")
+    assert has_element?(view, "#poll-#{sent.id} .poll-percent", "100%")
 
     # One poll per message.
     assert render_hook(view, "open_poll", %{}) =~ "This message has a poll already."
@@ -289,7 +291,8 @@ defmodule IdejoWeb.ComposerCommandsTest do
     {:ok, reader, _html} = watch(build_conn(), topic)
     assert perform_job(PollWorker, %{id: poll_id}) == :ok
     assert has_element?(view, "#poll-#{sent.id} .poll-closed", "Closed")
-    assert has_element?(reader, "#poll-#{sent.id} .poll-count", "0 votes (0%)")
+    assert has_element?(reader, "#poll-#{sent.id} .poll-count", "0 votes")
+    assert has_element?(reader, "#poll-#{sent.id} .poll-percent", "0%")
     refute has_element?(reader, "#poll-#{sent.id} button")
   end
 
@@ -419,5 +422,68 @@ defmodule IdejoWeb.ComposerCommandsTest do
     doc = LazyHTML.from_document(html)
     assert doc |> LazyHTML.query(~s(#{body} .spoiler)) |> LazyHTML.text() =~ "the butler"
     refute doc |> LazyHTML.query("[inert], .spoiler[role]") |> Enum.any?()
+  end
+
+  # Steward decision, 2026-11-02: answers side by side over vertical bars in their colours,
+  # an emoji for each, and results hidden until the poll closes.
+  test "a poll's answers take an emoji and a colour, its results may stay hidden", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+    render_hook(view, "commit", %{"body" => "Lunch", "break" => false, "then" => "poll"})
+    [_, sent] = Forum.list_messages(topic)
+
+    # Each answer: an emoji button, its text and its colour, the theme's to start with.
+    default = Polls.default_colour()
+    assert has_element?(view, ~s(#poll-colour-0[type=color][value="#{default}"]))
+    assert has_element?(view, "#poll-hide-results[type=checkbox]")
+
+    # The emoji picker, over the dialog, for answer 2; its choice comes back to the form.
+    view |> form("#poll-form", poll: %{question: "Where?"}) |> render_change()
+    view |> element("#poll-emoji-1") |> render_click()
+    assert has_element?(view, "#emoji-picker-title", "Choose an emoji")
+    assert has_element?(view, ~s(#emoji-picker-body[data-poll-option="1"]))
+    render_hook(view, "poll_emoji", %{"emoji" => "pizza"})
+    refute has_element?(view, "#emoji-picker")
+    assert has_element?(view, "#poll-dialog")
+    assert view |> element("#poll-emoji-1") |> render() =~ "Emoji of answer 2: :pizza:"
+    assert view |> element("#poll-question") |> render() =~ ~s(value="Where?")
+
+    view
+    |> form("#poll-form",
+      poll: %{
+        question: "Where?",
+        options: ["Park", "Café"],
+        emojis: ["", "pizza"],
+        colours: ["#00aa00", default],
+        hide_results: "true",
+        hours: "24"
+      }
+    )
+    |> render_submit()
+
+    poll = "#poll-#{sent.id}"
+    # Results hidden, even from the author, until it closes.
+    refute has_element?(view, "#{poll} .poll-bar")
+    assert has_element?(view, poll, "Results show when the poll closes.")
+    assert has_element?(view, "#{poll} .poll-options .poll-option img.poll-emoji[alt]")
+
+    {:ok, reader, _} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    [park, cafe] = Polls.summary(sent.id).options
+    reader |> form(poll, %{"options" => [park.id]}) |> render_submit()
+    refute has_element?(reader, "#{poll} .poll-bar")
+    {:ok, _} = Polls.vote(user_fixture(), sent, [cafe.id])
+
+    # Closed: a bar each, the coloured one filled in its colour, the other in the theme's.
+    Repo.update_all(Idejo.Messages.Poll, set: [closes_at: DateTime.add(DateTime.utc_now(), -1)])
+    Polls.closed(Polls.summary(sent.id).id)
+    # Park in its own colour; Café, without one, in the theme's (a class, no fill).
+    assert has_element?(reader, ~s(#{poll} rect.poll-bar-fill[fill="#00aa00"][height="50.0"]))
+    assert has_element?(reader, ~s(#{poll} rect.poll-bar-fill.is-theme[height="50.0"]))
+    refute has_element?(reader, "#{poll} rect.poll-bar-fill.is-theme[fill]")
+    assert has_element?(reader, "#{poll} .poll-percent", "50%")
+    # The theme's colour is a class, never a style (SP-05).
+    refute render(reader) =~ "style="
   end
 end

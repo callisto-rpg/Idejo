@@ -8,7 +8,10 @@ defmodule Idejo.Messages.Automessage do
   in the topic, sent by `sender`, a server account (`users.status` "system"). After it was
   posted in a topic, the command waits `cooldown_minutes` there (0: never). Made in
   **Admin → Automessages** (`Idejo.Messages.Automessages`). The message it posts holds the
-  Markdown and its HTML (FD-03); the automessage keeps only the Markdown.
+  Markdown and its HTML (FD-03); the automessage keeps only the Markdown. With a `poll`
+  (steward decision, 2026-11-02; what `Idejo.Messages.Polls.validate/1` reads, kept as
+  JSON), the message carries that poll, and its text may be left empty: the question is
+  then the message's text.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -29,6 +32,9 @@ defmodule Idejo.Messages.Automessage do
     field :body_md, :string
     field :everyone, :boolean, default: false
     field :cooldown_minutes, :integer, default: 0
+    field :poll, :map
+    # "Post a poll" in the form; `Idejo.Messages.Automessages.change/2` fills `poll` from it.
+    field :poll_on, :boolean, virtual: true, default: false
     belongs_to :sender, Idejo.Accounts.User
     # The sender's username in the form; the sender account is found or made from it.
     field :sender_username, :string, virtual: true
@@ -42,10 +48,10 @@ defmodule Idejo.Messages.Automessage do
   """
   def changeset(automessage, attrs, reserved) do
     automessage
-    |> cast(attrs, [:command, :body_md, :sender_username, :everyone, :cooldown_minutes])
+    |> cast(attrs, [:command, :body_md, :sender_username, :everyone, :cooldown_minutes, :poll_on])
     |> update_change(:command, &normalise_command/1)
     |> update_change(:sender_username, &String.trim/1)
-    |> validate_required([:command, :body_md, :sender_username, :cooldown_minutes])
+    |> validate_required([:command, :sender_username, :cooldown_minutes])
     |> validate_number(:cooldown_minutes,
       greater_than_or_equal_to: 0,
       less_than_or_equal_to: @max_cooldown
@@ -55,15 +61,22 @@ defmodule Idejo.Messages.Automessage do
     )
     |> validate_length(:command, max: 30)
     |> validate_exclusion(:command, reserved, message: "is one of the composer's own commands")
-    |> validate_change(:body_md, fn :body_md, body ->
-      if String.trim(body) == "", do: [body_md: "can't be blank"], else: []
-    end)
+    |> validate_body()
     |> validate_format(:sender_username, ~r/^[A-Za-z0-9_]+$/,
       message: "may only contain letters, digits and underscores"
     )
     |> validate_length(:sender_username, min: 3, max: 30)
     |> unsafe_validate_unique(:command, Idejo.Repo, message: "is already an automessage")
     |> unique_constraint(:command, message: "is already an automessage")
+  end
+
+  # A text, unless it posts a poll, whose question is then the text.
+  defp validate_body(changeset) do
+    cond do
+      String.trim(get_field(changeset, :body_md) || "") != "" -> changeset
+      get_field(changeset, :poll_on) -> put_change(changeset, :body_md, "")
+      true -> add_error(changeset, :body_md, "can't be blank")
+    end
   end
 
   # Typed with or without its `!`, in any case.

@@ -8,9 +8,13 @@ defmodule Idejo.Messages.Polls do
   or several, and closing after a number of hours (decimals allowed, at most 168, as
   `!schedule`).
 
+  Each answer may have an emoji and a bar colour (steward decision, 2026-11-02; none: the
+  theme's primary colour), and a poll may hide its results until it closes.
+
   Anyone who may post in the topic votes (`Idejo.Forum.can_post?/2`), and may change their
   vote until the poll closes. Votes are anonymous: readers see counts only, and only once
-  they voted or the poll closed. Deleted messages take no votes.
+  they voted or the poll closed (only once it closed with `hide_results`). Deleted messages
+  take no votes.
 
   Each change reaches the topic's viewers as `{:poll, message_id, summary}`, worked out once
   (NF-01); `Idejo.Messages.PollWorker` sends it again when the poll closes.
@@ -18,6 +22,7 @@ defmodule Idejo.Messages.Polls do
   import Ecto.Query
 
   alias Idejo.Accounts.User
+  alias Idejo.Emoji
   alias Idejo.Federation
   alias Idejo.Forum
   alias Idejo.Forum.Topic
@@ -25,6 +30,7 @@ defmodule Idejo.Messages.Polls do
   alias Idejo.Messages.{Message, Poll, PollOption, PollVote, PollWorker, Scheduling}
   alias Idejo.RateLimit
   alias Idejo.Repo
+  alias Idejo.Settings
 
   @max_options 10
 
@@ -33,10 +39,28 @@ defmodule Idejo.Messages.Polls do
           id: Ecto.UUID.t(),
           question: String.t(),
           multiple: boolean(),
+          hide_results: boolean(),
           closes_at: DateTime.t(),
           voters: non_neg_integer(),
-          options: [%{id: Ecto.UUID.t(), text: String.t(), count: non_neg_integer()}],
+          options: [
+            %{
+              id: Ecto.UUID.t(),
+              text: String.t(),
+              emoji: String.t() | nil,
+              colour: String.t() | nil,
+              count: non_neg_integer()
+            }
+          ],
           votes: %{Ecto.UUID.t() => [Ecto.UUID.t()]}
+        }
+
+  @typedoc "A poll checked by `validate/1`, ready to be added (`attach/3`)."
+  @type valid :: %{
+          question: String.t(),
+          options: [%{text: String.t(), emoji: String.t() | nil, colour: String.t() | nil}],
+          multiple: boolean(),
+          hide_results: boolean(),
+          seconds: pos_integer()
         }
 
   @doc "The most answers a poll takes."
@@ -44,9 +68,19 @@ defmodule Idejo.Messages.Polls do
   def max_options, do: @max_options
 
   @doc """
-  Adds a poll under the user's message. `attrs`: `"question"`, `"options"` (a list of
-  answers; blank ones are left out), `"multiple"` (`"true"` or `true` for several answers)
-  and `"hours"` (until it closes, `Idejo.Messages.Scheduling.parse_hours/1`).
+  The bar colour of an answer without one: the theme's primary colour, as `#rrggbb` (the
+  colour picker's own format).
+  """
+  @spec default_colour() :: String.t()
+  def default_colour do
+    case Settings.theme().primary do
+      "#" <> hex when byte_size(hex) >= 6 -> "#" <> String.downcase(binary_part(hex, 0, 6))
+      _ -> "#daa304"
+    end
+  end
+
+  @doc """
+  Adds a poll under the user's message. `attrs` as for `validate/1`.
 
   Refused with `:forbidden` for someone else's or a deleted message, or without the post
   right; `:taken` when the message has a poll; `:question`, `:options` (fewer than two, or
@@ -57,9 +91,11 @@ defmodule Idejo.Messages.Polls do
           | {:error, :forbidden | :taken | :question | :options | :hours | :rate_limited}
   def create(%User{} = user, %Message{} = message, attrs) do
     with :ok <- may_add?(user, message),
-         {:ok, %{question: question, options: options, seconds: seconds}} <- validate(attrs),
-         :ok <- RateLimit.check(:vote, user.id) do
-      insert(user, message, question, options, attrs["multiple"] in [true, "true"], seconds)
+         {:ok, valid} <- validate(attrs),
+         :ok <- RateLimit.check(:vote, user.id),
+         {:ok, summary} <- Repo.transact(fn -> attach(user, message, valid) end) do
+      announce(message, summary)
+      {:ok, summary}
     end
   end
 
@@ -82,17 +118,59 @@ defmodule Idejo.Messages.Polls do
     end
   end
 
-  defp validate(attrs) do
-    question = String.trim(attrs["question"] || "")
+  @doc """
+  Checks a poll's form. `attrs`: `"question"`; `"options"`, the answers (blank ones are left
+  out), either texts with `"emojis"` and `"colours"` beside them in the same order, or maps
+  with `"text"`, `"emoji"` and `"colour"`; `"multiple"` and `"hide_results"` (`"true"` or
+  `true`); `"hours"` until it closes (`Idejo.Messages.Scheduling.parse_hours/1`). An
+  unknown emoji or a colour that is not `#rrggbb` is dropped; the theme's colour
+  (`default_colour/0`) is stored as none, so the bar follows the theme.
 
-    options =
-      for text <- List.wrap(attrs["options"]), text = String.trim(text), text != "", do: text
+  `{:error, :question | :options | :hours}` for what is missing or wrong (fewer than two
+  answers, or more than #{@max_options}).
+  """
+  @spec validate(map()) :: {:ok, valid()} | {:error, :question | :options | :hours}
+  def validate(attrs) do
+    question = String.trim(attrs["question"] || "")
+    options = attrs |> options() |> Enum.reject(&(&1.text == ""))
 
     with :ok <- if(question == "", do: {:error, :question}, else: :ok),
          :ok <- if(length(options) in 2..@max_options//1, do: :ok, else: {:error, :options}),
          {:ok, seconds} <- hours(attrs["hours"]) do
-      {:ok, %{question: question, options: options, seconds: seconds}}
+      {:ok,
+       %{
+         question: question,
+         options: options,
+         multiple: attrs["multiple"] in [true, "true"],
+         hide_results: attrs["hide_results"] in [true, "true"],
+         seconds: seconds
+       }}
     end
+  end
+
+  defp options(attrs) do
+    emojis = List.wrap(attrs["emojis"])
+    colours = List.wrap(attrs["colours"])
+    default = default_colour()
+
+    attrs["options"]
+    |> List.wrap()
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {%{} = option, _i} -> option(option["text"], option["emoji"], option["colour"], default)
+      {text, i} -> option(text, Enum.at(emojis, i), Enum.at(colours, i), default)
+    end)
+  end
+
+  defp option(text, emoji, colour, default) do
+    colour = if is_binary(colour), do: String.downcase(String.trim(colour))
+
+    %{
+      text: if(is_binary(text), do: String.trim(text), else: ""),
+      emoji: if(is_binary(emoji) and Emoji.lookup(emoji), do: emoji),
+      colour:
+        if(is_binary(colour) and colour =~ ~r/^#[0-9a-f]{6}$/ and colour != default, do: colour)
+    }
   end
 
   @doc "True for a message posted by `post/4`: its text is only its poll's question."
@@ -121,33 +199,35 @@ defmodule Idejo.Messages.Polls do
     end
   end
 
-  defp insert(user, message, question, options, multiple?, seconds) do
-    closes_at = DateTime.add(DateTime.utc_now(), seconds, :second)
+  @doc """
+  Adds a poll checked by `validate/1` under `message`, by `author` (its activity's actor),
+  with no rights checked: `create/3` checks them, automessages (`Idejo.Messages.Automessages`)
+  post as a server account. Call it inside a transaction, then `announce/2` the summary once
+  it is committed.
+  """
+  @spec attach(User.t(), Message.t(), valid()) :: {:ok, summary()} | {:error, :taken | term()}
+  def attach(%User{} = author, %Message{} = message, valid) do
+    closes_at = DateTime.add(DateTime.utc_now(), valid.seconds, :second)
     poll_id = Federation.generate_id()
 
-    result =
-      Repo.transact(fn ->
-        with {:ok, _poll} <-
-               %Poll{
-                 id: poll_id,
-                 message_id: message.id,
-                 question: question,
-                 multiple: multiple?,
-                 closes_at: closes_at
-               }
-               |> Ecto.Changeset.change()
-               |> Ecto.Changeset.unique_constraint(:message_id)
-               |> Repo.insert()
-               |> taken(),
-             {_count, _} <- Repo.insert_all(PollOption, option_rows(poll_id, options)),
-             {:ok, _job} <- Oban.insert(PollWorker.new(%{id: poll_id}, scheduled_at: closes_at)),
-             {:ok, _activity} <- activity(user, message, question) do
-          {:ok, summary(message.id)}
-        end
-      end)
-
-    with {:ok, summary} <- result, do: broadcast(message, summary)
-    result
+    with {:ok, _poll} <-
+           %Poll{
+             id: poll_id,
+             message_id: message.id,
+             question: valid.question,
+             multiple: valid.multiple,
+             hide_results: valid.hide_results,
+             closes_at: closes_at
+           }
+           |> Ecto.Changeset.change()
+           |> Ecto.Changeset.unique_constraint(:message_id)
+           |> Repo.insert()
+           |> taken(),
+         {_count, _} <- Repo.insert_all(PollOption, option_rows(poll_id, valid.options)),
+         {:ok, _job} <- Oban.insert(PollWorker.new(%{id: poll_id}, scheduled_at: closes_at)),
+         {:ok, _activity} <- activity(author, message, valid.question) do
+      {:ok, summary(message.id)}
+    end
   end
 
   # Two polls for one message at once: the second finds the first's row.
@@ -157,8 +237,15 @@ defmodule Idejo.Messages.Polls do
   defp option_rows(poll_id, options) do
     options
     |> Enum.with_index()
-    |> Enum.map(fn {text, position} ->
-      %{id: Federation.generate_id(), poll_id: poll_id, position: position, text: text}
+    |> Enum.map(fn {option, position} ->
+      %{
+        id: Federation.generate_id(),
+        poll_id: poll_id,
+        position: position,
+        text: option.text,
+        emoji: option.emoji,
+        colour: option.colour
+      }
     end)
   end
 
@@ -192,7 +279,7 @@ defmodule Idejo.Messages.Polls do
          {:ok, chosen} <- chosen(poll, option_ids),
          :ok <- RateLimit.check(:vote, user.id) do
       {:ok, summary} = Repo.transact(fn -> replace_votes(poll, user, chosen) end)
-      broadcast(message, summary)
+      announce(message, summary)
       {:ok, summary}
     end
   end
@@ -241,12 +328,14 @@ defmodule Idejo.Messages.Polls do
 
   @doc """
   Whether `user` sees the counts: once they voted, and for everyone once it closed. The
-  message's author sees them from the start.
+  message's author sees them from the start. With `hide_results`, nobody sees them before
+  it closes.
   """
   @spec results_shown?(summary(), User.t() | nil, Message.t(), DateTime.t()) :: boolean()
   def results_shown?(summary, user, message, now \\ DateTime.utc_now()) do
     not open?(summary, now) or
-      (user != nil and (user.id == message.author_id or Map.has_key?(summary.votes, user.id)))
+      (not Map.get(summary, :hide_results, false) and user != nil and
+         (user.id == message.author_id or Map.has_key?(summary.votes, user.id)))
   end
 
   @doc "Called by `Idejo.Messages.PollWorker` when a poll closes: its topic hears of it."
@@ -254,11 +343,13 @@ defmodule Idejo.Messages.Polls do
   def closed(poll_id) do
     case Repo.one(from p in Poll, where: p.id == ^poll_id, preload: :message) do
       nil -> :ok
-      poll -> broadcast(poll.message, summary(poll.message_id))
+      poll -> announce(poll.message, summary(poll.message_id))
     end
   end
 
-  defp broadcast(message, summary) do
+  @doc "Sends a poll's summary to its topic's viewers, after the change is committed."
+  @spec announce(Message.t(), summary()) :: :ok
+  def announce(%Message{} = message, summary) do
     Messages.broadcast(message.topic_id, {:poll, message.id, summary})
     :ok
   end
@@ -294,12 +385,19 @@ defmodule Idejo.Messages.Polls do
       id: poll.id,
       question: poll.question,
       multiple: poll.multiple,
+      hide_results: poll.hide_results,
       closes_at: poll.closes_at,
       voters: map_size(by_user),
       options:
         for(
           option <- poll.options,
-          do: %{id: option.id, text: option.text, count: Map.get(counts, option.id, 0)}
+          do: %{
+            id: option.id,
+            text: option.text,
+            emoji: option.emoji,
+            colour: option.colour,
+            count: Map.get(counts, option.id, 0)
+          }
         ),
       votes: by_user
     }

@@ -1996,11 +1996,14 @@
 .schedule-excerpt { color: var(--ink-soft); font-size: 0.875rem; }
 
 /* !poll (steward decision, 2026-10-23): the poll under a message, and the dialog that adds
-   one. The bars are <progress> elements, so their width needs no style attribute (SP-05). */
+   one. Since 2026-11-02 (steward decision) the answers stand side by side, each a column: a
+   thick vertical bar (an SVG whose height and fill are attributes, never a style: SP-05; the
+   theme's primary colour without one of its own), the count, the emoji, the answer and its
+   button. */
 .poll {
   margin-top: 0.5rem;
   padding: 0.625rem 0.75rem;
-  max-width: 32rem;
+  max-width: 40rem;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-box);
   background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
@@ -2008,32 +2011,46 @@
   display: grid;
   gap: 0.5rem;
   & fieldset { display: grid; gap: 0.375rem; min-width: 0; }
-  & fieldset:disabled .poll-answer { cursor: default; }
+  & fieldset:disabled .poll-option { cursor: default; }
   & .btn { justify-self: start; }
 }
 .poll-question { font-weight: 600; margin-bottom: 0.25rem; }
-.poll-option { display: grid; gap: 0.125rem; }
-.poll-answer {
+.poll-options {
   display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem 1rem;
+}
+.poll-option {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  width: 5.5rem;
+  text-align: center;
   cursor: pointer;
-  & > span:first-of-type { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 }
-.poll-count { color: var(--ink-soft); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .poll-bar {
-  appearance: none;
-  width: 100%;
-  height: 0.375rem;
-  border: 0;
-  border-radius: 999px;
+  display: block;
+  width: 2.75rem;
+  height: 8rem;
+  border-radius: 0.5rem;
   overflow: hidden;
-  background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
-  color: var(--color-primary);
-  &::-webkit-progress-bar { background: transparent; }
-  &::-webkit-progress-value { background: var(--color-primary); border-radius: 999px; }
-  &::-moz-progress-bar { background: var(--color-primary); border-radius: 999px; }
 }
+.poll-bar-track { fill: color-mix(in oklab, var(--color-base-content) 8%, transparent); }
+.poll-bar-fill.is-theme { fill: var(--color-primary); }
+.poll-count {
+  display: grid;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.poll-percent { font-weight: 600; color: var(--color-base-content); }
+.poll-emoji { width: 1.75rem; height: 1.75rem; }
+.poll-answer-text { overflow-wrap: anywhere; line-height: 1.25; }
+/* The buttons on one line, under the longest answer. */
+.poll-option > input { margin-top: auto; }
 .poll-meta {
   display: flex;
   flex-wrap: wrap;
@@ -2042,8 +2059,39 @@
   font-size: 0.75rem;
 }
 .poll-closed { font-weight: 600; }
-.poll-card { max-width: 26rem; & form { display: grid; gap: 0.5rem; } }
-.poll-card-answers { display: grid; gap: 0.375rem; & .btn { justify-self: start; } }
+.poll-card { max-width: 28rem; & form { display: grid; gap: 0.5rem; } }
+.poll-card-answers { display: grid; gap: 0.375rem; & > .btn { justify-self: start; } }
+/* A row of the form: the emoji button (with × once one is chosen), the answer, its colour. */
+.poll-card-answer {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  & .emoji { width: 1.25rem; height: 1.25rem; }
+}
+.poll-card-emoji-wrap { position: relative; flex: none; }
+/* × on the emoji's corner, so a row keeps its width with or without one. */
+.poll-card-emoji-clear.btn {
+  position: absolute;
+  top: -0.375rem;
+  right: -0.375rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--color-base-100);
+  border: 1px solid var(--hairline);
+}
+.poll-card-colour {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.125rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.375rem;
+  background: transparent;
+  cursor: pointer;
+}
+.poll-fields { display: grid; gap: 0.5rem; }
 .poll-card-multiple { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
 
 /* !spoiler (steward decision, 2026-10-23): a cover over the message, see-through and

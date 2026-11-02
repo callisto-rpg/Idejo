@@ -128,4 +128,70 @@ defmodule IdejoWeb.AutomessagesLiveTest do
     assert render_hook(view, "automessage", %{"name" => name}) =~
              "It can be used again in 3 minutes."
   end
+
+  # Steward decision, 2026-11-02.
+  test "an automessage may post a poll, set up with the poll's fields", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/automessages")
+    refute has_element?(lv, "#automessage-poll")
+
+    lv
+    |> form("#automessage-form", automessage: %{command: "lunch", poll_on: "true"})
+    |> render_change()
+
+    assert has_element?(lv, "#automessage-poll #automessage-poll-question")
+    assert has_element?(lv, "#automessage-poll-colour-1[type=color]")
+    problems = IdejoWeb.Accessibility.audit(render(lv), page: false)
+    assert problems == [], Enum.join(problems, "\n")
+    lv |> element("#automessage-poll-add-option") |> render_click()
+    assert has_element?(lv, "#automessage-poll-option-2")
+
+    # The emoji picker for an answer.
+    lv |> element("#automessage-poll-emoji-0") |> render_click()
+    assert has_element?(lv, ~s(#emoji-picker-body[data-poll-option="0"]))
+    render_hook(lv, "poll_emoji", %{"emoji" => "pizza"})
+    refute has_element?(lv, "#emoji-picker")
+
+    assert lv
+           |> form("#automessage-form",
+             automessage: %{
+               command: "lunch",
+               body_md: "",
+               sender_username: "idejo",
+               poll_on: "true",
+               poll: %{question: "", options: ["A", "B", ""], hours: "1"}
+             }
+           )
+           |> render_submit() =~ "The poll needs a question."
+
+    lv
+    |> form("#automessage-form",
+      automessage: %{
+        command: "lunch",
+        body_md: "",
+        sender_username: "idejo",
+        poll_on: "true",
+        poll: %{
+          question: "Lunch?",
+          options: ["Pizza", "Soup", ""],
+          emojis: ["pizza", "", ""],
+          hide_results: "true",
+          hours: "1"
+        }
+      }
+    )
+    |> render_submit()
+
+    assert has_element?(lv, "#automessages li", "Poll")
+    automessage = Enum.find(Automessages.list(), &(&1.command == "lunch"))
+    assert %{"question" => "Lunch?", "hide_results" => true} = automessage.poll
+    assert [%{"emoji" => "pizza"}, %{"text" => "Soup"}] = automessage.poll["options"]
+
+    # Edited, the form shows what is kept.
+    lv |> element("#automessage-#{automessage.id} button", "Edit") |> render_click()
+    assert lv |> element("#automessage-poll-question") |> render() =~ ~s(value="Lunch?")
+    assert lv |> element("#automessage-poll-emoji-0") |> render() =~ ":pizza:"
+  end
 end

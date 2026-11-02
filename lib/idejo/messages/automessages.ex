@@ -19,6 +19,11 @@ defmodule Idejo.Messages.Automessages do
   already has is refused. Accounts stay when no automessage names them any more: their
   messages keep their author.
 
+  An automessage may post a poll (steward decision, 2026-11-02): "Post a poll" in the form,
+  with the poll's fields (`IdejoWeb.PollComponents.poll_fields/1`), checked by
+  `Idejo.Messages.Polls.validate/1` and kept in `poll`; each post adds a new poll, open for
+  its hours from then, under the message (whose text is the question when it has none).
+
   Every change is audited (`automessage.create|update|delete`, SP-06); every post is logged
   as its user's (`message.automessage`, MO-03), so moderators see who used one.
   """
@@ -37,6 +42,8 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.Messages.Automessage
   alias Idejo.Messages.Body
   alias Idejo.Messages.Message
+  alias Idejo.Messages.Polls
+  alias Idejo.Messages.Scheduling
   alias Idejo.Moderation
   alias Idejo.RateLimit
   alias Idejo.Repo
@@ -98,7 +105,64 @@ defmodule Idejo.Messages.Automessages do
   def change(automessage \\ %Automessage{}, attrs \\ %{}) do
     automessage
     |> with_username()
+    |> Map.put(:poll_on, automessage.poll != nil)
     |> Automessage.changeset(attrs, @reserved)
+    |> put_poll(attrs)
+  end
+
+  # "Post a poll": the poll's fields, checked as a poll's and kept as JSON; off, none. Only
+  # when the form says (a changeset made without params keeps what is stored).
+  defp put_poll(changeset, %{"poll_on" => _} = attrs) do
+    if Changeset.get_field(changeset, :poll_on) do
+      fields = attrs["poll"] || %{}
+
+      case Polls.validate(fields) do
+        {:ok, valid} -> Changeset.put_change(changeset, :poll, stored_poll(valid, fields))
+        {:error, reason} -> Changeset.add_error(changeset, :poll, poll_error(reason))
+      end
+    else
+      Changeset.put_change(changeset, :poll, nil)
+    end
+  end
+
+  defp put_poll(changeset, _attrs), do: changeset
+
+  defp stored_poll(valid, fields) do
+    %{
+      "question" => valid.question,
+      "options" =>
+        for(o <- valid.options, do: %{"text" => o.text, "emoji" => o.emoji, "colour" => o.colour}),
+      "multiple" => valid.multiple,
+      "hide_results" => valid.hide_results,
+      "hours" => String.trim(to_string(fields["hours"]))
+    }
+  end
+
+  defp poll_error(:question), do: "needs a question"
+  defp poll_error(:options), do: "needs two to #{Polls.max_options()} answers"
+
+  defp poll_error(:hours),
+    do: "needs a number of hours above 0, at most #{Scheduling.max_hours()}"
+
+  @doc """
+  The poll form's fields for an automessage's stored `poll`, as `poll_fields/1` reads them,
+  or `%{}`.
+  """
+  @spec poll_params(map() | nil) :: map()
+  def poll_params(nil), do: %{}
+
+  def poll_params(%{} = poll) do
+    options = List.wrap(poll["options"])
+
+    %{
+      "question" => poll["question"],
+      "options" => Enum.map(options, & &1["text"]),
+      "emojis" => Enum.map(options, &(&1["emoji"] || "")),
+      "colours" => Enum.map(options, &(&1["colour"] || Polls.default_colour())),
+      "multiple" => to_string(poll["multiple"] == true),
+      "hide_results" => to_string(poll["hide_results"] == true),
+      "hours" => poll["hours"]
+    }
   end
 
   defp with_username(%Automessage{sender: %User{username: username}} = a),
@@ -216,7 +280,7 @@ defmodule Idejo.Messages.Automessages do
 
   defp snapshot(%Automessage{sender: sender} = automessage) do
     automessage
-    |> Audit.snapshot([:command, :body_md, :everyone, :cooldown_minutes])
+    |> Audit.snapshot([:command, :body_md, :everyone, :cooldown_minutes, :poll])
     |> Map.put("sender", sender && sender.username)
   end
 
@@ -256,8 +320,11 @@ defmodule Idejo.Messages.Automessages do
         end
       end)
 
-    with {:ok, message} <- result, do: Messages.broadcast(topic.id, {:message, message})
-    result
+    with {:ok, {message, poll}} <- result do
+      Messages.broadcast(topic.id, {:message, message})
+      if poll, do: Polls.announce(message, poll)
+      {:ok, message}
+    end
   end
 
   defp allowed?(_who, nil), do: false
@@ -285,7 +352,8 @@ defmodule Idejo.Messages.Automessages do
   defp insert(user, topic, %Automessage{sender: sender} = automessage, now) do
     id = Federation.generate_id()
 
-    with {:ok, message} <-
+    with {:ok, poll} <- valid_poll(automessage),
+         {:ok, message} <-
            %Message{
              id: id,
              uri: Federation.uri(:message, id),
@@ -296,7 +364,7 @@ defmodule Idejo.Messages.Automessages do
              closes_at: now,
              closed_at: now
            }
-           |> Message.closed_changeset(%{body_md: automessage.body_md},
+           |> Message.closed_changeset(%{body_md: body(automessage, poll)},
              author: user,
              roles_as: sender,
              topic_id: topic.id
@@ -311,10 +379,30 @@ defmodule Idejo.Messages.Automessages do
          {:ok, _} <-
            Moderation.record(user, "message.automessage", message,
              details: %{"command" => automessage.command, "sender" => sender.username}
-           ) do
-      {:ok, message}
+           ),
+         {:ok, summary} <- attach_poll(sender, message, poll) do
+      {:ok, {message, summary}}
     end
   end
+
+  # The stored poll, checked again: an emoji gone since is dropped, the hours start now.
+  defp valid_poll(%Automessage{poll: nil}), do: {:ok, nil}
+
+  defp valid_poll(%Automessage{poll: poll}) do
+    case Polls.validate(poll) do
+      {:ok, valid} -> {:ok, valid}
+      {:error, reason} -> {:error, {:poll, reason}}
+    end
+  end
+
+  # With a poll and no text of its own, the question is its text (shown once, as the poll's).
+  defp body(%Automessage{body_md: body}, nil), do: body
+
+  defp body(%Automessage{body_md: body}, poll),
+    do: if(String.trim(body || "") == "", do: poll.question, else: body)
+
+  defp attach_poll(_sender, _message, nil), do: {:ok, nil}
+  defp attach_poll(sender, message, poll), do: Polls.attach(sender, message, poll)
 
   defp activity(sender, message, topic) do
     Federation.activity_changeset(%{
