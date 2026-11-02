@@ -437,6 +437,85 @@ subscribe with. Every install makes its key pair when it first starts; backups c
 browser's push subscription ends; each subscribes again the next time its member opens a
 page. The rotation is recorded in the audit log.
 
+## Running behind your own reverse proxy
+
+The bundle's Caddy is the default and the simplest: it gets certificates and passes every
+request to the app. If the machine already runs a reverse proxy (nginx, Traefik, another
+Caddy, a load balancer), or runs several Idejo servers behind one, leave Caddy out (AD-16)
+with the second Compose file, given after the first:
+
+```sh
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.external-proxy.yml \
+  --env-file deploy/.env up -d --build
+```
+
+Use the same two `-f` options for every later command (or put them in the `idejo` alias of
+[Day-to-day operations](#day-to-day-operations)). The second file changes only two things:
+Caddy is not started, so ports 80 and 443 stay free, and the app is published on
+`IDEJO_BIND:IDEJO_PORT`, `127.0.0.1:4000` unless you set them in `deploy/.env`.
+`IDEJO_DOMAIN` is still required: links and the live connection check use it. `ACME_EMAIL`
+is not used.
+
+Your proxy must:
+
+- terminate HTTPS for `IDEJO_DOMAIN` and pass requests to `http://127.0.0.1:4000` (or
+  `IDEJO_BIND:IDEJO_PORT`), keeping the `Host` header;
+- set `X-Forwarded-For` to the visitor's address, `X-Forwarded-Proto` to `https` and
+  `X-Forwarded-Host` to the host name;
+- pass WebSocket upgrades (the live pages use them, at `/live/websocket`) and keep them
+  open for a long time;
+- accept request bodies at least as large as the upload limit in **Admin → Settings**.
+
+nginx:
+
+```nginx
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name forum.example.org;
+    ssl_certificate     /etc/letsencrypt/live/forum.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/forum.example.org/privkey.pem;
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 1h;
+    }
+}
+```
+
+Another Caddy (it sets the `X-Forwarded-*` headers by itself):
+
+```caddyfile
+forum.example.org {
+	reverse_proxy 127.0.0.1:4000
+}
+```
+
+**Which proxies the app believes.** The app takes the visitor's address (for its rate
+limits), https and the host name from those headers only when the request comes from a
+trusted proxy. From anyone else it ignores them, so nobody can pose as another address or
+claim https. With `IDEJO_TRUSTED_PROXIES` empty, peers on a private network are trusted: a
+proxy on the same machine reaches the app through Docker's network, so this works as it
+is. If your proxy runs on another machine, publish the app on an address it can reach
+(`IDEJO_BIND`, never a public one without a firewall) and set `IDEJO_TRUSTED_PROXIES` to
+that proxy's address or range, comma-separated (`10.0.0.5`, `10.0.0.0/24`, `fd00::/8`).
+Once set, only those addresses are trusted. A malformed value stops the app at boot with a
+message saying so.
+
+The app still sends HSTS and redirects plain `http` to `https` (except `/health`), and
+builds every link from `IDEJO_DOMAIN`, never from the headers. Check it with
+`curl https://forum.example.org/health`.
+
 ## Health endpoint
 
 `GET /health` tells a monitoring tool, a container health check or an uptime service
@@ -470,7 +549,7 @@ Unlike other pages it also answers over plain `http`, so the container's own che
 | `app` keeps restarting | `idejo logs app`. `SECRET_KEY_BASE is missing` or `DATABASE_URL` errors mean an empty value in `deploy/.env`. |
 | `password authentication failed for user "idejo"` | `POSTGRES_PASSWORD` was changed after the first start. The database keeps the first password: restore the old value. |
 | Build stops with `Killed` or exit code 137 | Out of memory: add swap (step 4) and run the `up` command again. |
-| Browser shows "too many redirects" | Another proxy (e.g. Cloudflare in "Flexible" mode) sits in front. Set it to "Full (strict)", or turn the proxy off. |
+| Browser shows "too many redirects" | Another proxy (e.g. Cloudflare in "Flexible" mode) sits in front. Set it to "Full (strict)", or turn the proxy off. Behind [your own reverse proxy](#running-behind-your-own-reverse-proxy): it does not send `X-Forwarded-Proto: https`, or the app does not trust it (`IDEJO_TRUSTED_PROXIES`). |
 | Page loads but the live features do not connect | `IDEJO_DOMAIN` differs from the address in the browser (e.g. `www.` prefix): live connections are accepted only from `https://` and that exact name. Use exactly one name. |
 | `app` stops with `PHX_HOST is missing` | Running without the bundled Compose file: set `PHX_HOST` to the public host name (see [Environment variables](#environment-variables)). |
 
@@ -524,8 +603,11 @@ message naming it.
 | `IDEJO_SMTP_USERNAME` | no | none | Its login, if it needs one. |
 | `IDEJO_SMTP_PASSWORD` | no | none | Its password. Never stored, shown or logged by Idejo. |
 | `IDEJO_SMTP_FROM` | no | the panel's sender address | Sender address while this server is in use. |
+| `IDEJO_TRUSTED_PROXIES` | no | private networks | Reverse proxies whose `X-Forwarded-For`, `-Proto` and `-Host` are believed: IP addresses or CIDR ranges, comma-separated. See [Running behind your own reverse proxy](#running-behind-your-own-reverse-proxy). |
 | `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
 
 `deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which
-Compose gives to Caddy and the database (step 7). Empty values count as not set.
+Compose gives to Caddy and the database (step 7), and, only with
+`deploy/docker-compose.external-proxy.yml`, `IDEJO_BIND` and `IDEJO_PORT`. Empty values
+count as not set.
 
