@@ -13,6 +13,7 @@ defmodule IdejoWeb.ImageUploadTest do
   alias Idejo.Repo
   alias Idejo.Uploads
   alias Idejo.Uploads.Upload
+  alias IdejoWeb.ImageUploads
 
   setup %{conn: conn} do
     admin = user_with_role_fixture(:administrator)
@@ -112,5 +113,48 @@ defmodule IdejoWeb.ImageUploadTest do
     # And they show in messages: Markdown images are kept by the sanitiser.
     assert Body.to_html("![cat](/uploads/#{upload.path})") =~
              ~s(<img src="/uploads/#{upload.path}" alt="cat")
+  end
+
+  # A JPEG, PNG, GIF or WebP over the limit (`upload_max_mb`, 3 MB by default) is refused for
+  # its size, saying how large it is, never as if it were the wrong format.
+  @tag req: "TP-12"
+  test "TP-12 an image over the size limit says its size and the server's limit", %{
+    conn: conn,
+    topic: topic
+  } do
+    big = %{name: "photo.jpg", content: :binary.copy("x", 3_456_789), type: "image/jpeg"}
+
+    {:ok, lv, _html} =
+      live_isolated(conn, IdejoWeb.TopicLive, session: %{"topic_id" => topic.id})
+
+    input = file_input(lv, "#composer-image-form", :composer_image, [big])
+    assert {:error, [[_ref, :too_large]]} = render_upload(input, "photo.jpg")
+    # The browser sends the form's change once the file is chosen.
+    lv |> element("#composer-image-form") |> render_change(%{})
+
+    message = "Your image is 3.5 MB, which is above the server limit of 3 MB."
+    assert has_element?(lv, "[role=alert]", message)
+    refute has_element?(lv, "[role=alert]", "Only JPEG")
+
+    # The profile's avatar says the same.
+    {:ok, settings, _html} = live(conn, ~p"/users/settings")
+    input = file_input(settings, "#avatar-form", :avatar, [big])
+    assert {:error, [[_ref, :too_large]]} = render_upload(input, "photo.jpg")
+    settings |> element("#avatar-form") |> render_change(%{})
+    assert has_element?(settings, "[role=alert]", message)
+  end
+
+  @tag req: "TP-12"
+  test "TP-12 the size message rounds to a tenth of a MB; an image not saved is not a format error" do
+    assert ImageUploads.error_text(:too_large, 7_784_175) ==
+             "Your image is 7.8 MB, which is above the server limit of 3 MB."
+
+    assert ImageUploads.error_text(:too_large, 4_000_000) ==
+             "Your image is 4 MB, which is above the server limit of 3 MB."
+
+    assert ImageUploads.error_text(:too_large) ==
+             "Your image is above the server limit of 3 MB."
+
+    refute ImageUploads.error_text(:not_saved) =~ "JPEG"
   end
 end

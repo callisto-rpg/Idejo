@@ -57,7 +57,7 @@ defmodule Idejo.Uploads do
   """
   @spec store_image(User.t(), Path.t()) ::
           {:ok, Upload.t()}
-          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :not_saved | :rate_limited}
   def store_image(%User{} = user, path) do
     with :ok <- check_size(path),
          :ok <- RateLimit.check(:upload, user.id),
@@ -75,7 +75,7 @@ defmodule Idejo.Uploads do
   """
   @spec store_avatar(User.t(), Path.t()) ::
           {:ok, Upload.t()}
-          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :not_saved | :rate_limited}
   def store_avatar(%User{} = user, path) do
     with :ok <- check_size(path),
          :ok <- RateLimit.check(:upload, user.id),
@@ -86,7 +86,7 @@ defmodule Idejo.Uploads do
       save(user, square, {"webp", "image/webp"})
     else
       {:error, reason}
-      when reason in [:too_large, :not_an_image, :too_many_pixels, :rate_limited] ->
+      when reason in [:too_large, :not_an_image, :too_many_pixels, :not_saved, :rate_limited] ->
         {:error, reason}
 
       _ ->
@@ -218,13 +218,15 @@ defmodule Idejo.Uploads do
 
     upright = if ext == "jpg", do: Image.autorotate!(image), else: image
 
+    # An image libvips opened but could not write again (a very large one, say) is not a
+    # wrong format: `:not_saved`, so the user is not told it is.
     with {:ok, _} <- Image.write(upright, dest, strip_metadata: true),
          {:ok, %{size: size}} <- File.stat(dest) do
       Repo.insert(%Upload{id: id, user_id: user.id, path: name, mime: mime, size: size})
     else
       _ ->
         File.rm(dest)
-        {:error, :not_an_image}
+        {:error, :not_saved}
     end
   end
 

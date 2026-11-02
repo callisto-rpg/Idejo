@@ -500,7 +500,7 @@ defmodule Idejo.Accounts do
   """
   @spec set_avatar(User.t(), Path.t(), :light | :dark) ::
           {:ok, User.t()}
-          | {:error, :too_large | :not_an_image | :too_many_pixels | :rate_limited}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :not_saved | :rate_limited}
   def set_avatar(%User{} = user, path, theme \\ :light) when theme in [:light, :dark] do
     with {:ok, upload} <- Uploads.store_avatar(user, path) do
       Repo.transact(fn -> replace_avatar(user, avatar_field(theme), upload.id) end)

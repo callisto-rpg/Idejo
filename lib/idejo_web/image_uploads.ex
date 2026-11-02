@@ -66,7 +66,9 @@ defmodule IdejoWeb.ImageUploads do
         socket
 
       [error | _] ->
-        socket |> cancel_upload(name, entry.ref) |> assign(:image_error, message(error))
+        socket
+        |> cancel_upload(name, entry.ref)
+        |> assign(:image_error, message(error, entry.client_size))
     end
   end
 
@@ -97,7 +99,7 @@ defmodule IdejoWeb.ImageUploads do
            |> push_event("image_uploaded", %{upload: name, markdown: markdown})}
 
         {:error, reason} ->
-          {:noreply, assign(socket, :image_error, message(reason))}
+          {:noreply, assign(socket, :image_error, message(reason, entry.client_size))}
       end
     else
       {:noreply, socket}
@@ -118,20 +120,49 @@ defmodule IdejoWeb.ImageUploads do
     end
   end
 
-  @doc "What to tell the user when an image is refused for `reason`."
-  @spec error_text(atom()) :: String.t()
-  def error_text(reason), do: message(reason)
+  @doc """
+  What to tell the user when an image is refused for `reason`. `size`, the file's size in
+  bytes when known, says by how much a too large one is over the limit.
+  """
+  @spec error_text(atom(), non_neg_integer() | nil) :: String.t()
+  def error_text(reason, size \\ nil), do: message(reason, size)
 
-  defp message(:too_large),
-    do: gettext("This image is larger than %{mb} MB.", mb: div(Uploads.max_bytes(), 1_000_000))
+  # The size limit (the `upload_max_mb` setting) and the image's size, both in MB as the
+  # setting counts them (1,000,000 bytes), the image's to one decimal.
+  defp message(:too_large, size) when is_integer(size) do
+    gettext("Your image is %{size} MB, which is above the server limit of %{max} MB.",
+      size: megabytes(size),
+      max: megabytes(Uploads.max_bytes())
+    )
+  end
+
+  defp message(:too_large, _size),
+    do:
+      gettext("Your image is above the server limit of %{max} MB.",
+        max: megabytes(Uploads.max_bytes())
+      )
+
+  defp message(reason, _size), do: message(reason)
 
   defp message(:not_accepted), do: gettext("Only JPEG, PNG, GIF and WebP images can be added.")
   defp message(:not_an_image), do: gettext("Only JPEG, PNG, GIF and WebP images can be added.")
   defp message(:too_many_pixels), do: gettext("This image has too many pixels.")
   defp message(:too_many_files), do: gettext("Add one image at a time.")
+  defp message(:not_saved), do: gettext("This image could not be added. Try a smaller one.")
 
   defp message(:rate_limited),
     do: gettext("You have added many images lately. Please try again later.")
 
   defp message(_), do: gettext("This image could not be added.")
+
+  # 7_784_175 bytes is "7.8"; 3_000_000 is "3"; never "0" for a file that has bytes.
+  defp megabytes(bytes) do
+    mb = Float.round(bytes / 1_000_000, 1)
+
+    cond do
+      mb == 0.0 and bytes > 0 -> "0.1"
+      mb == trunc(mb) -> Integer.to_string(trunc(mb))
+      true -> Float.to_string(mb)
+    end
+  end
 end
