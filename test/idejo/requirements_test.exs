@@ -6,11 +6,9 @@ defmodule Idejo.RequirementsTest do
 
   alias Idejo.Requirements
 
-  # MVP requirements whose tests come with a later pull request (MVP §7): M6, one pull
-  # request each. Remove an ID when its tests land: the last test below fails until then.
-  @pending %{
-    "NF-12" => "M6: idle memory"
-  }
+  # MVP requirements whose tests come with a later pull request (MVP §7). Remove an ID when
+  # its tests land: the last test below fails until then.
+  @pending %{}
 
   # MVP requirements on how people work, which no test can check: a person verifies them in
   # review (pull request template).
@@ -25,9 +23,11 @@ defmodule Idejo.RequirementsTest do
     "NF-04" => "200 people online on 2 vCPU / 2 GB"
   }
 
-  # MVP requirements measured in a browser, not by mix test; the document holds the result.
+  # MVP requirements measured, not tested by mix test (NF-03 in a browser, NF-12 on the idle
+  # production container); the document holds the method and the result.
   @by_measurement %{
-    "NF-03" => "docs/page-speed.md"
+    "NF-03" => "docs/page-speed.md",
+    "NF-12" => "docs/load-testing.md"
   }
 
   @tag req: "DV-02"
