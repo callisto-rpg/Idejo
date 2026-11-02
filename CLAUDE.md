@@ -205,7 +205,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_SECURITY` (added: `starttls`, `tls`, `none`; by default `tls` on 465, else `starttls`), `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Settings has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | Done (`config/runtime.exs`, `Idejo.Mailer.smtp_settings/2`; `test/idejo_web/ad_13_environment_test.exs`) |
 | Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | To build |
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output | Done (M5) |
-| Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | To build |
+| Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | To build |
 | Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. **Matching an existing local account with the same email: ask the steward first.** Extra review (DV-06) | To build |
 | Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
@@ -1494,6 +1494,14 @@ The contract (M6; mark each item done here when its PR merges):
   repository (change it with the `db` image), `IDEJO_PG_BIN_DIR` points elsewhere. Tests
   needing them are tagged `pg_tools` (skipped with a note when missing, never on CI); the
   restore test uses a database of its own through a dynamic repo, outside the sandbox.
+- **Health endpoint** (AD-15): `GET /health` (`IdejoWeb.HealthController`, in the router's
+  no-session scope, so no session, cookie, CSRF or setup redirect; excluded from
+  `force_ssl` by path, so the container asks it over http) answers `Idejo.Health.report/1`:
+  `status`, `version` and `checks.database` / `checks.migrations` as plain words only
+  (`ok`, `error`, `pending`), never an error's text, a name or a count; 200 or 503,
+  `no-store`. The shared `:request` limit covers it. The Compose `app` service's health
+  check asks it with bash's `/dev/tcp` (the image has no curl), and Caddy waits for it.
+  `bin/idejo-admin health` (`Release.health/0`) stays the operator's detailed check.
 - **Background jobs**: Oban (`config :idejo, Oban`, `oban_jobs` migration pinned to
   version 14; queues `maintenance`, `messages` and `push`), `testing: :manual` in tests (use
   `Oban.Testing`).

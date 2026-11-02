@@ -44,6 +44,23 @@ services:
         condition: service_healthy
     expose:
       - "4000"
+    # AD-15: healthy while GET /health answers 200 (database reachable, migrations applied).
+    # The image has no curl or wget; bash's /dev/tcp asks the app over plain http, which
+    # /health allows from inside the container.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/4000 &&
+          printf 'GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          head -n 1 <&3 | grep -q ' 200 '
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      # Migrations run before the server starts.
+      start_period: 120s
 
   db:
     # The major version must match PG_MAJOR in the Dockerfile (pg_dump for backups, AD-05).
@@ -76,7 +93,8 @@ services:
       - caddy_data:/data       # certificates — keep this volume
       - caddy_config:/config
     depends_on:
-      - app
+      app:
+        condition: service_healthy
 
 volumes:
   pgdata:
