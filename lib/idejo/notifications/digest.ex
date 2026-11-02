@@ -226,7 +226,7 @@ defmodule Idejo.Notifications.Digest do
     email =
       new()
       |> to(user.email)
-      |> Swoosh.Email.from({server, Settings.get(:mail_from)})
+      |> Swoosh.Email.from({server, Mailer.from_address()})
       |> subject(gettext("What you missed on %{server}", server: server))
       |> header("List-Unsubscribe", "<#{unsubscribe}>")
       |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")

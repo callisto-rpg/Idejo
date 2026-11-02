@@ -66,12 +66,19 @@ if config_env() == :prod do
       For example: ecto://USER:PASS@HOST/DATABASE
       """
 
+  # Empty counts as unset: the bundled Compose file passes POOL_SIZE through as it is.
+  pool_size =
+    case System.get_env("POOL_SIZE", "") |> String.trim() do
+      "" -> 10
+      size -> String.to_integer(size)
+    end
+
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :idejo, Idejo.Repo,
     # ssl: true,
     url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    pool_size: pool_size,
     # For machines with several cores, consider starting multiple pools of `pool_size`
     # pool_count: 4,
     socket_options: maybe_ipv6
@@ -88,13 +95,58 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  # AD-13: the public host name, required: links, emails, cookies and the WebSocket origin
+  # check all follow it, so a wrong default would be worse than not starting.
+  host =
+    case System.get_env("PHX_HOST", "") |> String.trim() do
+      "" ->
+        raise """
+        environment variable PHX_HOST is missing.
+        Set it to the server's public host name, for example forum.example.org
+        (no https://, no path). The bundled Compose file sets it from IDEJO_DOMAIN.
+        """
+
+      host ->
+        host
+    end
 
   config :idejo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :idejo, :base_uri, "https://#{host}"
   # AD-08: email goes through the SMTP server set in the admin panel (Idejo.Mailer).
   config :idejo, Idejo.Mailer, adapter: Swoosh.Adapters.SMTP
+
+  # AD-13: an SMTP server from the environment, used only while Admin → Email has no SMTP
+  # host; once the panel has one, the panel's settings are used and these are not. They are
+  # never stored, shown or audited.
+  smtp_env = fn name ->
+    case System.get_env("IDEJO_SMTP_" <> name, "") |> String.trim() do
+      "" -> nil
+      value -> value
+    end
+  end
+
+  if smtp_host = smtp_env.("HOST") do
+    smtp_port =
+      case Integer.parse(smtp_env.("PORT") || "587") do
+        {port, ""} when port in 1..65_535 -> port
+        _ -> raise "environment variable IDEJO_SMTP_PORT must be a port number (1 to 65535)."
+      end
+
+    smtp_security = smtp_env.("SECURITY") || if(smtp_port == 465, do: "tls", else: "starttls")
+
+    if smtp_security not in ~w(starttls tls none) do
+      raise "environment variable IDEJO_SMTP_SECURITY must be starttls, tls or none."
+    end
+
+    config :idejo, :smtp_environment,
+      host: smtp_host,
+      port: smtp_port,
+      security: smtp_security,
+      username: smtp_env.("USERNAME") || "",
+      password: smtp_env.("PASSWORD") || "",
+      from: smtp_env.("FROM")
+  end
 
   config :idejo, IdejoWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
@@ -105,7 +157,9 @@ if config_env() == :prod do
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    # AD-13: LiveView's WebSocket and long-poll connections only from this host's pages.
+    check_origin: ["https://#{host}"]
 
   # ## SSL Support
   #

@@ -10,6 +10,7 @@ path = [
   "**/*.pdf",
   "NOTICE",
   ".sobelow-conf",
+  ".sobelow-skips",
   ".tool-versions",
   ".gitattributes",
   ".gitignore",

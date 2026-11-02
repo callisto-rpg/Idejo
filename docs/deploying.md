@@ -418,14 +418,14 @@ page. The rotation is recorded in the audit log.
 | `password authentication failed for user "idejo"` | `POSTGRES_PASSWORD` was changed after the first start. The database keeps the first password: restore the old value. |
 | Build stops with `Killed` or exit code 137 | Out of memory: add swap (step 4) and run the `up` command again. |
 | Browser shows "too many redirects" | Another proxy (e.g. Cloudflare in "Flexible" mode) sits in front. Set it to "Full (strict)", or turn the proxy off. |
-| Page loads but the live features do not connect | `IDEJO_DOMAIN` differs from the address in the browser (e.g. `www.` prefix). Use exactly one name. |
+| Page loads but the live features do not connect | `IDEJO_DOMAIN` differs from the address in the browser (e.g. `www.` prefix): live connections are accepted only from `https://` and that exact name. Use exactly one name. |
+| `app` stops with `PHX_HOST is missing` | Running without the bundled Compose file: set `PHX_HOST` to the public host name (see [Environment variables](#environment-variables)). |
 
 ## Outgoing email
 
 Idejo sends sign-up verification emails (and later invites and password resets) through an
-SMTP server you choose: your mail provider or a transactional email service. Nothing goes
-in `deploy/.env` for this. Once signed in as an administrator, open **Admin → Email** and
-fill in:
+SMTP server you choose: your mail provider or a transactional email service. Once signed
+in as an administrator, open **Admin → Email** and fill in:
 
 - **Sender address**, e.g. `forum@example.org`. Use an address your SMTP service is allowed
   to send from, or messages will be rejected or land in spam.
@@ -436,4 +436,43 @@ fill in:
 
 Save, then press **Send test email**: it goes to your own address. If it fails, the page
 shows the reason. While no SMTP host is set, the server sends no email at all.
+
+You can also give the server an SMTP server in `deploy/.env` (`IDEJO_SMTP_HOST` and the
+other `IDEJO_SMTP_*` variables, see [Environment variables](#environment-variables)), for
+example so the owner's first emails go out before anyone has signed in. It is used only
+while **Admin → Email** has no SMTP host: the page then says so, showing its host and port
+(never the login). As soon as a host is saved in the panel, the panel's settings are used
+and the environment's are not; the two are never mixed. Change these variables, then run
+the `up` command again.
+
+## Environment variables
+
+Every setting the app reads from its environment (AD-13). With the bundled Compose file you
+only fill in `deploy/.env` (step 7); Compose sets the rest for the app. Running the image
+some other way, set them yourself. A missing required variable stops the app at boot with a
+message naming it.
+
+| Variable | Required | Default | What it does |
+| --- | --- | --- | --- |
+| `PHX_HOST` | yes | none | The public host name, e.g. `forum.example.org` (no `https://`). Links, emails and the WebSocket origin check follow it. Compose sets it from `IDEJO_DOMAIN`. |
+| `SECRET_KEY_BASE` | yes | none | Signs and encrypts cookies and stored secrets. Changing it signs everyone out and makes the saved SMTP password unreadable. |
+| `DATABASE_URL` | yes | none | `ecto://USER:PASSWORD@HOST/DATABASE`. Compose builds it from `POSTGRES_PASSWORD`. |
+| `PHX_SERVER` | no | off | `true` starts the web server; the image's `bin/server` sets it. |
+| `PORT` | no | `4000` | Port the app listens on. |
+| `POOL_SIZE` | no | `10` | Database connections kept open. |
+| `ECTO_IPV6` | no | off | `true` or `1` to reach the database over IPv6. |
+| `IDEJO_UPLOADS_DIR` | no | `/data/uploads` | Where uploaded images are kept. |
+| `IDEJO_BACKUP_DIR` | no | `/data/backups` | Where nightly backups are written. |
+| `IDEJO_PG_BIN_DIR` | no | the `PATH` | Where `pg_dump` and `pg_restore` are; they must match the database's major version. |
+| `IDEJO_SOURCE_URL` | no | upstream at the built commit | The footer's "Source code" link. Required by the AGPL if you run modified code. |
+| `IDEJO_SMTP_HOST` | no | none | SMTP server used while **Admin → Email** has no host. |
+| `IDEJO_SMTP_PORT` | no | `587` | Its port. |
+| `IDEJO_SMTP_SECURITY` | no | `tls` on port 465, else `starttls` | `starttls`, `tls` (TLS from the start) or `none` (a relay on the same machine or network only). Certificates are always checked. |
+| `IDEJO_SMTP_USERNAME` | no | none | Its login, if it needs one. |
+| `IDEJO_SMTP_PASSWORD` | no | none | Its password. Never stored, shown or logged by Idejo. |
+| `IDEJO_SMTP_FROM` | no | the panel's sender address | Sender address while this server is in use. |
+| `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
+
+`deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which
+Compose gives to Caddy and the database (step 7). Empty values count as not set.
 
