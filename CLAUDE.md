@@ -552,7 +552,9 @@ roles or the permission grid. Every later change must keep it true:
   `data-layout="list"` (kept by `JS.ignore_attributes`): a grid whose first rows are the
   bars, counts and emojis in columns (`.poll-options-n{N}` sets `--poll-n`, labels are
   `display: contents`), then each answer's `.poll-choice` as a row, button, its emoji again
-  (`.poll-emoji-inline`, `alt=""`) and text. Anyone with the
+  (`.poll-emoji-inline`, `alt=""`) and text, each in an explicit row (`grid-row: k + 3`;
+  auto-placed, they would fill the empty rows before the results show). Without results
+  (`.poll-options` lacks `has-results`) the emojis above are hidden: no bars to line up with. Anyone with the
   post right votes (`Forum.can_post?/2`, not on deleted messages), changes or takes back
   their vote until `closes_at`. Votes are anonymous; counts show to voters, the author and,
   once closed, everyone; with `hide_results` to nobody before it closes

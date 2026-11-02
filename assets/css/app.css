@@ -2086,7 +2086,8 @@
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  /* Words whole ("votes", never "vote" over "s"). */
+  overflow-wrap: normal;
 }
 .poll-percent { font-weight: 600; color: var(--color-base-content); }
 .poll-emoji { width: min(1.75rem, 100%); height: auto; aspect-ratio: 1; }
@@ -2119,7 +2120,7 @@
   & .poll-option { display: contents; }
   & .poll-bar, & .poll-count, & .poll-emoji { justify-self: center; text-align: center; }
   & .poll-bar { grid-row: 1; }
-  & .poll-count { grid-row: 2; align-self: start; }
+  & .poll-count { grid-row: 2; align-self: start; font-size: 0.6875rem; }
   & .poll-emoji { grid-row: 3; align-self: start; }
   & .poll-choice {
     grid-column: 1 / -1;
@@ -2130,7 +2131,9 @@
     cursor: pointer;
     & > input { order: 0; margin-top: 0; flex: none; }
   }
-  & .poll-option:first-child > .poll-choice { margin-top: 0.5rem; }
+  & .has-results .poll-option:first-child > .poll-choice { margin-top: 0.5rem; }
+  /* Before the results show there are no bars: the emojis are in the answers' rows only. */
+  & .poll-options:not(.has-results) .poll-emoji { display: none; }
   & .poll-emoji-inline { display: block; width: 1.25rem; height: 1.25rem; flex: none; }
   & .poll-answer-text { flex: 1; min-width: 0; }
 }
@@ -2153,6 +2156,18 @@
 .poll[data-layout="list"] .poll-option:nth-child(8) > :not(.poll-choice) { grid-column: 8; }
 .poll[data-layout="list"] .poll-option:nth-child(9) > :not(.poll-choice) { grid-column: 9; }
 .poll[data-layout="list"] .poll-option:nth-child(10) > :not(.poll-choice) { grid-column: 10; }
+/* Each answer's row, under the bars, counts and emojis (rows 1 to 3), whether or not those
+   show: auto-placed, the answers would fill the empty rows before the results show. */
+.poll[data-layout="list"] .poll-option:nth-child(1) > .poll-choice { grid-row: 4; }
+.poll[data-layout="list"] .poll-option:nth-child(2) > .poll-choice { grid-row: 5; }
+.poll[data-layout="list"] .poll-option:nth-child(3) > .poll-choice { grid-row: 6; }
+.poll[data-layout="list"] .poll-option:nth-child(4) > .poll-choice { grid-row: 7; }
+.poll[data-layout="list"] .poll-option:nth-child(5) > .poll-choice { grid-row: 8; }
+.poll[data-layout="list"] .poll-option:nth-child(6) > .poll-choice { grid-row: 9; }
+.poll[data-layout="list"] .poll-option:nth-child(7) > .poll-choice { grid-row: 10; }
+.poll[data-layout="list"] .poll-option:nth-child(8) > .poll-choice { grid-row: 11; }
+.poll[data-layout="list"] .poll-option:nth-child(9) > .poll-choice { grid-row: 12; }
+.poll[data-layout="list"] .poll-option:nth-child(10) > .poll-choice { grid-row: 13; }
 .poll-meta {
   display: flex;
   flex-wrap: wrap;
