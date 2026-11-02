@@ -494,4 +494,44 @@ defmodule IdejoWeb.ComposerCommandsTest do
     # The theme's colour is a class, never a style (SP-05).
     refute render(reader) =~ "style="
   end
+
+  # Steward decision, 2026-11-02: on narrow screens the columns shrink to one line, and when
+  # answers do not fit the PollLayout hook lists them under the bars (checked in a browser).
+  test "a poll is laid out for narrow screens by its hook, its emoji also beside each answer", %{
+    conn: conn,
+    topic: topic
+  } do
+    {:ok, view, _html} = watch(conn, topic)
+    render_hook(view, "commit", %{"body" => "Fruit", "break" => false, "then" => "poll"})
+    [_, sent] = Forum.list_messages(topic)
+
+    view
+    |> form("#poll-form",
+      poll: %{question: "Which?", options: ["Apple", "Pear", "Plum"], hours: "1"}
+    )
+    |> render_submit()
+
+    Polls.vote(user_fixture(), sent, [hd(Polls.summary(sent.id).options).id])
+
+    Repo.update_all(Idejo.Messages.PollOption, set: [emoji: "apple"])
+
+    {:ok, reader, _} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    poll = "#poll-#{sent.id}"
+
+    [mounted] =
+      reader
+      |> element(poll)
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("form")
+      |> LazyHTML.attribute("phx-mounted")
+
+    assert mounted =~ "data-layout"
+    assert has_element?(reader, "#{poll}[phx-hook=PollLayout] .poll-options.poll-options-n3")
+    # Each answer's button and text together, with its emoji again, decorative.
+    assert has_element?(reader, ~s(#{poll} .poll-choice img.poll-emoji-inline[alt=""]))
+    assert has_element?(reader, "#{poll} .poll-choice input + img + .poll-answer-text", "Apple")
+    js = File.read!("assets/js/poll_layout.js")
+    assert js =~ ~s(dataset.layout = "list") and File.read!("assets/js/app.js") =~ "PollLayout"
+  end
 end
