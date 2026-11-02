@@ -49,7 +49,7 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.Repo
 
   # The composer's own commands (IdejoWeb.ComposerCommands.all/0), never an automessage's.
-  @reserved ~w(image new-topic poll schedule spoiler)
+  @reserved ~w(image forward new-topic poll schedule spoiler)
 
   @default_username "idejo"
 

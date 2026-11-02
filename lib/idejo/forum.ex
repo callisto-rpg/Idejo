@@ -1563,7 +1563,7 @@ defmodule Idejo.Forum do
       from m in Message,
         where: m.topic_id == ^id,
         order_by: [asc: m.opened_at, asc: m.id],
-        preload: [:author, :versions, reply_to: :author]
+        preload: ^Idejo.Messages.shown()
     )
   end
 

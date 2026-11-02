@@ -25,6 +25,14 @@ defmodule IdejoWeb.ComposerCommands do
           )
       },
       %{
+        name: "forward",
+        detail: gettext("Forward the message you are replying to"),
+        help:
+          gettext(
+            "Opens Forward for the message you are replying to (choose Reply on it first): pick a topic, recent ones first, or search for one. That topic opens with the message in a box over your new message, whole; write what you want to say with it and send. Forward under a message does the same."
+          )
+      },
+      %{
         name: "new-topic",
         detail: gettext("Send, then start a new topic from it"),
         help:

@@ -11,7 +11,8 @@ defmodule IdejoWeb.TopicController do
   here; its first render is part of this page's HTML. Opening it marks the topic read for a
   signed-in user (TP-07); the oldest message unread before that is passed on, so the page
   opens there. `?reply_to={message id}` opens the form as a reply to that message (TP-08),
-  without JavaScript needed to choose it.
+  without JavaScript needed to choose it; `?forward={message id}` opens it carrying that
+  message (Forward, steward decision, 2026-11-02).
   """
   use IdejoWeb, :controller
 
@@ -47,6 +48,7 @@ defmodule IdejoWeb.TopicController do
               topic: topic,
               page_title: topic.title,
               reply_to_id: params["reply_to"],
+              forward_id: params["forward"],
               first_unread: first_unread,
               window: window(params),
               following?: Reading.following?(user, topic),

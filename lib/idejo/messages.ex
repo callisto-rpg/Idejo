@@ -37,7 +37,7 @@ defmodule Idejo.Messages do
   alias Idejo.Repo
   alias Idejo.Settings
 
-  @shown [:author, :versions, reply_to: :author]
+  @shown [:author, :versions, reply_to: :author, forwarded_from: [:author, :topic]]
   @pubsub Idejo.PubSub
 
   @doc "Subscribes the caller to a topic's message events."
@@ -123,6 +123,9 @@ defmodule Idejo.Messages do
 
     * `:break` - Ctrl+Enter. Defaults to `false`.
     * `:reply_to_id` - when this Enter opens a message, the message it replies to (TP-08).
+    * `:forwarded_from_id` - when this Enter opens a message, the message it forwards (steward
+      decision, 2026-11-02): any message the author may read, from any topic, not deleted;
+      like a reply, it may start a new message early.
     * `:new` - `text` is a new message, written after "Reply" (steward decision,
       2026-10-24), not the open one: the open message closes first. Allowed when Ctrl+Enter
       would start a new message (`may_start_new?/2`) or, for a reply, at any time while the
@@ -170,12 +173,12 @@ defmodule Idejo.Messages do
         {:ok, nil}
 
       open != nil and opts[:new] == true ->
-        start_over(author, topic, open, text, now, opts[:reply_to_id])
+        start_over(author, topic, open, text, now, opts)
 
       # SP-05: and a new message counts towards the new messages a minute.
       open == nil ->
         with :ok <- RateLimit.check(:new_message, author.id),
-             do: open_new(author, topic, text, now, opts[:reply_to_id])
+             do: open_new(author, topic, text, now, opts)
 
       true ->
         append(open, text, now, Keyword.get(opts, :break, false))
@@ -183,15 +186,16 @@ defmodule Idejo.Messages do
   end
 
   # A new message while one is open (`:new`): the open one closes first (GM-09: one open).
-  defp start_over(_author, _topic, _open, "", _now, _reply_to_id), do: {:ok, nil}
+  defp start_over(_author, _topic, _open, "", _now, _opts), do: {:ok, nil}
 
-  defp start_over(author, topic, open, text, now, reply_to_id) do
-    early? = reply_to_id not in [nil, ""] and Settings.get(:gm_early_reply)
+  defp start_over(author, topic, open, text, now, opts) do
+    quoting? = Enum.any?([opts[:reply_to_id], opts[:forwarded_from_id]], &(&1 not in [nil, ""]))
+    early? = quoting? and Settings.get(:gm_early_reply)
 
     with :ok <- if(early? or may_start_new?(open, now), do: :ok, else: {:error, :too_soon}),
          :ok <- RateLimit.check(:new_message, author.id),
          {:ok, closed} <- close_locked(open, now),
-         {:ok, message} <- open_new(author, topic, text, now, reply_to_id) do
+         {:ok, message} <- open_new(author, topic, text, now, opts) do
       {:ok, {closed, message}}
     end
   end
@@ -217,7 +221,7 @@ defmodule Idejo.Messages do
       String.starts_with?(last, ["    ", "\t"])
   end
 
-  defp open_new(author, topic, text, now, reply_to_id) do
+  defp open_new(author, topic, text, now, opts) do
     id = Federation.generate_id()
     # No slow mode in a private conversation (steward decision, 2026-10-27): no window.
     window = if topic.private, do: 0, else: Settings.get(:gm_window_seconds)
@@ -227,7 +231,8 @@ defmodule Idejo.Messages do
       uri: Federation.uri(:message, id),
       topic_id: topic.id,
       author_id: author.id,
-      reply_to_id: reply_to(topic, reply_to_id),
+      reply_to_id: reply_to(topic, opts[:reply_to_id]),
+      forwarded_from_id: forwarded_from(author, opts[:forwarded_from_id]),
       state: "open",
       opened_at: now,
       closes_at: DateTime.add(now, window, :second),
@@ -242,6 +247,17 @@ defmodule Idejo.Messages do
          {:ok, _} <- Notifications.notify_new(message, topic),
          {:ok, _} <- activity(author, message, "create", topic.uri) do
       {:ok, message}
+    end
+  end
+
+  # Forward: a message the author may read (a topic they may view, or a private conversation
+  # of theirs), not deleted.
+  defp forwarded_from(_author, blank) when blank in [nil, ""], do: nil
+
+  defp forwarded_from(author, id) do
+    case Forum.get_readable_message(author, id) do
+      %Message{id: id, deleted_at: nil} -> id
+      _ -> nil
     end
   end
 

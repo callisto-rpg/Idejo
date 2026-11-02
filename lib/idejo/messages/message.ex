@@ -39,6 +39,8 @@ defmodule Idejo.Messages.Message do
     belongs_to :topic, Idejo.Forum.Topic
     belongs_to :author, Idejo.Accounts.User
     belongs_to :reply_to, __MODULE__
+    # Forward (steward decision, 2026-11-02): the message it carries, from any topic, or nil.
+    belongs_to :forwarded_from, __MODULE__
     # The automessage it was posted from (Idejo.Messages.Automessages), for its cooldown.
     field :automessage_id, Ecto.UUID
     # The role shown next to the author's name, worked out once by Idejo.Messages.broadcast/2

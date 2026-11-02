@@ -389,6 +389,9 @@ export const Composer = {
       const extra = label ? {label} : {}
       if (this.unsent().trim() !== "") this.send(false, name, extra)
       else this.pushEvent(name === "poll" ? "open_poll" : "spoiler", extra)
+    } else if (name === "forward") {
+      // Forward (steward decision, 2026-11-02): the card for the message being replied to.
+      this.pushEvent("forward_quoted", {})
     } else if (name === "schedule") {
       // The dialog gives the focus back to the box when it closes.
       InlineCard.opener = this.input

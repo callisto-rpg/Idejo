@@ -73,7 +73,7 @@ defmodule IdejoWeb.HelpTest do
     end
 
     assert Enum.map(ComposerCommands.all(), & &1.label) ==
-             ["!image", "!new-topic", "!poll", "!schedule", "!spoiler"]
+             ["!image", "!forward", "!new-topic", "!poll", "!schedule", "!spoiler"]
   end
 
   # Steward decision, 2026-10-28.
