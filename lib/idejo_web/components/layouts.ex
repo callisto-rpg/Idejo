@@ -128,7 +128,9 @@ defmodule IdejoWeb.Layouts do
 
   # Where the reader is, always in the header: "Server › Category › Topic" (the server's
   # name is the brand before it). The category links to its page; the topic is the page
-  # itself. Nothing on pages of neither.
+  # itself. Nothing on pages of neither. On phones, on a topic (steward decision,
+  # 2026-11-03): "logo › category icon › title", the names of both kept for screen readers,
+  # the title fading out at the right when too long.
   attr :category, :any, required: true
   attr :topic, :any, required: true
 
@@ -143,10 +145,11 @@ defmodule IdejoWeb.Layouts do
             aria-current={if is_nil(@topic), do: "page"}
             id="breadcrumb-category"
           >
-            {@category.name}
+            <IdejoWeb.TopicComponents.category_mark :if={@topic} category={@category} />
+            <span class="header-crumb-name">{@category.name}</span>
           </a>
         </li>
-        <li :if={@topic} class="header-crumb">
+        <li :if={@topic} class="header-crumb is-last">
           <span class="header-crumb-sep" aria-hidden="true">›</span>
           <a
             href={~p"/t/#{@topic.id}/#{@topic.slug}"}

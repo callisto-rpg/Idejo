@@ -1183,8 +1183,11 @@ The contract (M6; mark each item done here when its PR merges):
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - **Page frame and look**: `Layouts.app` draws the header bar (server name, then where the
   reader is, `breadcrumb/1`: `#breadcrumb`, "› Category › Topic" from its `category=` and
-  `topic=`, the last `aria-current="page"`, cut with "…", only the last part under 640 px;
-  steward decision, 2026-11-02; Unread, Moderation, and the account menu: a `<details>` holding
+  `topic=`, the last `aria-current="page"`, cut with "…"; steward decision, 2026-11-02. Under 640 px
+  (steward decision, 2026-11-03): on a topic, logo › category mark › title, the server's and
+  the category's names visually hidden but read, the title fading out over its last 1.5rem
+  when `assets/js/breadcrumb.js` marks it `data-cut` (cut only; "…" without scripts); on a
+  category page, its name; Unread, Moderation, and the account menu: a `<details>` holding
   Profile and account, Admin, Theme and Sign out, so it opens without JavaScript; with it, a
   click outside or Escape closes it, `assets/js/account_menu.js`), the
   categories sidebar (each category with the topics the user follows there,

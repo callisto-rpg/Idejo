@@ -268,7 +268,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   follow it again. **Mark unread** makes its latest message by someone else new again.
 - **Search**, the box in the sidebar under **Filter by tag**, finds words in messages and
   titles. The bar at the top always shows where you are: the server, the category, then
-  the topic, each a link.
+  the topic, each a link. On a phone it shows the server's logo, the category's icon and
+  the topic's title.
 
 ## Private conversations
 

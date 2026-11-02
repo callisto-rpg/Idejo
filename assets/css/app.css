@@ -363,20 +363,26 @@
     margin-bottom: 1.5rem;
   }
   .brand-name {
-    display: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 1.0625rem;
   }
-
-  @media (min-width: 400px) { .brand-name { display: inline; } }
+  /* Hidden on the narrowest screens, and on phones in a topic (the logo stands for it), but
+     kept for screen readers: the brand link's only name (the logo's alt is empty). */
+  @media (max-width: 399px) { .brand-name { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); } }
+  @media (max-width: 639px) {
+    .app-header:has(.header-crumb.is-parent) .brand-name {
+      position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%);
+    }
+  }
   /* Where the reader is: "› Category › Topic" after the server's name, cut with "…" when
-     long. On narrow screens only the last part shows. */
+     long. On phones, in a topic: "› [category icon] › Title" (steward decision, 2026-11-03),
+     the title fading out at the right when it does not fit. */
   .header-crumbs {
     flex: 1;
     min-width: 0;
-    & ol { display: flex; align-items: center; min-width: 0; }
+    & ol { display: flex; align-items: center; min-width: 0; width: 100%; }
   }
   .header-spacer { flex: 1; }
   .header-crumb {
@@ -386,6 +392,10 @@
     font-size: 0.9375rem;
     white-space: nowrap;
     & a {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       color: var(--ink-soft);
@@ -396,7 +406,26 @@
     &.is-parent { flex: 0 1 auto; max-width: 40%; }
   }
   .header-crumb-sep { flex: none; margin: 0 0.5rem; color: var(--ink-faint); }
-  @media (max-width: 639px) { .header-crumb.is-parent { display: none; } }
+  .header-crumb-name { overflow: hidden; text-overflow: ellipsis; }
+  .header-crumb .category-mark { display: none; }
+  @media (max-width: 639px) {
+    .header-crumb.is-parent {
+      flex: none;
+      max-width: none;
+      & .category-mark { display: inline-grid; }
+      & .header-crumb-name {
+        position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%);
+      }
+    }
+    /* A title too long fades out over its last 1.5rem instead of "…": breadcrumb.js marks
+       the crumb `data-cut` only when the title is cut, so one that fits is never dimmed.
+       Without scripts, the "…" stays. */
+    [data-js] .header-crumb.is-last a { text-overflow: clip; }
+    .header-crumb.is-last[data-cut] {
+      overflow: hidden;
+      mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+    }
+  }
 
   .header-nav {
     display: flex;
