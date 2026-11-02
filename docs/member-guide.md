@@ -39,7 +39,7 @@ Prefer buttons to keys? Turn on **Use the graphical composer** under **Writing**
 row of small icons then sits under the box:
 
 - at the left, the **smiley** picks an emoji (it goes in as `:name:`), the **picture** adds
-  an image where the cursor is, the **pencil** shows the text controls (**Bold**,
+  an image where the cursor is, the **pencil** shows the text controls (**New line**, like Shift+Enter, **Bold**,
   **Italic**, **Strikethrough**, **Insert link**, **Code**, **Quote**, **Bulleted list**,
   **Numbered list**: select words first to format them) and **+** shows the commands
   (**Spoiler**, **Poll**, **Schedule**, **New topic from this**), the same as typing `!`;
