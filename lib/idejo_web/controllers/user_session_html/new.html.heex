@@ -8,7 +8,7 @@
       <Layouts.full_logo />
       <.header>
         {gettext("Sign in")}
-        <:subtitle>
+        <:subtitle :if={Idejo.Accounts.sign_ups_open?()}>
           {gettext("No account yet?")}
           <.link href={~p"/users/sign-up"} class="font-semibold text-brand hover:underline">
             {gettext("Create one")}

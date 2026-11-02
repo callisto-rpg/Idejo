@@ -54,7 +54,13 @@
       </.form>
       <div class="guest-notice-account">
         <.link href={~p"/users/sign-in"} class="btn btn-primary">{gettext("Sign in")}</.link>
-        <.link href={~p"/users/sign-up"} class="btn btn-primary">{gettext("Sign up")}</.link>
+        <.link
+          :if={Idejo.Accounts.sign_ups_open?()}
+          href={~p"/users/sign-up"}
+          class="btn btn-primary"
+        >
+          {gettext("Sign up")}
+        </.link>
       </div>
     </div>
   </dialog>

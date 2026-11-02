@@ -33,7 +33,7 @@ defmodule Idejo.Settings do
   @default_css_path Path.expand("../../priv/theme/default.css", __DIR__)
   @external_resource @default_css_path
   @default_css @default_css_path |> File.read!() |> String.trim()
-  @registration_modes ~w(open invite_only)
+  @registration_modes ~w(open invite_only closed)
   # PN-16: the push services of Chrome and Edge (FCM), Firefox, Safari and Windows.
   @push_services Enum.join(
                    ~w(fcm.googleapis.com updates.push.services.mozilla.com *.push.apple.com
@@ -43,7 +43,8 @@ defmodule Idejo.Settings do
 
   @definitions %{
     server_name: %{type: :string, default: "Idejo", required: true, max: 80},
-    # Who may sign up (AC-02): anyone, or only people with an invite.
+    # Who may sign up (AC-02): anyone, only people with an invite, or nobody (closed; steward
+    # decision, 2026-11-02, for AD-14).
     registration_mode: %{
       type: :string,
       default: "open",
@@ -153,7 +154,8 @@ defmodule Idejo.Settings do
           | :theme_dark_bg
 
   @doc """
-  The allowed values of `:registration_mode`: open, or invite-only (AC-02).
+  The allowed values of `:registration_mode`: open, invite-only (AC-02), or closed: nobody
+  signs up, not even with an invite (steward decision, 2026-11-02).
   """
   @spec registration_modes() :: [String.t()]
   def registration_modes, do: @registration_modes
@@ -240,7 +242,7 @@ defmodule Idejo.Settings do
   """
   @spec update_settings(User.t(), map()) ::
           {:ok, %{key() => String.t() | integer() | boolean()}} | {:error, Ecto.Changeset.t()}
-  def update_settings(%User{} = admin, attrs) do
+  def update_settings(admin, attrs) when is_struct(admin, User) or is_nil(admin) do
     changeset = change_settings(attrs)
 
     with {:ok, new} <- apply_action(changeset, :update) do

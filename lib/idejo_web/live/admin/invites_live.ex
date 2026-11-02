@@ -17,7 +17,7 @@ defmodule IdejoWeb.Admin.InvitesLive do
     {:ok,
      socket
      |> assign(:page_title, gettext("Invites"))
-     |> assign(:invite_only?, Settings.get(:registration_mode) == "invite_only")
+     |> assign(:registration_mode, Settings.get(:registration_mode))
      |> assign(:new_invite, nil)
      |> load_invites()}
   end
@@ -59,9 +59,15 @@ defmodule IdejoWeb.Admin.InvitesLive do
         </:subtitle>
       </.header>
 
-      <p :if={!@invite_only?} class="alert alert-info">
+      <p :if={@registration_mode == "open"} class="alert alert-info">
         {gettext(
           "Anyone can sign up right now, so invites are not needed. Switch to invite-only in Settings."
+        )}
+      </p>
+
+      <p :if={@registration_mode == "closed"} id="invites-closed" class="alert alert-warning">
+        {gettext(
+          "Sign-ups are closed, so invite links do not work either. Switch to invite-only in Settings."
         )}
       </p>
 

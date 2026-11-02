@@ -73,7 +73,8 @@ defmodule IdejoWeb.Admin.SettingsLive do
           label={gettext("Who can sign up")}
           options={[
             {gettext("Anyone"), "open"},
-            {gettext("Only people with an invite"), "invite_only"}
+            {gettext("Only people with an invite"), "invite_only"},
+            {gettext("Nobody (sign-ups closed)"), "closed"}
           ]}
         />
         <.input

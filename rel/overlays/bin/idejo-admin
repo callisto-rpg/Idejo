@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Command-line recovery (AD-09). In the production bundle:
+# Command-line setup (AD-14) and recovery (AD-09). In the production bundle:
 #
 #   docker compose -f deploy/docker-compose.yml --env-file deploy/.env exec app bin/idejo-admin health
 #
@@ -17,6 +17,11 @@ usage() {
 Usage: bin/idejo-admin COMMAND
 
 Commands:
+  setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
+                                    set up a new server instead of the setup wizard;
+                                    the owner gets an email with a link to choose a
+                                    password (printed here when email cannot go out).
+                                    Registration is open unless given
   reset-owner-password [USERNAME]   give an owner a new password and end their sessions
   backup                            make a backup now, in the backup directory
   restore FILE [--yes]              replace the database and uploads with a backup's
@@ -46,6 +51,33 @@ quote() {
 }
 
 case "${1:-}" in
+  setup)
+    shift
+    name="" email="" registration="open"
+    while [ $# -gt 0 ]; do
+      if [ $# -lt 2 ]; then usage >&2; exit 64; fi
+      case $1 in
+        --name) name=$2 ;;
+        --owner-email) email=$2 ;;
+        --registration) registration=$2 ;;
+        *) usage >&2; exit 64 ;;
+      esac
+      shift 2
+    done
+    if [ -z "$(printf '%s' "$name" | tr -d '[:space:]')" ]; then
+      echo "setup: --name is required." >&2
+      exit 64
+    fi
+    case $email in
+      *@*) ;;
+      *) echo "setup: --owner-email must be an email address." >&2; exit 64 ;;
+    esac
+    case $registration in
+      open | invite | closed) ;;
+      *) echo "setup: --registration must be open, invite or closed." >&2; exit 64 ;;
+    esac
+    run "Idejo.Release.setup(name: $(quote "$name"), owner_email: $(quote "$email"), registration: $(quote "$registration"))"
+    ;;
   reset-owner-password)
     if [ $# -gt 2 ]; then usage >&2; exit 64; fi
     run "Idejo.Release.reset_owner_password($(quote "${2:-}"))"

@@ -31,7 +31,7 @@ defmodule Idejo.AccountsInvitesTest do
       assert admin_id == admin.id
 
       assert {:error, changeset} =
-               Settings.update_settings(admin, %{"registration_mode" => "closed"})
+               Settings.update_settings(admin, %{"registration_mode" => "approval"})
 
       assert "is invalid" in errors_on(changeset).registration_mode
     end

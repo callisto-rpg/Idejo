@@ -48,7 +48,8 @@ defmodule IdejoWeb.UserRegistrationController do
     render(conn, :new,
       page_title: gettext("Create an account"),
       changeset: changeset,
-      invite_only?: Settings.get(:registration_mode) == "invite_only"
+      invite_only?: Settings.get(:registration_mode) == "invite_only",
+      closed?: not Accounts.sign_ups_open?()
     )
   end
 end

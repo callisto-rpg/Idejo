@@ -36,6 +36,79 @@ defmodule Idejo.Release do
     {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
   end
 
+  ## Headless setup (AD-14)
+
+  # The words of `--registration` and the settings they stand for.
+  @registration_modes %{"open" => "open", "invite" => "invite_only", "closed" => "closed"}
+
+  @doc """
+  `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]`:
+  sets the server up like the first-run wizard, through the same code (`Idejo.Setup`). The
+  owner is created as an invite and chooses a password from a link, emailed to them; when it
+  cannot be sent (no SMTP server set yet) the link is printed for the operator to hand over.
+  Fails, changing nothing, once the server is set up or on a wrong value.
+  """
+  @spec setup(keyword()) :: :ok
+  def setup(opts) do
+    name = blank_to_nil(opts[:name]) || fail("The server name (--name) is empty.")
+
+    email =
+      blank_to_nil(opts[:owner_email]) || fail("The owner's email (--owner-email) is empty.")
+
+    mode =
+      Map.get(@registration_modes, opts[:registration] || "open") ||
+        fail("--registration must be open, invite or closed.")
+
+    attrs = %{name: name, owner_email: email, registration_mode: mode}
+
+    case with_repo(fn -> Idejo.Setup.complete_headless(attrs) end) do
+      {:ok, %{owner: owner, delivered: :ok}} ->
+        IO.puts("""
+        #{name} is set up. Its owner is #{owner.email} (username #{owner.username}).
+        An email with a link to choose a password went to #{owner.email}; it works for \
+        #{Accounts.UserToken.set_password_validity_in_days()} days.\
+        """)
+
+      {:ok, %{owner: owner, url: url, delivered: {:error, reason}}} ->
+        IO.puts("""
+        #{name} is set up. Its owner is #{owner.email} (username #{owner.username}).
+        The email with their link could not be sent (#{delivery_error(reason)}).
+        Give them this link to choose a password; it works once, for \
+        #{Accounts.UserToken.set_password_validity_in_days()} days:
+
+            #{url}\
+        """)
+
+      {:error, :already_set_up} ->
+        fail("Idejo is already set up: nothing changed.")
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        fail("Nothing changed: " <> changeset_errors(changeset))
+    end
+  end
+
+  defp delivery_error(:smtp_not_configured),
+    do: "no SMTP server is set: Admin → Email, or IDEJO_SMTP_HOST"
+
+  defp delivery_error(reason), do: inspect(reason, limit: 5, printable_limit: 120)
+
+  defp changeset_errors(changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {message, opts} ->
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+    |> Enum.map_join("; ", fn {field, messages} ->
+      "#{setup_field(field)} #{Enum.join(messages, ", ")}"
+    end)
+  end
+
+  defp setup_field(:email), do: "the owner's email"
+  defp setup_field(:username), do: "the username made from the email"
+  defp setup_field(:server_name), do: "the server name"
+  defp setup_field(field), do: to_string(field)
+
   ## Owner password (AD-09)
 
   @doc """

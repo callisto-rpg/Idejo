@@ -82,10 +82,12 @@ defmodule Idejo.Accounts do
   ## Options
 
     * `:confirmed` - creates the account with its email already verified.
-    * `:skip_invite` - signs up without an invite even when registration is invite-only.
+    * `:skip_invite` - creates the account whatever the registration mode: no invite needed
+      when invite-only, and allowed when closed.
     * `:welcomed` - shows no welcome card (the owner, who wrote what it says).
 
-  Only the first-run wizard uses these options, for the owner (AD-01).
+  Only setup, the wizard or `bin/idejo-admin setup` (AD-01, AD-14), uses these options, for
+  the owner.
   """
   @spec register_user(map(), keyword()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def register_user(attrs, opts \\ []) do
@@ -121,6 +123,13 @@ defmodule Idejo.Accounts do
     do: Ecto.Changeset.put_change(changeset, :welcomed_at, DateTime.utc_now(:second))
 
   @doc """
+  Whether people may sign up at all: false while registration is closed (steward decision,
+  2026-11-02). Sign-up links are hidden then.
+  """
+  @spec sign_ups_open?() :: boolean()
+  def sign_ups_open?, do: Settings.get(:registration_mode) != "closed"
+
+  @doc """
   Records that the user has seen the welcome card (steward decision, 2026-10-23): it shows on
   a new member's first visit until then.
   """
@@ -131,21 +140,32 @@ defmodule Idejo.Accounts do
   def mark_welcomed(%User{} = user), do: {:ok, user}
 
   # Locks the invite so two sign-ups cannot use it at once. An invalid invite is added to the
-  # changeset's errors, so the form shows it together with any other error.
+  # changeset's errors, so the form shows it together with any other error. Closed: nobody
+  # signs up, invite or not.
   defp check_invite(changeset, opts) do
-    if opts[:skip_invite] || Settings.get(:registration_mode) != "invite_only" do
-      {nil, changeset}
-    else
-      code = Ecto.Changeset.get_field(changeset, :invite_code)
+    mode = if opts[:skip_invite], do: "open", else: Settings.get(:registration_mode)
 
-      case code && Repo.one(usable_invite_query(code)) do
-        %Invite{} = invite ->
-          {invite, changeset}
+    case mode do
+      "closed" ->
+        {nil, Ecto.Changeset.add_error(changeset, :email, "cannot sign up: sign-ups are closed")}
 
-        nil ->
-          {nil,
-           Ecto.Changeset.add_error(changeset, :invite_code, "is not valid, used or expired")}
-      end
+      "invite_only" ->
+        find_invite(changeset)
+
+      _open ->
+        {nil, changeset}
+    end
+  end
+
+  defp find_invite(changeset) do
+    code = Ecto.Changeset.get_field(changeset, :invite_code)
+
+    case code && Repo.one(usable_invite_query(code)) do
+      %Invite{} = invite ->
+        {invite, changeset}
+
+      nil ->
+        {nil, Ecto.Changeset.add_error(changeset, :invite_code, "is not valid, used or expired")}
     end
   end
 
@@ -282,16 +302,32 @@ defmodule Idejo.Accounts do
   def get_user_by_email(email) when is_binary(email), do: Repo.get_by(User, email: email)
 
   @doc """
-  Gets the user a valid password reset token was sent to, or `nil`.
+  Gets the user a valid password reset token was sent to, or `nil`. The link an owner made
+  by `bin/idejo-admin setup` gets to choose a first password (AD-14) is one too.
   """
   @spec get_user_by_reset_password_token(String.t()) :: User.t() | nil
   def get_user_by_reset_password_token(token) when is_binary(token) do
-    with {:ok, query} <- UserToken.verify_email_token_query(token, "reset_password"),
-         {user, _token} <- Repo.one(query) do
-      user
-    else
-      _ -> nil
-    end
+    Enum.find_value(["reset_password", "set_password"], fn context ->
+      with {:ok, query} <- UserToken.verify_email_token_query(token, context),
+           {user, _token} <- Repo.one(query) do
+        user
+      else
+        _ -> nil
+      end
+    end)
+  end
+
+  @doc """
+  Makes the link token with which an owner made by `bin/idejo-admin setup` (AD-14) chooses
+  their first password on the password reset page, for
+  #{UserToken.set_password_validity_in_days()} days. Setting it deletes it, like every token
+  of the account.
+  """
+  @spec create_set_password_token(User.t()) :: String.t()
+  def create_set_password_token(%User{} = user) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "set_password")
+    Repo.insert!(user_token)
+    encoded_token
   end
 
   @doc """

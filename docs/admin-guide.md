@@ -53,7 +53,10 @@ corner. It has ten tabs.
 ### Settings
 
 - **Server name**: shown in the header, in page titles and in emails.
-- **Who can sign up**: **Anyone**, or **Only people with an invite** (see [Invites](#invites)).
+- **Who can sign up**: **Anyone**, **Only people with an invite** (see [Invites](#invites)),
+  or **Nobody (sign-ups closed)**: the sign-up page says the server is not taking new
+  members, the Sign up links disappear, and invite links stop working too. Existing members
+  are not affected.
 - **Patience timer (active thread) (seconds)**: from 0 to 600, 15 by default: how long after
   a message's first line its author must wait before starting a new one. 0 means no wait
   once someone has written below. It applies to messages started after you change it.
@@ -222,7 +225,8 @@ their Team role allows. Changes apply at once, also to pages people have open.
 
 With **Only people with an invite** in [Settings](#settings), press **Create an invite
 link** and send the link to one person. Each link works once, for 7 days. The list shows
-which links are unused, used (and by whom) or expired.
+which links are unused, used (and by whom) or expired. While sign-ups are closed, the page
+warns that invite links do not work.
 
 ### Roles
 
