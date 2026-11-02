@@ -7,7 +7,9 @@
 // Topic pages where the reader may react fetch both and build the buttons while the page is
 // idle (`preloadEmoji`, from the `data-emoji-index` element), so the picker opens at once;
 // the built groups move from one opening to the next. The server only hears the choice, as
-// "react". The element is phx-update="ignore".
+// "react". Opened by the graphical composer's emoji button (TP-11; no data-message-id), the
+// choice goes to the composer instead (`idejo:emoji`, as `:name:`) and the picker closes.
+// The element is phx-update="ignore".
 
 let loading = null  // the fetch, shared by every opening on the page
 let groups = null   // the built groups: one element, moved into each opening
@@ -106,7 +108,14 @@ export const EmojiPicker = {
     this.search.addEventListener("input", () => this.filter())
     this.onClick = event => {
       const choice = event.target.closest("button[data-emoji]")
-      if (choice) this.pushEvent("react", {id: this.el.dataset.messageId, emoji: choice.dataset.emoji})
+      if (!choice) return
+      const id = this.el.dataset.messageId
+      if (id) {
+        this.pushEvent("react", {id, emoji: choice.dataset.emoji})
+      } else {
+        window.dispatchEvent(new CustomEvent("idejo:emoji", {detail: choice.dataset.emoji}))
+        this.el.closest("dialog")?.close()
+      }
     }
 
     prepare(this.el.dataset.src, JSON.parse(this.el.dataset.labels))

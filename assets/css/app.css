@@ -2120,6 +2120,62 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
   position: relative;
   border-radius: 0.5rem;
 }
+/* The graphical composer (TP-11; steward decision, 2026-11-02): a bar of monochrome icons
+   under the box, the panels it reveals above it, and Send at the right with its menu. */
+.composer-toolbar {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  &[hidden] { display: none; }
+}
+.composer-toolbar-row,
+.composer-toolbar-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+  &[hidden] { display: none; }
+}
+.composer-toolbar-panel {
+  padding: 0.125rem;
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--color-base-content) 4%, transparent);
+}
+.composer-toolbar-gap { flex: 1; }
+.composer-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--ink-faint);
+  cursor: pointer;
+  &:hover, &:focus-visible, &[aria-expanded="true"] {
+    color: var(--color-base-content);
+    background: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  }
+}
+.composer-tool-labelled { font-size: 0.875rem; }
+/* A long press opens Send's menu, not the phone's own. */
+.composer-send {
+  color: var(--color-base-content);
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.composer-send-wrap { position: relative; }
+.composer-send-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.25rem);
+  z-index: 30;
+  width: max-content;
+  max-width: 80vw;
+  & [aria-disabled="true"] { color: var(--ink-faint); cursor: default; }
+}
+
 /* AX-01: no ring around the box while typing (steward decision, 2026-10-25): the focus shows
    as the thick caret the backdrop draws, and the bubble beside it. */
 .composer-backdrop,

@@ -45,6 +45,7 @@ defmodule Idejo.Accounts.User do
     # Automatic punctuation (steward decision, 2026-10-26): a `.` after a sent line that ends
     # without punctuation (GM-02), set in the profile. See Idejo.Messages.commit/4.
     field :auto_punctuation, :boolean, default: true
+    field :graphical_composer, :boolean, default: false
     # Whether a message's actions always show on touch screens and on screens that point
     # (steward decision, 2026-10-31), set in the profile; read by IdejoWeb.TopicLive.
     field :controls_on_mobile, :boolean, default: false
@@ -110,12 +111,12 @@ defmodule Idejo.Accounts.User do
 
   @doc """
   A changeset for the user's writing preferences: automatic punctuation (steward decision,
-  2026-10-26).
+  2026-10-26) and the graphical composer (TP-11; steward decision, 2026-11-02).
   """
   def writing_changeset(user, attrs) do
     user
-    |> cast(attrs, [:auto_punctuation])
-    |> validate_required([:auto_punctuation])
+    |> cast(attrs, [:auto_punctuation, :graphical_composer])
+    |> validate_required([:auto_punctuation, :graphical_composer])
   end
 
   @doc """

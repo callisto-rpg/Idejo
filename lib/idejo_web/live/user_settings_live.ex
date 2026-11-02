@@ -209,8 +209,9 @@ defmodule IdejoWeb.UserSettingsLive do
     end
   end
 
-  # Automatic punctuation (steward decision, 2026-10-26): open topic pages pick it up when
-  # reloaded (`TopicLive` reads it at mount, for the composer and for the engine alike).
+  # Automatic punctuation (steward decision, 2026-10-26) and the graphical composer (TP-11;
+  # steward decision, 2026-11-02): open topic pages pick them up when reloaded (`TopicLive`
+  # reads them at mount, for the composer and for the engine alike).
   def handle_event("save_writing", %{"writing" => params}, socket) do
     case Accounts.update_user_writing(socket.assigns.current_scope.user, params) do
       {:ok, user} ->
@@ -522,6 +523,18 @@ defmodule IdejoWeb.UserSettingsLive do
           <p id="auto-punctuation-help" class="text-sm opacity-70 -mt-1 mb-4">
             {gettext(
               "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, your messages keep the text exactly as typed."
+            )}
+          </p>
+          <%!-- TP-11 (steward decision, 2026-11-02). --%>
+          <.input
+            field={@writing_form[:graphical_composer]}
+            type="checkbox"
+            label={gettext("Use the graphical composer")}
+            aria-describedby="graphical-composer-help"
+          />
+          <p id="graphical-composer-help" class="text-sm opacity-70 -mt-1 mb-4">
+            {gettext(
+              "Adds buttons under the box you write in: emoji, images, text formatting, more commands, and Send. Open topics show them once reloaded."
             )}
           </p>
           <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>

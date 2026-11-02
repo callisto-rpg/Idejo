@@ -239,13 +239,16 @@ defmodule IdejoWeb.ReactionComponents do
   @spec picker_labels() :: String.t()
   def picker_labels, do: Jason.encode!(Map.new(Emoji.categories(), &{&1, category_name(&1)}))
 
-  attr :picker, :map, required: true, doc: "`%{message_id: id}`"
+  attr :picker, :map,
+    required: true,
+    doc: "`%{message_id: id}`, or `%{message_id: nil}` for the graphical composer (TP-11)"
 
   @doc """
   Every emoji, in groups, with a search box: the + of `add_reaction/1`. Only its frame is
   rendered here; the `EmojiPicker` hook fetches the list (`/emoji-index.json`, kept by the
   browser), draws it and searches it, so opening the picker sends nothing over the live
-  connection. A choice is pushed as `"react"`.
+  connection. A choice is pushed as `"react"`; without a message, it goes into the composer
+  (the graphical composer's emoji button, TP-11) as `:name:`.
   """
   def emoji_picker(assigns) do
     assigns = assign(assigns, labels: picker_labels(), index: picker_index())
@@ -259,7 +262,9 @@ defmodule IdejoWeb.ReactionComponents do
       aria-labelledby="emoji-picker-title"
     >
       <div class="modal-box emoji-picker">
-        <h2 id="emoji-picker-title" class="inline-card-title">{gettext("Add a reaction")}</h2>
+        <h2 id="emoji-picker-title" class="inline-card-title">
+          {if @picker.message_id, do: gettext("Add a reaction"), else: gettext("Insert an emoji")}
+        </h2>
         <div
           id="emoji-picker-body"
           class="emoji-picker-body"
