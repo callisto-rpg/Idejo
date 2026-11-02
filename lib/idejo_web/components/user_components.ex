@@ -5,7 +5,7 @@ defmodule IdejoWeb.UserComponents do
   @moduledoc """
   The user card (TP-10): what an @mention leads to. Display name, username, picture, roles
   and the bio under them (AC-04), on the page at `/u/{id}` and in the dialog a mention opens
-  in a topic. Server moderators also get a "User
+  in a topic (there a bio past 200 characters is cut, `bio_limit`). Server moderators also get a "User
   actions" button on it, with the moderation actions on the account (MO-02).
 
   And the avatar (AC-04) wherever a user is shown: their picture, or their initial when they
@@ -67,7 +67,13 @@ defmodule IdejoWeb.UserComponents do
     default: "h2",
     doc: "h1 on the card's own page (AX-01), h2 in a dialog"
 
+  attr :bio_limit, :integer,
+    default: nil,
+    doc: "past this many characters the bio shows as plain text, cut; nil shows it whole"
+
   def user_card(assigns) do
+    assigns = assign(assigns, :short_bio, short_bio(assigns.card.user, assigns.bio_limit))
+
     ~H"""
     <div id={"#{@id}-content"} class="flex items-start gap-4">
       <.avatar user={@card.user} size={:large} />
@@ -83,11 +89,13 @@ defmodule IdejoWeb.UserComponents do
         </ul>
         <%!-- AC-04: the bio, the user's Markdown, under the roles. --%>
         <IdejoWeb.MessageComponents.body
-          :if={@card.user.bio_html}
+          :if={@card.user.bio_html && !@short_bio}
           html={@card.user.bio_html}
           id={"#{@id}-bio"}
           class="user-bio"
         />
+        <%!-- A long bio, in the dialog: its beginning, the whole one on the profile. --%>
+        <p :if={@short_bio} id={"#{@id}-bio"} class="user-bio">{@short_bio}</p>
         <%!-- Opens the conversation with them, started on first use (steward decision,
              2026-10-27); a plain form, so no JavaScript is needed. --%>
         <.form
@@ -107,6 +115,15 @@ defmodule IdejoWeb.UserComponents do
       </div>
     </div>
     """
+  end
+
+  # The bio's first `limit` characters as text, when it is longer; nil to show it whole.
+  defp short_bio(_user, nil), do: nil
+  defp short_bio(%{bio_html: nil}, _limit), do: nil
+
+  defp short_bio(%{bio_html: html}, limit) do
+    text = Idejo.Forum.html_excerpt(html, limit)
+    if String.ends_with?(text, "…"), do: text
   end
 
   # MO-02: the "User actions" button and what it opens. A <details>, so it works from the

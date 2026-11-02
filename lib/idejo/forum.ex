@@ -1929,7 +1929,14 @@ defmodule Idejo.Forum do
   def excerpt(%Message{spoiler: true}, _length),
     do: gettext("(spoiler)")
 
-  def excerpt(%Message{body_html: html}, length) do
+  def excerpt(%Message{body_html: html}, length), do: html_excerpt(html, length)
+
+  @doc """
+  The plain text of stored HTML (FD-03), cut like `excerpt/2`'s: inline spoilers masked,
+  emoji read as their alt, words parted by blocks and line breaks.
+  """
+  @spec html_excerpt(String.t(), pos_integer()) :: String.t()
+  def html_excerpt(html, length) do
     text =
       html
       |> mask_spoilers()

@@ -21,7 +21,7 @@ defmodule IdejoWeb.CardComponents do
 
   def inline_card(%{card: %{kind: :user}} = assigns) do
     ~H"""
-    <UserComponents.user_card card={@card.card} id="inline-card" />
+    <UserComponents.user_card card={@card.card} id="inline-card" bio_limit={200} />
     <.open_link path={@card.path} label={gettext("Open profile")} />
     """
   end
