@@ -1892,10 +1892,15 @@
     bottom: calc(100% + 0.25rem);
     z-index: 20;
     display: flex;
+    /* Ten choices and + (👍 and 👎 added, steward decision, 2026-11-03): one row where it
+       fits, else a second one, never past a phone's edge. */
+    flex-wrap: wrap;
+    width: max-content;
+    max-width: calc(100vw - 3rem);
     gap: 0.125rem;
     padding: 0.25rem;
     border: 1px solid var(--overlay-line);
-    border-radius: 999px;
+    border-radius: 1.25rem;
     background: var(--color-base-100);
     box-shadow: var(--shadow-lift);
   }

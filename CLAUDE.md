@@ -1128,7 +1128,7 @@ The contract (M6; mark each item done here when its PR merges):
   `{:reactions, message_id, summary}` goes to the topic, worked out once (NF-01).
   `TopicLive` shows `ReactionComponents.reaction_bar/1` under each message (count when
   several chose an emoji; buttons with `aria-pressed`), a "React" `<details>` among the
-  actions, drawn like Edit or Report (`add_reaction/1`: the eight defaults and +; a click
+  actions, drawn like Edit or Report (`add_reaction/1`: the ten defaults, `Emoji.defaults/0`, and +; a click
   outside closes it, `assets/js/account_menu.js`; steward decision, 2026-10-25) and the + dialog (`emoji_picker/1`, reusing
   the `InlineCard` hook with `data-close-event`). The server renders only its frame: the
   `EmojiPicker` hook (`assets/js/emoji_picker.js`, `phx-update="ignore"`) fetches

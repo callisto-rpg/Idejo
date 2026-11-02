@@ -50,7 +50,7 @@ defmodule Idejo.EmojiTest do
     end
 
     assert Enum.map(Emoji.defaults(), & &1.name) ==
-             ~w(agree disagree this same yes no joy heart)
+             ~w(agree disagree this same yes no joy heart +1 -1)
 
     assert [{"Server", [%{name: "bruh"}]}] = Emoji.groups("bruh")
     assert "joy" in (Emoji.groups(":joy:") |> Enum.flat_map(&elem(&1, 1)) |> Enum.map(& &1.name))

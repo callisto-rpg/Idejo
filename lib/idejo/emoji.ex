@@ -29,8 +29,8 @@ defmodule Idejo.Emoji do
   # The server's own reactions, in reactions/ (steward's work, CC-BY-4.0).
   @own ~w(agree disagree this same yes no bruh nice oof thank-you true)
 
-  # The reaction picker's first choices (steward decision).
-  @defaults ~w(agree disagree this same yes no joy heart)
+  # The reaction picker's first choices (steward decisions; 👍 and 👎 added 2026-11-03).
+  @defaults ~w(agree disagree this same yes no joy heart +1 -1)
 
   @type t :: %{name: String.t(), char: String.t() | nil, src: String.t(), category: String.t()}
 
@@ -115,7 +115,7 @@ defmodule Idejo.Emoji do
   @spec by_char(String.t()) :: t() | nil
   def by_char(char) when is_binary(char), do: Map.get(@by_char, char)
 
-  @doc "The reaction picker's first choices: the server's own six, then joy and heart."
+  @doc "The reaction picker's first choices: the server's own six, then joy, heart, 👍 and 👎."
   @spec defaults() :: [t()]
   def defaults, do: Enum.map(@defaults, &lookup/1)
 

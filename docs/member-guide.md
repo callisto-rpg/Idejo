@@ -142,7 +142,7 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 - **Emoji**: write `:name:`, such as `:joy:`, `:tada:` or `:+1:`, or type an emoji; it shows
   as a picture. This server also has its own: `:agree:`, `:disagree:`, `:this:`, `:same:`,
   `:yes:`, `:no:`, `:bruh:`, `:nice:`, `:oof:`, `:thank-you:`, `:true:`.
-- **Reactions**: click **React** under a message for eight quick choices (a click elsewhere
+- **Reactions**: click **React** under a message for ten quick choices (a click elsewhere
   closes them), or **+** for
   every emoji (with a search box). Your reactions show under the message, with a count when
   several people chose the same one; click one to add yours or take it back. You may add
