@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 
-// Applies the light/dark theme, the hidden sidebar and its rolled-up links (sidebar.js) and
+// Applies the light/dark theme, the sidebar's rolled-up links (sidebar.js) and
 // the tutorial bubbles' choice, before first paint. Loaded as a blocking
 // <script> in the root layout; kept out of the HTML so the content security
 // policy can refuse inline scripts (SP-05).
@@ -19,12 +19,12 @@
       document.documentElement.setAttribute("data-theme-source", "user");
     }
   };
-  // Tells the stylesheet that scripts run, so the sidebar button can be shown.
+  // Tells the stylesheet that scripts run.
   document.documentElement.dataset.js = ""
   try {
-    if (localStorage.getItem("idejo:sidebar") === "hidden") {
-      document.documentElement.dataset.sidebar = "hidden"
-    }
+    // The sidebar no longer hides on wide screens (steward decision, 2026-11-03): forget an
+    // earlier choice.
+    localStorage.removeItem("idejo:sidebar")
     // The sidebar's links rolled into icons (steward decision, 2026-10-28; sidebar.js).
     if (localStorage.getItem("idejo:quicklinks") === "rolled") {
       document.documentElement.dataset.quicklinks = "rolled"

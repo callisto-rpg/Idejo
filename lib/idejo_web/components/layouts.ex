@@ -66,8 +66,10 @@ defmodule IdejoWeb.Layouts do
 
     ~H"""
     <header class="app-header">
-      <%!-- Shown and wired by assets/js/sidebar.js: without JavaScript the sidebar stays
-           open on wide screens, and the home page lists the categories anyway. --%>
+      <%!-- Opens the drawer on narrow screens (assets/js/sidebar.js); not shown in the bar
+           (steward decision, 2026-11-03), only while it has the keyboard focus, so keyboard
+           and screen-reader users still reach the categories. Never on wide screens, where
+           the sidebar always shows. --%>
       <button
         type="button"
         id="sidebar-toggle"

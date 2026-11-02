@@ -336,8 +336,6 @@
   }
   @media (min-width: 640px) { .app-header { padding: 0 1.25rem; } }
 
-  .sidebar-toggle { display: none; }
-  [data-js] .sidebar-toggle { display: inline-flex; }
 
   .brand {
     display: inline-flex;
@@ -406,6 +404,9 @@
     &.is-parent { flex: 0 1 auto; max-width: 40%; }
   }
   .header-crumb-sep { flex: none; margin: 0 0.5rem; color: var(--ink-faint); }
+  /* Phones: the logo alone before the path, as close to its "›" as the parts after it
+     (steward decision, 2026-11-03): the bar's gap taken back. */
+  @media (max-width: 639px) { .header-crumbs { margin-left: -0.75rem; } }
   .header-crumb-name { overflow: hidden; text-overflow: ellipsis; }
   .header-crumb .category-mark,
   .header-crumb .header-crumb-icon { display: none; }
@@ -759,9 +760,8 @@
     overflow-y: auto;
     padding: 1.25rem 0.75rem;
     border-right: 1px solid var(--hairline);
-    transition: margin-left 200ms ease;
   }
-  /* Narrow screens: a drawer over the page, closed until the header's button opens it. */
+  /* Narrow screens: a drawer over the page, closed until a swipe or the button opens it. */
   @media (max-width: 1023.98px) {
     .app-sidebar {
       position: fixed;
@@ -780,13 +780,6 @@
       inset: var(--header-h) 0 0 0;
       z-index: 44;
       background: oklch(0% 0 0 / 0.3);
-    }
-  }
-  @media (min-width: 1024px) {
-    [data-sidebar="hidden"] .app-sidebar {
-      margin-left: calc(-1 * var(--sidebar-w));
-      visibility: hidden;
-      transition: margin-left 200ms ease, visibility 200ms;
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -3536,4 +3529,25 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
   font-size: 0.8125em;
   font-weight: 600;
   text-align: center;
+}
+
+/* The drawer's button (steward decision, 2026-11-03): not shown in the bar. On narrow
+   screens it stays for the keyboard and screen readers, shown only while it has the keyboard
+   focus, like the skip link; on wide ones the sidebar never hides, and without scripts it
+   would do nothing. Outside the layers: daisyUI's `.btn` display would win over a layered
+   rule. */
+:root:not([data-js]) .sidebar-toggle { display: none; }
+@media (min-width: 1024px) { .sidebar-toggle { display: none; } }
+@media (max-width: 1023.98px) {
+  .sidebar-toggle:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    border: 0;
+  }
 }
