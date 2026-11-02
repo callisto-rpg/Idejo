@@ -3,15 +3,14 @@
 
 import {syncToggles} from "./toggles"
 
-// The header's button that hides and shows the categories sidebar. On wide screens the
-// sidebar sits beside the page and the choice is remembered (theme.js applies it before
-// the first paint); on narrow ones it opens over the page, for the moment only.
+// The categories sidebar. On wide screens it always sits beside the page (steward decision,
+// 2026-11-03); on narrow ones it is a drawer over the page, opened by a swipe right or by the
+// header's button, which shows only while it has the keyboard focus (like the skip link).
 const root = document.documentElement
 const wide = matchMedia("(min-width: 1024px)")
 const toggle = () => document.getElementById("sidebar-toggle")
 
-const isShown = () =>
-  wide.matches ? root.dataset.sidebar !== "hidden" : root.dataset.drawer === "open"
+const isShown = () => wide.matches || root.dataset.drawer === "open"
 
 const sync = () => toggle()?.setAttribute("aria-expanded", String(isShown()))
 
@@ -93,17 +92,8 @@ const closeDrawer = () => {
 }
 
 const flip = () => {
-  if (wide.matches) {
-    const hidden = root.dataset.sidebar !== "hidden"
-    if (hidden) root.dataset.sidebar = "hidden"
-    else delete root.dataset.sidebar
-    try {
-      if (hidden) localStorage.setItem("idejo:sidebar", "hidden")
-      else localStorage.removeItem("idejo:sidebar")
-    } catch (_e) {
-      // Storage refused (private window): the choice lasts for this page only.
-    }
-  } else if (root.dataset.drawer === "open") {
+  if (wide.matches) return
+  if (root.dataset.drawer === "open") {
     delete root.dataset.drawer
   } else {
     root.dataset.drawer = "open"

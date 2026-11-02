@@ -1211,9 +1211,11 @@ The contract (M6; mark each item done here when its PR merges):
   category with topics has a `.sidebar-fold` toggle, `aria-pressed`, that folds it to its
   `.has-news` topics and the one on screen, remembered in `localStorage`
   (`idejo:folded-categories`) and applied again by `applyFolds()` after the Notifier swaps
-  the sidebar; steward decision, 2026-10-23); `assets/js/sidebar.js` hides it on wide screens (remembered in `localStorage`, applied
-  before paint by `theme.js`) and opens it as a drawer on narrow ones, where a quick sideways
-  swipe right opens it and left closes it; followed topics there carry a dot for what is
+  the sidebar; steward decision, 2026-10-23); on wide screens it always shows (steward decision, 2026-11-03: no
+  hiding; `theme.js` clears the old `idejo:sidebar` choice); `assets/js/sidebar.js` opens it
+  as a drawer on narrow ones, where a quick sideways swipe right opens it and left closes it,
+  and the header's `#sidebar-toggle` (not shown in the bar: visually hidden until it has the
+  keyboard focus, AX-01; never on wide screens) opens it too; followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their
   notifications: grey new, blue a +role mention, orange a reply, red an @mention; the
   strongest wins) and a bolder
