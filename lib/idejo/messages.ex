@@ -51,13 +51,21 @@ defmodule Idejo.Messages do
   @doc """
   Broadcasts a message event on a topic. A `{:message, message}` goes out with what a topic
   view shows of it loaded (author, versions, the message it replies to), loaded here once
-  rather than by each of the topic's viewers (NF-01). Call it once the message's transaction
+  rather than by each of the topic's viewers (NF-01), with the role shown next to the
+  author's name (`author_role`). Call it once the message's transaction
   has committed: it also announces the notifications written with it
   (`Idejo.Notifications.announce/1`).
   """
   @spec broadcast(Ecto.UUID.t(), term()) :: :ok | {:error, term()}
   def broadcast(topic_id, {:message, %Message{} = message}) do
     message = Repo.preload(message, @shown, force: true)
+    # The role next to the author's name, once here rather than by each viewer new to the
+    # author: 200 viewers of a topic where 30 people start writing asked for it 6,000 times.
+    message = %{
+      message
+      | author_role: Idejo.Access.shown_role(Idejo.Access.roles_of(message.author))
+    }
+
     # Committed: the notifications written with it go out live too.
     :ok = Notifications.announce(message)
     Phoenix.PubSub.broadcast(@pubsub, "topic:" <> topic_id, {:message, message})

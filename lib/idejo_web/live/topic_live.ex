@@ -100,6 +100,7 @@ defmodule IdejoWeb.TopicLive do
            lost_access?: false,
            roles: %{},
            committed: nil,
+           read_timer: nil,
            editing: nil,
            refocus: nil,
            can_moderate?: false,
@@ -152,7 +153,7 @@ defmodule IdejoWeb.TopicLive do
         {:ok,
          socket
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
-         |> assign(:committed, nil)
+         |> assign(committed: nil, read_timer: nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, can_fork?(user, topic))
          |> assign(:automessages, automessages(user, topic))
@@ -638,14 +639,25 @@ defmodule IdejoWeb.TopicLive do
   # The role next to each author's name (GM-07): their highest-ranked one that is "Visible
   # next to name" (steward decision, 2026-10-23), or none.
   # Only authors not seen yet are looked up, so most events cost no query (NF-01).
+  # A broadcast message carries its author's role (`author_role`, NF-04): no query then.
   defp add_roles(socket, messages) do
-    missing =
+    {known, rest} =
       messages
-      |> Enum.map(& &1.author)
-      |> Enum.uniq_by(& &1.id)
-      |> Enum.reject(&Map.has_key?(socket.assigns.roles, &1.id))
+      |> Enum.reject(&Map.has_key?(socket.assigns.roles, &1.author_id))
+      |> Enum.uniq_by(& &1.author_id)
+      |> Enum.split_with(&(&1.author_role != :unknown))
 
-    if missing == [], do: socket, else: assign_roles(socket, missing)
+    socket =
+      if known == [],
+        do: socket,
+        else:
+          assign(
+            socket,
+            :roles,
+            Enum.reduce(known, socket.assigns.roles, &Map.put(&2, &1.author_id, &1.author_role))
+          )
+
+    if rest == [], do: socket, else: assign_roles(socket, Enum.map(rest, & &1.author))
   end
 
   # The composer shows its author's name before their first message here (no jump on the
@@ -685,6 +697,27 @@ defmodule IdejoWeb.TopicLive do
 
   defp sync_composer(socket), do: socket
 
+  # TP-07: a new message arriving while the end is shown is read (steward decision), marked
+  # a moment later, once for all that came meanwhile, and at a moment of its own for each
+  # view (NF-04): 200 viewers marking each of 30 messages opened within seconds ran the
+  # database pool dry. `:read_mark_ms` is the wait and its spread; 0 marks at once.
+  defp mark_read_soon(%{assigns: %{read_timer: ref}} = socket) when ref != nil, do: socket
+
+  defp mark_read_soon(socket) do
+    case Application.get_env(:idejo, :read_mark_ms, {2_000, 2_000}) do
+      {0, _spread} ->
+        Reading.mark_read(user(socket), socket.assigns.topic)
+        socket
+
+      {wait, spread} ->
+        assign(
+          socket,
+          :read_timer,
+          Process.send_after(self(), :mark_read, wait + :rand.uniform(spread))
+        )
+    end
+  end
+
   defp open_message(_messages, nil), do: nil
 
   defp open_message(messages, user),
@@ -709,10 +742,9 @@ defmodule IdejoWeb.TopicLive do
       # of two messages arrive out of order).
       socket.assigns.at_end? and within_run?(socket.assigns, message) ->
         # A message that arrives while the topic is open is read (TP-07).
-        Reading.mark_read(user(socket), socket.assigns.topic)
-
         {:noreply,
          socket
+         |> mark_read_soon()
          |> arrived(message)
          |> put_message(message)
          |> put_bounds()
@@ -733,6 +765,12 @@ defmodule IdejoWeb.TopicLive do
       true ->
         {:noreply, track_mine(socket, message)}
     end
+  end
+
+  # The read mark a new message asked for (`mark_read_soon/1`), while the end is still shown.
+  def handle_info(:mark_read, socket) do
+    if socket.assigns.at_end?, do: Reading.mark_read(user(socket), socket.assigns.topic)
+    {:noreply, assign(socket, :read_timer, nil)}
   end
 
   def handle_info({:committed_shown, id}, %{assigns: %{committed: id}} = socket),

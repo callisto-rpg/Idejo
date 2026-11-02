@@ -41,6 +41,9 @@ defmodule Idejo.Messages.Message do
     belongs_to :reply_to, __MODULE__
     # The automessage it was posted from (Idejo.Messages.Automessages), for its cooldown.
     field :automessage_id, Ecto.UUID
+    # The role shown next to the author's name, worked out once by Idejo.Messages.broadcast/2
+    # for every viewer of the topic (NF-04): a role, nil (none shown), or :unknown.
+    field :author_role, :any, virtual: true, default: :unknown
     # Earlier versions, kept only when sent text was changed (GM-11, TP-05).
     has_many :versions, Idejo.Messages.Version, preload_order: [asc: :created_at]
 
