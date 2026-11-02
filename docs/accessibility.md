@@ -6,8 +6,11 @@ by hand before a release.
 ## Checked by the tests
 
 `mix test` (and CI) runs `test/idejo_web/accessibility_test.exs`, which renders every page
-(public, signed-in, moderation and admin) and the live topic in its states (composer,
-message editor in Write and Preview, moderation forms). It audits the HTML with
+(public, signed-in, moderation and admin, and those an emailed link opens), a long topic's
+windows (its end with the unread line, a page, around a message) and the live topic in its
+states (composer, message editor in Write and Preview, moderation forms, the inline cards,
+the emoji picker, who reacted, the Moderate card, selecting and moving messages, "N new
+messages", the "too soon" and delete-own dialogs). It audits the HTML with
 `IdejoWeb.Accessibility` (`test/support/accessibility.ex`):
 
 - `<html lang>`, exactly one `<main>`, a `<footer>`, and distinct names for several `<nav>`s;

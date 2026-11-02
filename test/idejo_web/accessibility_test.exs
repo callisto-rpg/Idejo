@@ -138,6 +138,57 @@ defmodule IdejoWeb.AccessibilityTest do
   end
 
   @tag req: "AX-01"
+  test "AX-01 the pages an emailed link opens", %{conn: conn, member: member} do
+    unconfirmed = unconfirmed_user_fixture()
+
+    confirm =
+      extract_user_token(&Accounts.deliver_user_confirmation_instructions(unconfirmed, &1))
+
+    reset = extract_user_token(&Accounts.deliver_user_reset_password_instructions(member, &1))
+
+    assert_all_accessible(conn, [
+      ~p"/users/confirm/#{confirm}",
+      ~p"/users/reset-password/#{reset}"
+    ])
+  end
+
+  @tag req: "AX-01"
+  test "AX-01 a long topic's windows: its end, a page, around a message, the unread line", %{
+    conn: conn,
+    general: general,
+    member: member,
+    reader: reader,
+    idea: idea
+  } do
+    {:ok, topic} =
+      Forum.create_topic(member, general, %{
+        "title" => "Long",
+        "body" => "Hi",
+        "tag_ids" => [idea.id]
+      })
+
+    post = fn range ->
+      for i <- range, do: post!(Enum.at([member, reader], rem(i, 2)), topic, i)
+    end
+
+    _read = post.(1..60)
+    :ok = Idejo.Reading.mark_read(reader, topic)
+    middle = 61..150 |> then(post) |> Enum.at(10)
+    path = ~p"/t/#{topic.id}/#{topic.slug}"
+
+    page = conn |> log_in_user(reader) |> get(path) |> html_response(200)
+    assert page =~ ~s(id="unread-line") and page =~ ~s(id="earlier-messages")
+    assert Accessibility.audit(page) == []
+
+    assert_all_accessible(conn, [path, path <> "?page=2", path <> "?around=#{middle.id}"])
+  end
+
+  defp post!(author, topic, i) do
+    {:ok, message} = Forum.post_message(author, topic, %{"body" => "Message #{i}"})
+    message
+  end
+
+  @tag req: "AX-01"
   test "AX-01 the welcome card a new member sees on their first visit", %{conn: conn} do
     conn = log_in_user(conn, user_fixture(%{welcome: true}))
     assert_all_accessible(conn, [~p"/", ~p"/rules"])
@@ -367,6 +418,85 @@ defmodule IdejoWeb.AccessibilityTest do
 
     assert has_element?(reader, ".spoiler-reveal")
     assert_fragment_accessible(render(reader), "#{path}, spoiler")
+  end
+
+  @tag req: "AX-01"
+  test "AX-01 the live topic's cards, menus and moderation dialogs", %{
+    topic: topic,
+    member: member,
+    general: general,
+    admin: admin,
+    reply: reply
+  } do
+    {:ok, view, _html} =
+      live_isolated(log_in_user(build_conn(), admin), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
+    for {kind, ref} <- [
+          {"user", member.id},
+          {"topic", topic.id},
+          {"category", general.slug},
+          {"role", "moderator"}
+        ] do
+      render_hook(view, "show_card", %{"kind" => kind, "ref" => ref})
+      assert has_element?(view, "#inline-card-name")
+      assert_fragment_accessible(render(view), "#{kind} card")
+      render_hook(view, "hide_card", %{})
+    end
+
+    steps = [
+      {"emoji picker", "#emoji-picker", "emoji_picker", %{"id" => reply.id}, "close_picker"},
+      {"who reacted", "#reaction-who", "reaction_who", %{"id" => reply.id}, nil},
+      {"who reacted, all", "#reaction-card", "reaction_who_all", %{}, "close_reaction_who"},
+      {"Moderate", "#moderate-card", "open_moderate", %{"id" => reply.id}, "close_moderate"},
+      {"select to move", "#move-banner", "start_selecting", %{"id" => reply.id}, nil},
+      {"move to a new thread", "#move-dialog", "move_to", %{"to" => "new"}, "close_move"},
+      {"move to an existing thread", "#move-dialog", "move_to", %{"to" => "existing"}, nil},
+      {"search a thread", "#move-dialog", "search_targets", %{"q" => "Garden"},
+       "cancel_selecting"},
+      {"select to delete", "#delete-banner", "start_selecting",
+       %{"id" => reply.id, "for" => "delete"}, "cancel_selecting"}
+    ]
+
+    for {where, selector, event, params, close} <- steps do
+      render_hook(view, event, params)
+      assert has_element?(view, selector), "#{where}: no #{selector}"
+      assert_fragment_accessible(render(view), where)
+      if close, do: render_hook(view, close, %{})
+    end
+
+    # Someone else's new message while the window does not reach the end: "N new messages".
+    render_hook(view, "load_earlier", %{})
+    {:ok, _} = Forum.post_message(member, topic, %{"body" => "Later"})
+    assert_fragment_accessible(render(view), "new messages")
+  end
+
+  @tag req: "AX-01"
+  test "AX-01 the author's dialogs: too soon for a new message, deleting their own", %{
+    topic: topic,
+    member: member,
+    admin: admin
+  } do
+    {:ok, _} = Idejo.Settings.update_settings(admin, %{"gm_early_reply" => "false"})
+    [first | _] = Forum.list_messages(topic)
+
+    {:ok, view, _html} =
+      live_isolated(log_in_user(build_conn(), member), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
+    render_hook(view, "commit", %{"body" => "Open", "break" => false})
+    render_hook(view, "reply", %{"id" => first.id})
+    render_hook(view, "commit", %{"body" => "A reply", "break" => false})
+    assert has_element?(view, "#too-soon-dialog")
+    assert_fragment_accessible(render(view), "too soon")
+
+    [edited | _] = for m <- Forum.list_messages(topic), m.edited, do: m
+    view |> element("#message-#{edited.id}-edit") |> render_click()
+    render_hook(view, "commit", %{"body" => "", "break" => false})
+    assert has_element?(view, "#delete-own-dialog")
+    assert_fragment_accessible(render(view), "deleting one's own message")
   end
 
   @tag req: "AX-01"
