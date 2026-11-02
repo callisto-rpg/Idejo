@@ -83,4 +83,42 @@ defmodule IdejoWeb.LiveUpdateSizeTest do
     {:ok, _} = Reactions.toggle(user_fixture(), first, "heart")
     assert next_diff(view) < 1_000
   end
+
+  # The entries of the messages an update did not touch are kept as they were, the very same
+  # terms, so neither the view nor LiveView's keyed list works them out again (NF-01).
+  @tag req: "NF-01"
+  test "NF-01 an update makes again only the entry of the message it changed", %{
+    topic: topic,
+    view: view
+  } do
+    # Compared in the view's own process: :sys.get_state/1 would copy them.
+    in_view = fn fun ->
+      me = self()
+
+      :sys.replace_state(view.pid, fn state ->
+        send(me, {:in_view, fun.(state.socket.assigns.listed.pairs)})
+        state
+      end)
+
+      assert_receive {:in_view, result}
+      result
+    end
+
+    writer = user_fixture()
+    {:ok, message} = Messages.commit(writer, topic, "Hello")
+    render(view)
+    in_view.(&Process.put(:pairs_before, &1))
+
+    {:ok, _} = Messages.commit(writer, topic, "Hello. And more")
+    render(view)
+
+    remade =
+      in_view.(fn later ->
+        before = Process.get(:pairs_before)
+
+        for {id, pair} <- later, not :erts_debug.same(pair, before[id]), do: id
+      end)
+
+    assert remade == [message.id]
+  end
 end

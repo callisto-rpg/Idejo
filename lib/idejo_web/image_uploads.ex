@@ -20,13 +20,17 @@ defmodule IdejoWeb.ImageUploads do
 
   @doc """
   Allows image uploads under `name`, for a user allowed to post: `allowed?` false leaves
-  them off.
+  them off. `after`, given, runs on the socket after each upload's progress (TopicLive
+  brings its message list up to date with it, as after every event).
   """
-  @spec allow(Phoenix.LiveView.Socket.t(), atom(), boolean()) :: Phoenix.LiveView.Socket.t()
-  def allow(socket, name, allowed? \\ true)
-  def allow(socket, _name, false), do: assign(socket, :image_error, nil)
+  @spec allow(Phoenix.LiveView.Socket.t(), atom(), boolean(), keyword()) ::
+          Phoenix.LiveView.Socket.t()
+  def allow(socket, name, allowed? \\ true, opts \\ [])
+  def allow(socket, _name, false, _opts), do: assign(socket, :image_error, nil)
 
-  def allow(socket, name, true) do
+  def allow(socket, name, true, opts) do
+    after_progress = Keyword.get(opts, :after, & &1)
+
     socket
     |> assign(:image_error, nil)
     |> allow_upload(name,
@@ -34,7 +38,10 @@ defmodule IdejoWeb.ImageUploads do
       max_entries: 1,
       max_file_size: Uploads.max_bytes(),
       auto_upload: true,
-      progress: &progress/3
+      progress: fn name, entry, socket ->
+        {:noreply, socket} = progress(name, entry, socket)
+        {:noreply, after_progress.(socket)}
+      end
     )
   end
 
