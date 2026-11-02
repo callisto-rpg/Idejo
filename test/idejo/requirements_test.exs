@@ -6,9 +6,17 @@ defmodule Idejo.RequirementsTest do
 
   alias Idejo.Requirements
 
-  # MVP requirements whose tests come with a later pull request of M5 (MVP §7). Remove an ID
-  # when its tests land: the last test below fails until then.
-  @pending %{}
+  # MVP requirements whose tests come with a later pull request (MVP §7): M6, one pull
+  # request each. Remove an ID when its tests land: the last test below fails until then.
+  @pending %{
+    "SP-10" => "M6: host-only cookies",
+    "AD-13" => "M6: configuration from the environment",
+    "AD-15" => "M6: GET /health",
+    "AD-14" => "M6: headless setup",
+    "AD-16" => "M6: optional bundled proxy",
+    "AC-09" => "M6: OpenID Connect client",
+    "NF-12" => "M6: idle memory"
+  }
 
   # MVP requirements on how people work, which no test can check: a person verifies them in
   # review (pull request template).

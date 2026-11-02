@@ -1,6 +1,6 @@
 # Idejo — MVP Spec Sheet v0.1
 
-Oct 17, 2026 · @Mariano
+Oct 17, 2026 · @Mariano · updated Nov 2, 2026 (M6, ready for Idejo Hub)
 
 ## 1. Goal
 
@@ -34,10 +34,11 @@ v0.1 keeps the complete growing-message behaviour and a minimal version of every
 | Administration | Install, settings, users, roles, categories, nightly backup, CLI recovery | Auto-archive, importers, branding, metrics, S3 storage |
 | API and federation | Internal API used by the web app; stable URIs and activity log from day one | Public API tokens, webhooks, bots, plugins, federation |
 | Licensing and process | AGPL-3.0-only headers, NOTICE, source link, CLA check, AI-commit trailers, CLAUDE.md, tests per ID | Trademark policy, commercial licence |
+| Hosting (M6) | One community per instance; several instances may share a host. Configuration from the environment, headless setup, health endpoint, optional bundled proxy, OpenID Connect client, host-only cookies | Any multi-forum logic inside Idejo (that lives in the separate Idejo Hub) |
 
 ## 3. Requirements
 
-Every row is required for v0.1. “As v1” means the v1 requirement applies unchanged.
+Every row is required for v0.1. “As v1” means the v1 requirement applies unchanged. Rows marked **(M6)** are built in milestone M6, after the pilot starts, so that Idejo can run under Idejo Hub; they are required for the M6 release, not for the pilot.
 
 | ID | v0.1 form |
 | --- | --- |
@@ -61,6 +62,7 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | AC-01, AC-02 | Email sign-up with verification; password change from the profile; open or invite-only; password reset by email |
 | AC-04 | Display name and avatar |
 | AC-05, AC-07 | As v1: guest reading; users delete their own account |
+| AC-09 | (M6) OpenID Connect client, one provider set by environment (`IDEJO_OIDC_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET`, `_LABEL`); local accounts can stay on or be switched off (`IDEJO_LOCAL_ACCOUNTS`). Authorization code flow with PKCE, `state` and `nonce`. Accounts linked by issuer and subject, never by email. First sign-in creates a local member, still subject to the registration mode. The provider never grants a role; roles, profile, bans and moderation history stay local. SAML and LDAP wait for v1 |
 | MO-01 | Report a message with a reason |
 | MO-02 | Delete, edit, lock, close open message, ban account |
 | MO-03 | Action log with moderator, target, reason, time |
@@ -74,10 +76,16 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 | AD-04 | Server-wide window setting |
 | AD-05 | Nightly database and upload backup to local disk; restore by command |
 | AD-08, AD-09 | As v1: SMTP settings with test; command-line recovery |
+| AD-13 | (M6) All runtime configuration from environment variables: host (`PHX_HOST`, required in production, no default), database URL, upload and backup paths, secret keys, optional SMTP defaults (`IDEJO_SMTP_*`, used only while the admin panel has no SMTP settings; the panel always wins). WebSocket origin check follows the host. Every variable documented in `deploy/.env.example` |
+| AD-14 | (M6) Headless setup: `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]`, as an alternative to the first-run wizard and through the same code. The owner is created as an invite and sets their password from the email. Refuses with a non-zero exit code, changing nothing, once setup is done |
+| AD-15 | (M6) `GET /health`: JSON `{status, version, checks: {database, migrations}}`, 200 when every check is ok, 503 otherwise. No sign-in, no session, no personal data; rate-limited (SP-05). Used as the container health check |
+| AD-16 | (M6) The bundled Caddy stays the default; a documented way runs the app without it, behind an external proxy. `X-Forwarded-Proto` and `X-Forwarded-Host` are trusted only from the addresses in `IDEJO_TRUSTED_PROXIES` |
 | SP-01, SP-02, SP-04, SP-05, SP-06 | As v1 (TLS, password hashing and sessions, no third-party scripts, web hardening, admin audit log) |
+| SP-10 | (M6) Every cookie the app sets is host-only (no `Domain` attribute), guarded by a test |
 | FD-01 to FD-03 | As v1: stable URIs, activity outbox, Markdown plus HTML storage — cheap now, costly to add later |
 | CL-01, CL-02 | Responsive web app; no-JS read view |
 | NF-01 to NF-04 | As v1 |
+| NF-12 | (M6) An idle production instance (no one online) uses under 200 MB of memory; method and figure recorded in `docs/load-testing.md`. Not enforced yet |
 | LI-01 to LI-03, LI-05, LI-08 | As v1 |
 | DV-01 to DV-06 | As v1 |
 
@@ -146,12 +154,13 @@ PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` w
 | audit\_log | id, admin\_id, change, before, after, created\_at | SP-06 |
 | activities | id, actor\_uri, verb, object\_uri, target\_uri, payload, created\_at | Outbox for future federation (FD-02) |
 | invites | code, created\_by, used\_by, expires\_at |  |
+| user\_identities | id, user\_id, issuer, subject, inserted\_at | (M6, AC-09) One row per OpenID Connect link; unique on issuer and subject. Columns to be confirmed in the AC-09 pull request |
 | uploads | id, user\_id, path, mime, size, created\_at | Images only |
 | settings | key, value | e.g. `gm_window_seconds = 15`, registration mode, SMTP |
 
 ## 7. Build plan
 
-Six milestones, in order; each ends with its exit check passing in CI before the next starts. Growing messages come after static topics so the core feature is built on a working base.
+Seven milestones, in order; each ends with its exit check passing in CI before the next starts. M6 comes after the pilot starts and adds no multi-forum logic to Idejo: it only makes one instance easy to run beside others (v1 section 13, “Running several forums on one host”). Growing messages come after static topics so the core feature is built on a working base.
 
 1. **M0 — Foundations:** repository with CLAUDE.md, licence headers, NOTICE, CLA check, CI (formatter, linter, tests), Docker Compose with Phoenix, PostgreSQL and Caddy.
    - Exit: an empty app deploys with HTTPS from one command; CI is green.
@@ -165,6 +174,8 @@ Six milestones, in order; each ends with its exit check passing in CI before the
    - Exit: search finds a message by a word added in its last commit; a growing message produces one notification.
 6. **M5 — Moderation and operations:** reports, moderator actions and log, bans, nightly backup and restore, command-line recovery, accessibility audit, load test.
    - Exit: every item in section 8 is ticked; pilot starts.
+7. **M6 — Ready for Idejo Hub:** host-only cookies (SP-10), configuration from the environment (AD-13), health endpoint (AD-15), headless setup (AD-14), optional bundled proxy (AD-16), OpenID Connect client (AC-09), idle memory measured (NF-12). No tenant column, no list of other forums, no Hub-specific code path.
+   - Exit: an automated check, run locally and in CI, starts two instances from the same image behind one Caddy on `a.idejo.test` and `b.idejo.test`, each with its own database and volumes; sets both up with `bin/idejo-admin setup`, no wizard; gets 200 from `/health` on both; signs one member in to both through one test OpenID Connect provider and gives them a different role on each; shows a session cookie from one host is never sent to the other; and the “admin sets up the server” flow still passes on a single-server install.
 
 ## 8. Definition of done
 

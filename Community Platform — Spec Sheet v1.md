@@ -1,6 +1,6 @@
 # Idejo — Spec Sheet v1
 
-Oct 17, 2026 · @Mariano
+Oct 17, 2026 · @Mariano · updated Nov 2, 2026 (several forums on one host)
 
 ## 1. Overview
 
@@ -24,7 +24,7 @@ The twelve open questions from the feature list are settled as follows; each dec
 | When a topic stops being live | Optional auto-archive after 65 days of inactivity by default; period editable in server-wide settings. |
 | First message of a topic | Same editor as any message. Only differences: it has a title, it takes tags, and it is not live while being typed. |
 | Replies inside a topic | Inline replies only. Anyone permitted can select any message, including someone else’s, and create a new topic from it. |
-| Communities per install | One community per server. |
+| Communities per install | One community per instance; several instances may share a host (section 13, “Running several forums on one host”). Idejo itself never holds more than one community. |
 | Licence | AGPL-3.0-only with a section 7(b) attribution notice. Copyright steward: Mariano Pictet until an organisation is formed, then transferred to it. Dual licensing kept possible. |
 | Voice and video | Not in the product. |
 | Federation | Not in v1; the architecture must allow it later. |
@@ -169,7 +169,7 @@ One account per person on the server; anonymous visitors can read public categor
 | AC-06 | Ignore a user: their messages are collapsed for you | Must |
 | AC-07 | Users export their data and delete their account themselves | Must |
 | AC-08 | List and revoke active sessions and devices | Must |
-| AC-09 | Single sign-on via OpenID Connect, SAML or LDAP | Should |
+| AC-09 | Single sign-on as an OpenID Connect client (Must, needed by Idejo Hub's shared identity); SAML or LDAP (Should) | Must |
 | AC-10 | Trust levels unlocked by account age and activity, used against spam | Should |
 | AC-11 | Status: online, away, invisible | Should |
 | AC-12 | Profile badges | Could |
@@ -282,6 +282,25 @@ After a one-command install, everything day-to-day is done in the web admin pane
 | AD-10 | phpBB importer: users, categories, topics, posts as closed messages, attachments, redirects from old URLs | Should |
 | AD-11 | Branding: logo, colours, custom CSS | Should |
 | AD-12 | Health page, structured logs and a metrics endpoint | Should |
+| AD-13 | All runtime configuration from environment variables: host, database URL, upload path, SMTP defaults, secret keys | Must |
+| AD-14 | Headless setup command (`bin/idejo-admin setup`) as an alternative to the first-run wizard | Must |
+| AD-15 | `GET /health` JSON endpoint: version, database, migrations; 200 or 503 | Must |
+| AD-16 | Bundled reverse proxy optional, so an external proxy can sit in front | Must |
+
+### Running several forums on one host
+
+Idejo stays single-community: one instance, one database, one community. Several instances can still run side by side on one server, each on its own host name, with their own database, uploads and secrets. The separate **Idejo Hub** (its own repository and spec, *Idejo Hub — Spec Sheet*) does this for an operator: it creates, backs up, upgrades and suspends ordinary Idejo instances from the outside, and can give them one shared sign-in identity.
+
+The Hub depends only on these documented interfaces, which also help standalone installs:
+
+- configuration from environment variables (AD-13);
+- headless setup (AD-14) and the command-line tool for backup, restore and health, non-interactive with an exit code (AD-09);
+- the health endpoint (AD-15);
+- running behind an external proxy (AD-16);
+- sign-in through an OpenID Connect provider (AC-09);
+- host-only cookies (SP-10) and a small idle footprint (NF-12).
+
+Idejo gains no multi-forum code: no tenant column, no list of other forums, no Hub-specific code path. Each instance shows its own “Source code” link (LI-03). These interfaces keep working across minor versions, or change only with a note in the release.
 
 ## 14. Security and privacy
 
@@ -298,6 +317,7 @@ All traffic is encrypted between client and server; content is readable by the s
 | SP-07 | Published vulnerability disclosure policy and security-only patch releases | Must |
 | SP-08 | Media proxy: external images and link previews fetched by the server, hiding users’ IP addresses | Should |
 | SP-09 | Retention policies: auto-delete messages older than N days, per category | Should |
+| SP-10 | Every cookie is host-only (no `Domain` attribute), so a session on one host is never sent to another host of the same domain; guarded by a test | Must |
 
 ## 15. API, extensibility and federation readiness
 
@@ -347,6 +367,7 @@ These targets are agreed; a load test before each release verifies them.
 | NF-09 | Portability | Full export as JSON plus Markdown plus original attachments |
 | NF-10 | Quality | Automated tests cover every GM rule; accessibility audit and load test before each release |
 | NF-11 | Documentation | Admin, moderator, user and API guides shipped with each release |
+| NF-12 | Idle footprint | An idle instance (no one online) uses under 200 MB of memory, so several can share a host. NF-04 still applies to a single install |
 
 ## 18. Proposed tech stack
 
