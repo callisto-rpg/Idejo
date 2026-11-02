@@ -167,6 +167,46 @@ defmodule IdejoWeb.TopicWindowTest do
     assert canonical.(short, "?page=1") == "http://localhost:4000/t/#{short.id}/#{short.slug}"
   end
 
+  # Found by the load test (200 viewers, 30 writing): a message posted between the view's
+  # count of the topic and its load of the end made a topic just short of a window load
+  # whole, opening message included, while the count said it did not start at the
+  # beginning, so the opening message was pinned on top as well: the same key twice, and the
+  # page crashed.
+  @tag req: "TP-04"
+  test "TP-04 a message posted while the view loads the end never shows a message twice",
+       context do
+    {topic, _messages} = long_topic(context, 19)
+    test_pid = self()
+    handler = "window-race-#{System.unique_integer()}"
+
+    # Right after the count of the topic's messages, someone posts.
+    :telemetry.attach(
+      handler,
+      [:idejo, :repo, :query],
+      fn _event, _measurements, %{query: query}, _config ->
+        if query =~ ~s{SELECT count(*) FROM "messages"} and
+             :persistent_term.get(handler, nil) == nil do
+          :persistent_term.put(handler, true)
+          send(test_pid, :posted)
+          say(topic, context.author, "Message 20")
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn ->
+      :telemetry.detach(handler)
+      :persistent_term.erase(handler)
+    end)
+
+    {:ok, lv, html} = open(build_conn(), topic)
+    assert_received :posted
+    assert numbers(html) == Enum.to_list(1..20)
+    assert numbers(render(lv)) == Enum.to_list(1..20)
+    refute has_element?(lv, "#opening-message")
+    refute has_element?(lv, "#earlier-messages")
+  end
+
   @tag req: "TP-04"
   test "TP-04 scrolling to an edge loads the messages before or after, at most 100 at once",
        context do
