@@ -21,7 +21,11 @@
       {gettext("Joining is by invitation. Use the link or code you were given.")}
     </p>
 
-    <.form :let={f} for={@changeset} action={~p"/users/sign-up"}>
+    <p :if={@closed?} id="sign-ups-closed" class="alert alert-info my-4">
+      {gettext("This server is not taking new members.")}
+    </p>
+
+    <.form :let={f} :if={!@closed?} for={@changeset} action={~p"/users/sign-up"}>
       <.input
         :if={@invite_only?}
         field={f[:invite_code]}

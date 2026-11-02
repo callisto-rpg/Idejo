@@ -15,6 +15,8 @@ defmodule Idejo.Accounts.UserToken do
   @confirm_validity_in_days 7
   # Short, since whoever holds the link can set a new password.
   @reset_password_validity_in_days 1
+  # An owner made by `bin/idejo-admin setup` chooses a first password (AD-14), like an invite.
+  @set_password_validity_in_days 7
   @session_validity_in_days 14
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -87,9 +89,11 @@ defmodule Idejo.Accounts.UserToken do
 
   If found, the query returns a tuple of the form `{user, token}`. The token must match its
   hashed counterpart, be younger than its context allows and have been sent to the user's
-  current email. Contexts: `"confirm"` (7 days) and `"reset_password"` (1 day).
+  current email. Contexts: `"confirm"` (7 days), `"reset_password"` (1 day) and
+  `"set_password"` (7 days, AD-14).
   """
-  def verify_email_token_query(token, context) when context in ["confirm", "reset_password"] do
+  def verify_email_token_query(token, context)
+      when context in ["confirm", "reset_password", "set_password"] do
     case Base.url_decode64(token, padding: false) do
       {:ok, decoded_token} ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
@@ -110,6 +114,11 @@ defmodule Idejo.Accounts.UserToken do
 
   defp validity_in_days("confirm"), do: @confirm_validity_in_days
   defp validity_in_days("reset_password"), do: @reset_password_validity_in_days
+  defp validity_in_days("set_password"), do: @set_password_validity_in_days
+
+  @doc "How long the link an owner made by `bin/idejo-admin setup` gets works (AD-14)."
+  @spec set_password_validity_in_days() :: pos_integer()
+  def set_password_validity_in_days, do: @set_password_validity_in_days
 
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]

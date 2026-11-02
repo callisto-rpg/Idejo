@@ -431,7 +431,11 @@ defmodule IdejoWeb.Layouts do
         <%!-- On phones, the sidebar holds it: the header has no room. --%>
         <.theme_toggle class="max-sm:hidden" />
         <.link href={~p"/users/sign-in"} class="btn btn-ghost btn-sm">{gettext("Sign in")}</.link>
-        <.link href={~p"/users/sign-up"} class="btn btn-primary btn-sm">
+        <.link
+          :if={Idejo.Accounts.sign_ups_open?()}
+          href={~p"/users/sign-up"}
+          class="btn btn-primary btn-sm"
+        >
           {gettext("Sign up")}
         </.link>
       <% end %>

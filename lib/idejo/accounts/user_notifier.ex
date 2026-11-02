@@ -8,6 +8,7 @@ defmodule Idejo.Accounts.UserNotifier do
   import Swoosh.Email
   use Gettext, backend: IdejoWeb.Gettext
 
+  alias Idejo.Accounts.UserToken
   alias Idejo.Mailer
   alias Idejo.Settings
 
@@ -45,6 +46,34 @@ defmodule Idejo.Accounts.UserNotifier do
         """,
         name: user.display_name,
         url: url
+      )
+    )
+  end
+
+  @doc """
+  Delivers the link with which the owner made by `bin/idejo-admin setup` (AD-14) chooses
+  their password.
+  """
+  def deliver_owner_invite(user, url) do
+    deliver(
+      user.email,
+      gettext("You are the owner of %{name}", name: Settings.get(:server_name)),
+      gettext(
+        """
+        Hi,
+
+        %{name} is set up, and you are its owner. To choose your password, visit the link
+        below within %{days} days:
+
+        %{url}
+
+        Then sign in with this email address. You can change your display name in your
+        profile; your username, %{username}, stays as it is.
+        """,
+        name: Settings.get(:server_name),
+        days: UserToken.set_password_validity_in_days(),
+        url: url,
+        username: user.username
       )
     )
   end

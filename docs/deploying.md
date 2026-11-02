@@ -260,6 +260,32 @@ to check that email works. The wizard is then gone for good.
 Next, set up categories, roles and permissions with the [admin guide](admin-guide.md), and
 give your members the one-page [member guide](member-guide.md).
 
+### Or set it up from the command line
+
+Instead of the wizard, `bin/idejo-admin setup` (AD-14) sets the server up in one command, for
+scripts and for running many servers. It does exactly what the wizard does, except that the
+owner gets no password here:
+
+```sh
+idejo exec app bin/idejo-admin setup --name "Garden Club" --owner-email you@example.org
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--name NAME` | The server name (required, at most 80 characters). |
+| `--owner-email EMAIL` | The owner's email (required). Their username is made from the part before `@` (`you`; letters, digits and `_`) and can never change; the display name, the same at first, can be changed in the profile. |
+| `--registration open\|invite\|closed` | Who can sign up: anyone (the default, as with the wizard), only people with an invite, or nobody. Changeable later in **Admin → Settings**. |
+
+The owner is created as an invite: an email takes them to a page where they choose their
+password, within 7 days. While no SMTP server is set (neither **Admin → Email** nor
+`IDEJO_SMTP_HOST`, see [Environment variables](#environment-variables)), the command prints
+that link instead: give it to the owner yourself. If it expires unused, run
+`bin/idejo-admin reset-owner-password` ([Recovery](#recovery-from-the-command-line)).
+
+It exits with status 0 once the server is set up. On an already set-up server it changes
+nothing and exits with 1; a missing or wrong option exits with 64. Audit entries of a
+command-line setup name no admin, like the other commands.
+
 ## Day-to-day operations
 
 Run these from `~/idejo`. To save typing, define a shortcut once:
@@ -376,7 +402,8 @@ To move to a new server, or after losing one:
 ## Recovery from the command line
 
 Everything day-to-day happens in the web admin panel. When that is out of reach, the app
-container carries a recovery tool, `bin/idejo-admin` (AD-09):
+container carries a recovery tool, `bin/idejo-admin` (AD-09; it also runs
+[the setup](#or-set-it-up-from-the-command-line), AD-14):
 
 ```sh
 idejo exec app bin/idejo-admin health
