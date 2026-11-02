@@ -400,7 +400,10 @@ The contract (M6; mark each item done here when its PR merges):
   replies stay in the one flow, shown with `Forum.excerpt/2` linking to `/m/{id}`. "Reply"
   links use `?reply_to={id}#composer`, so choosing a message needs no JavaScript; once
   connected (`live?`) Reply is a button (`#message-{id}-reply`, `"reply"`) that shows the
-  quote over the composer at once and focuses it, with no page load.
+  quote over the composer at once and focuses it, with no page load. The quote
+  (`#replying-to`) stays over the author's open message after its first Enter, read from
+  the message's `reply_to` (`TopicLive.replying/1`, as `carried/1` for forwards), with
+  "Cancel reply" only before that Enter; it goes when the message closes.
   Reply starts a new message (steward decision, 2026-10-24): with the author's message still
   open, `TopicLive` sets `draft_over` (that message's id), shows it like the others and puts
   an empty composer at the end; Enter commits with `new: true`, which closes the open

@@ -76,8 +76,15 @@ defmodule IdejoWeb.InlineRepliesTest do
 
     [_, reply] = Forum.list_messages(topic)
     assert reply.reply_to_id == first.id
+    # The quote stays over the open message while the author goes on typing; sent, the
+    # reply can no longer be cancelled.
+    assert has_element?(lv, "#replying-to", "Replying to Sam Starter:")
+    refute has_element?(lv, "#replying-to button", "Cancel reply")
+    enter(lv, "Lunch **first**. Then plans")
+    assert has_element?(lv, "#replying-to", "What next?")
+
+    {:ok, _} = Idejo.Messages.close(Repo.reload!(reply))
     refute has_element?(lv, "#replying-to")
-    {:ok, _} = Idejo.Messages.close(reply)
 
     # Others see it at once, quoting what it replies to.
     assert has_element?(lv, "#message-#{reply.id}-reply-to", "In reply to Sam Starter")
@@ -184,7 +191,7 @@ defmodule IdejoWeb.InlineRepliesTest do
     enter(lv, "About that")
     assert [_, %{reply_to_id: reply_to_id}] = Forum.list_messages(topic)
     assert reply_to_id == first.id
-    refute has_element?(lv, "#replying-to")
+    assert has_element?(lv, "#replying-to", "Replying to Sam Starter:")
 
     # With the author's message open, the composer leaves it for a new message at once.
     lv |> element("#message-#{first.id}-reply") |> render_click()
