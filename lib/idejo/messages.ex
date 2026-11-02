@@ -58,7 +58,7 @@ defmodule Idejo.Messages do
   """
   @spec broadcast(Ecto.UUID.t(), term()) :: :ok | {:error, term()}
   def broadcast(topic_id, {:message, %Message{} = message}) do
-    message = Repo.preload(message, @shown, force: true)
+    [message] = message |> Repo.preload(@shown, force: true) |> List.wrap() |> with_version_html()
     # The role next to the author's name, once here rather than by each viewer new to the
     # author: 200 viewers of a topic where 30 people start writing asked for it 6,000 times.
     message = %{
@@ -73,6 +73,29 @@ defmodule Idejo.Messages do
 
   def broadcast(topic_id, event),
     do: Phoenix.PubSub.broadcast(@pubsub, "topic:" <> topic_id, event)
+
+  @doc """
+  The messages with their earlier versions' HTML (GM-11), rendered once here: a topic view
+  shows them under "view earlier version", and rendered by each viewer each edited message
+  cost every viewer a Markdown rendering per version at every update of it. Versions not
+  loaded are left alone.
+  """
+  @spec with_version_html([Message.t()]) :: [Message.t()]
+  def with_version_html(messages) do
+    Enum.map(messages, fn
+      %Message{versions: [_ | _] = versions} = message ->
+        context = Body.context(message)
+        %{message | versions: Enum.map(versions, &version_html(&1, context))}
+
+      message ->
+        message
+    end)
+  end
+
+  defp version_html(%{body_html: nil} = version, context),
+    do: %{version | body_html: Body.to_html(version.body_md, context)}
+
+  defp version_html(version, _context), do: version
 
   @doc "What a topic view shows of a message besides its own fields, for `Repo.preload/2`."
   @spec shown() :: list()

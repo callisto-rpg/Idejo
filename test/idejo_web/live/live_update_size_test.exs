@@ -10,6 +10,7 @@ defmodule IdejoWeb.LiveUpdateSizeTest do
   alias Idejo.Forum
   alias Idejo.Messages
   alias Idejo.Reactions
+  alias Idejo.Repo
 
   # Messages already in the topic: an update must not cost more because of them.
   @earlier 40
@@ -120,5 +121,32 @@ defmodule IdejoWeb.LiveUpdateSizeTest do
       end)
 
     assert remade == [message.id]
+  end
+
+  # GM-11: the earlier versions of an edited message are rendered once, where it is loaded or
+  # broadcast; each viewer rendered every one of them again at each update of the message.
+  @tag req: "NF-01"
+  test "NF-01 an update of an edited message renders no Markdown in the viewers' views", %{
+    topic: topic,
+    view: view
+  } do
+    writer = user_fixture()
+    {:ok, message} = Messages.commit(writer, topic, "Hello there")
+    # Changing sent text keeps a version (GM-11), three times.
+    for text <- ["Hullo there", "Hallo there", "Hello all"],
+        do: {:ok, _} = Messages.commit(writer, topic, text)
+
+    render(view)
+    :erlang.trace(view.pid, true, [:call])
+    :erlang.trace_pattern({Idejo.Markdown, :to_html, :_}, true, [:local])
+
+    {:ok, updated} = Messages.commit(writer, topic, "Hello all. And more")
+    assert render(view) =~ "And more"
+    assert render(view) =~ "Hullo there"
+    assert length(Repo.preload(updated, :versions, force: true).versions) == 3
+
+    :erlang.trace(view.pid, false, [:call])
+    refute_received {:trace, _, :call, {Idejo.Markdown, :to_html, _}}
+    assert message.id == updated.id
   end
 end
