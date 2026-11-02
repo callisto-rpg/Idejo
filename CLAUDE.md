@@ -1582,6 +1582,9 @@ mix deps.audit && mix hex.audit
 reuse lint                         # SPDX headers (pip install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
 load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
+mix test --only req:AC-09          # one M6 requirement (SP-10, AD-13, AD-14, AD-15, AD-16, AC-09)
+deploy/test/m6/run.sh [--skip-flow]   # M6 exit check: two forums, one Caddy, Dex, a browser (Docker)
+# in a release: bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
 # page speed (NF-03): Lighthouse on the production build, steps in docs/page-speed.md
 ```
 
@@ -1599,19 +1602,27 @@ in the same pull request (DV-01).
 - [x] M3 — Growing messages
 - [x] M4 — Around the conversation
 - [ ] **M5 — Moderation and operations**
-- [ ] **M6 — Ready for Idejo Hub** — SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12 (see Running under Idejo Hub)
+- [x] M6 — Ready for Idejo Hub — SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12 (see Running under Idejo Hub); exit check `deploy/test/m6/run.sh`
 
-Current milestone: **M5**. **M6 is also authorised now** (steward decision, 2026-11-02) and may
-be worked on alongside M5, in the order SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12, one PR
-each. Do not start any other later work.
+Current milestone: **M5**. M6 was authorised alongside it (steward decision, 2026-11-02) and is
+done. Do not start any other later work.
 
 M6 exit check (MVP §7), an automated check runnable locally and in CI (Docker required):
 two instances from the same image behind one Caddy on `a.idejo.test` and `b.idejo.test`, own
 database and volumes each; both set up with `bin/idejo-admin setup`, no wizard; 200 from
 `/health` on both; one member signs in to both through one test OpenID Connect provider
 (open-source, licence-checked, LI-06) and holds a different role on each; a session cookie from
-one host is never sent to the other; the "admin sets up the server" flow still passes. When it
-passes: tick M6 here, add its commands to Commands, and stop.
+one host is never sent to the other; the "admin sets up the server" flow still passes. It is
+`deploy/test/m6/run.sh` (`deploy/test/m6/README.md`): Compose with one PostgreSQL server (two
+databases and roles), the image twice behind one Caddy (`tls internal`, its root mounted into
+the apps' CA list; `IDEJO_TRUSTED_PROXIES` names it), Dex v2.46.0 (Apache-2.0) as the
+provider; `bin/idejo-admin setup` on both (B invite-only), `/health` through Caddy, then
+Playwright 1.49.1 (Apache-2.0, its Docker image) signs one member in to both (B through an
+invite), `run.sh` makes them moderator on A only (`Access.assign_role/3` over `rpc`), and the
+browser checks each forum's roles, host-only cookies and that no request carried the other
+host's session; then the flow test (`--skip-flow` in CI, whose Tests job runs it) and the
+default Compose install with its Caddy. It removes everything, pass or fail, and exits non-zero
+on any failure. CI: `.github/workflows/m6-exit-check.yml`, nightly and on demand.
 
 M4 exit check (MVP §7): search finds a message by a word added in its last commit
 (`test/idejo/search_test.exs`, SE-03); a growing message produces one notification

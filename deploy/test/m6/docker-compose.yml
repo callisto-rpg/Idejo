@@ -1,0 +1,130 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# M6 exit check (MVP §7): two Idejo instances from the same image, a.idejo.test and
+# b.idejo.test, each with its own database (one PostgreSQL server, two databases and two
+# roles) and its own volumes, behind one Caddy with its internal CA, as AD-16 runs them
+# (no bundled Caddy per instance, IDEJO_TRUSTED_PROXIES naming the shared one), and one
+# test OpenID Connect provider (Dex) on id.idejo.test. Started by run.sh; never in production.
+
+name: idejo-m6
+
+x-forum: &forum
+  image: ${IDEJO_M6_IMAGE:-idejo-m6:check}
+  # As deploy/docker-compose.yml: migrations, then the server.
+  command: ["sh", "-c", "/app/bin/migrate && /app/bin/server"]
+  depends_on:
+    db:
+      condition: service_healthy
+  healthcheck:
+    test:
+      - CMD
+      - bash
+      - -c
+      - >-
+        exec 3<>/dev/tcp/127.0.0.1/4000 &&
+        printf 'GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+        head -n 1 <&3 | grep -q ' 200 '
+    interval: 5s
+    timeout: 5s
+    retries: 30
+    start_period: 120s
+  volumes:
+    # Caddy's internal root, added to the system's, so the app trusts https://id.idejo.test.
+    - ${IDEJO_M6_CA_BUNDLE}:/etc/ssl/certs/ca-certificates.crt:ro
+  networks:
+    - m6
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      FORUM_A_PASSWORD: ${FORUM_A_PASSWORD}
+      FORUM_B_PASSWORD: ${FORUM_B_PASSWORD}
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d forum_b"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      - m6
+
+  a:
+    <<: *forum
+    environment:
+      PHX_SERVER: "true"
+      PHX_HOST: a.idejo.test
+      PORT: "4000"
+      SECRET_KEY_BASE: ${FORUM_A_SECRET_KEY_BASE}
+      DATABASE_URL: ecto://forum_a:${FORUM_A_PASSWORD}@db/forum_a
+      IDEJO_UPLOADS_DIR: /data/uploads
+      IDEJO_BACKUP_DIR: /data/backups
+      IDEJO_TRUSTED_PROXIES: 172.30.66.10
+      IDEJO_OIDC_ISSUER: https://id.idejo.test
+      IDEJO_OIDC_CLIENT_ID: forum-a
+      IDEJO_OIDC_CLIENT_SECRET: ${FORUM_A_OIDC_SECRET}
+      IDEJO_OIDC_LABEL: Idejo ID
+    volumes:
+      - ${IDEJO_M6_CA_BUNDLE}:/etc/ssl/certs/ca-certificates.crt:ro
+      - a_uploads:/data/uploads
+      - a_backups:/data/backups
+
+  b:
+    <<: *forum
+    environment:
+      PHX_SERVER: "true"
+      PHX_HOST: b.idejo.test
+      PORT: "4000"
+      SECRET_KEY_BASE: ${FORUM_B_SECRET_KEY_BASE}
+      DATABASE_URL: ecto://forum_b:${FORUM_B_PASSWORD}@db/forum_b
+      IDEJO_UPLOADS_DIR: /data/uploads
+      IDEJO_BACKUP_DIR: /data/backups
+      IDEJO_TRUSTED_PROXIES: 172.30.66.10
+      IDEJO_OIDC_ISSUER: https://id.idejo.test
+      IDEJO_OIDC_CLIENT_ID: forum-b
+      IDEJO_OIDC_CLIENT_SECRET: ${FORUM_B_OIDC_SECRET}
+      IDEJO_OIDC_LABEL: Idejo ID
+    volumes:
+      - ${IDEJO_M6_CA_BUNDLE}:/etc/ssl/certs/ca-certificates.crt:ro
+      - b_uploads:/data/uploads
+      - b_backups:/data/backups
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.46.0
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    environment:
+      FORUM_A_OIDC_SECRET: ${FORUM_A_OIDC_SECRET}
+      FORUM_B_OIDC_SECRET: ${FORUM_B_OIDC_SECRET}
+    volumes:
+      - ./dex.yaml:/etc/dex/config.yaml:ro
+    networks:
+      - m6
+
+  caddy:
+    image: caddy:2.11-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    networks:
+      m6:
+        ipv4_address: 172.30.66.10
+        # Every name points at Caddy inside the network, for the apps and the browser alike.
+        aliases: [a.idejo.test, b.idejo.test, id.idejo.test]
+
+volumes:
+  pgdata:
+  a_uploads:
+  a_backups:
+  b_uploads:
+  b_backups:
+  caddy_data:
+
+networks:
+  m6:
+    ipam:
+      config:
+        - subnet: 172.30.66.0/24

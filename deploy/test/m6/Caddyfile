@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# M6 exit check: one Caddy in front of both forums and the test provider, with certificates
+# from its own internal CA (no ACME). It sets X-Forwarded-For, -Proto and -Host itself.
+
+{
+	auto_https disable_redirects
+	local_certs
+}
+
+a.idejo.test {
+	tls internal
+	reverse_proxy a:4000
+}
+
+b.idejo.test {
+	tls internal
+	reverse_proxy b:4000
+}
+
+id.idejo.test {
+	tls internal
+	reverse_proxy dex:5556
+}
