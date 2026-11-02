@@ -206,7 +206,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | To build |
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | To build |
 | Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. **Matching an existing local account with the same email: ask the steward first.** Extra review (DV-06) | To build |
-| Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | To build |
+| Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
 | Footprint | NF-12 | Idle production container under 200 MB; method and figure in `docs/load-testing.md`. Measured, not enforced | To build |
 
 ## Conventions
@@ -332,7 +332,10 @@ The contract (M6; mark each item done here when its PR merges):
   deletes every token of the account and disconnects all its sessions
   (`UserAuth.disconnect_sessions/1`). A password change from the profile (AC-01,
   `Accounts.update_user_password/3`) needs the current password and does the same for every
-  other session, keeping the one that made the change.
+  other session, keeping the one that made the change. Every cookie is host-only, never with
+  a `Domain` (SP-10): the session and remember-me cookies are the only ones the server sets
+  (LiveView's script sets its flash cookie with `path=/` only), and
+  `test/idejo_web/sp_10_cookies_test.exs` fails on a new one, or on `domain:`, until checked.
 - **Categories** (RP-03, `Idejo.Forum`, **Admin → Categories**): one level (`parent_id` stays
   unused), ordered by `position`, at `/c/{slug}`. The slug is made from the name at creation
   (or chosen) and never changes, so renaming keeps links. Each change writes an audit entry
