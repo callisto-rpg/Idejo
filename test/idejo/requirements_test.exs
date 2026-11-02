@@ -9,7 +9,6 @@ defmodule Idejo.RequirementsTest do
   # MVP requirements whose tests come with a later pull request (MVP §7): M6, one pull
   # request each. Remove an ID when its tests land: the last test below fails until then.
   @pending %{
-    "SP-10" => "M6: host-only cookies",
     "AD-13" => "M6: configuration from the environment",
     "AD-15" => "M6: GET /health",
     "AD-14" => "M6: headless setup",
