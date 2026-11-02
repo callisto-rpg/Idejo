@@ -9,7 +9,6 @@ defmodule Idejo.RequirementsTest do
   # MVP requirements whose tests come with a later pull request (MVP §7): M6, one pull
   # request each. Remove an ID when its tests land: the last test below fails until then.
   @pending %{
-    "AC-09" => "M6: OpenID Connect client",
     "NF-12" => "M6: idle memory"
   }
 

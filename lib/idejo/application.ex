@@ -8,6 +8,8 @@ defmodule Idejo.Application do
 
   use Application
 
+  alias Idejo.Accounts.OIDC
+
   @impl true
   def start(_type, _args) do
     children = [
@@ -24,6 +26,8 @@ defmodule Idejo.Application do
       Idejo.Messages.Authors,
       # SP-05: rate limit counters, in memory.
       {Idejo.RateLimit, clean_period: :timer.minutes(10)},
+      # AC-09: the OpenID Connect provider's settings and keys, kept fresh (when set up).
+      OIDC.child_specs(),
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),
@@ -36,7 +40,7 @@ defmodule Idejo.Application do
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Idejo.Supervisor]
-    Supervisor.start_link(Enum.reject(children, &is_nil/1), opts)
+    Supervisor.start_link(children |> List.flatten() |> Enum.reject(&is_nil/1), opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

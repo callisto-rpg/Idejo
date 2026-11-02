@@ -88,6 +88,8 @@ defmodule Idejo.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
+      # AC-09: OpenID Connect client (Apache-2.0, LI-06).
+      {:oidcc, "~> 3.9"},
       {:bandit, "~> 1.14 and >= 1.14.1"},
       {:oban, "~> 2.24"},
       {:argon2_elixir, "~> 4.1"},

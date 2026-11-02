@@ -25,7 +25,22 @@
       </p>
     </div>
 
-    <.form :let={f} for={@form} as={:user} id="sign_in_form" action={~p"/users/sign-in"}>
+    <IdejoWeb.OIDCComponents.oidc_button />
+
+    <p :if={@oidc? and @password?} class="divider text-sm">{gettext("or")}</p>
+
+    <p :if={!@local_accounts? and @password?} id="password-sign-in-note" class="text-sm">
+      {gettext("Here, a password signs in only owners and administrators.")}
+    </p>
+
+    <.form
+      :let={f}
+      :if={@password?}
+      for={@form}
+      as={:user}
+      id="sign_in_form"
+      action={~p"/users/sign-in"}
+    >
       <.input
         field={f[:email]}
         type="email"
@@ -44,7 +59,7 @@
         required
       />
       <.input field={f[:remember_me]} type="checkbox" label={gettext("Keep me signed in")} />
-      <p class="text-sm mb-2">
+      <p :if={@local_accounts?} class="text-sm mb-2">
         <.link href={~p"/users/reset-password"} class="link">
           {gettext("Forgot your password?")}
         </.link>
@@ -53,5 +68,11 @@
         {gettext("Sign in")}
       </.button>
     </.form>
+
+    <p :if={!@password?} class="text-sm text-center">
+      <.link href={~p"/users/sign-in?with=password"} id="password-sign-in-link" class="link">
+        {gettext("Owner or administrator? Sign in with a password")}
+      </.link>
+    </p>
   </div>
 </Layouts.app>

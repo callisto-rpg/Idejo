@@ -292,6 +292,13 @@ using the dark theme), change your password, or delete your account. The same me
 has the **Theme** (follow your system, light or dark) and **Sign out**. Your messages stay after
 that, shown as "Deleted user".
 
+If the server offers **Sign in with …** (an account shared with other services, set up by
+whoever runs the server), you can sign in and sign up with that button instead of a
+password. Already have an account here with a password? Sign in with it, then press
+**Link …** under **Sign in with …** in **Profile and account**: the two are never joined
+by themselves, even with the same email address. Without a password here, deleting your
+account asks you to sign in there again first (**Confirm with …**).
+
 **Writing**, on the same page, has **Automatic punctuation** (on at first): a full stop
 after a line you send without punctuation at its end, never after code. Turn it off to keep
 your messages exactly as typed; a topic page already open follows the change once reloaded.

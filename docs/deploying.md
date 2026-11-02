@@ -516,6 +516,56 @@ The app still sends HSTS and redirects plain `http` to `https` (except `/health`
 builds every link from `IDEJO_DOMAIN`, never from the headers. Check it with
 `curl https://forum.example.org/health`.
 
+## Sign in through an OpenID Connect provider
+
+Idejo can let people sign in with an account they already have at an OpenID Connect
+provider (AC-09): Keycloak, Authentik, Dex, Zitadel, a company's or a family of forums'
+own. Register Idejo there as a confidential web client with:
+
+- **redirect URI** `https://forum.example.org/users/oidc/callback`;
+- the **authorization code** flow with **PKCE** (S256);
+- scopes `openid email profile`.
+
+Then set, in `deploy/.env`:
+
+```sh
+IDEJO_OIDC_ISSUER=https://id.example.org          # the provider's issuer, https
+IDEJO_OIDC_CLIENT_ID=forum
+IDEJO_OIDC_CLIENT_SECRET=…                        # only here; never shown or logged
+IDEJO_OIDC_LABEL=Example ID                       # the button: "Sign in with Example ID"
+IDEJO_LOCAL_ACCOUNTS=on                           # off: no password sign-up or reset
+```
+
+and run the `up` command again. All four `IDEJO_OIDC_*` go together: some without the
+others stop the app at boot with a message naming the missing ones. The provider's settings
+and keys are fetched from its `/.well-known/openid-configuration` and kept up to date; if
+it is down when the app starts, the app starts anyway and keeps asking.
+
+What happens:
+
+- **Accounts are linked by the provider's own id for the person** (issuer and subject),
+  never by email. The first sign-in makes a member here, under **Who can sign up**: open,
+  invite-only (the invite link's sign-up page has the button and carries the invite) or
+  closed. Their username comes from the provider's `preferred_username` (or the email),
+  their display name from `name`. An email the provider has not verified gets Idejo's
+  verification email, as a sign-up would.
+- **An account here with the same email is never joined by itself**: that sign-in is
+  refused with a message. Its owner signs in with their password and presses **Link** in
+  **Profile and account**.
+- **The provider never gives a role.** Roles, the profile, bans and moderation history are
+  this server's. A banned member stays banned, however they sign in.
+- **Signing out** ends the session here only, not at the provider.
+- **Deleting an account** without a password here asks the member to sign in at the
+  provider again (within five minutes), instead of a password. The link goes with the
+  account.
+
+With `IDEJO_LOCAL_ACCOUNTS=off`, the sign-in page shows only the provider's button, sign-up
+only through it, and there is no password reset by email. **Owners and administrators can
+always sign in with a password** (the link under the button), so
+`bin/idejo-admin reset-owner-password` keeps working ([Recovery](#recovery-from-the-command-line))
+even when the provider is down. `IDEJO_LOCAL_ACCOUNTS=off` without the provider set up stops
+the app at boot: nobody could sign in.
+
 ## Health endpoint
 
 `GET /health` tells a monitoring tool, a container health check or an uptime service
@@ -604,6 +654,11 @@ message naming it.
 | `IDEJO_SMTP_PASSWORD` | no | none | Its password. Never stored, shown or logged by Idejo. |
 | `IDEJO_SMTP_FROM` | no | the panel's sender address | Sender address while this server is in use. |
 | `IDEJO_TRUSTED_PROXIES` | no | private networks | Reverse proxies whose `X-Forwarded-For`, `-Proto` and `-Host` are believed: IP addresses or CIDR ranges, comma-separated. See [Running behind your own reverse proxy](#running-behind-your-own-reverse-proxy). |
+| `IDEJO_OIDC_ISSUER` | with the next three | none | The OpenID Connect provider's issuer (`https://…`). See [Sign in through an OpenID Connect provider](#sign-in-through-an-openid-connect-provider). |
+| `IDEJO_OIDC_CLIENT_ID` | with the others | none | Idejo's client id at the provider. |
+| `IDEJO_OIDC_CLIENT_SECRET` | with the others | none | Its client secret. Read from here only; never stored, shown or logged. |
+| `IDEJO_OIDC_LABEL` | with the others | none | The provider's name on the button: "Sign in with …". |
+| `IDEJO_LOCAL_ACCOUNTS` | no | `on` | `off`: no password sign-up, sign-in or reset, except owners' and administrators' sign-in. Needs the provider. |
 | `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
 
 `deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which

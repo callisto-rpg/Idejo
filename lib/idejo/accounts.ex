@@ -16,7 +16,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Repo
   alias Idejo.Uploads
 
-  alias Idejo.Accounts.{Invite, User, UserNotifier, UserToken}
+  alias Idejo.Accounts.{Invite, OIDC, User, UserIdentity, UserNotifier, UserToken}
   alias Idejo.Audit
   alias Idejo.Settings
 
@@ -121,6 +121,27 @@ defmodule Idejo.Accounts do
 
   defp mark_welcomed_changeset(changeset),
     do: Ecto.Changeset.put_change(changeset, :welcomed_at, DateTime.utc_now(:second))
+
+  @doc """
+  A username made from `candidate` that nobody has yet: other characters than letters,
+  digits and `_` become `_`, at most 30; `fallback` when shorter than 3;
+  a number added when taken. For accounts made without a sign-up form (AD-14, AC-09).
+  """
+  @spec free_username(String.t() | nil, String.t()) :: String.t()
+  def free_username(candidate, fallback \\ "member") do
+    base = (candidate || "") |> String.replace(~r/[^A-Za-z0-9_]/, "_") |> String.slice(0, 30)
+    base = if String.length(base) < 3, do: fallback, else: base
+
+    if username_taken?(base),
+      do: String.slice(base, 0, 25) <> "_" <> Integer.to_string(:rand.uniform(9999)),
+      else: base
+  end
+
+  defp username_taken?(username) do
+    Repo.exists?(
+      from u in User, where: fragment("lower(?)", u.username) == ^String.downcase(username)
+    )
+  end
 
   @doc """
   Whether people may sign up at all: false while registration is closed (steward decision,
@@ -676,18 +697,28 @@ defmodule Idejo.Accounts do
   ## Account deletion (AC-07)
 
   @doc """
-  Deletes the user's own account, given their password.
+  Deletes the user's own account, given their password, or `{:oidc, at}`: the time (Unix
+  seconds) they signed in again through the OpenID Connect provider their account is linked
+  to, within the last five minutes (AC-09; steward decision, 2026-11-02), for members whose
+  only way in is the provider.
 
   The row stays so the stable `uri` (FD-01) and the records that name the user keep
   working, but everything personal goes: email, username, display name and password are
-  replaced, roles, sessions and emailed links are deleted, and `status` becomes
+  replaced, roles, sessions, emailed links and OpenID Connect links are deleted, and `status` becomes
   `"deleted"`. A `delete` activity (FD-02) is recorded in the same transaction.
 
   The server's last owner cannot delete their account (`{:error, :last_owner}`). Returns the
   socket ids of the ended sessions, so the web layer can disconnect their LiveViews.
   """
-  @spec delete_user(User.t(), String.t() | nil) ::
-          {:ok, {User.t(), [String.t()]}} | {:error, :invalid_password | :last_owner}
+  @spec delete_user(User.t(), String.t() | {:oidc, integer() | nil} | nil) ::
+          {:ok, {User.t(), [String.t()]}}
+          | {:error, :invalid_password | :reauthentication | :last_owner}
+  def delete_user(%User{} = user, {:oidc, at}) do
+    if OIDC.fresh_reauth?(at) and OIDC.identity(user),
+      do: Repo.transact(fn -> anonymise(user) end),
+      else: {:error, :reauthentication}
+  end
+
   def delete_user(%User{} = user, password) do
     if User.valid_password?(user, password || "") do
       Repo.transact(fn -> anonymise(user) end)
@@ -701,6 +732,8 @@ defmodule Idejo.Accounts do
       socket_ids = session_socket_ids(user)
       Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
       Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id)
+      # AC-09: the provider's person is no longer this account.
+      Repo.delete_all(from i in UserIdentity, where: i.user_id == ^user.id)
       :ok = Push.delete_for_user(user)
 
       # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.
