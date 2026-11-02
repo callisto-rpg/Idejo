@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# M6 exit check (MVP §7): two instances behind one Caddy, set up headless, /health, one
+# member through one OpenID Connect provider with a role on one forum only, no cookie across
+# hosts, and the default Compose install (deploy/test/m6/README.md). It builds the image and
+# runs a browser, too slow for every pull request: nightly, and on demand from the Actions
+# tab. The "admin sets up the server" flow runs in CI's Tests job, hence --skip-flow.
+
+name: M6 exit check
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m6:
+    name: Two forums, one provider
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: deploy/test/m6/run.sh --skip-flow
+      - name: Keep the browser's screenshot of a failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m6-failure
+          path: deploy/test/m6/failure.png
+          if-no-files-found: ignore

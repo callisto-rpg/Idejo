@@ -41,3 +41,6 @@ npm-debug.log
 # Production secrets.
 /deploy/.env
 
+
+# M6 exit check: the browser's screenshot of a failure.
+/deploy/test/m6/failure.png
