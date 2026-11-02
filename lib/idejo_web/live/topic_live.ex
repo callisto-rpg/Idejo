@@ -3106,8 +3106,10 @@ defmodule IdejoWeb.TopicLive do
               {Calendar.strftime(version.created_at, "%Y-%m-%d %H:%M:%S UTC")}
             </time>
           </p>
+          <%!-- Rendered once where the message was loaded or broadcast. --%>
           <MessageComponents.body html={
-            Messages.Body.to_html(version.body_md, Messages.Body.context(@message))
+            version.body_html ||
+              Messages.Body.to_html(version.body_md, Messages.Body.context(@message))
           } />
         </li>
       </ol>

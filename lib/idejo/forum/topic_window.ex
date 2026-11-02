@@ -58,7 +58,7 @@ defmodule Idejo.Forum.TopicWindow do
       limit: 1
     )
     |> Repo.one()
-    |> Repo.preload(@preload)
+    |> then(&(&1 && hd(shown([&1]))))
   end
 
   @doc "The topic's latest message as `%{id: id, opened_at: opened_at}`, or nil."
@@ -115,13 +115,13 @@ defmodule Idejo.Forum.TopicWindow do
   @spec around(Topic.t(), Message.t(), non_neg_integer(), non_neg_integer()) :: [Message.t()]
   def around(%Topic{} = topic, %Message{} = message, before, after_count) do
     before(topic, message, before) ++
-      Repo.preload([message], @preload) ++ next(topic, message, after_count)
+      shown([message]) ++ next(topic, message, after_count)
   end
 
   @doc "From `message` to the end of its topic, in order."
   @spec since(Topic.t(), Message.t()) :: [Message.t()]
   def since(%Topic{} = topic, %Message{} = message),
-    do: Repo.preload([message], @preload) ++ next(topic, message, count(topic))
+    do: shown([message]) ++ next(topic, message, count(topic))
 
   @doc "Page `page` (from 1) of `size` messages, in order: `?page=n` without JavaScript."
   @spec page(Topic.t(), pos_integer(), pos_integer()) :: [Message.t()]
@@ -173,6 +173,10 @@ defmodule Idejo.Forum.TopicWindow do
     )
   end
 
-  defp load(query), do: query |> Repo.all() |> Repo.preload(@preload)
-  defp load_reversed(query), do: query |> Repo.all() |> Enum.reverse() |> Repo.preload(@preload)
+  defp load(query), do: query |> Repo.all() |> shown()
+  defp load_reversed(query), do: query |> Repo.all() |> Enum.reverse() |> shown()
+
+  # What a topic view shows of each message, earlier versions rendered (GM-11).
+  defp shown(messages),
+    do: messages |> Repo.preload(@preload) |> Idejo.Messages.with_version_html()
 end

@@ -612,7 +612,9 @@ roles or the permission grid. Every later change must keep it true:
   message editor in place (`edit_as_moderator/4`). Otherwise (`version: :auto`), changing
   text already there keeps a version and sets `edited`; adding at the end does not.
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
-  needed) listing each version newest first with the span it was current. `list_messages/1`
+  needed) listing each version newest first with the span it was current. Each version's
+  HTML is rendered once where messages are loaded or broadcast
+  (`Messages.with_version_html/1`, the virtual `Version.body_html`), never by each viewer. `list_messages/1`
   preloads `:versions`.
 - **Deleting one's own message** (steward decision, 2026-10-23): Enter on an emptied edit
   (the composer sends `""` while `data-editing`) asks "Are you sure you want to delete your

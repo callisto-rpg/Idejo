@@ -14,6 +14,9 @@ defmodule Idejo.Messages.Version do
   @foreign_key_type :binary_id
   schema "message_versions" do
     field :body_md, :string
+    # Its sanitised HTML, rendered once where messages are loaded or broadcast
+    # (`Idejo.Messages.with_version_html/1`), not by each viewer at each update.
+    field :body_html, :string, virtual: true
     belongs_to :message, Idejo.Messages.Message
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at, updated_at: false)
