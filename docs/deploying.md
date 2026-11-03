@@ -286,6 +286,25 @@ It exits with status 0 once the server is set up. On an already set-up server it
 nothing and exits with 1; a missing or wrong option exits with 64. Audit entries of a
 command-line setup name no admin, like the other commands.
 
+## Prebuilt images
+
+Each Idejo release is also published as a Docker image, `ghcr.io/callisto-rpg/idejo:X.Y.Z`
+(and `X.Y` for the newest patch of that minor version), for linux/amd64. Idejo Hub uses these
+images. The install above builds from source instead, so you do not need them for a
+standalone server.
+
+Releases are made by the steward: set `version` in `mix.exs`, merge, then push a tag with the
+same number:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The "Publish image" workflow checks the tag against `mix.exs`, runs the M6 exit check and
+only then pushes the image. An image built from a tag links to that exact commit as its
+"Source code" (LI-03).
+
 ## Day-to-day operations
 
 Run these from `~/idejo`. To save typing, define a shortcut once:
