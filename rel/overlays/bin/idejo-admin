@@ -29,6 +29,11 @@ Commands:
                                     backup directory)
   health                            check the server, database, migrations, push keys,
                                     uploads and last backup
+  delete-account --oidc-subject SUB delete the account linked to the OpenID Connect
+                                    provider's subject (anonymised, as when a member
+                                    deletes it); exit 2 when none is linked
+  leave --oidc-subject SUB          that person leaves: sessions end, pushes and email
+                                    summaries stop, the account stays; exit 2 when none
   stats                             print members, topics, messages and the database's
                                     and uploads' sizes as one line of JSON
   push-key                          print the public key browsers subscribe with
@@ -114,6 +119,11 @@ case "${1:-}" in
   health)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi
     run "Idejo.Release.health()"
+    ;;
+  delete-account | leave)
+    if [ $# -ne 3 ] || [ "$2" != "--oidc-subject" ] || [ -z "$3" ]; then usage >&2; exit 64; fi
+    fun=$(printf '%s' "$1" | tr '-' '_')
+    run "Idejo.Release.$fun($(quote "$3"))"
     ;;
   stats)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi

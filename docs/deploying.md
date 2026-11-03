@@ -322,6 +322,8 @@ source ~/.bashrc
 | Stop everything | `idejo down` (data is kept in Docker volumes) |
 | Start again | `idejo up -d` |
 | Health check | `idejo exec app bin/idejo-admin health` |
+| A person leaves (sign-in provider) | `idejo exec app bin/idejo-admin leave --oidc-subject SUB` |
+| Delete a person's account (sign-in provider) | `idejo exec app bin/idejo-admin delete-account --oidc-subject SUB` |
 | Size (members, topics, messages, database, uploads; JSON) | `idejo exec app bin/idejo-admin stats` |
 
 **Updating to a new version:** make a backup first (`idejo exec app bin/idejo-admin backup`,
