@@ -13,7 +13,8 @@ the emoji picker, who reacted, the Moderate card, selecting and moving messages,
 messages", the "too soon" and delete-own dialogs). It audits the HTML with
 `IdejoWeb.Accessibility` (`test/support/accessibility.ex`):
 
-- `<html lang>`, exactly one `<main>`, a `<footer>`, and distinct names for several `<nav>`s;
+- `<html lang>`, exactly one `<main>`, at most one `<footer>` (only Help, Profile and account and the
+  admin pages have one), and distinct names for several `<nav>`s;
 - a skip link to `<main>` as the first stop of the keyboard;
 - exactly one `<h1>`, and no skipped heading level;
 - every text field, select and text area labelled; every link, button and summary named;

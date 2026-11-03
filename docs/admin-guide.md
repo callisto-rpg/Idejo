@@ -103,8 +103,9 @@ corner. It has ten tabs.
   **Low**, **Medium** (the default) or **High**.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
-- **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of every
-  page. Until you write one, the page says the server has not published a notice yet.
+- **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of the
+  **Help** page (in the sidebar), **Profile and account** and the admin pages, where the
+  "Source code" link and the Idejo notice are too. Until you write one, the page says the server has not published a notice yet.
 - **Theme**: the website's colours, as `#rrggbb` (or `#rrggbbaa` with transparency), typed
   or chosen with the colour button beside each. **Primary colour** fills buttons, toggles and
   links; **Secondary colour** and **Tertiary colour** appear only where a second colour is

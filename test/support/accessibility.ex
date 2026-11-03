@@ -87,7 +87,9 @@ defmodule IdejoWeb.Accessibility do
 
     List.flatten([
       if(length(mains) != 1, do: ["#{length(mains)} <main> landmarks, not one"], else: []),
-      if(Enum.any?(nodes, &(elem(&1, 0) == "footer")), do: [], else: ["no <footer>"]),
+      # The footer shows only on Help, Profile and account and the admin pages (steward
+      # decision, 2026-11-03); never more than one.
+      if(Enum.count(nodes, &(elem(&1, 0) == "footer")) > 1, do: ["several <footer>s"], else: []),
       if(length(navs) > 1 and (nil in nav_names or Enum.uniq(nav_names) != nav_names),
         do: ["several <nav> landmarks without distinct aria-labels"],
         else: []

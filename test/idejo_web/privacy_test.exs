@@ -32,8 +32,10 @@ defmodule IdejoWeb.PrivacyTest do
   end
 
   @tag req: "AD-02"
-  test "AD-02 every page's footer links to the privacy notice", %{conn: conn} do
-    for path <- [~p"/", ~p"/users/sign-in", ~p"/privacy"] do
+  test "AD-02 the footer links to the privacy notice", %{conn: conn} do
+    # The footer is on Help (linked from every page's sidebar), Profile and account and the
+    # admin pages (steward decision, 2026-11-03); IdejoWeb.FooterTest covers those.
+    for path <- [~p"/help"] do
       footer = conn |> get(path) |> html_response(200) |> LazyHTML.from_document()
 
       assert LazyHTML.query(footer, "footer a#privacy-link") |> LazyHTML.attribute("href") == [
