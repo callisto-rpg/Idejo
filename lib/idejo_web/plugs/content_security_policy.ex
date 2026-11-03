@@ -5,7 +5,9 @@ defmodule IdejoWeb.Plugs.ContentSecurityPolicy do
   @moduledoc """
   Sets a strict `content-security-policy` header on browser responses (SP-05).
 
-  Everything is served from the app itself (SP-04), so only `'self'` is allowed.
+  Everything is served from the app itself (SP-04), so only `'self'` is allowed, but for the
+  GIF provider's hosts while GIFs are on (steward decision, 2026-11-03; `Idejo.Gifs`): its
+  API for `connect-src`, its media for `img-src`.
   Inline `<script>` and `<style>` elements are refused unless they carry the
   per-request nonce stored in `conn.assigns.script_csp_nonce` and
   `conn.assigns.style_csp_nonce` (used by LiveDashboard and the Swoosh mailbox
@@ -31,14 +33,16 @@ defmodule IdejoWeb.Plugs.ContentSecurityPolicy do
   end
 
   defp policy(script_nonce, style_nonce) do
+    gifs = Idejo.Gifs.csp_sources()
+
     Enum.join(
       [
         "default-src 'self'",
         "script-src 'self' 'nonce-#{script_nonce}'",
         "style-src 'self' 'nonce-#{style_nonce}'",
-        "img-src 'self' data: blob:",
+        Enum.join(["img-src 'self' data: blob:" | gifs.img], " "),
         "font-src 'self' data:",
-        "connect-src 'self'",
+        Enum.join(["connect-src 'self'" | gifs.connect], " "),
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

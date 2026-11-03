@@ -67,6 +67,10 @@ config :argon2_elixir, argon2_type: 2, t_cost: 3, m_cost: 16, parallelism: 4
 # since it serves plain http.
 config :idejo, :secure_cookies, true
 
+# The GIF provider the composer's !gif overlay searches (steward decision, 2026-11-03):
+# a module of Idejo.Gifs.Provider, with its browser adapter in assets/js/gifs/.
+config :idejo, :gif_provider, Idejo.Gifs.Klipy
+
 # LI-03: the upstream repository; the footer links to it at the commit the release was built
 # from. A server running modified code sets IDEJO_SOURCE_URL instead (see config/runtime.exs).
 config :idejo, :upstream_source_url, "https://github.com/callisto-rpg/Idejo"

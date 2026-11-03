@@ -103,6 +103,16 @@ defmodule Idejo.Settings do
       max: 2000,
       format: :host_patterns
     },
+    # GIFs in the composer (steward decisions, 2026-11-03; Idejo.Gifs): the provider's key,
+    # empty for off. Not a secret: every browser that searches receives it.
+    gif_api_key: %{type: :string, default: "", max: 255},
+    # The provider's content safety filter.
+    gif_content_filter: %{
+      type: :string,
+      default: "medium",
+      required: true,
+      in: ~w(off low medium high)
+    },
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
     custom_css: %{type: :string, default: @default_css, max: 100_000},
@@ -146,6 +156,8 @@ defmodule Idejo.Settings do
           | :push_enabled
           | :push_followed_interval_minutes
           | :push_services
+          | :gif_api_key
+          | :gif_content_filter
           | :custom_css
           | :theme_primary
           | :theme_secondary

@@ -91,6 +91,16 @@ corner. It has ten tabs.
   `*.example.org` allows any name under `example.org`. Add your own, for example a
   UnifiedPush server, if members' browsers use one. Addresses on private networks are always
   refused.
+- **GIF provider key**: GIFs in messages (`!gif`, and a GIF button in the graphical
+  composer) come from KLIPY. Create an app key in KLIPY's Partner Panel (partner.klipy.com)
+  and paste it here; empty, there are no GIFs. Members' browsers then search KLIPY and load
+  GIFs from it directly, as KLIPY's terms require, so KLIPY sees the address of everyone who
+  searches for or reads a GIF: say so in your **Privacy notice**. Keep ads off for the key in
+  the Partner Panel (Idejo shows none), and block words or GIFs there if you need to. A new
+  key is in testing mode, limited to 100 searches an hour, until you ask KLIPY for production
+  access.
+- **GIF content filter**: how strictly KLIPY leaves unsafe GIFs out of searches: **Off**,
+  **Low**, **Medium** (the default) or **High**.
 - **About** and **Rules** (Markdown): shown to each new member once, in a welcome card with
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
 - **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of every

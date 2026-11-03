@@ -245,6 +245,8 @@ The contract (M6; mark each item done here when its PR merges):
   real pages in order with ConnTest and LiveViewTest (no browser), tagged
   `@tag flow: "admin-sets-up-the-server"` etc.
 - **No third-party scripts, fonts or analytics** (SP-04). Assets are served from the app.
+  One exception, chosen by the steward (2026-11-03): GIFs (below) load from the GIF
+  provider's hosts, and browsers call its API, only while an administrator has entered a key.
   Fonts (steward decision, 2026-10-23): Fraunces for titles (`--font-title`: headings and
   title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
   `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
@@ -573,7 +575,7 @@ The contract (M6; mark each item done here when its PR merges):
   heroicons, each named: at the left emoji (`"emoji_picker"` with no id opens the reaction
   picker for the composer, `picker.message_id` nil, "Insert an emoji"; `EmojiPicker` then
   sends `idejo:emoji` and the box gets `:name:`), image (the composer's file input, at the
-  caret), the text controls (`#composer-format`: a new line, as Shift+Enter, then Markdown around
+  caret), GIF (`#composer-gif`, `data-command="gif"`, while GIFs are on), the text controls (`#composer-format`: a new line, as Shift+Enter, then Markdown around
   the selection, `formatEdit/4`) and + (`#composer-more`: the `ComposerCommands` the author may use among
   spoiler, poll, schedule, new-topic, run by the hook's `command/1`); at the right Send
   (`#composer-send`): a click is Enter (`send(false)`); a right click, a double click, a
@@ -597,6 +599,27 @@ The contract (M6; mark each item done here when its PR merges):
   for the open message; with nothing open, `!poll` opens the dialog alone and `!spoiler`
   asks for the message first). The commands are defined
   once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
+- **GIFs** (steward decisions, 2026-11-03; `Idejo.Gifs`): `!gif` and the graphical
+  composer's GIF button open `#gif-picker` (`IdejoWeb.GifComponents.gif_picker/1`, rendered
+  by `TopicLive` for posters while on; `phx-update="ignore"`, the `GifPicker` hook,
+  `assets/js/gif_picker.js`, opened by `idejo:gif-open` with the box as opener): the
+  provider's popular GIFs, then a search (350 ms after typing stops), "More GIFs" for the next
+  page; a click sends `idejo:gif` with `![title](url)`, which the `Composer` hook puts at the
+  caret, unsent, drawn as a "GIF:" pill (`gifPattern/1` over `data-gif-hosts`, in
+  `withImages/4`). The provider is swappable: an `Idejo.Gifs.Provider` module (`id`, `name`,
+  `search_placeholder`, `api_sources`, `media_sources`, `content_filters`) set by
+  `config :idejo, :gif_provider` (`Idejo.Gifs.Klipy`), and an adapter of the same id in
+  `assets/js/gifs/` (`page/1`, `shared/1`; listed in `index.js`). KLIPY's standard terms
+  (steward decision): the browser calls the API and loads media from the URLs returned, never
+  through Idejo (no proxy, cache or re-hosting), results in KLIPY's order (ads, which come
+  only when switched on for the key, are left out: keep them off), "Search KLIPY" as the
+  placeholder (required) and "Powered by KLIPY"; the share trigger gets the query, never a
+  user identifier (no `customer_id`). On while `gif_api_key` ("GIF provider key", Admin →
+  Settings; not secret: browsers receive it; blank is off) is set; `gif_content_filter`
+  (off/low/medium/high, default medium) goes with searches. `Idejo.Gifs.client_config/0`,
+  read by `TopicLive` at mount (`gifs`), never in a render; `csp_sources/0` adds the API to
+  `connect-src` and the media hosts to `img-src` (`ContentSecurityPolicy`), only while on.
+  Posted GIFs are plain Markdown images: other outside images stay blocked by the policy.
 - **Polls** (steward decision, 2026-10-23; `Idejo.Messages.Polls`, `polls`, `poll_options`,
   `poll_votes`): `!poll`'s dialog (`PollComponents.poll_dialog/1`, `#poll-dialog`) takes a
   question, 2 to 10 answers, "Allow several answers" and hours like `!schedule` (required,

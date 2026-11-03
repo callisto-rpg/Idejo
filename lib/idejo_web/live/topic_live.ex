@@ -145,7 +145,8 @@ defmodule IdejoWeb.TopicLive do
            too_soon?: false,
            composing_edit: nil,
            edit_versioned?: false,
-           images?: false
+           images?: false,
+           gifs: nil
          )
          |> assign(:listed, nil)
          |> sync_entries()}
@@ -199,6 +200,8 @@ defmodule IdejoWeb.TopicLive do
          |> put_pending()
          # TP-12: `@uploads` exists only when they were allowed here, at mount.
          |> assign(:images?, can_post?)
+         # GIFs (steward decisions, 2026-11-03): what the overlay needs, nil while off.
+         |> assign(:gifs, if(can_post?, do: Idejo.Gifs.client_config()))
          |> ImageUploads.allow(:composer_image, can_post?)
          # The editor's image error is in its message's entry (sync_entries/1).
          |> ImageUploads.allow(:edit_image, can_post?, after: &sync_entries/1)
@@ -2379,6 +2382,7 @@ defmodule IdejoWeb.TopicLive do
         :if={@picker && (@can_react? or (@picker.message_id == nil and @can_post?))}
         picker={@picker}
       />
+      <IdejoWeb.GifComponents.gif_picker :if={@gifs && @can_post?} gifs={@gifs} />
       <ReactionComponents.reaction_who :if={@reaction_who && !@reaction_who.all?} who={@reaction_who} />
       <ReactionComponents.reaction_card :if={@reaction_who && @reaction_who.all?} who={@reaction_who} />
       <.delete_own_dialog :if={@confirm_delete} />
@@ -2492,9 +2496,17 @@ defmodule IdejoWeb.TopicLive do
             <.composer
               mine={@mine}
               pending={@pending}
-              commands={IdejoWeb.ComposerCommands.for_composer(@images?, @can_fork?, @automessages)}
+              commands={
+                IdejoWeb.ComposerCommands.for_composer(
+                  @images?,
+                  @can_fork?,
+                  @automessages,
+                  @gifs != nil
+                )
+              }
               punctuate?={@punctuate?}
               graphical?={@graphical?}
+              gifs={@gifs}
               reply_to={@reply_to}
               forward={@forward}
               topic_id={@topic.id}
@@ -3539,8 +3551,9 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # TP-11, "Use the graphical composer" (steward decision, 2026-11-02): under the box, at the
-  # left an emoji button, an image button, a button showing the text controls (Markdown around
-  # the selection) and + showing the other commands; at the right Send, which is Enter, and
+  # left an emoji button, an image button, a GIF button (while GIFs are on; 2026-11-03), a
+  # button showing the text controls (Markdown around the selection) and + showing the other
+  # commands; at the right Send, which is Enter, and
   # whose menu (a right click, a double click, a long press or the menu key) holds Ctrl+Enter.
   # Monochrome icons, each named. The `Composer` hook runs them; without scripts nothing
   # would, so the bar is hidden until the hook shows it (phx-update="ignore" keeps that and
@@ -3554,6 +3567,7 @@ defmodule IdejoWeb.TopicLive do
 
     assigns =
       assign(assigns,
+        gif?: MapSet.member?(names, "gif"),
         formats: [
           {"newline", "hero-arrow-turn-down-left", gettext("New line")},
           {"bold", "hero-bold", gettext("Bold")},
@@ -3646,6 +3660,18 @@ defmodule IdejoWeb.TopicLive do
         >
           <.icon name="hero-photo" class="size-5" />
         </button>
+        <%!-- !gif (steward decision, 2026-11-03), while GIFs are on. --%>
+        <button
+          :if={@gif?}
+          type="button"
+          id="composer-gif"
+          class="composer-tool"
+          data-command="gif"
+          aria-label={gettext("Add a GIF")}
+          title={gettext("Add a GIF")}
+        >
+          <.icon name="hero-gif" class="size-5" />
+        </button>
         <button
           type="button"
           id="composer-format-toggle"
@@ -3720,6 +3746,7 @@ defmodule IdejoWeb.TopicLive do
     doc: "the author's \"Use the graphical composer\": buttons under the box (TP-11)"
 
   attr :reply_to, :any, required: true
+  attr :gifs, :map, default: nil, doc: "Idejo.Gifs.client_config/0, nil while off"
   attr :forward, :any, default: nil, doc: "the message forwarded with the new message"
   attr :topic_id, :string, default: nil
 
@@ -3851,6 +3878,8 @@ defmodule IdejoWeb.TopicLive do
             else: gettext("Message now visible to all!")
         }
         data-label-image={gettext("image:")}
+        data-label-gif={gettext("GIF:")}
+        data-gif-hosts={Jason.encode!((@gifs && @gifs.hosts) || [])}
       >
         <div class="composer-backdrop" aria-hidden="true"></div>
         <textarea
