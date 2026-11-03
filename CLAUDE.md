@@ -209,6 +209,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | Done (`deploy/docker-compose.external-proxy.yml`, `ClientIp.trusted?/1`; `test/idejo_web/ad_16_proxy_test.exs`) |
 | Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. Matching an existing local account with the same email: never automatic; the member links from their profile while signed in (steward decision, 2026-11-02). Extra review (DV-06) | Done (`Idejo.Accounts.OIDC`, `IdejoWeb.OIDCController`; `test/idejo_web/ac_09_openid_connect_test.exs`) |
 | Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
+| Image | AD-01 | Official image `ghcr.io/callisto-rpg/idejo:X.Y.Z` (and `X.Y`), pushed by `.github/workflows/publish-image.yml` when a tag `vX.Y.Z` matching `mix.exs` is pushed, after the M6 exit check passes. Built from the tagged commit, so its "Source code" link points at it (LI-03). linux/amd64 only | Workflow added; no release tagged yet |
 | Footprint | NF-12 | Idle production container under 200 MB; method and figure in `docs/load-testing.md`. Measured, not enforced | Measured 2026-11-02 (`docs/load-testing.md`): **over**, 204 MiB idle, 227 MiB warmed; 99 MiB warmed with `RELEASE_MODE=interactive` (not applied: steward decision) |
 
 ## Conventions
@@ -1628,6 +1629,7 @@ mix precommit                      # everything above that CI runs, Dialyzer too
 load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
 mix test --only req:AC-09          # one M6 requirement (SP-10, AD-13, AD-14, AD-15, AD-16, AC-09)
 deploy/test/m6/run.sh [--skip-flow]   # M6 exit check: two forums, one Caddy, Dex, a browser (Docker)
+git tag vX.Y.Z && git push origin vX.Y.Z   # release: publishes ghcr.io/callisto-rpg/idejo:X.Y.Z (version must match mix.exs)
 # in a release: bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
 # page speed (NF-03): Lighthouse on the production build, steps in docs/page-speed.md
 ```
