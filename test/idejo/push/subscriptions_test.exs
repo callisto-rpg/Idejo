@@ -134,6 +134,7 @@ defmodule Idejo.Push.SubscriptionsTest do
       user = user_fixture()
       {limit, _window} = Idejo.RateLimit.limit(:push_subscribe)
 
+      Idejo.RateLimitWindow.fresh(:push_subscribe)
       for _ <- 1..limit, do: assert({:ok, _} = Push.subscribe(user, "s", browser()))
       assert Push.subscribe(user, "s", browser()) == {:error, :rate_limited}
     end
