@@ -181,12 +181,24 @@ function burnRuns(sent, marks) {
 // An uploaded image's Markdown, as the composer inserts it (IdejoWeb.ImageUploads).
 const IMAGE = /!\[[^\]\n]*\]\((\/uploads\/[A-Za-z0-9-]+\.(?:jpe?g|png|gif|webp))\)/g
 
+// A GIF's Markdown (gif_picker.js): an image from one of the provider's hosts
+// (`data-gif-hosts`), drawn as a "GIF:" pill like an uploaded image's.
+export function gifPattern(hosts) {
+  if (!hosts || hosts.length === 0) return null
+  const escaped = hosts.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")
+  return new RegExp(`!\\[[^\\]\\n]*\\]\\(((?:${escaped})/[^)\\s]+)\\)`, "g")
+}
+
 // Images in the box (steward decision, 2026-10-26): their Markdown stays in the text, so the
 // backdrop keeps every character under the textarea, but drawn transparent
 // (`composer-image`), with a pill ("image:" and the picture, like excerpts') over its start.
 // Returns the runs split at each image, the pill as a run of no text and HTML of its own.
-export function withImages(runs, value, label) {
-  const images = Array.from(value.matchAll(IMAGE), m => [m.index, m.index + m[0].length, m[1]])
+export function withImages(runs, value, label, gifs = null) {
+  const images = Array.from(value.matchAll(IMAGE), m => [m.index, m.index + m[0].length, m[1], label])
+  if (gifs?.pattern) {
+    for (const m of value.matchAll(gifs.pattern)) images.push([m.index, m.index + m[0].length, m[1], gifs.label])
+    images.sort((a, b) => a[0] - b[0])
+  }
   if (images.length === 0) return runs
   const out = []
   let pos = 0
@@ -197,7 +209,7 @@ export function withImages(runs, value, label) {
       const image = images.find(([start, end]) => start <= at && at < end)
       const next = images.find(([start]) => start > at)
       if (image) {
-        if (image[0] === at) out.push(["", "", pill(label, image[2])])
+        if (image[0] === at) out.push(["", "", pill(image[3], image[2])])
         const to = Math.min(text.length, image[1] - pos)
         out.push([`${cls} composer-image`, text.slice(from, to)])
         from = to
@@ -304,6 +316,12 @@ export const Composer = {
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
     // unsent, like anything typed.
     onImages(this.input, files => this.upload("composer_image", files))
+    // A GIF chosen in the overlay: its Markdown at the caret, unsent, like an image.
+    this.onGif = e => {
+      insertAtCaret(this.input, e.detail.markdown)
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+    window.addEventListener("idejo:gif", this.onGif)
     this.handleEvent("image_uploaded", ({upload, markdown}) => {
       if (upload !== "composer_image") return
       if (this.imageAtEnd) appendLine(this.input, markdown)
@@ -329,6 +347,18 @@ export const Composer = {
     document.removeEventListener("keydown", this.onPageKey)
     window.removeEventListener("idejo:appended", this.onAppended)
     window.removeEventListener("scroll", this.onScroll)
+    window.removeEventListener("idejo:gif", this.onGif)
+  },
+
+  // The provider's hosts, to draw GIFs' Markdown as pills; read once.
+  gifs() {
+    if (this.gifDrawing === undefined) {
+      let hosts = []
+      try { hosts = JSON.parse(this.el.dataset.gifHosts || "[]") } catch (_e) { hosts = [] }
+      const pattern = gifPattern(hosts)
+      this.gifDrawing = pattern && {pattern, label: this.el.dataset.labelGif || "GIF:"}
+    }
+    return this.gifDrawing
   },
 
   showAppended() {
@@ -377,7 +407,11 @@ export const Composer = {
   },
 
   command(name, label) {
-    if (name === "image") {
+    if (name === "gif") {
+      // GIFs (steward decision, 2026-11-03): the overlay (gif_picker.js) sends the chosen
+      // one back as `idejo:gif`, and gives the focus back to the box.
+      window.dispatchEvent(new CustomEvent("idejo:gif-open", {detail: {opener: this.input}}))
+    } else if (name === "image") {
       this.imageAtEnd = true
       document.querySelector("#composer-image-form input[type=file]")?.click()
     } else if (name === "new-topic") {
@@ -504,7 +538,7 @@ export const Composer = {
     const painted = burning
       ? [...burnRuns(this.sent, this.burn.marks), ["composer-unsent", value.slice(this.sent.length)]]
       : sentRuns(this.sent, value).map(([text, sent]) => [sent ? "composer-sent" : "composer-unsent", text])
-    const runs = withImages(painted, value, this.el.dataset.labelImage || "image:")
+    const runs = withImages(painted, value, this.el.dataset.labelImage || "image:", this.gifs())
 
     const {selectionStart: start, selectionEnd: end} = this.input
     const caretAt = document.activeElement === this.input && start === end ? start : null

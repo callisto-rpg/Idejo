@@ -25,6 +25,14 @@ defmodule IdejoWeb.ComposerCommands do
           )
       },
       %{
+        name: "gif",
+        detail: gettext("Search for a GIF and add it to your message"),
+        help:
+          gettext(
+            "Opens a search for GIFs, the popular ones first. The GIF you choose goes where your cursor is, not sent yet. Only when an administrator has turned GIFs on; they come from an outside service, which sees the address of everyone who searches or reads them."
+          )
+      },
+      %{
         name: "forward",
         detail: gettext("Forward the message you are replying to"),
         help:
@@ -69,16 +77,19 @@ defmodule IdejoWeb.ComposerCommands do
   end
 
   @doc """
-  The commands an author may use in a composer: `!image` with uploads allowed, `!new-topic`
-  when they may start a topic somewhere, then the `automessages` they may send there
+  The commands an author may use in a composer: `!image` with uploads allowed, `!gif` while
+  GIFs are on (`Idejo.Gifs.enabled?/0`, `gifs?`), `!new-topic` when they may start a topic
+  somewhere, then the `automessages` they may send there
   (`Idejo.Messages.Automessages.commands_for/2`; steward decisions, 2026-11-01), marked `auto`
   for the `Composer` hook. Only what the list needs.
   """
-  @spec for_composer(boolean(), boolean(), [%{name: String.t(), sender: String.t()}]) :: [map()]
-  def for_composer(upload?, can_fork?, automessages \\ []) do
+  @spec for_composer(boolean(), boolean(), [%{name: String.t(), sender: String.t()}], boolean()) ::
+          [map()]
+  def for_composer(upload?, can_fork?, automessages \\ [], gifs? \\ false) do
     own =
       for %{name: name} = command <- all(),
           name != "image" or upload?,
+          name != "gif" or gifs?,
           name != "new-topic" or can_fork?,
           do: Map.take(command, [:name, :label, :detail])
 

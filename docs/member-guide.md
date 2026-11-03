@@ -39,7 +39,7 @@ Prefer buttons to keys? Turn on **Use the graphical composer** under **Writing**
 row of small icons then sits under the box:
 
 - at the left, the **smiley** picks an emoji (it goes in as `:name:`), the **picture** adds
-  an image where the cursor is, the **pencil** shows the text controls (**New line**, like Shift+Enter, **Bold**,
+  an image where the cursor is, **GIF** (when the server has GIFs on) searches for a GIF, the **pencil** shows the text controls (**New line**, like Shift+Enter, **Bold**,
   **Italic**, **Strikethrough**, **Insert link**, **Code**, **Quote**, **Bulleted list**,
   **Numbered list**: select words first to format them) and **+** shows the commands
   (**Spoiler**, **Poll**, **Schedule**, **Forward**, **New topic from this**), the same as
@@ -155,6 +155,11 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 - **Commands**: type **!** at the start of a word in the box for a list of commands. Pick one
   with a click, or type its name or use the arrow keys, then **Enter** (or **Tab**):
   - **!image** opens your files; the picture goes at the end of your message.
+  - **!gif** (when an administrator has turned GIFs on) opens a search for GIFs, the popular
+    ones first; type in the box to search, **More GIFs** for more. The one you click goes
+    where your cursor is, shown as a small "GIF:" pill, not sent yet. GIFs come from an
+    outside service (named under the results), which sees your address when you search and
+    when you or anyone else sees a GIF.
   - **!new-topic** sends what you wrote, then opens **New topic** with your message as its
     first message: give it a title (and a category, and tags if it has any). When you were
     replying, the new topic continues from the message you replied to. Your message stays

@@ -154,6 +154,11 @@ defmodule IdejoWeb.PublicPagesTest do
     sources = Path.wildcard("assets/{js,css,vendor}/**/*.{js,css}")
     assert sources != []
 
+    # The one exception (steward decision, 2026-11-03): a GIF provider's adapter
+    # (assets/js/gifs/<id>.js) reaches its provider, and only the hosts its Idejo.Gifs.Provider
+    # module declares, which are all the content security policy lets through.
+    gif_providers = Map.new([Idejo.Gifs.provider()], &{"assets/js/gifs/#{&1.id()}.js", &1})
+
     for file <- sources do
       code =
         file
@@ -161,6 +166,22 @@ defmodule IdejoWeb.PublicPagesTest do
         # Links in comments are documentation, not requests.
         |> String.replace(~r{/\*.*?\*/}s, "")
         |> String.replace(~r{(^|\s)//[^\n]*}, "")
+
+      code =
+        case gif_providers[file] do
+          nil ->
+            code
+
+          provider ->
+            allowed = provider.api_sources() ++ provider.media_sources()
+            urls = Regex.scan(~r{https?://[^\s"'`/]+}, code) |> List.flatten()
+            assert urls != [], "#{file} names its provider"
+
+            for url <- urls,
+                do: assert(url in allowed, "#{file} names #{url}, which its provider lacks")
+
+            String.replace(code, ~r{https?://}, "")
+        end
 
       refute code =~ ~r{https?://}, "#{file} names another site"
       refute code =~ ~r{@import\s+url}, "#{file} imports a stylesheet"

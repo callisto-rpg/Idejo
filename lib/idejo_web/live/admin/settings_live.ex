@@ -210,6 +210,35 @@ defmodule IdejoWeb.Admin.SettingsLive do
             "The only hosts browser notifications are sent to, one per line; *.example.org allows any name under example.org. The defaults are the services of Chrome, Edge, Firefox, Safari and Windows; add yours, for example a UnifiedPush server."
           )}
         </p>
+        <%!-- GIFs in the composer (steward decisions, 2026-11-03; Idejo.Gifs). --%>
+        <.input
+          field={@form[:gif_api_key]}
+          type="text"
+          label={gettext("GIF provider key")}
+          autocomplete="off"
+          spellcheck="false"
+          aria-describedby="gif-key-help"
+        />
+        <p id="gif-key-help" class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext(
+            "The app key from %{provider}'s Partner Panel. With a key, members get !gif and a GIF button: their browsers search %{provider} and load the GIFs from it, so %{provider} sees the address of everyone who searches or reads a GIF; say so in the privacy notice. Keep ads off for the key. Empty: no GIFs.",
+            provider: Idejo.Gifs.provider().name()
+          )}
+        </p>
+        <.input
+          field={@form[:gif_content_filter]}
+          type="select"
+          label={gettext("GIF content filter")}
+          options={[
+            {gettext("Off"), "off"},
+            {gettext("Low"), "low"},
+            {gettext("Medium"), "medium"},
+            {gettext("High (strictest)"), "high"}
+          ]}
+        />
+        <p class="text-sm opacity-70 -mt-1 mb-4">
+          {gettext("How strictly the provider leaves out unsafe GIFs from searches.")}
+        </p>
         <%!-- The welcome card and "Rules & Roles" (steward decision, 2026-10-23). --%>
         <.input
           field={@form[:server_about]}
