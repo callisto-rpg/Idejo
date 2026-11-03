@@ -134,6 +134,49 @@ defmodule Idejo.ReleaseTest do
     end
   end
 
+  describe "stats" do
+    @tag req: "AD-09"
+    test "AD-09 stats prints members, topics, messages and sizes as one line of JSON" do
+      owner = user_with_role_fixture(:owner)
+      _member = user_fixture()
+      {:ok, category} = Idejo.Forum.create_category(owner, %{"name" => "Stats"})
+
+      {:ok, _topic} =
+        Idejo.Forum.create_topic(owner, category, %{"title" => "Hello", "body" => "First"})
+
+      output = capture_io(fn -> assert Release.stats() == :ok end)
+      assert [line] = String.split(output, "\n", trim: true)
+      stats = Jason.decode!(line)
+
+      assert Map.keys(stats) |> Enum.sort() ==
+               ~w(database_bytes members messages topics uploads_bytes)
+
+      assert stats["members"] >= 2
+      assert stats["topics"] >= 1
+      assert stats["messages"] >= 1
+      assert stats["database_bytes"] > 0
+      assert is_integer(stats["uploads_bytes"])
+    end
+
+    @tag req: "AD-09"
+    test "AD-09 stats leaves out server accounts" do
+      before = Release.stats_data()
+      _system = user_fixture() |> Ecto.Changeset.change(status: "system") |> Idejo.Repo.update!()
+      assert Release.stats_data()["members"] == before["members"]
+    end
+
+    @tag req: "AD-09"
+    test "AD-09 stats counts the uploads directory's bytes" do
+      dir = Application.fetch_env!(:idejo, :uploads_dir)
+      File.mkdir_p!(dir)
+      before = Release.stats_data()["uploads_bytes"]
+      path = Path.join(dir, "stats-test-#{System.unique_integer([:positive])}.bin")
+      File.write!(path, String.duplicate("x", 1000))
+      on_exit(fn -> File.rm(path) end)
+      assert Release.stats_data()["uploads_bytes"] == before + 1000
+    end
+  end
+
   describe "backup and restore" do
     defp backup_check, do: List.keyfind(Release.health_checks(), "backup", 0)
 
