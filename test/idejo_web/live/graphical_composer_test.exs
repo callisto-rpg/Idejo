@@ -30,25 +30,34 @@ defmodule IdejoWeb.GraphicalComposerTest do
   end
 
   @tag req: "TP-11"
-  test "TP-11 the graphical composer is a setting under Writing, off by default", %{
+  test "TP-11 the graphical composer is a setting under Writing, on for new accounts", %{
     topic: topic,
     user: user
   } do
-    refute user.graphical_composer
-    refute has_element?(topic_live(user, topic), "#composer-toolbar")
+    # On for new accounts (steward decision, 2026-11-03), in the database's default too.
+    assert user.graphical_composer
+    assert has_element?(topic_live(user, topic), "#composer-toolbar")
+
+    %{rows: [[default]]} =
+      Idejo.Repo.query!(
+        "SELECT column_default FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'graphical_composer'"
+      )
+
+    assert default == "true"
 
     {:ok, lv, html} = live(log_in_user(build_conn(), user), ~p"/users/settings")
     assert html =~ "Use the graphical composer"
-
-    assert lv
-           |> form("#writing-form", writing: %{graphical_composer: "true"})
-           |> render_submit() =~ "Writing preferences saved."
-
-    assert Accounts.get_user(user.id).graphical_composer
     assert has_element?(lv, ~s(#writing-form input[name="writing[graphical_composer]"][checked]))
 
+    assert lv
+           |> form("#writing-form", writing: %{graphical_composer: "false"})
+           |> render_submit() =~ "Writing preferences saved."
+
+    refute Accounts.get_user(user.id).graphical_composer
+    refute has_element?(lv, ~s(#writing-form input[name="writing[graphical_composer]"][checked]))
+
     # Read when a topic page opens.
-    assert has_element?(topic_live(Accounts.get_user(user.id), topic), "#composer-toolbar")
+    refute has_element?(topic_live(Accounts.get_user(user.id), topic), "#composer-toolbar")
   end
 
   @tag req: "TP-11"

@@ -34,9 +34,9 @@ This bubble stays whatever **Tutorial bubbles** is set to.
 
 ### The graphical composer
 
-Prefer buttons to keys? Turn on **Use the graphical composer** under **Writing** in
-**Profile and account** (off at first; a topic page already open shows it once reloaded). A
-row of small icons then sits under the box:
+Prefer buttons to keys? **Use the graphical composer** under **Writing** in **Profile and
+account** (on for new accounts; turn it on or off there, and a topic page already open shows
+the change once reloaded) puts a row of small icons under the box:
 
 - at the left, the **smiley** picks an emoji (it goes in as `:name:`), the **picture** adds
   an image where the cursor is, **GIF** (when the server has GIFs on) searches for a GIF, the **pencil** shows the text controls (**New line**, like Shift+Enter, **Bold**,

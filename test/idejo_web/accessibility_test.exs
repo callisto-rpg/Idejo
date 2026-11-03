@@ -270,6 +270,7 @@ defmodule IdejoWeb.AccessibilityTest do
   test "AX-01 the audit finds what it looks for, so a passing page means something" do
     bad = """
     <!DOCTYPE html><html><head><title>x</title></head><body>
+    <footer>a</footer><footer>b</footer>
     <nav><a href="/">Home</a></nav><nav><a>No href</a></nav>
     <h2>Skipped h1</h2><h4>Deep</h4>
     <div phx-click="go">Click</div>
@@ -286,7 +287,7 @@ defmodule IdejoWeb.AccessibilityTest do
     for expected <- [
           "<html> has no lang",
           "0 <main> landmarks, not one",
-          "no <footer>",
+          "several <footer>s",
           "several <nav> landmarks without distinct aria-labels",
           "the first focusable element is not a link to <main>'s id",
           "0 <h1> headings, not one",

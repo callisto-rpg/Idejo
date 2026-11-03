@@ -55,6 +55,12 @@ defmodule IdejoWeb.Layouts do
       "on private conversation pages, for the breadcrumb: `:list` on `/p`, or " <>
         "`%{id: id, title: names}` on one conversation"
 
+  attr :footer, :boolean,
+    default: false,
+    doc:
+      "the footer (attribution, source code, privacy): only on Help, Profile and account " <>
+        "and the admin pages (steward decision, 2026-11-03)"
+
   attr :push_banner, :boolean,
     default: false,
     doc: "offer browser notifications (PN-20: category and topic pages, `Push.banner?/1`)"
@@ -124,7 +130,7 @@ defmodule IdejoWeb.Layouts do
           </div>
         </main>
 
-        <.site_footer />
+        <.site_footer :if={@footer} />
       </div>
     </div>
 
@@ -1060,8 +1066,9 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The footer on every page: the attribution notice (LI-02), the "Source code" link (LI-03)
-  and the privacy notice (AD-02).
+  The footer: the attribution notice (LI-02), the "Source code" link (LI-03) and the privacy
+  notice (AD-02). Only on Help, Profile and account and the admin pages (steward decision,
+  2026-11-03): `Layouts.app`'s `footer`; Help is linked from every page's sidebar.
 
   The notice is kept word for word as NOTICE gives it, and is not translated: section 7(b)
   of the licence requires it to be preserved.
@@ -1216,7 +1223,7 @@ defmodule IdejoWeb.Layouts do
 
   def admin(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide}>
+    <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} footer>
       <nav aria-label={gettext("Admin")} class="tabs tabs-border mb-6 overflow-x-auto">
         <.link
           navigate={~p"/admin"}

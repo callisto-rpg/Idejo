@@ -417,7 +417,7 @@ defmodule IdejoWeb.UserSettingsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
+    <Layouts.app flash={@flash} current_scope={@current_scope} footer>
       <.header>
         {gettext("Profile and account")}
         <:subtitle>@{@current_scope.user.username} · {@current_scope.user.email}</:subtitle>

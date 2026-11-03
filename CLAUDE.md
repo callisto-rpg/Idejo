@@ -568,7 +568,8 @@ The contract (M6; mark each item done here when its PR merges):
   `mayStartNew()` from `composer_timer.js`: the line's end has passed, or there is none),
   then puts the caret at the end of the box (`focusEnd()`); otherwise only the caret.
 - **Graphical composer** (TP-11; steward decision, 2026-11-02): "Use the graphical composer"
-  (`users.graphical_composer`, off by default, under "Writing" in Profile and account,
+  (`users.graphical_composer`, on for new accounts, off for those made before 2026-11-03
+  (steward decision), under "Writing" in Profile and account,
   `Accounts.update_user_writing/2`; `TopicLive` reads it at mount, `graphical?`) puts
   `composer_toolbar/1` under the box (`#composer-toolbar`, `phx-update="ignore"`, `hidden`
   until the `Composer` hook shows it: without scripts nothing would run it). Monochrome
@@ -1275,12 +1276,15 @@ The contract (M6; mark each item done here when its PR merges):
   a hairline and a hover glow; the dark theme turns `--shadow-soft` / `--shadow-lift` into
   faint glows. Times in lists read "5 min
   ago" (`TopicComponents.time_ago/1`), with the exact time in `datetime` and `title`.
-- **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer carries the
+- **Footer** (LI-02, LI-03): every page renders `Layouts.app`, whose footer (only with
+  `footer`: Help, Profile and account and the admin pages, through `Layouts.admin`; steward
+  decision, 2026-11-03, the sidebar's Help link reaching it from every page) carries the
   attribution notice word for word (never translated or reworded: AGPL section 7(b)) and the
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
   `IDEJO_SOURCE_URL`). It also links the privacy notice (AD-02): `/privacy`
   (`PrivacyController`, public, no JavaScript), the `privacy_notice` setting, Markdown written
-  in **Admin → Settings**. New pages must use `Layouts.app` so the footer is never missing.
+  in **Admin → Settings**. New pages must use `Layouts.app` (a new settings page passes
+  `footer`). The accessibility audit allows no footer, never two.
 - **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
   to `/setup`; once a page finds an owner it stops asking the database until the server
   restarts (owners cannot all be removed). The wizard needs the setup code written to the app log at boot
