@@ -175,19 +175,21 @@ defmodule Idejo.Backup do
   Puts a backup back: the database and the uploads are replaced by the backup's. The server
   must be stopped (`bin/idejo-admin restore` checks it).
 
-  First makes a backup of what is there now, so a wrong restore can be undone. Then empties
+  First makes a backup of what is there now, so a wrong restore can be undone (unless the
+  database was never migrated: a new install restoring onto an empty database, with nothing
+  to keep, which used to fail). Then empties
   the database, restores the dump, runs the migrations a backup from an older version lacks,
   replaces the uploaded files and records `backup.restore` in the audit log. Refuses a
   backup made by a newer version of Idejo.
 
-  Returns the path of the backup made first.
+  Returns the path of the backup made first, or nil when there was nothing to keep.
   """
-  @spec restore(Path.t()) :: {:ok, Path.t()} | {:error, String.t()}
+  @spec restore(Path.t()) :: {:ok, Path.t() | nil} | {:error, String.t()}
   # sobelow_skip ["Traversal.FileModule"]
   def restore(path) do
     with {:ok, manifest} <- read_manifest(path),
          :ok <- check_version(manifest),
-         {:ok, before} <- create(),
+         {:ok, before} <- backup_before_restore(),
          staging = Path.join(uploads_dir(), ".restore"),
          :ok <- extract(path, staging),
          :ok <- restore_database(Path.join(staging, "database.dump")),
@@ -202,6 +204,19 @@ defmodule Idejo.Backup do
         File.rm_rf(Path.join(uploads_dir(), ".restore"))
         {:error, describe(reason)}
     end
+  end
+
+  # A database that was never migrated (a new install restored before its first start) holds
+  # nothing to keep; making a backup of it would fail on the missing schema_migrations.
+  defp backup_before_restore do
+    if migrated?(), do: create(), else: {:ok, nil}
+  end
+
+  defp migrated? do
+    %{rows: [[exists]]} =
+      Repo.query!("SELECT to_regclass('public.schema_migrations') IS NOT NULL", [], log: false)
+
+    exists
   end
 
   # Only these names may come out of an archive: nothing outside the staging directory.
