@@ -156,6 +156,7 @@ defmodule IdejoWeb.AD16ProxyTest do
     end
 
     # Through the trusted proxy, each visitor has a counter of their own.
+    Idejo.RateLimitWindow.fresh(:sign_in)
     for _ <- 1..limit, do: assert(attempt.({192, 0, 2, 10}, "192.0.2.101").status == 200)
     assert attempt.({192, 0, 2, 10}, "192.0.2.101").status == 429
     assert attempt.({192, 0, 2, 10}, "192.0.2.102").status == 200

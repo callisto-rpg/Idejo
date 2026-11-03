@@ -5,7 +5,8 @@ defmodule IdejoWeb.RateLimitTest do
   @moduledoc """
   SP-05 rate limits. Limits are off in the test configuration, so this module turns them on;
   it is not async, as that setting is global. Each test acts from addresses and accounts of
-  its own, so the counters of one never touch another.
+  its own, so the counters of one never touch another, and starts each burst in a fresh
+  window (`Idejo.RateLimitWindow.fresh/1`), so a window's end never restarts the count.
   """
   use IdejoWeb.ConnCase, async: false
 
@@ -14,6 +15,7 @@ defmodule IdejoWeb.RateLimitTest do
   alias Idejo.Forum
   alias Idejo.Moderation
   alias Idejo.RateLimit
+  alias Idejo.RateLimitWindow
   alias Idejo.Repo
   alias IdejoWeb.Plugs.ClientIp
 
@@ -39,6 +41,7 @@ defmodule IdejoWeb.RateLimitTest do
       })
     end
 
+    RateLimitWindow.fresh(:sign_in)
     for _ <- 1..limit, do: assert(attempt.(conn).status == 200)
 
     refused = attempt.(conn)
@@ -54,6 +57,7 @@ defmodule IdejoWeb.RateLimitTest do
   test "SP-05 every request is limited per IP address" do
     conn = from_ip()
     {limit, _window} = RateLimit.limit(:request)
+    RateLimitWindow.fresh(:request)
     for _ <- 1..limit, do: assert(get(conn, ~p"/robots.txt").status == 200)
     assert get(conn, ~p"/robots.txt").status == 429
   end
@@ -98,6 +102,7 @@ defmodule IdejoWeb.RateLimitTest do
     member = user_fixture()
 
     {topics, _window} = RateLimit.limit(:new_topic)
+    RateLimitWindow.fresh(:new_topic)
 
     for n <- 1..topics,
         do: {:ok, _} = Forum.create_topic(member, general, %{"title" => "T#{n}", "body" => "B"})
@@ -110,12 +115,14 @@ defmodule IdejoWeb.RateLimitTest do
 
     {messages, _window} = RateLimit.limit(:new_message)
     poster = user_fixture()
+    RateLimitWindow.fresh(:new_message)
     for n <- 1..messages, do: {:ok, _} = Forum.post_message(poster, topic, %{"body" => "M#{n}"})
     assert Forum.post_message(poster, topic, %{"body" => "Again"}) == {:error, :rate_limited}
 
     [message | _] = Forum.list_messages(topic)
     {reports, _window} = RateLimit.limit(:report)
     reporter = user_fixture()
+    RateLimitWindow.fresh(:report)
 
     for _ <- 1..reports do
       {:ok, report} = Moderation.report_message(reporter, message, %{"reason" => "x"})

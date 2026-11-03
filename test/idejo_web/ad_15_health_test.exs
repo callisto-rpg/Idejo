@@ -105,10 +105,10 @@ defmodule IdejoWeb.AD15HealthTest do
 
     # An address no other test uses (RFC 5737), so no other counter is touched.
     conn = %{build_conn() | remote_ip: {203, 0, 113, 15}}
+    # All in one window (fixed minutes), so the count never starts again midway.
+    Idejo.RateLimitWindow.fresh(:request)
     for _ <- 1..limit, do: assert(health(conn).status == 200)
-    # Windows are fixed minutes: when these requests straddle one, the count starts again,
-    # so the refusal may come up to a limit later.
-    assert Enum.find_value(1..(limit + 1), fn _ -> health(conn).status == 429 || nil end)
+    assert health(conn).status == 429
   end
 
   @tag req: "AD-15"
