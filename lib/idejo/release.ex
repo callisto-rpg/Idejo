@@ -305,6 +305,56 @@ defmodule Idejo.Release do
   end
 
   @doc """
+  `bin/idejo-admin stats` (AD-09): how big this server is, as one line of JSON on standard
+  output, for monitoring and for Idejo Hub (Running under Idejo Hub): `members` (active
+  accounts, no server accounts), `topics` (not private conversations), `messages` (not
+  deleted), `database_bytes`, `uploads_bytes`. Counts and sizes only: nothing about anyone.
+  """
+  @spec stats() :: :ok
+  def stats do
+    with_repo(&stats_data/0) |> Jason.encode!() |> IO.puts()
+  end
+
+  @doc "The figures `stats/0` prints."
+  @spec stats_data() :: %{String.t() => non_neg_integer()}
+  def stats_data do
+    %{
+      "members" =>
+        Repo.aggregate(from(u in Idejo.Accounts.User, where: u.status == "active"), :count),
+      "topics" => Repo.aggregate(from(t in Idejo.Forum.Topic, where: not t.private), :count),
+      "messages" =>
+        Repo.aggregate(from(m in Idejo.Messages.Message, where: is_nil(m.deleted_at)), :count),
+      "database_bytes" => database_bytes(),
+      "uploads_bytes" => directory_bytes(Application.fetch_env!(:idejo, :uploads_dir))
+    }
+  end
+
+  defp database_bytes do
+    %{rows: [[bytes]]} =
+      Repo.query!("SELECT pg_database_size(current_database())", [], log: false)
+
+    bytes
+  end
+
+  # The uploads directory's files, as stored (no symlinks followed).
+  # sobelow_skip ["Traversal.FileModule"]
+  defp directory_bytes(dir) do
+    case File.ls(dir) do
+      {:ok, names} -> Enum.reduce(names, 0, &(&2 + entry_bytes(Path.join(dir, &1))))
+      {:error, _} -> 0
+    end
+  end
+
+  # sobelow_skip ["Traversal.FileModule"]
+  defp entry_bytes(path) do
+    case File.lstat(path) do
+      {:ok, %File.Stat{type: :regular, size: size}} -> size
+      {:ok, %File.Stat{type: :directory}} -> directory_bytes(path)
+      _other -> 0
+    end
+  end
+
+  @doc """
   Runs the health checks: `{name, :ok | :warning | :error, detail}` for the server, the
   database, migrations, the owner, the push keys, the uploads directory and the last backup.
   """

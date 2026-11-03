@@ -29,6 +29,8 @@ Commands:
                                     backup directory)
   health                            check the server, database, migrations, push keys,
                                     uploads and last backup
+  stats                             print members, topics, messages and the database's
+                                    and uploads' sizes as one line of JSON
   push-key                          print the public key browsers subscribe with
   rotate-push-keys [--yes]          make new push keys; every browser's push
                                     subscription ends
@@ -112,6 +114,10 @@ case "${1:-}" in
   health)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi
     run "Idejo.Release.health()"
+    ;;
+  stats)
+    if [ $# -gt 1 ]; then usage >&2; exit 64; fi
+    run "Idejo.Release.stats()"
     ;;
   push-key)
     if [ $# -gt 1 ]; then usage >&2; exit 64; fi

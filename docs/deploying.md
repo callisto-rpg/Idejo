@@ -322,6 +322,7 @@ source ~/.bashrc
 | Stop everything | `idejo down` (data is kept in Docker volumes) |
 | Start again | `idejo up -d` |
 | Health check | `idejo exec app bin/idejo-admin health` |
+| Size (members, topics, messages, database, uploads; JSON) | `idejo exec app bin/idejo-admin stats` |
 
 **Updating to a new version:** make a backup first (`idejo exec app bin/idejo-admin backup`,
 see [Backups](#backups)), then:
