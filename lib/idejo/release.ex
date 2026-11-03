@@ -225,6 +225,9 @@ defmodule Idejo.Release do
     path = if Path.basename(file) == file, do: Path.join(Backup.dir(), file), else: file
 
     case with_repo(fn -> Backup.restore(path) end) do
+      {:ok, nil} ->
+        IO.puts("Restored #{path}. The database was empty before: nothing else to keep.")
+
       {:ok, before} ->
         IO.puts("""
         Restored #{path}.

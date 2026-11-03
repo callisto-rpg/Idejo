@@ -111,6 +111,33 @@ defmodule Idejo.BackupTest do
     end
   end
 
+  describe "restore onto a new install" do
+    setup :scratch_database
+
+    @tag req: "AD-05", pg_tools: true
+    test "AD-05 restores onto a database that was never migrated, with nothing to keep first" do
+      alice = user_fixture(%{username: unique_username("alice")})
+      put_upload("kept.webp", "kept")
+      {:ok, backup} = Backup.create()
+
+      # A new install: an empty database, before its first start (no migrations yet).
+      config = Application.fetch_env!(:idejo, Idejo.Repo)
+      Supervisor.stop(Repo.get_dynamic_repo())
+      Repo.put_dynamic_repo(Repo)
+      :ok = Postgres.storage_down(config)
+      :ok = Postgres.storage_up(config)
+      File.rm_rf!(uploads_dir())
+      connect()
+
+      assert {:ok, nil} = Backup.restore(backup)
+      connect()
+      assert Accounts.get_user_by_email(alice.email)
+      assert uploads() == ["kept.webp"]
+      # Only the restored backup is in the directory: none was made of the empty database.
+      assert [%{path: ^backup}] = Backup.list()
+    end
+  end
+
   describe "restore refuses" do
     @tag req: "AD-05"
     test "AD-05 a file that is not an Idejo backup" do
