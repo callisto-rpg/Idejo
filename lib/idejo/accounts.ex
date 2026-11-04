@@ -12,6 +12,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Federation
   alias Idejo.Messages.Body
   alias Idejo.Moderation
+  alias Idejo.Notifications.{Digest, EmailPreference}
   alias Idejo.Push
   alias Idejo.Repo
   alias Idejo.Uploads
@@ -724,6 +725,65 @@ defmodule Idejo.Accounts do
       Repo.transact(fn -> anonymise(user) end)
     else
       {:error, :invalid_password}
+    end
+  end
+
+  @doc """
+  AC-09, for a shared identity provider (Idejo Hub's ID-05, ID-06): the account linked to
+  the configured provider's `subject`, deleted as AC-07 deletes one (anonymised: its messages
+  stay, shown as "Deleted user"; the last owner is refused). No password or sign-in is asked:
+  only the server's command line calls it, for the provider's operator. Audited as
+  `user.delete_by_identity` with no admin. Returns the ended sessions' socket ids.
+  """
+  @spec delete_user_by_identity(String.t()) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, :not_found | :last_owner | :no_provider}
+  def delete_user_by_identity(subject) do
+    with {:ok, user} <- user_by_identity(subject) do
+      Repo.transact(fn -> anonymise_audited(user) end)
+    end
+  end
+
+  defp anonymise_audited(user) do
+    with {:ok, result} <- anonymise(user) do
+      {:ok, _} = Audit.record(nil, "user.delete_by_identity", %{"uri" => user.uri}, nil)
+      {:ok, result}
+    end
+  end
+
+  @doc """
+  AC-09, for a shared identity provider (Idejo Hub's ID-05): the person leaves this forum but
+  keeps their account. Their sessions end, their browsers stop getting pushes and their email
+  summaries are turned off; their account, messages, roles and link to the provider stay, so
+  signing in again with the same identity brings everything back. Audited as `user.leave`.
+  Returns the ended sessions' socket ids.
+  """
+  @spec leave_by_identity(String.t()) ::
+          {:ok, {User.t(), [String.t()]}} | {:error, :not_found | :no_provider}
+  def leave_by_identity(subject) do
+    with {:ok, user} <- user_by_identity(subject) do
+      Repo.transact(fn ->
+        socket_ids = session_socket_ids(user)
+        Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
+        :ok = Push.delete_for_user(user)
+
+        {:ok, _} =
+          Digest.update_preferences(user, Map.new(EmailPreference.options(), &{&1, false}))
+
+        {:ok, _} = Audit.record(nil, "user.leave", %{"uri" => user.uri}, nil)
+        {:ok, {user, socket_ids}}
+      end)
+    end
+  end
+
+  defp user_by_identity(subject) do
+    with issuer when is_binary(issuer) <-
+           (Application.get_env(:idejo, :oidc) || [])[:issuer] || {:error, :no_provider},
+         %User{status: status} = user when status != "deleted" <-
+           OIDC.find_user(%{"iss" => issuer, "sub" => subject}) || {:error, :not_found} do
+      {:ok, user}
+    else
+      {:error, reason} -> {:error, reason}
+      %User{} -> {:error, :not_found}
     end
   end
 
