@@ -52,6 +52,13 @@ async function signIn(host, invite) {
     await page.click("#submit-login")
   }
 
+  // A first sign-in asks whether to join, saying what the forum receives.
+  await page.waitForURL(url => ["/", "/users/oidc/consent"].includes(new URL(url).pathname))
+  if (new URL(page.url()).pathname === "/users/oidc/consent") {
+    check((await page.textContent("#oidc-consent")).includes(EMAIL), `${host}: consent names the email`)
+    await page.click("#oidc-consent-join")
+  }
+
   await page.waitForURL(`https://${host}/`)
   await page.goto(`https://${host}/users/settings`)
   check(new URL(page.url()).pathname === "/users/settings", `${host}: signed in through Idejo ID`)

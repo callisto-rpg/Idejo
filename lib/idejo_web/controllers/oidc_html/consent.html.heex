@@ -1,0 +1,38 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("Join %{server}?", server: @server)}</h1>
+  </header>
+  <section id="oidc-consent" aria-labelledby="oidc-consent-shared">
+    <p id="oidc-consent-shared">
+      {gettext("%{server} will receive from %{provider}:", server: @server, provider: @provider)}
+    </p>
+    <ul class="list-disc pl-6">
+      <li>{gettext("your email address, %{email}", email: @details.email)}</li>
+      <li>{gettext("your display name, %{name}", name: @details.display_name)}</li>
+    </ul>
+    <p>
+      {gettext(
+        "Never your password. Your profile, roles and messages here stay on this server; you can change your display name here once you have joined."
+      )}
+    </p>
+    <form action={~p"/users/oidc/consent"} method="post" class="flex gap-2 mt-4">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <button
+        type="submit"
+        name="choice"
+        value="join"
+        id="oidc-consent-join"
+        class="btn btn-primary"
+      >
+        {gettext("Join")}
+      </button>
+      <button type="submit" name="choice" value="cancel" id="oidc-consent-cancel" class="btn">
+        {gettext("Cancel")}
+      </button>
+    </form>
+  </section>
+</Layouts.app>

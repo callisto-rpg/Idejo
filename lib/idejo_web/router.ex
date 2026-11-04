@@ -225,6 +225,8 @@ defmodule IdejoWeb.Router do
     # where it sends the browser back; also linking and confirming from the profile.
     get "/oidc", OIDCController, :start
     get "/oidc/callback", OIDCController, :callback
+    get "/oidc/consent", OIDCController, :consent
+    post "/oidc/consent", OIDCController, :decide
     get "/confirm/:token", UserConfirmationController, :edit
     post "/confirm/:token", UserConfirmationController, :update
   end

@@ -209,6 +209,36 @@ defmodule Idejo.Accounts.OIDC do
     end
   end
 
+  @doc """
+  Whether a person the provider vouches for, not yet linked here, may be asked to join:
+  `:ok`, or the error `sign_in/2` would give (`:no_email`, `:email_taken`, `:closed`), so
+  nobody consents only to be refused. An invite is checked when they join.
+  """
+  @spec precheck(map()) :: :ok | {:error, :no_email | :email_taken | :closed}
+  def precheck(claims) do
+    with {:ok, email} <- email(claims) do
+      cond do
+        Accounts.get_user_by_email(email) -> {:error, :email_taken}
+        not Accounts.sign_ups_open?() -> {:error, :closed}
+        true -> :ok
+      end
+    end
+  end
+
+  @consent_claims ~w(iss sub email email_verified name preferred_username)
+
+  @doc """
+  The claims kept while a person decides whether to join (the consent page): what
+  `sign_in/2` reads and nothing else.
+  """
+  def consent_claims(claims), do: Map.take(claims, @consent_claims)
+
+  @doc "What the consent page shows: the email and the display name a new member would get."
+  def consent_details(claims) do
+    {:ok, email} = email(claims)
+    %{email: email, display_name: display_name(claims, email |> String.split("@") |> hd())}
+  end
+
   defp create(claims, invite_code) do
     with {:ok, email} <- email(claims) do
       if Accounts.get_user_by_email(email),

@@ -9,8 +9,10 @@ defmodule IdejoWeb.OIDCController do
   through the provider), `link` (a signed-in member links their account from the profile)
   or `reauth` (a signed-in member confirms deleting their account). The request's `state`,
   `nonce` and PKCE verifier wait in the encrypted session, used once.
-  `GET /users/oidc/callback` is where the provider sends the browser back. 404 while
-  OpenID Connect is not set up.
+  `GET /users/oidc/callback` is where the provider sends the browser back. Someone not yet
+  a member is then asked at `GET /users/oidc/consent` whether to join, seeing what this
+  server receives from the provider (their email and display name); `POST` there joins or
+  cancels. 404 while OpenID Connect is not set up.
   """
   use IdejoWeb, :controller
 
@@ -23,8 +25,12 @@ defmodule IdejoWeb.OIDCController do
   # SP-05: each callback is a sign-in attempt.
   plug IdejoWeb.Plugs.RateLimit, :sign_in when action == :callback
   plug :require_oidc
+  # SP-05: joining makes an account, as signing up does.
+  plug IdejoWeb.Plugs.RateLimit, :sign_up when action == :decide
 
   @session_key "oidc_request"
+  @consent_key "oidc_consent"
+  @consent_seconds 600
   @intents ~w(sign_in link reauth)
 
   def start(conn, params) do
@@ -84,10 +90,22 @@ defmodule IdejoWeb.OIDCController do
     end
   end
 
+  # A linked member signs in. Someone new is first asked whether to join, and told what
+  # this server receives from the provider (consent on first join; steward decision,
+  # 2026-11-04): the claims wait in the encrypted session for ten minutes.
   defp finish(conn, "sign_in", claims, request) do
-    case OIDC.sign_in(claims, request["invite"]) do
-      {:ok, user, kind} ->
-        log_in(conn, user, kind)
+    with nil <- OIDC.find_user(claims),
+         :ok <- OIDC.precheck(claims) do
+      pending = %{
+        "claims" => OIDC.consent_claims(claims),
+        "invite" => request["invite"],
+        "at" => System.system_time(:second)
+      }
+
+      conn |> put_session(@consent_key, pending) |> redirect(to: ~p"/users/oidc/consent")
+    else
+      %Idejo.Accounts.User{} ->
+        join(conn, claims, request["invite"])
 
       {:error, reason} ->
         conn |> put_flash(:error, refusal(reason)) |> redirect(to: back("sign_in"))
@@ -141,6 +159,63 @@ defmodule IdejoWeb.OIDCController do
           gettext("That is not the %{provider} account linked to yours.", provider: OIDC.label())
         )
         |> redirect(to: back("reauth"))
+    end
+  end
+
+  @doc "The consent page: what joining shares with this server, Join or Cancel."
+  def consent(conn, _params) do
+    case pending(conn) do
+      {:ok, pending} ->
+        render(conn, :consent,
+          page_title: gettext("Join %{server}", server: IdejoWeb.Layouts.server_name()),
+          provider: OIDC.label(),
+          server: IdejoWeb.Layouts.server_name(),
+          details: OIDC.consent_details(pending["claims"])
+        )
+
+      :none ->
+        conn |> delete_session(@consent_key) |> redirect(to: ~p"/users/sign-in")
+    end
+  end
+
+  @doc "Join (the account is made and signed in) or Cancel (nothing is kept)."
+  def decide(conn, params) do
+    result = pending(conn)
+    conn = delete_session(conn, @consent_key)
+
+    case {result, params["choice"]} do
+      {{:ok, pending}, "join"} ->
+        join(conn, pending["claims"], pending["invite"])
+
+      {{:ok, _pending}, _cancel} ->
+        conn
+        |> put_flash(:info, gettext("You did not join. Nothing was kept."))
+        |> redirect(to: ~p"/users/sign-in")
+
+      {:none, _choice} ->
+        conn
+        |> put_flash(:error, gettext("That took too long. Please sign in again."))
+        |> redirect(to: ~p"/users/sign-in")
+    end
+  end
+
+  defp pending(conn) do
+    case get_session(conn, @consent_key) do
+      %{"claims" => %{}, "at" => at} = pending when is_integer(at) ->
+        if System.system_time(:second) - at <= @consent_seconds, do: {:ok, pending}, else: :none
+
+      _other ->
+        :none
+    end
+  end
+
+  defp join(conn, claims, invite) do
+    case OIDC.sign_in(claims, invite) do
+      {:ok, user, kind} ->
+        log_in(conn, user, kind)
+
+      {:error, reason} ->
+        conn |> put_flash(:error, refusal(reason)) |> redirect(to: back("sign_in"))
     end
   end
 
