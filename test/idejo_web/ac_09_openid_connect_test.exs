@@ -46,7 +46,17 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
     request = FakeOIDCProvider.authorization(location)
     code = FakeOIDCProvider.code(provider, request, claims, Keyword.take(opts, [:key]))
     query = %{"code" => code, "state" => Keyword.get(opts, :state, request["state"])}
-    get(conn, ~p"/users/oidc/callback?#{query}")
+    conn = get(conn, ~p"/users/oidc/callback?#{query}")
+
+    # Someone new is asked first (consent on first join): join, unless the test says not to.
+    case {Keyword.get(opts, :consent, "join"), conn.status, get_resp_header(conn, "location")} do
+      {choice, 302, ["/users/oidc/consent"]} when choice in ["join", "cancel"] ->
+        assert html_response(get(recycle(conn), ~p"/users/oidc/consent"), 200) =~ "Join"
+        post(recycle(conn), ~p"/users/oidc/consent", %{"choice" => choice})
+
+      _other ->
+        conn
+    end
   end
 
   defp identities, do: Repo.all(UserIdentity)
@@ -89,7 +99,8 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
         code = FakeOIDCProvider.code(provider, request, @ada)
         query = %{"code" => code, "state" => request["state"]}
         first = get(conn, ~p"/users/oidc/callback?#{query}")
-        assert signed_in?(first)
+        assert redirected_to(first) == ~p"/users/oidc/consent"
+        assert signed_in?(post(recycle(first), ~p"/users/oidc/consent", %{"choice" => "join"}))
         replay = get(conn |> recycle(), ~p"/users/oidc/callback?#{query}")
         refute signed_in?(replay)
 
@@ -375,6 +386,63 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
     Application.delete_env(:idejo, :oidc)
     assert get(build_conn(), ~p"/users/oidc").status == 404
     refute html_response(get(build_conn(), ~p"/users/sign-in"), 200) =~ "Sign in with"
+  end
+
+  @tag req: "AC-09"
+  test "AC-09 someone new is asked first, told what this server receives", %{provider: provider} do
+    conn = through(provider, @ada, consent: :stop)
+    assert redirected_to(conn) == ~p"/users/oidc/consent"
+    refute signed_in?(conn)
+    refute Repo.get_by(User, email: "ada@idejo.test")
+
+    html = html_response(get(recycle(conn), ~p"/users/oidc/consent"), 200)
+    assert html =~ "will receive from Test ID"
+    assert html =~ "your email address, ada@idejo.test"
+    assert html =~ "your display name, Ada Lovelace"
+    assert IdejoWeb.Accessibility.audit(html) == []
+
+    # Cancel: nothing kept, and the page is gone.
+    conn = post(recycle(conn), ~p"/users/oidc/consent", %{"choice" => "cancel"})
+    assert redirected_to(conn) == ~p"/users/sign-in"
+    refute signed_in?(conn)
+    assert identities() == []
+    assert redirected_to(get(recycle(conn), ~p"/users/oidc/consent")) == ~p"/users/sign-in"
+
+    # Join: the member is made then, and a member already linked is never asked again.
+    assert signed_in?(through(provider, @ada))
+    assert [_] = identities()
+    conn = through(provider, @ada, consent: :stop)
+    assert redirected_to(conn) == ~p"/"
+    assert signed_in?(conn)
+  end
+
+  @tag req: "AC-09"
+  test "AC-09 consent waits ten minutes, and is not asked when joining would be refused",
+       %{provider: provider} do
+    conn = through(provider, @ada, consent: :stop)
+    pending = get_session(conn, "oidc_consent")
+
+    assert Map.keys(pending["claims"]) -- ~w(iss sub email email_verified name preferred_username) ==
+             []
+
+    conn =
+      conn
+      |> recycle()
+      |> Plug.Test.init_test_session(%{
+        "oidc_consent" => %{pending | "at" => pending["at"] - 601}
+      })
+      |> post(~p"/users/oidc/consent", %{"choice" => "join"})
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "took too long"
+    refute Repo.get_by(User, email: "ada@idejo.test")
+
+    user_fixture(%{email: "bea@idejo.test"})
+
+    conn =
+      through(provider, %{@ada | "sub" => "bea-1", "email" => "bea@idejo.test"}, consent: :stop)
+
+    assert redirected_to(conn) == ~p"/users/sign-in"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "already uses the email address"
   end
 
   @tag req: "AC-09"

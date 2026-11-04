@@ -339,7 +339,12 @@ The contract (M6; mark each item done here when its PR merges):
   PKCE verifier, time) in the encrypted session, used once within ten minutes; `GET
   /users/oidc/callback` gets the checked claims (`OIDC.claims/3`: `Oidcc.retrieve_token/5`
   checks signature, `iss`, `aud`, `exp`, `iat`, `nonce`). `user_identities` (issuer,
-  subject; no tokens) links accounts, never email: `OIDC.sign_in/2` finds the link or
+  subject; no tokens) links accounts, never email. Someone not yet linked is first asked
+  (steward decision, 2026-11-04): after `OIDC.precheck/1` (no email, email taken, closed:
+  refused at once), `OIDC.consent_claims/1` waits in the session (`oidc_consent`, ten
+  minutes) and `GET /users/oidc/consent` shows "Join {server}?" with what it receives from
+  the provider (email and display name, `OIDC.consent_details/1`); `POST` with `choice`
+  `join` (rate-limited `:sign_up`) or `cancel` (nothing kept). Then `OIDC.sign_in/2` finds the link or
   registers a member through `Accounts.register_user/2` (registration mode and invites
   apply; `email_verified` or Idejo's verification email; username from
   `Accounts.free_username/2`; a random password nobody knows), refuses an email an account
