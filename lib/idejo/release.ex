@@ -239,6 +239,67 @@ defmodule Idejo.Release do
     end
   end
 
+  ## Shared identity (AC-09, for Idejo Hub's ID-05 and ID-06)
+
+  @doc """
+  `bin/idejo-admin delete-account --oidc-subject SUB`: deletes (anonymises, AC-07) the account
+  linked to the configured provider's subject. Exit 0 when done, 2 when no account is linked
+  to it (nothing to do), 1 otherwise (the last owner, no provider configured).
+  """
+  @spec delete_account(String.t()) :: :ok
+  def delete_account(subject) do
+    case with_repo(fn -> Accounts.delete_user_by_identity(subject) end) do
+      {:ok, {_user, socket_ids}} ->
+        disconnect(socket_ids)
+
+        IO.puts(
+          "The account linked to that identity is deleted; its messages show \"Deleted user\"."
+        )
+
+      {:error, :not_found} ->
+        not_found()
+
+      {:error, :last_owner} ->
+        fail(
+          "That account is the server's last owner: give another account the owner role first."
+        )
+
+      {:error, :no_provider} ->
+        fail("No OpenID Connect provider is configured (IDEJO_OIDC_*).")
+    end
+  end
+
+  @doc """
+  `bin/idejo-admin leave --oidc-subject SUB`: the person leaves this forum, keeping their
+  account (sessions ended, pushes and email summaries stopped). Exit codes as
+  `delete_account/1`.
+  """
+  @spec leave(String.t()) :: :ok
+  def leave(subject) do
+    case with_repo(fn -> Accounts.leave_by_identity(subject) end) do
+      {:ok, {_user, socket_ids}} ->
+        disconnect(socket_ids)
+        IO.puts("Left: sessions ended, no more pushes or email summaries; the account is kept.")
+
+      {:error, :not_found} ->
+        not_found()
+
+      {:error, :no_provider} ->
+        fail("No OpenID Connect provider is configured (IDEJO_OIDC_*).")
+    end
+  end
+
+  # Only inside the running server (rpc); a fresh VM has no LiveViews to disconnect.
+  defp disconnect(socket_ids) do
+    if Process.whereis(IdejoWeb.Endpoint), do: IdejoWeb.UserAuth.disconnect_sessions(socket_ids)
+    :ok
+  end
+
+  defp not_found do
+    IO.puts("No account here is linked to that identity: nothing to do.")
+    exit({:shutdown, 2})
+  end
+
   ## Push keys (PN-14, AD-09)
 
   @doc """
