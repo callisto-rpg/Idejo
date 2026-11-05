@@ -11,8 +11,8 @@ that deploys with HTTPS from one command, with CI green.
 ## 0. On Windows, work inside WSL 2
 
 Phoenix development is much smoother on Linux: Erlang compiles natively, `argon2_elixir`
-needs a C compiler, and live reload needs `inotify-tools`. Install WSL 2 with Ubuntu
-(`wsl --install` in an admin PowerShell), plus Docker Desktop with WSL integration on.
+needs a C compiler, and live reload needs `inotify-tools`. Install WSL 2 with Debian
+(`wsl --install -d Debian` in an admin PowerShell), plus Docker Desktop with WSL integration on.
 Clone the repository **inside** the Linux file system (e.g. `~/code/idejo`), not under
 `/mnt/c/...`, or file watching and compiles will be slow.
 
@@ -21,15 +21,15 @@ Clone the repository **inside** the Linux file system (e.g. `~/code/idejo`), not
 ```sh
 sudo apt update
 sudo apt install -y build-essential autoconf m4 libncurses-dev libssl-dev \
-  libwxgtk3.2-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev \
-  unixodbc-dev xsltproc fop libxml2-utils inotify-tools git curl
+  libwxgtk3.2-dev libgl-dev libglu1-mesa-dev libpng-dev libssh-dev \
+  unixodbc-dev xsltproc fop libxml2-utils inotify-tools git curl ca-certificates pipx
 curl https://mise.run | sh            # then follow its instruction to activate mise
 cd ~/code/idejo
 mise install                          # Erlang + Elixir pinned in .tool-versions
 mix local.hex --force
 mix local.rebar --force
 mix archive.install hex phx_new --force
-pipx install reuse                    # or: pip install --user reuse
+pipx install reuse                    # Debian blocks pip install --user (PEP 668)
 ```
 
 Install Claude Code with its official installer.

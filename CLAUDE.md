@@ -1630,7 +1630,7 @@ mix credo --strict
 mix dialyzer
 mix sobelow --config               # reviewed findings in .sobelow-skips (AD-13's origin list)
 mix deps.audit && mix hex.audit
-reuse lint                         # SPDX headers (pip install reuse)
+reuse lint                         # SPDX headers (pipx install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
 load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
 mix test --only req:AC-09          # one M6 requirement (SP-10, AD-13, AD-14, AD-15, AD-16, AC-09)

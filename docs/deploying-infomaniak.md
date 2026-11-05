@@ -28,7 +28,7 @@ Idejo runs in Docker, which needs a server you fully control. At Infomaniak that
 
 For the VPS, choose:
 
-- **Operating system:** **Ubuntu 24.04 LTS**
+- **Operating system:** **Debian 13 (trixie)**
 - **Size:** at least **2 vCPU and 2 GB RAM**, 20 GB disk or more
 - **SSH key:** see step 1 — ideally you add it while ordering
 
@@ -157,12 +157,12 @@ On macOS and Linux, `dig +short forum.example.org` also works.
 **On your computer:**
 
 ```sh
-ssh ubuntu@203.0.113.10
+ssh debian@203.0.113.10
 ```
 
-- The user is **`ubuntu`** — that is Infomaniak's default for Ubuntu servers.
+- The user is **`debian`** — that is Infomaniak's default for Debian servers.
 - The first time, it asks *"Are you sure you want to continue connecting?"* — type `yes`.
-- You are in when the prompt changes to something like `ubuntu@your-server:~$`.
+- You are in when the prompt changes to something like `debian@your-server:~$`.
 
 From now on, **every command runs on the server** until the guide says otherwise. To leave
 the server, type `exit`.
@@ -178,13 +178,13 @@ Troubleshooting.
 sudo apt update && sudo apt upgrade -y
 ```
 
-This can take a few minutes. If a purple screen asks about configuration files or restarting
+This can take a few minutes. If a blue screen asks about configuration files or restarting
 services, press **Enter** to accept the default.
 
 Turn on automatic security updates:
 
 ```sh
-sudo apt install -y unattended-upgrades
+sudo apt install -y unattended-upgrades ca-certificates curl
 sudo dpkg-reconfigure -plow unattended-upgrades
 ```
 
@@ -212,7 +212,7 @@ sudo systemctl restart ssh
 ```
 
 **Before closing your current window**, open a **second** terminal on your computer and
-check you can still log in with `ssh ubuntu@203.0.113.10`. If you can, close the second
+check you can still log in with `ssh debian@203.0.113.10`. If you can, close the second
 window and continue. If you cannot, undo it from the first window with
 `sudo rm /etc/ssh/sshd_config.d/10-hardening.conf && sudo systemctl restart ssh`.
 
@@ -241,13 +241,13 @@ Paste this block as a whole:
 
 ```sh
 sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
-sudo usermod -aG docker ubuntu
+sudo usermod -aG docker debian
 ```
 
 Log out and back in, so your user may use Docker:
@@ -257,7 +257,7 @@ exit
 ```
 
 ```sh
-ssh ubuntu@203.0.113.10
+ssh debian@203.0.113.10
 ```
 
 Check:
@@ -358,7 +358,7 @@ not work after a few minutes, see Troubleshooting.
 
 ## Everyday use
 
-Log in with `ssh ubuntu@203.0.113.10`, then create a shortcut **once**:
+Log in with `ssh debian@203.0.113.10`, then create a shortcut **once**:
 
 ```sh
 echo "alias idejo='docker compose -f ~/idejo/deploy/docker-compose.yml --env-file ~/idejo/deploy/.env'" >> ~/.bashrc
@@ -403,7 +403,7 @@ and keeps the last 7, on the server.
    Then **on your computer:**
 
    ```sh
-   scp -r ubuntu@203.0.113.10:idejo-backups ./
+   scp -r debian@203.0.113.10:idejo-backups ./
    ```
 
    Keep a copy of `deploy/.env` with them, in your password manager.
@@ -421,7 +421,7 @@ Never run `idejo down -v`: the `-v` deletes your database, backups and certifica
 
 | What you see | What to do |
 | --- | --- |
-| `Permission denied (publickey)` when logging in | The server lacks your key. Check you used `ubuntu@` and the right IP. If Infomaniak generated the key, add `-i path/to/key`. Otherwise use the Manager's **web console** on the VPS page to log in and add the line from `cat ~/.ssh/id_ed25519.pub` to `/home/ubuntu/.ssh/authorized_keys`. |
+| `Permission denied (publickey)` when logging in | The server lacks your key. Check you used `debian@` and the right IP. If Infomaniak generated the key, add `-i path/to/key`. Otherwise use the Manager's **web console** on the VPS page to log in and add the line from `cat ~/.ssh/id_ed25519.pub` to `/home/debian/.ssh/authorized_keys`. |
 | `Connection timed out` when logging in | Port 22 is not open in the Infomaniak firewall (step 3), or the IP is wrong. |
 | Browser says "site can't be reached" | DNS not ready yet (`nslookup` in step 4 must show your IP), or ports 80/443 not open in the firewall (step 3). |
 | Browser warns the certificate is invalid | Caddy has not got the certificate yet. Read `idejo logs caddy`. Messages with `challenge failed` mean DNS or the firewall is not right yet; fix them and wait — Caddy retries. |
