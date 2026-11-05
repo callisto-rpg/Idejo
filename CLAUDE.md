@@ -311,7 +311,7 @@ The contract (M6; mark each item done here when its PR merges):
   `users.user_tag`, optional, at most 32 characters, blank is none, not unique, never read by
   @mentions or suggestions): `UserComponents.user_tag/1` puts it right after the name, inside
   the name's element (so the author's `a.author-name` opens the card from either), the same
-  font at 80% after a thin line (`.user-tag`); on the author line and the user card. The bio
+  font at 50% opacity (steward decision, 2026-11-05; was 80%) after a thin line (`.user-tag`); on the author line and the user card. The bio
   (AC-04; `users.bio_md` / `bio_html`, FD-03; at most 5000 characters, blank is none) is
   written in the same page with the message editor (Write / Preview, `@` suggestions) and
   saved by `Accounts.update_user_bio/2`, which renders it with `Body.to_html/2` as the user
