@@ -197,6 +197,9 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   `x^2^` (superscript), `-# small text` at the start of a line (smaller and greyed out),
   `` `code` ``, code blocks between ```` ``` ```` lines, `> quotes`, lists, tables and links.
   **Help**, in the sidebar, ends with **Formatting text**: every format and how it shows.
+  While you type, bold, italics, struck-through text and `||spoilers||` already show as
+  they will look, with their signs (`**`, `*`, `~~`, `||`) still there; the words of a
+  spoiler show faded.
   Messages have no length limit; a long one shows a **Show all** button.
 - **New topic from this** turns a side question into its own topic, linked both ways: the
   new topic says where it continues from, and the message gets a **Continue topic** button.

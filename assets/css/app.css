@@ -2432,6 +2432,21 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
   overflow-wrap: break-word;
   border: 0;
 }
+/* Live formatting (TP-11; steward decision, 2026-11-05; assets/js/composer_format.js):
+   none of these changes a character's width, or the caret and the text would drift apart. */
+.composer-backdrop .md-b {
+  -webkit-text-stroke: 0.035em currentColor;
+}
+.composer-backdrop .md-w {
+  display: inline-block;
+  transform: skewX(-10deg);
+}
+.composer-backdrop .md-s {
+  text-decoration: line-through;
+}
+.composer-backdrop .md-spoiler {
+  opacity: 0.5;
+}
 .composer-backdrop {
   position: absolute;
   inset: 0;
