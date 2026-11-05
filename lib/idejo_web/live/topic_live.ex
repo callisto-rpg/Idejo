@@ -3869,6 +3869,7 @@ defmodule IdejoWeb.TopicLive do
         data-editing={@editing?}
         data-commands={Jason.encode!(@commands)}
         data-punctuate={to_string(@punctuate?)}
+        data-graphical={@graphical?}
         data-label-send={gettext("Enter to send")}
         data-label-sent={gettext("Sent!")}
         data-label-continue={gettext("Continue typing to add to your message")}

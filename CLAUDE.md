@@ -600,6 +600,28 @@ The contract (M6; mark each item done here when its PR merges):
   editing, disabled with "You cannot start a new message yet" before `mayStartNew()`.
   Clicks never move the focus out of the box. `assets/js/composer_toolbar.js`
   (`mountToolbar/1`, from the hook).
+  It also draws the message as it will look (steward decision, 2026-11-05;
+  `assets/js/composer_view.js`, `data-graphical`, `.composer.is-graphical`): the textarea
+  still holds the Markdown, caret, selection and keys (sending, timers, suggestions, undo,
+  input methods unchanged), out of sight on the caret's line (`placeInput()`), and the
+  backdrop becomes the view (`drawView()`): titles, bullets and numbered lists (levels),
+  quotes, `-#` small text, code blocks and rules per line (`lineKind/1`, their Markdown
+  hidden), inline bold, italic, strikethrough, ==highlight==, `code`, spoilers (50%) and
+  links (`formatMarks/1`, its markers hidden), uploaded images and GIFs as pictures. Every
+  piece drawn carries its place in the text (`data-s`; `sourceAt/3`, `pointAt/2`). `Layout`
+  knows what is hidden: the caret rests before Markdown that closes a format and after any
+  other (`canonical/1`; a caret just typed after a closing `**` stays, `this.typed`),
+  arrows pass hidden Markdown and pictures in one step (`stepLeft/1`, `stepRight/1`; up and
+  down by the drawing, `vertical()`), Backspace and Delete take the character seen or a whole
+  picture, at an item's start its bullet, and an emptied format's Markdown with it
+  (`backspace/1`, `forward/1`, `emptied/2`), Shift+Enter in a list or quote starts the next
+  item and in an empty one ends it. The mouse's caret and selection are made by the hook
+  (`onViewMouseDown`: drag, Shift+click, double click a word, `wordAt/1`, triple click a
+  line), so the focus never leaves the textarea; a tap places the caret (`onViewPointer`), a
+  long press's selection becomes the textarea's (`followViewSelection`). A picture pasted,
+  dropped or chosen shows at once from its file (`pending`, a `blob:` URL) until
+  `"image_uploaded"`, or `"image_failed"` (`ImageUploads` sends it for a refused or failed
+  upload). Screen readers keep reading the textarea (the view is `aria-hidden`).
 - **Composer commands** (steward decision, 2026-10-23): after `!` at the start of a word the
   `Suggest` list shows the composer's commands (`data-commands` from `TopicLive.commands/2`:
   only those the author may use; no server question; Enter picks one only once a letter

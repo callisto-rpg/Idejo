@@ -132,6 +132,7 @@ import {InlineCard} from "./inline_cards"
 import {mayStartNew} from "./composer_timer"
 import {mountToolbar} from "./composer_toolbar"
 import {formatMarks, formatted} from "./composer_format"
+import {Layout, render as renderView, sourceAt, pointAt} from "./composer_view"
 
 // Where Ctrl+Enter keeps its own meaning (typing elsewhere, a link opening in a new tab), so
 // it never reaches the composer from there.
@@ -254,6 +255,10 @@ export const Composer = {
     this.input = this.el.querySelector("textarea")
     this.backdrop = this.el.querySelector(".composer-backdrop")
     this.sent = ""
+    // TP-11: the graphical composer shows the message as it will look (composer_view.js).
+    this.graphical = this.el.hasAttribute("data-graphical") && this.el.dataset.graphical !== "false"
+    this.pending = []
+    if (this.graphical) this.el.classList.add("is-graphical")
     // A browser may put back what the box held before a reload, although it asks not to
     // (autocomplete="off"): that is the sent text again, not something typed. Only what
     // follows the sent text stays, as unsent.
@@ -264,11 +269,19 @@ export const Composer = {
     this.input.addEventListener("input", e => {
       this.enters = 0
       this.justSent = false
+      this.typed = [this.input.value, this.input.selectionStart]
       if (e.inputType?.startsWith("insert") && this.labelledSpoiler()) return
       this.paint()
     })
     // The caret drawn in the backdrop follows the focus and the selection.
-    this.onSelection = () => { if (document.activeElement === this.input) this.paint() }
+    this.onSelection = () => {
+      if (document.activeElement === this.input) {
+        if (this.graphical && !this.composing) this.keepCaretOutOfMarkdown()
+        this.paint()
+      } else if (this.graphical) {
+        this.followViewSelection()
+      }
+    }
     document.addEventListener("selectionchange", this.onSelection)
     for (const event of ["focus", "blur", "select", "keyup", "mouseup"]) {
       this.input.addEventListener(event, () => this.paint())
@@ -282,6 +295,7 @@ export const Composer = {
       e.preventDefault()
       this.send(e.ctrlKey || e.metaKey || this.enterRun())
     })
+    if (this.graphical) this.mountView()
     // Ctrl+Enter from anywhere else on the page (steward decision, 2026-10-25): starts a new
     // message when it may, sending what is not sent yet, and puts the caret at the end of the
     // box; when it may not yet, only the caret goes there, so the author goes on writing.
@@ -319,7 +333,7 @@ export const Composer = {
     this.handleEvent("composer_focus", () => this.focusEnd())
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
     // unsent, like anything typed.
-    onImages(this.input, files => this.upload("composer_image", files))
+    onImages(this.input, files => this.uploadImages(files))
     // A GIF chosen in the overlay: its Markdown at the caret, unsent, like an image.
     this.onGif = e => {
       insertAtCaret(this.input, e.detail.markdown)
@@ -328,8 +342,16 @@ export const Composer = {
     window.addEventListener("idejo:gif", this.onGif)
     this.handleEvent("image_uploaded", ({upload, markdown}) => {
       if (upload !== "composer_image") return
+      this.dropPending()
       if (this.imageAtEnd) appendLine(this.input, markdown)
       else insertAtCaret(this.input, markdown)
+      this.imageAtEnd = false
+      this.paint()
+    })
+    // Refused or failed: the picture shown while it uploaded goes.
+    this.handleEvent("image_failed", ({upload}) => {
+      if (upload !== "composer_image") return
+      this.dropPending()
       this.imageAtEnd = false
       this.paint()
     })
@@ -347,6 +369,8 @@ export const Composer = {
 
   destroyed() {
     this.unmountToolbar?.()
+    this.unmountView?.()
+    for (const {url} of this.pending) URL.revokeObjectURL(url)
     document.removeEventListener("selectionchange", this.onSelection)
     document.removeEventListener("keydown", this.onPageKey)
     window.removeEventListener("idejo:appended", this.onAppended)
@@ -533,6 +557,275 @@ export const Composer = {
     })
   },
 
+  // TP-11, the graphical composer (steward decision, 2026-11-05; composer_view.js): the text
+  // box keeps the Markdown, the caret and the keys, out of sight; the backdrop is the view
+  // the author sees, clicks and taps. Its caret moves over hidden Markdown in one step,
+  // Backspace and Delete take what is seen, Shift+Enter in a list starts its next item, and
+  // a picture shows while it uploads.
+  mountView() {
+    const view = this.backdrop
+    const on = (el, event, fn, opts) => { el.addEventListener(event, fn, opts); return () => el.removeEventListener(event, fn, opts) }
+    const offs = [
+      on(this.input, "compositionstart", () => { this.composing = true }),
+      on(this.input, "compositionend", () => { this.composing = false }),
+      on(this.input, "keydown", e => this.onViewKey(e)),
+      on(view, "pointerdown", e => { this.pointerType = e.pointerType }),
+      // The focus stays in the box: a tap keeps a phone's keyboard, and the mouse's caret and
+      // selection are made here (a double click takes a word, a triple click a line).
+      on(view, "mousedown", e => this.onViewMouseDown(e)),
+      on(document, "mousemove", e => {
+        if (this.dragAnchor == null || !(e.buttons & 1)) return
+        const p = this.pointSource(e)
+        if (p !== null) { this.selectRange(this.dragAnchor, p); this.paint() }
+      }),
+      on(document, "mouseup", () => { this.dragAnchor = null }),
+      on(view, "mouseup", e => { if (this.pointerType !== "mouse") this.onViewPointer(e) }),
+      // A picture chosen with the image button or !image shows while it uploads.
+      on(document, "change", e => {
+        if (e.target.matches?.("#composer-image-form input[type=file]")) this.addPending(e.target.files)
+      }),
+    ]
+    onImages(view, files => this.uploadImages(files))
+    this.unmountView = () => offs.forEach(off => off())
+  },
+
+  // The view's HTML, with the caret, the selection and the pictures still uploading.
+  drawView(value, painted, caretAt) {
+    const base = []
+    for (const [cls, text] of painted) for (let k = 0; k < text.length; k++) base.push(cls)
+    this.layout = new Layout(value, this.gifs()?.pattern || null)
+    const {selectionStart: s, selectionEnd: e, selectionDirection: d} = this.input
+    const select = document.activeElement === this.input && s !== e ? [s, e] : null
+    return renderView(this.layout, {
+      base,
+      caret: caretAt == null ? null : [caretAt, this.caret(value, caretAt)],
+      select,
+      focus: select ? (d === "backward" ? s : e) : null,
+      pending: this.pending,
+      placeholder: this.input.placeholder,
+    })
+  },
+
+  // The hidden box sits on the caret's line, so a browser scrolling to what is typed scrolls
+  // there.
+  placeInput() {
+    const mark = this.backdrop.querySelector(".composer-caret, .g-focus")
+    if (!mark) return
+    const top = mark.getBoundingClientRect().top - this.el.getBoundingClientRect().top
+    this.input.style.top = `${Math.max(0, top)}px`
+  },
+
+  // A caret moved inside hidden Markdown or a picture's (Home, End, Ctrl+arrows) goes where
+  // it is drawn. Not where it was typed: after a closing `**` just typed, what follows is
+  // plain.
+  keepCaretOutOfMarkdown() {
+    const {selectionStart: s, selectionEnd: e} = this.input
+    if (s !== e || !this.layout || this.layout.value !== this.input.value) return
+    if (this.typed && this.typed[0] === this.input.value && this.typed[1] === s) return
+    const c = this.layout.canonical(s)
+    if (c !== s) this.input.setSelectionRange(c, c)
+  },
+
+  // Words selected in the view (a long press on a phone) are the box's selection, for the
+  // toolbar's buttons.
+  followViewSelection() {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !this.backdrop.contains(sel.anchorNode) || !this.backdrop.contains(sel.focusNode)) return
+    const a = sourceAt(this.backdrop, sel.anchorNode, sel.anchorOffset)
+    const f = sourceAt(this.backdrop, sel.focusNode, sel.focusOffset)
+    if (a === null || f === null || a === f) return
+    this.input.setSelectionRange(Math.min(a, f), Math.max(a, f), f < a ? "backward" : "forward")
+  },
+
+  onViewMouseDown(e) {
+    if (e.button !== 0) return
+    if (this.pointerType !== "mouse") {
+      if (document.activeElement === this.input) e.preventDefault()
+      return
+    }
+    if (e.target.closest?.(".tutorial-bubble, .composer-hint")) return
+    e.preventDefault()
+    const layout = this.layout
+    const p = this.pointSource(e) ?? this.input.value.length
+    const {selectionStart: s, selectionEnd: t, selectionDirection: d} = this.input
+    this.input.focus({preventScroll: true})
+    this.goalX = null
+    if (e.detail === 2 && layout) {
+      const [a, b] = layout.wordAt(p)
+      this.input.setSelectionRange(a, b)
+    } else if (e.detail >= 3 && layout) {
+      const line = layout.lines.find(l => l.a <= p && p <= l.b)
+      if (line) this.input.setSelectionRange(line.a + line.prefix, line.b)
+    } else if (e.shiftKey) {
+      this.selectRange(d === "backward" ? t : s, p)
+      this.dragAnchor = d === "backward" ? t : s
+    } else {
+      this.input.setSelectionRange(p, p)
+      this.dragAnchor = p
+    }
+    this.paint()
+  },
+
+  // The place in the text under the pointer, where the caret goes; null outside the view.
+  pointSource(e) {
+    if (e.target.classList?.contains("g-image")) {
+      const r = e.target.getBoundingClientRect()
+      return Number(e.clientX < r.left + r.width / 2 ? e.target.dataset.a : e.target.dataset.b)
+    }
+    const hit = pointAt(e.clientX, e.clientY)
+    const p = hit ? sourceAt(this.backdrop, hit[0], hit[1]) : null
+    return p === null ? null : this.layout ? this.layout.canonical(p) : p
+  },
+
+  // A tap, or a selection made by a long press, in the view: the box takes the focus, with
+  // the caret or the selection where it was made.
+  onViewPointer(e) {
+    if (e.button !== undefined && e.button !== 0) return
+    if (e.target.closest?.(".tutorial-bubble, .composer-hint")) return
+    const view = this.backdrop
+    const length = this.input.value.length
+    let start = null, end = null, direction = "forward"
+    const sel = window.getSelection()
+    if (sel && !sel.isCollapsed && view.contains(sel.anchorNode) && view.contains(sel.focusNode)) {
+      const a = sourceAt(view, sel.anchorNode, sel.anchorOffset)
+      const f = sourceAt(view, sel.focusNode, sel.focusOffset)
+      if (a !== null && f !== null && a !== f) {
+        start = Math.min(a, f)
+        end = Math.max(a, f)
+        direction = f < a ? "backward" : "forward"
+      }
+    }
+    if (start === null) {
+      let p = null
+      if (e.target.classList?.contains("g-image")) p = Number(e.target.dataset.b)
+      else {
+        const hit = pointAt(e.clientX, e.clientY)
+        p = hit ? sourceAt(view, hit[0], hit[1]) : null
+      }
+      p = this.layout ? this.layout.canonical(p ?? length) : (p ?? length)
+      start = end = p
+    }
+    this.goalX = null
+    this.input.focus({preventScroll: true})
+    sel?.removeAllRanges()
+    this.input.setSelectionRange(start, end, direction)
+    this.paint()
+  },
+
+  onViewKey(e) {
+    if (e.defaultPrevented || e.isComposing || this.composing || e.altKey) return
+    const layout = this.layout
+    if (!layout || layout.value !== this.input.value) return
+    const input = this.input
+    // A caret moved into hidden Markdown just before (Home, End) may not have been put where
+    // it is drawn yet: the selection's event comes later.
+    this.keepCaretOutOfMarkdown()
+    const {selectionStart: s, selectionEnd: t, selectionDirection: d} = input
+    const plain = !e.ctrlKey && !e.metaKey
+    const anchor = d === "backward" ? t : s
+    const focus = d === "backward" ? s : t
+
+    if ((e.key === "ArrowRight" || e.key === "ArrowLeft") && plain) {
+      e.preventDefault()
+      const right = e.key === "ArrowRight"
+      const step = p => (right ? layout.stepRight(p) : layout.stepLeft(p))
+      if (e.shiftKey) this.selectRange(anchor, step(focus))
+      else if (s !== t) input.setSelectionRange(right ? t : s, right ? t : s)
+      else input.setSelectionRange(step(s), step(s))
+      this.goalX = null
+      this.paint()
+    } else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && plain) {
+      e.preventDefault()
+      const p = this.vertical(e.key === "ArrowUp" ? -1 : 1, focus)
+      if (e.shiftKey) this.selectRange(anchor, p)
+      else input.setSelectionRange(p, p)
+      this.paint()
+    } else if ((e.key === "Backspace" || e.key === "Delete") && plain && s === t) {
+      e.preventDefault()
+      const range = e.key === "Backspace" ? layout.backspace(s) : layout.forward(s)
+      if (range) this.replaceText(range[0], range[1], "")
+    } else if (e.key === "Enter" && e.shiftKey && plain && s === t) {
+      // A new line in a list or a quote continues it; in an empty item, it ends the list.
+      const line = layout.lines.find(l => l.a <= s && s <= l.b)
+      if (!line || !["g-ul", "g-ol", "g-quote"].includes(line.cls)) return
+      e.preventDefault()
+      const prefix = input.value.slice(line.a, line.a + line.prefix)
+      if (line.b === line.a + line.prefix) this.replaceText(line.a, line.b, "")
+      else {
+        const next = line.cls === "g-ol" ? prefix.replace(/\d+/, n => String(Number(n) + 1)) : prefix
+        this.replaceText(s, s, "\n" + next)
+      }
+    }
+  },
+
+  // From `focus`, the place one line up (-1) or down (1) in the view, at the same distance from
+  // the left as where the moves started; past the first or last line, the start or the end.
+  vertical(dir, focus) {
+    const layout = this.layout
+    const mark = this.backdrop.querySelector(".composer-caret, .g-focus")
+    if (mark) {
+      const r = mark.getBoundingClientRect()
+      if (this.goalX == null) this.goalX = r.left
+      const view = this.backdrop.getBoundingClientRect()
+      const band = this.visibleBand()
+      const limit = dir < 0 ? Math.max(view.top, band.top) : Math.min(view.bottom, band.bottom)
+      for (let y = dir < 0 ? r.top - 2 : r.bottom + 2; dir < 0 ? y > limit : y < limit; y += 4 * dir) {
+        const hit = pointAt(this.goalX, y)
+        const p = hit ? sourceAt(this.backdrop, hit[0], hit[1]) : null
+        if (p === null) continue
+        const range = document.createRange()
+        try { range.setStart(hit[0], hit[1]) } catch (_e) { continue }
+        const rect = range.getClientRects()[0] || hit[0].parentElement?.getBoundingClientRect()
+        if (!rect || (dir < 0 ? rect.bottom <= r.top + 1 : rect.top >= r.bottom - 1)) return layout.canonical(p)
+      }
+    }
+    // Off screen, or no drawing: the same column of the line before or after.
+    const index = layout.lines.findIndex(l => l.a <= focus && focus <= l.b)
+    const other = layout.lines[index + dir]
+    if (!other) return dir < 0 ? 0 : this.input.value.length
+    const column = focus - layout.lines[index].a
+    return layout.canonical(Math.min(other.a + column, other.b))
+  },
+
+  selectRange(anchor, focus) {
+    this.input.setSelectionRange(Math.min(anchor, focus), Math.max(anchor, focus), focus < anchor ? "backward" : "forward")
+  },
+
+  // Replaces from..to with `text` through the browser's own typing, so undo works.
+  replaceText(from, to, text) {
+    const input = this.input
+    input.setSelectionRange(from, to)
+    const done = text === "" ? document.execCommand?.("delete", false) : document.execCommand?.("insertText", false, text)
+    if (!done) {
+      input.setRangeText(text, from, to, "end")
+      input.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+  },
+
+  // Pasted or dropped pictures upload; in the graphical composer they show at once.
+  uploadImages(files) {
+    if (this.graphical) this.addPending(files)
+    this.upload("composer_image", files)
+  },
+
+  addPending(files) {
+    if (!this.graphical) return
+    const at = this.imageAtEnd ? this.input.value.length : (this.input.selectionStart ?? this.input.value.length)
+    for (const file of Array.from(files || []).filter(f => f.type.startsWith("image/")).slice(0, 1)) {
+      const entry = {at, url: URL.createObjectURL(file)}
+      this.pending.push(entry)
+      // Never left behind, should the server not answer.
+      setTimeout(() => { if (this.pending.includes(entry)) { this.dropPending(entry); this.paint() } }, 120_000)
+    }
+    this.paint()
+  },
+
+  dropPending(entry = this.pending[0]) {
+    if (!entry) return
+    URL.revokeObjectURL(entry.url)
+    this.pending = this.pending.filter(p => p !== entry)
+  },
+
   paint() {
     const value = this.input.value
     const elapsed = this.burn ? performance.now() - this.burn.start : Infinity
@@ -542,8 +835,6 @@ export const Composer = {
     const painted = burning
       ? [...burnRuns(this.sent, this.burn.marks), ["composer-unsent", value.slice(this.sent.length)]]
       : sentRuns(this.sent, value).map(([text, sent]) => [sent ? "composer-sent" : "composer-unsent", text])
-    const runs = withImages(painted, value, this.el.dataset.labelImage || "image:", this.gifs())
-
     const {selectionStart: start, selectionEnd: end} = this.input
     const caretAt = document.activeElement === this.input && start === end ? start : null
 
@@ -553,10 +844,17 @@ export const Composer = {
     // browser would pull it up and leave it there. The scroll is put back in any case.
     const y = window.scrollY
     this.el.style.minHeight = `${this.el.offsetHeight}px`
-    // The extra space keeps a trailing line break visible in the backdrop.
-    // TP-11: bold, italic, strikethrough and spoilers show while typing, markers kept.
-    const marks = formatMarks(value)
-    this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt), marks) + " "
+    const surface = this.graphical ? this.backdrop : this.input
+    const before = surface.offsetHeight
+    if (this.graphical) {
+      this.backdrop.innerHTML = this.drawView(value, painted, caretAt)
+    } else {
+      const runs = withImages(painted, value, this.el.dataset.labelImage || "image:", this.gifs())
+      // TP-11: bold, italic, strikethrough and spoilers show while typing, markers kept.
+      const marks = formatMarks(value)
+      // The extra space keeps a trailing line break visible in the backdrop.
+      this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt), marks) + " "
+    }
     this.fitHint()
     // "Sent!" turns from white to the theme's colours once, whatever repaints it.
     this.backdrop.querySelector(".is-sent")
@@ -569,16 +867,20 @@ export const Composer = {
       this.burnTimer = setTimeout(() => this.paint(), BURN_MS - elapsed + 50)
     }
     this.showStatus(value)
-    const height = this.input.offsetHeight
+    const height = this.graphical ? before : this.input.offsetHeight
     const shown = caretAt != null && this.inView()
-    this.input.style.height = "auto"
-    this.input.style.height = this.input.scrollHeight + "px"
+    if (this.graphical) {
+      this.placeInput()
+    } else {
+      this.input.style.height = "auto"
+      this.input.style.height = this.input.scrollHeight + "px"
+    }
     this.el.style.minHeight = ""
     if (window.scrollY !== y) window.scrollTo(window.scrollX, y)
     // A new line while typing (steward decision, 2026-10-31): the page moves up by a line,
     // 1.5 em (the box's line height), and further if it would still be under the on-screen
     // keyboard, so what is being typed stays in sight on phones.
-    if (shown && this.input.offsetHeight > height) {
+    if (shown && surface.offsetHeight > height) {
       window.scrollBy(0, 1.5 * (parseFloat(getComputedStyle(this.input).fontSize) || 16))
       this.reveal()
     }
@@ -604,7 +906,7 @@ export const Composer = {
   },
 
   inView() {
-    const r = this.input.getBoundingClientRect()
+    const r = (this.graphical ? this.backdrop : this.input).getBoundingClientRect()
     const {top, bottom} = this.visibleBand()
     return r.bottom > top && r.top < bottom
   },
@@ -612,7 +914,7 @@ export const Composer = {
   // After a send the box can grow a line, or move down under the author's name (the first
   // Enter): scrolls just enough to keep its end above the keyboard.
   reveal() {
-    const r = this.input.getBoundingClientRect()
+    const r = (this.graphical ? this.backdrop : this.input).getBoundingClientRect()
     const {bottom} = this.visibleBand()
     const below = r.bottom + REVEAL_MARGIN - bottom
     if (below > 0) window.scrollBy(0, below)
