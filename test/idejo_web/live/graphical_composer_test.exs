@@ -30,6 +30,16 @@ defmodule IdejoWeb.GraphicalComposerTest do
   end
 
   @tag req: "TP-11"
+  test "TP-11 the graphical composer draws the message as it will look; the plain one does not",
+       %{topic: topic, user: user} do
+    # composer_view.js takes over the box's drawing where the composer says so.
+    assert has_element?(topic_live(user, topic), ~s(#composer[data-graphical]))
+
+    {:ok, plain} = Accounts.update_user_writing(user, %{graphical_composer: false})
+    refute has_element?(topic_live(plain, topic), ~s(#composer[data-graphical]))
+  end
+
+  @tag req: "TP-11"
   test "TP-11 the graphical composer is a setting under Writing, on for new accounts", %{
     topic: topic,
     user: user

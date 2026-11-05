@@ -11,16 +11,24 @@
 // spoiler an opacity).
 //
 // `formatMarks/1` finds the spans as Idejo's Markdown does (MDEx, CommonMark's delimiter
-// rules, GitHub's strikethrough, Discord's spoilers), per paragraph, leaving code (fenced
-// blocks and `code spans`), escaped characters and bare links alone.
+// rules, GitHub's strikethrough, Discord's spoilers, ==highlight==), per paragraph, leaving
+// code (fenced blocks and `code spans`), escaped characters and bare links alone. It also
+// marks `code spans` (CODE; their backticks, and escapes' backslashes, as markers) for the
+// graphical composer (composer_view.js), which draws them; the plain composer does not.
 
 export const BOLD = 1
 export const ITALIC = 2
 export const STRIKE = 4
 export const SPOILER = 8
 export const MARKER = 16
+// Inline code and ==highlight== (the graphical composer draws them; the plain one leaves them).
+export const CODE = 32
+export const HIGHLIGHT = 64
 
-const CLASSES = [[BOLD, "md-b"], [ITALIC, "md-i"], [STRIKE, "md-s"], [SPOILER, "md-spoiler"], [MARKER, "md-marker"]]
+const CLASSES = [
+  [BOLD, "md-b"], [ITALIC, "md-i"], [STRIKE, "md-s"], [SPOILER, "md-spoiler"], [MARKER, "md-marker"],
+  [CODE, "md-code"], [HIGHLIGHT, "md-hl"],
+]
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/
 // A bare link's start (its `_` and `*` are not formatting).
@@ -67,16 +75,25 @@ function inline(value, from, to, marks) {
     const ch = value[i]
 
     if (ch === "\\" && punct(value[i + 1])) {
+      // The backslash is only Markdown: a marker.
+      marks[i] |= MARKER
       i += 2
     } else if (ch === "`") {
       const n = repeat(value, i, to, "`")
       const close = codeEnd(value, i + n, to, n)
-      i = close === -1 ? i + n : close
+      if (close === -1) {
+        i += n
+      } else {
+        for (let k = i; k < close; k++) marks[k] |= CODE
+        for (let k = i; k < i + n; k++) marks[k] |= MARKER
+        for (let k = close - n; k < close; k++) marks[k] |= MARKER
+        i = close
+      }
     } else if (LINK.test(value.slice(i, i + 8))) {
       while (i < to && !space(value[i])) i++
-    } else if (ch === "*" || ch === "_" || ch === "~" || ch === "|") {
+    } else if (ch === "*" || ch === "_" || ch === "~" || ch === "|" || ch === "=") {
       const n = repeat(value, i, to, ch)
-      if ((ch === "|" && n === 2) || (ch === "~" && n <= 2) || ch === "*" || ch === "_") {
+      if (((ch === "|" || ch === "=") && n === 2) || (ch === "~" && n <= 2) || ch === "*" || ch === "_") {
         runs.push(run(value, from, to, i, n, ch))
       }
       i += n
@@ -123,7 +140,7 @@ function run(value, from, to, start, n, ch) {
 function compatible(opener, closer) {
   if (opener.ch !== closer.ch) return false
   // Strikethrough and spoilers close only with a run as long as their opener.
-  if (opener.ch === "~" || opener.ch === "|") return opener.n === closer.n
+  if (opener.ch === "~" || opener.ch === "|" || opener.ch === "=") return opener.n === closer.n
   // The rule of three.
   if ((opener.close || closer.open) && (opener.size + closer.size) % 3 === 0) {
     return opener.size % 3 === 0 && closer.size % 3 === 0
@@ -142,7 +159,7 @@ function match(runs, marks) {
 
       const opener = runs[o]
       const use = opener.ch === "*" || opener.ch === "_" ? (opener.n >= 2 && closer.n >= 2 ? 2 : 1) : opener.n
-      const flag = {"~": STRIKE, "|": SPOILER}[opener.ch] || (use === 2 ? BOLD : ITALIC)
+      const flag = {"~": STRIKE, "|": SPOILER, "=": HIGHLIGHT}[opener.ch] || (use === 2 ? BOLD : ITALIC)
       const innerFrom = opener.start + opener.n
       const innerTo = closer.closeAt
 

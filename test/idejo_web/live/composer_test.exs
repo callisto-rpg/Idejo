@@ -395,8 +395,9 @@ defmodule IdejoWeb.ComposerTest do
     assert js =~
              ~r/const y = window\.scrollY\s*this\.el\.style\.minHeight = `\$\{this\.el\.offsetHeight\}px`/
 
+    # (The graphical composer, TP-11, places its hidden box instead of growing it.)
     assert js =~
-             ~r/this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*this\.el\.style\.minHeight = ""\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
+             ~r/this\.input\.style\.height = "auto"\s*this\.input\.style\.height = this\.input\.scrollHeight \+ "px"\s*\}\s*this\.el\.style\.minHeight = ""\s*if \(window\.scrollY !== y\) window\.scrollTo\(window\.scrollX, y\)/
 
     # The visible band excludes the keyboard; only a box seen when sent is kept in sight.
     assert js =~ "window.visualViewport"
@@ -430,7 +431,9 @@ defmodule IdejoWeb.ComposerTest do
 
     # A new line while typing moves the page up by 1.5 em, and more if it is still under the
     # keyboard (steward decision, 2026-10-31).
-    assert js =~ "if (shown && this.input.offsetHeight > height) {"
+    # The box that grows: the text box, or the graphical composer's view (TP-11).
+    assert js =~ "const surface = this.graphical ? this.backdrop : this.input"
+    assert js =~ "if (shown && surface.offsetHeight > height) {"
 
     assert js =~
              "window.scrollBy(0, 1.5 * (parseFloat(getComputedStyle(this.input).fontSize) || 16))"

@@ -49,6 +49,14 @@ the change once reloaded) puts a row of small icons under the box:
   **Ctrl+Enter** (while you are editing a message, **Save and end the edit**). While you cannot
   start a new message yet, it says so instead.
 
+The graphical composer also shows your message as it will look once sent: as soon as you
+finish writing some Markdown, its signs disappear. `# ` makes a title, `- ` a bullet and `1. `
+a numbered list, `> ` a quote; `**bold**`, `*italics*`, `~~struck through~~`, `==highlighted==`,
+`` `code` `` and links show as they will look, and the words of a `||spoiler||` show faded.
+Pictures and GIFs show as pictures, as soon as you add them. In a list, **Shift+Enter**
+starts the next item; on an empty item it ends the list. **Backspace** at the start of an
+item removes its bullet.
+
 The keys keep working as well.
 
 ## How a message grows

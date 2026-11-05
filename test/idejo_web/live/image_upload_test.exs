@@ -94,6 +94,8 @@ defmodule IdejoWeb.ImageUploadTest do
 
     assert has_element?(lv, "[role=alert]", "Only JPEG, PNG, GIF and WebP images can be added.")
     assert Repo.aggregate(Upload, :count) == 0
+    # TP-11: the graphical composer drops the picture it showed while it uploaded.
+    assert_push_event(lv, "image_failed", %{upload: :composer_image})
   end
 
   @tag req: "TP-12"
@@ -135,6 +137,7 @@ defmodule IdejoWeb.ImageUploadTest do
     message = "Your image is 3.5 MB, which is above the server limit of 3 MB."
     assert has_element?(lv, "[role=alert]", message)
     refute has_element?(lv, "[role=alert]", "Only JPEG")
+    assert_push_event(lv, "image_failed", %{upload: :composer_image})
 
     # The profile's avatar says the same.
     {:ok, settings, _html} = live(conn, ~p"/users/settings")

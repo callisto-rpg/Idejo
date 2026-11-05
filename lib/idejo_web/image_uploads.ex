@@ -9,7 +9,8 @@ defmodule IdejoWeb.ImageUploads do
   uploads at once. When it is stored (`Idejo.Uploads.store_image/2`) the page gets
   `"image_uploaded"` with its upload name and Markdown, which the hook inserts at the caret,
   as unsent text: nothing is posted until the author sends it. The composer itself gets no
-  button (GM-07).
+  button (GM-07). A refused or failed image sends `"image_failed"` instead, so the graphical
+  composer drops the picture it showed while it uploaded (TP-11).
   """
   use Gettext, backend: IdejoWeb.Gettext
 
@@ -69,6 +70,7 @@ defmodule IdejoWeb.ImageUploads do
         socket
         |> cancel_upload(name, entry.ref)
         |> assign(:image_error, message(error, entry.client_size))
+        |> push_event("image_failed", %{upload: name})
     end
   end
 
@@ -77,7 +79,10 @@ defmodule IdejoWeb.ImageUploads do
     if entry.done?, do: consume_uploaded_entry(socket, entry, fn _ -> {:ok, nil} end)
 
     {:noreply,
-     socket |> cancel_upload(name, entry.ref) |> assign(:image_error, message(:forbidden))}
+     socket
+     |> cancel_upload(name, entry.ref)
+     |> assign(:image_error, message(:forbidden))
+     |> push_event("image_failed", %{upload: name})}
   end
 
   defp progress(name, entry, socket) do
@@ -99,7 +104,10 @@ defmodule IdejoWeb.ImageUploads do
            |> push_event("image_uploaded", %{upload: name, markdown: markdown})}
 
         {:error, reason} ->
-          {:noreply, assign(socket, :image_error, message(reason, entry.client_size))}
+          {:noreply,
+           socket
+           |> assign(:image_error, message(reason, entry.client_size))
+           |> push_event("image_failed", %{upload: name})}
       end
     else
       {:noreply, socket}
