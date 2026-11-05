@@ -1323,7 +1323,13 @@ The contract (M6; mark each item done here when its PR merges):
   decision, 2026-10-24); the full one
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
   sign-in, sign-up and setup pages and on the visitors' card, in colour in both themes
-  (steward decision, 2026-10-24). Pages set `page_title`; the title reads "Page · Server name". No
+  (steward decision, 2026-10-24). The forum's own logo (AD-11, `Idejo.Settings.Logo`) replaces the small one in the
+  header: **Admin → Settings** → Logo uploads it at once (`Uploads.store_logo/2`: fitted
+  inside 256 px, shape and transparency kept, WebP) and keeps its address in the
+  `brand_logo` setting (only `/uploads/<uuid>.webp` or empty; audited as `settings.update`;
+  `Uploads.delete_unused/1` keeps it, a replaced one is deleted); `.brand-mark.is-custom`
+  draws it whole (`object-fit: contain`), without the tile's rounding and shadow. The
+  favicon and app icons stay Idejo's. Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface. The small logo, rendered from `logo-small.svg` at 180,
   192 and 512 px (`/images/icon-*.png`; steward decision, 2026-10-26), is the app icon (and
   the push notifications' icon): the web app manifest (CL-01,

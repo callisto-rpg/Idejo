@@ -15,8 +15,8 @@ defmodule Idejo.Settings do
 
   Keys in v0.1 so far: the server name (AD-02), the registration mode (AC-02) and outgoing
   email (AD-08), the growing-message window (GM-15, AD-04), the image size limit (TP-12), and
-  the About and Rules texts of the welcome card (Markdown), the server's stylesheet, and the
-  website theme's colours.
+  the About and Rules texts of the welcome card (Markdown), the server's stylesheet, the
+  website theme's colours and the forum's logo (AD-11).
   """
 
   import Ecto.Changeset
@@ -122,7 +122,10 @@ defmodule Idejo.Settings do
     theme_secondary: %{type: :string, default: "#f2c94c", required: true, format: :colour},
     theme_tertiary: %{type: :string, default: "#b8860b", required: true, format: :colour},
     theme_light_bg: %{type: :string, default: "#fdfcf6", required: true, format: :colour},
-    theme_dark_bg: %{type: :string, default: "#1d1a00", required: true, format: :colour}
+    theme_dark_bg: %{type: :string, default: "#1d1a00", required: true, format: :colour},
+    # AD-11: the forum's own logo in the header, an upload's address
+    # (`Idejo.Settings.Logo`); empty for Idejo's small logo.
+    brand_logo: %{type: :string, default: "", max: 100, format: :logo}
   }
 
   @theme_names [
@@ -164,6 +167,7 @@ defmodule Idejo.Settings do
           | :theme_tertiary
           | :theme_light_bg
           | :theme_dark_bg
+          | :brand_logo
 
   @doc """
   The allowed values of `:registration_mode`: open, invite-only (AC-02), or closed: nobody
@@ -380,6 +384,13 @@ defmodule Idejo.Settings do
     |> update_change(key, &(&1 && String.downcase(&1)))
     |> validate_format(key, ~r/^#[0-9a-f]{6}([0-9a-f]{2})?$/,
       message: "must look like #daa304 or #daa304ff"
+    )
+  end
+
+  # Only a logo Idejo.Settings.Logo stored: a WebP upload.
+  defp validate_format_of(changeset, key, :logo) do
+    validate_format(changeset, key, ~r"^(/uploads/[0-9a-f-]{36}\.webp)?$",
+      message: "must be an uploaded logo"
     )
   end
 

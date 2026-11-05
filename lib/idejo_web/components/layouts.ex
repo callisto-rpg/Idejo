@@ -68,7 +68,10 @@ defmodule IdejoWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
-    assigns = assign(assigns, :user, assigns.current_scope && assigns.current_scope.user)
+    assigns =
+      assigns
+      |> assign(:user, assigns.current_scope && assigns.current_scope.user)
+      |> assign(:logo, Idejo.Settings.get(:brand_logo))
 
     ~H"""
     <header class="app-header">
@@ -88,8 +91,15 @@ defmodule IdejoWeb.Layouts do
       </button>
 
       <a href={~p"/"} class="brand" id="brand">
-        <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23). --%>
-        <img src={~p"/images/logo-small.svg"} alt="" class="brand-mark" width="32" height="32" />
+        <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23),
+             or the forum's own logo (AD-11). --%>
+        <img
+          src={Idejo.Settings.Logo.url(@logo)}
+          alt=""
+          class={["brand-mark", @logo != "" && "is-custom"]}
+          width="32"
+          height="32"
+        />
         <span class="brand-name">{server_name()}</span>
       </a>
 

@@ -353,6 +353,12 @@
     border-radius: 0.5rem;
     box-shadow: var(--shadow-soft);
   }
+  /* A forum's own logo (AD-11): any shape, kept whole in the square, transparency shown. */
+  .brand-mark.is-custom {
+    object-fit: contain;
+    border-radius: 0;
+    box-shadow: none;
+  }
   /* The full logo on the sign-in, sign-up and setup pages: in colour, in both themes. */
   .full-logo {
     display: inline-block;
