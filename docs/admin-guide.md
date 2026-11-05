@@ -112,6 +112,11 @@ corner. It has ten tabs.
   needed. **Light background** and **Dark background** are the page's in the light and dark
   themes. Text on a colour turns white or near-black, whichever reads better. The page loads
   again when you save a change, to show it. **Stylesheet** can still override them.
+- **Logo**: your forum's own logo, shown in the header before the server name in place of
+  Idejo's small logo. Choose a JPEG, PNG, GIF or WebP image (up to the image size limit): it
+  is saved at once, fitted whole into the header's small square (transparency is kept; only
+  the first frame of an animation) and the page loads again to show it. **Use the Idejo
+  logo** goes back. The browser tab's icon and the app icon stay Idejo's.
 
 ### Info boxes
 

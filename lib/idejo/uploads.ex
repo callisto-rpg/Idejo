@@ -94,6 +94,34 @@ defmodule Idejo.Uploads do
     end
   end
 
+  @logo_size 256
+
+  @doc """
+  Stores the image at `path` as the forum's logo (AD-11), uploaded by `admin`: checked like
+  any image, then fitted inside #{@logo_size} px, keeping its shape and transparency, as a
+  WebP without metadata. Only the first frame of an animation.
+  """
+  @spec store_logo(User.t(), Path.t()) ::
+          {:ok, Upload.t()}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :not_saved | :rate_limited}
+  def store_logo(%User{} = admin, path) do
+    with :ok <- check_size(path),
+         :ok <- RateLimit.check(:upload, admin.id),
+         {:ok, image, {ext, _mime}} <- open(path, 1),
+         :ok <- check_pixels(image),
+         image = if(ext == "jpg", do: Image.autorotate!(image), else: image),
+         {:ok, fitted} <- Image.thumbnail(image, @logo_size, resize: :down) do
+      save(admin, fitted, {"webp", "image/webp"})
+    else
+      {:error, reason}
+      when reason in [:too_large, :not_an_image, :too_many_pixels, :not_saved, :rate_limited] ->
+        {:error, reason}
+
+      _ ->
+        {:error, :not_an_image}
+    end
+  end
+
   @doc """
   The public path of a user's avatar, or `nil` when they have none (AC-04). A server account
   without one (`Idejo.Messages.Automessages`) shows the Idejo picture.

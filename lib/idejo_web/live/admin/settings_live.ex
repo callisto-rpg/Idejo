@@ -9,17 +9,55 @@ defmodule IdejoWeb.Admin.SettingsLive do
 
   The website theme's colours (steward decision, 2026-10-24) are typed or picked with the
   browser's colour picker; the page loads again after they change, so the panel shows them.
+
+  The forum's logo (AD-11) uploads as soon as an image is chosen (`Idejo.Settings.Logo`),
+  and the page loads again so the header shows it; "Use the Idejo logo" goes back.
   """
   use IdejoWeb, :live_view
 
   alias Idejo.Settings
+  alias Idejo.Settings.Logo
+  alias Idejo.Uploads
+  alias IdejoWeb.ImageUploads
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, gettext("Settings"))
-     |> assign(:form, to_form(Settings.change_settings(), as: :settings))}
+     |> assign(:form, to_form(Settings.change_settings(), as: :settings))
+     |> assign(:logo, Settings.get(:brand_logo))
+     |> assign(:image_error, nil)
+     |> allow_upload(:logo,
+       accept: Uploads.extensions(),
+       max_entries: 1,
+       max_file_size: Uploads.max_bytes(),
+       auto_upload: true,
+       progress: &logo_progress/3
+     )}
+  end
+
+  # AD-11: a chosen image becomes the logo as soon as it has uploaded; a full page load, so
+  # the header shows it.
+  defp logo_progress(:logo, entry, socket) do
+    if entry.done? do
+      admin = socket.assigns.current_scope.user
+
+      result =
+        consume_uploaded_entry(socket, entry, fn %{path: path} -> {:ok, Logo.set(admin, path)} end)
+
+      case result do
+        {:ok, _url} ->
+          {:noreply,
+           socket |> put_flash(:info, gettext("Logo saved.")) |> redirect(to: ~p"/admin")}
+
+        {:error, reason} ->
+          {:noreply,
+           assign(socket, :image_error, ImageUploads.error_text(reason, entry.client_size))}
+      end
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -28,6 +66,16 @@ defmodule IdejoWeb.Admin.SettingsLive do
       params |> picked_colour(all) |> Settings.change_settings() |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :form, to_form(changeset, as: :settings))}
+  end
+
+  def handle_event("validate_logo", _params, socket),
+    do: {:noreply, ImageUploads.check(socket, :logo)}
+
+  def handle_event("remove_logo", _params, socket) do
+    {:ok, _url} = Logo.remove(socket.assigns.current_scope.user)
+
+    {:noreply,
+     socket |> put_flash(:info, gettext("The Idejo logo is back.")) |> redirect(to: ~p"/admin")}
   end
 
   def handle_event("save", %{"settings" => params}, socket) do
@@ -289,6 +337,46 @@ defmodule IdejoWeb.Admin.SettingsLive do
           {gettext("Save")}
         </.button>
       </.form>
+
+      <%!-- AD-11: the forum's own logo in the header. --%>
+      <section class="mt-10" aria-labelledby="logo-heading">
+        <h2 id="logo-heading" class="font-semibold mb-2">{gettext("Logo")}</h2>
+        <p id="logo-help" class="text-sm opacity-70 mb-3">
+          {gettext(
+            "Shown in the header before the server name, in a small square: wide or tall images are fitted whole, transparency is kept. The image is saved at once."
+          )}
+        </p>
+        <div class="flex flex-wrap items-center gap-4">
+          <img
+            id="logo-preview"
+            src={Logo.url(@logo)}
+            alt={gettext("Current logo")}
+            class={["brand-mark", @logo != "" && "is-custom"]}
+            width="32"
+            height="32"
+          />
+          <form id="logo-form" phx-change="validate_logo" phx-submit="validate_logo">
+            <label class="flex flex-col gap-1 text-sm">
+              <span>{gettext("Choose an image (JPEG, PNG, GIF or WebP)")}</span>
+              <.live_file_input
+                upload={@uploads.logo}
+                class="file-input file-input-sm"
+                aria-describedby="logo-help"
+              />
+            </label>
+          </form>
+          <button
+            :if={@logo != ""}
+            type="button"
+            id="remove-logo"
+            class="btn btn-sm"
+            phx-click="remove_logo"
+          >
+            {gettext("Use the Idejo logo")}
+          </button>
+        </div>
+        <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
+      </section>
     </Layouts.admin>
     """
   end
