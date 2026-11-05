@@ -539,7 +539,16 @@ The contract (M6; mark each item done here when its PR merges):
   start, `withImages/3`, `data-label-image`; steward decision, 2026-10-26), and text just
   sent "burns" in
   (`.composer-burn`, `BURN_MS`; `burnMarks/2`; repaints keep its place with a negative
-  `animationDelay` set through the DOM, never a style attribute). The backdrop also draws
+  `animationDelay` set through the DOM, never a style attribute). Live formatting (TP-11;
+  steward decision, 2026-11-05): `**bold**`, `*italic*` / `_italic_`, `~~struck~~` and
+  `||spoiler||` show while typing, sent or not, their markers still visible and a spoiler's
+  text at 50% opacity: `assets/js/composer_format.js` (`formatMarks/1`, CommonMark's
+  delimiter rules per paragraph, code and bare links left alone) and `formatted/3`, spans of
+  `.md-*` nested inside each run's span (so the unsent highlight stays one box), through
+  `withCaret/4`. None may change a character's width: bold is `-webkit-text-stroke`, italic
+  each word an inline block skewed (`.md-w`; Chromium will not slant Rubik's variable face
+  by itself), strikethrough a line, a spoiler an opacity; underline has no syntax (steward
+  decision). The backdrop also draws
   the caret, 3px and blinking (`.composer-caret`, an empty inline span at the selection; the
   text box's own `caret-color` is transparent), which with the bubble shows the focus: the
   box has no ring (AX-01; steward decision, 2026-10-25). The `Composer` hook (`assets/js/composer.js`) pushes `"commit"`

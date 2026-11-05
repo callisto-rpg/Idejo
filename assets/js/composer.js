@@ -131,6 +131,7 @@ import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
 import {mayStartNew} from "./composer_timer"
 import {mountToolbar} from "./composer_toolbar"
+import {formatMarks, formatted} from "./composer_format"
 
 // Where Ctrl+Enter keeps its own meaning (typing elsewhere, a link opening in a new tab), so
 // it never reaches the composer from there.
@@ -228,17 +229,20 @@ const pill = (label, src) =>
   `<span class="composer-image-anchor"><span class="image-pill composer-image-pill">${escape(label)}<img src="${escape(src)}" alt="" class="image-pill-thumb"></span></span>`
 
 // The runs as HTML, with `caret` (HTML) at character `at` of their text, when `at` is a number.
-// A run with HTML of its own (a pill) is written as it is.
-export function withCaret(runs, at, caret) {
+// A run with HTML of its own (a pill) is written as it is. `marks` (composer_format.js), when
+// given, draws the live formatting inside each run's span.
+export function withCaret(runs, at, caret, marks = null) {
   let html = "", pos = 0, placed = at == null
+  const piece = (cls, text, start) =>
+    text === "" ? "" : `<span class="${cls}">${formatted(text, start, marks)}</span>`
   for (const [cls, text, raw] of runs) {
     if (raw) {
       html += raw
     } else if (!placed && at <= pos + text.length) {
-      html += span(cls, text.slice(0, at - pos)) + caret + span(cls, text.slice(at - pos))
+      html += piece(cls, text.slice(0, at - pos), pos) + caret + piece(cls, text.slice(at - pos), at)
       placed = true
     } else {
-      html += span(cls, text)
+      html += piece(cls, text, pos)
     }
     pos += text.length
   }
@@ -550,7 +554,9 @@ export const Composer = {
     const y = window.scrollY
     this.el.style.minHeight = `${this.el.offsetHeight}px`
     // The extra space keeps a trailing line break visible in the backdrop.
-    this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt)) + " "
+    // TP-11: bold, italic, strikethrough and spoilers show while typing, markers kept.
+    const marks = formatMarks(value)
+    this.backdrop.innerHTML = withCaret(runs, caretAt, caretAt == null ? "" : this.caret(value, caretAt), marks) + " "
     this.fitHint()
     // "Sent!" turns from white to the theme's colours once, whatever repaints it.
     this.backdrop.querySelector(".is-sent")
