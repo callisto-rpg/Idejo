@@ -25,7 +25,7 @@ Using **Infomaniak**? Follow the beginner's walkthrough in
 
 ## What you need before you start
 
-- **A server (VPS)** running **Ubuntu 24.04 LTS**, with at least **2 vCPU and 2 GB RAM**
+- **A server (VPS)** running **Debian 13 (trixie)**, with at least **2 vCPU and 2 GB RAM**
   (the pilot target) and 20 GB of disk. Any provider works (Hetzner, OVH, Infomaniak,
   DigitalOcean, Scaleway …). It must have a public IPv4 address.
 - **A domain name** you control, for example `forum.example.org`. You will point it at the
@@ -71,7 +71,7 @@ Update the system and turn on automatic security updates:
 
 ```sh
 apt update && apt upgrade -y
-apt install -y unattended-upgrades git curl
+apt install -y unattended-upgrades sudo rsync git curl ca-certificates ufw
 dpkg-reconfigure -plow unattended-upgrades     # answer "Yes"
 ```
 
@@ -104,10 +104,10 @@ From now on, always log in as `idejo`.
 
 ## 3. Firewall
 
-Allow only SSH and web traffic:
+Allow only SSH and web traffic (`ufw` was installed in step 2; Debian does not ship it):
 
 ```sh
-sudo ufw allow OpenSSH
+sudo ufw allow 22/tcp                          # SSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw allow 443/udp                         # HTTP/3
@@ -136,13 +136,14 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ## 5. Install Docker
 
-Use Docker's own packages (the `docker.io` package from Ubuntu lacks the Compose plugin):
+Use Docker's own packages for Debian (Debian's `docker.io` is older and does not ship the
+Compose plugin):
 
 ```sh
 sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
