@@ -10,7 +10,7 @@ const load = (list) => {
   if (list.dataset.loaded) return
   list.dataset.loaded = "true"
 
-  fetch(list.dataset.src, {headers: {accept: "application/json"}, credentials: "same-origin"})
+  fetch(list.dataset.src, {credentials: "same-origin"})
     .then((response) => (response.ok ? response.json() : {communities: []}))
     .then(({communities}) => {
       for (const {name, url} of communities || []) {

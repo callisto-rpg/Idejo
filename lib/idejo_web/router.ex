@@ -25,6 +25,23 @@ defmodule IdejoWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # JSON about the signed-in member, asked by the page's own scripts (GET only): the session,
+  # no layout. `:browser` accepts only HTML, so a script asking for JSON got 406 (the
+  # community menu stayed empty; steward report, 2026-11-06).
+  pipeline :member_json do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug :protect_from_forgery
+    plug :fetch_current_scope_for_user
+  end
+
+  # The community menu (steward decision, 2026-11-06): the member's other communities, JSON.
+  scope "/", IdejoWeb do
+    pipe_through :member_json
+
+    get "/community", CommunityController, :index
+  end
+
   # SE-04: for search engines; no session, nothing personal.
   scope "/", IdejoWeb do
     # AD-15: for container health checks and monitoring; no session, nothing personal, and
@@ -80,8 +97,6 @@ defmodule IdejoWeb.Router do
     get "/help", HelpController, :show
     # AD-02: the privacy notice, written in Admin → Settings.
     get "/privacy", PrivacyController, :show
-    # The community menu (steward decision, 2026-11-06): the member's other communities, JSON.
-    get "/community", CommunityController, :index
     # NO-04: the email summary's unsubscribe link, with no need to sign in.
     get "/email/unsubscribe/:token", EmailUnsubscribeController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).

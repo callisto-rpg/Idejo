@@ -131,6 +131,14 @@ defmodule IdejoWeb.CommunityMenuTest do
     # The list the script fills.
     json = conn |> log_in_user(member) |> get(~p"/community") |> json_response(200)
 
+    # Asked as a script asks for JSON, too (it got 406 once: steward report, 2026-11-06).
+    assert conn
+           |> recycle()
+           |> log_in_user(member)
+           |> put_req_header("accept", "application/json")
+           |> get(~p"/community")
+           |> json_response(200) == json
+
     assert json == %{
              "communities" => [%{"name" => "Chess club", "url" => "https://chess.example.test/"}]
            }
