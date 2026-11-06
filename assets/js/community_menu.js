@@ -26,6 +26,14 @@ const load = (list) => {
     .catch(() => {})
 }
 
+// "Show the sidebar", the menu's first item on narrow screens (sidebar.js opens the drawer):
+// the menu closes too.
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#community-menu #sidebar-show")) {
+    document.getElementById("community-menu").open = false
+  }
+})
+
 document.addEventListener("toggle", (e) => {
   const menu = e.target
   if (menu.id !== "community-menu" || !menu.open) return
