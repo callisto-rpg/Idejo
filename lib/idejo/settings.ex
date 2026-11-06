@@ -25,7 +25,7 @@ defmodule Idejo.Settings do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Repo
-  alias Idejo.Settings.{Secret, Setting}
+  alias Idejo.Settings.{Secret, Setting, Stylesheet}
 
   @smtp_security ~w(starttls tls none)
 
@@ -115,7 +115,8 @@ defmodule Idejo.Settings do
     },
     # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
     # 2026-10-23).
-    custom_css: %{type: :string, default: @default_css, max: 100_000},
+    # AD-11: loads nothing from elsewhere, runs nothing (Idejo.Settings.Stylesheet).
+    custom_css: %{type: :string, default: @default_css, max: 100_000, format: :stylesheet},
     # The website theme (steward decision, 2026-10-24): buttons, toggles, links and the page
     # backgrounds, as #rrggbb or #rrggbbaa. Admin → Settings.
     theme_primary: %{type: :string, default: "#daa304ff", required: true, format: :colour},
@@ -392,6 +393,15 @@ defmodule Idejo.Settings do
     validate_format(changeset, key, ~r"^(/uploads/[0-9a-f-]{36}\.webp)?$",
       message: "must be an uploaded logo"
     )
+  end
+
+  defp validate_format_of(changeset, key, :stylesheet) do
+    validate_change(changeset, key, fn ^key, css ->
+      case Stylesheet.check(css || "") do
+        :ok -> []
+        {:error, reason} -> [{key, reason}]
+      end
+    end)
   end
 
   defp validate_format_of(changeset, _key, nil), do: changeset

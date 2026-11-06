@@ -271,7 +271,12 @@ The contract (M6; mark each item done here when its PR merges):
   `/theme.css` (`ThemeController`, no session, `text/css`, `nosniff`), linked by the root
   layout after `app.css` with `?v=` and a hash of its text (cached for good; the bare address is
   revalidated). The default makes `.modal-box` cards 70% opaque with a 3px backdrop blur and
-  the welcome card 80% with 6px, as variables.
+  the welcome card 80% with 6px, as variables. Checked before it is saved (AD-11;
+  `Idejo.Settings.Stylesheet.check/1`, the setting's `format: :stylesheet`): comments and CSS
+  escapes read away, then no `@import`, every `url(…)` and `image-set` string a local path or
+  `data:` (no scheme, no `//host`), none of `expression(`, `behavior:`, `-moz-binding`,
+  `javascript:`, `vbscript:`, and no `</`; the page shows the reason and keeps the text. The
+  content security policy (SP-05) refuses outside loads anyway, a text saved before included.
 - **No inline `<script>`, `<style>` or `style=""`** — the content security policy refuses them
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
   `assets/css/`; a dependency that needs inline code gets the per-request nonce from
