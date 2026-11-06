@@ -193,13 +193,123 @@ defmodule IdejoWeb.InlineRepliesTest do
     assert reply_to_id == first.id
     assert has_element?(lv, "#replying-to", "Replying to Sam Starter:")
 
-    # With the author's message open, the composer leaves it for a new message at once.
-    lv |> element("#message-#{first.id}-reply") |> render_click()
-    assert_push_event(lv, "composer_sent", %{body: ""})
-    assert has_element?(lv, "#composer-slot #composer")
-    enter(lv, "And another")
+    assert [_, %{author_id: author_id}] = Forum.list_messages(topic)
+    assert author_id == member.id
+  end
 
-    assert [_, %{state: "closed"}, %{reply_to_id: ^reply_to_id, author_id: author_id}] =
+  @tag req: "TP-08"
+  test "TP-08 an inline reply's quote shows its words as written and links nobody they name", %{
+    first: first,
+    member: member
+  } do
+    first = %{first | author: %{member | display_name: "Mia [the] *best*"}}
+    first = %{first | body_html: "<p>ask @mia_x +moderator ==now== `x` &amp; ||y||</p>"}
+    quote = IdejoWeb.InlineReplies.markdown(first)
+
+    assert quote ==
+             "> [Replying to Mia \\[the\\] \\*best\\*:](/m/#{first.id})\n" <>
+               "> [ask @mia\\_x +moderator \\=\\=now\\=\\= \\`x\\` \\& \\|\\|y\\|\\|](/m/#{first.id})"
+
+    assert Idejo.Markdown.quoted_messages(quote <> "\n\nYes") == [first.id]
+    assert Idejo.Markdown.references(quote) == []
+
+    html = Idejo.Markdown.to_html(quote)
+    assert html =~ "Replying to Mia [the] *best*:"
+    assert html =~ "ask @mia_x +moderator ==now== `x` &amp; ||y||"
+  end
+
+  @tag req: "TP-08"
+  test "TP-08 Reply on a message above the open one quotes it inside that message", %{
+    conn: conn,
+    topic: topic,
+    first: first,
+    member: member
+  } do
+    {:ok, open} = Idejo.Messages.commit(member, topic, "Still talking")
+    {:ok, lv, _html} = form_live(conn, topic)
+    assert has_element?(lv, "#message-#{open.id} #composer")
+
+    lv |> element("#message-#{first.id}-reply") |> render_click()
+
+    # The quote goes into the open message, where the author writes; no new message.
+    quote = IdejoWeb.InlineReplies.markdown(Repo.preload(first, :author))
+    assert_push_event(lv, "composer_quote", %{markdown: ^quote})
+    assert_push_event(lv, "composer_focus", %{})
+    refute_push_event(lv, "composer_flush", %{})
+    refute has_element?(lv, "#replying-to")
+    assert has_element?(lv, "#message-#{open.id} #composer")
+
+    # Several quotes in one message, each answered.
+    enter(lv, "Still talking.\n\n#{quote}\n\nYes\n\n#{quote}\n\nAnd no")
+
+    assert [_, %{id: id, state: "open", body_md: body, body_html: html}] =
+             Forum.list_messages(topic)
+
+    assert id == open.id
+    assert length(String.split(body, "> [Replying to Sam Starter:]")) == 3
+    assert length(String.split(html, "<blockquote>")) == 3
+    assert html =~ ~s(<a href="/m/#{first.id}")
+  end
+
+  @tag req: "TP-08"
+  test "TP-08 Reply on a message below the open one sends it and starts a blank reply", %{
+    conn: conn,
+    topic: topic,
+    member: member
+  } do
+    {:ok, open} = Idejo.Messages.commit(member, topic, "Still talking")
+    other = user_fixture(%{display_name: "Olga Other"})
+    {:ok, below} = Idejo.Messages.commit(other, topic, "An answer")
+    {:ok, lv, _html} = form_live(conn, topic)
+
+    # First what is not sent joins the open message (the hook sends it, then comes back).
+    lv |> element("#message-#{below.id}-reply") |> render_click()
+    assert_push_event(lv, "composer_flush", %{id: below_id})
+    assert below_id == below.id
+    refute has_element?(lv, "#replying-to")
+
+    enter(lv, "Still talking. One more thing")
+    lv |> element("#composer") |> render_hook("reply", %{"id" => below.id, "flushed" => true})
+
+    # Then a new message at the end, blank, replying.
+    assert_push_event(lv, "composer_sent", %{body: "", clear: true})
+    assert has_element?(lv, "#replying-to", "Replying to Olga Other:")
+    assert has_element?(lv, "#composer-slot #composer")
+
+    enter(lv, "About that")
+
+    assert [_, closed, _below, reply] = Forum.list_messages(topic)
+    assert closed.id == open.id
+    assert closed.state == "closed"
+    assert closed.body_md == "Still talking. One more thing."
+    assert reply.reply_to_id == below.id
+    assert reply.body_md == "About that."
+  end
+
+  @tag req: "TP-08"
+  test "TP-08 a second Reply below never carries the sent message into a new one", %{
+    conn: conn,
+    topic: topic,
+    first: first,
+    member: member
+  } do
+    other = user_fixture(%{display_name: "Olga Other"})
+    {:ok, lv, _html} = form_live(conn, topic)
+
+    # A reply, sent: open.
+    lv |> element("#message-#{first.id}-reply") |> render_click()
+    enter(lv, "About that")
+    {:ok, below} = Idejo.Messages.commit(other, topic, "An answer")
+
+    # Reply below it: the composer is cleared for the new message, whatever it held.
+    lv |> element("#message-#{below.id}-reply") |> render_click()
+    assert_push_event(lv, "composer_flush", %{})
+    lv |> element("#composer") |> render_hook("reply", %{"id" => below.id, "flushed" => true})
+    assert_push_event(lv, "composer_sent", %{body: "", clear: true})
+
+    enter(lv, "Second")
+
+    assert [_, %{body_md: "About that."}, _below, %{body_md: "Second.", author_id: author_id}] =
              Forum.list_messages(topic)
 
     assert author_id == member.id

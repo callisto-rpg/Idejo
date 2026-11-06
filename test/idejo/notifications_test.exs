@@ -107,6 +107,38 @@ defmodule Idejo.NotificationsTest do
   end
 
   @tag req: "NO-01"
+  test "NO-01 an inline reply notifies the quoted author as a reply, at open or on append", %{
+    ada: ada,
+    bo: bo,
+    cy: cy,
+    topic: topic
+  } do
+    [first] = Forum.list_messages(topic)
+    {:ok, cy_says} = Forum.post_message(cy, topic, %{"body" => "Me too"})
+    :ok = Reading.unfollow(ada, topic)
+
+    quote_of = fn message ->
+      "> [Replying to them:](/m/#{message.id})\n> [them](/m/#{message.id})"
+    end
+
+    # Quoted when the message opens: Ada (not following) is replied to.
+    {:ok, open} = Messages.commit(bo, topic, "#{quote_of.(first)}\n\nYes")
+    assert kinds(open)[ada.id] == "reply"
+    refute Map.has_key?(kinds(open), bo.id)
+
+    # Quoted in an append: Cy's follow becomes a reply.
+    assert kinds(open)[cy.id] == "follow"
+    {:ok, _} = Messages.commit(bo, topic, "#{open.body_md}\n\n#{quote_of.(cy_says)}\n\nAnd you")
+    assert kinds(open)[cy.id] == "reply"
+
+    # A permalink outside a quote is only a link.
+    {:ok, plain} =
+      Forum.post_message(cy, topic, %{"body" => "See /m/#{first.id} and [it](/m/#{first.id})"})
+
+    refute Map.has_key?(kinds(plain), ada.id)
+  end
+
+  @tag req: "NO-01"
   test "NO-01 a +role mention is its own kind, below a reply, above a follow", %{
     admin: admin,
     ada: ada,
