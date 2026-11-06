@@ -7,7 +7,7 @@
 // "React" choices (ReactionComponents.add_reaction/1) close the same way (steward decision,
 // 2026-10-25).
 
-const OUTSIDE_CLOSES = "#account-menu[open], .add-reaction[open]"
+const OUTSIDE_CLOSES = "#account-menu[open], .add-reaction[open], #community-menu[open]"
 
 document.addEventListener("pointerdown", e => {
   document.querySelectorAll(OUTSIDE_CLOSES).forEach(el => {

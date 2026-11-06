@@ -682,6 +682,8 @@ message naming it.
 | `IDEJO_OIDC_CLIENT_SECRET` | with the others | none | Its client secret. Read from here only; never stored, shown or logged. |
 | `IDEJO_OIDC_LABEL` | with the others | none | The provider's name on the button: "Sign in with …". |
 | `IDEJO_LOCAL_ACCOUNTS` | no | `on` | `off`: no password sign-up, sign-in or reset, except owners' and administrators' sign-in. Needs the provider. |
+| `IDEJO_COMMUNITY_URL` | no | none | For a forum among several sharing one sign-in: where this server asks which other communities a member joined (`GET ?subject=`, HTTP Basic with the OpenID Connect client id and secret; JSON `{"communities": [{"name", "url"}]}`), shown in the forum icon's menu. Needs the provider. |
+| `IDEJO_COMMUNITY_DIRECTORY_URL` | no | none | A public page listing those communities: "Find more forums" in the forum icon's menu. |
 | `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
 
 `deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which

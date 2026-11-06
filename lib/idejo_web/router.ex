@@ -74,6 +74,8 @@ defmodule IdejoWeb.Router do
     get "/help", HelpController, :show
     # AD-02: the privacy notice, written in Admin → Settings.
     get "/privacy", PrivacyController, :show
+    # The community menu (steward decision, 2026-11-06): the member's other communities, JSON.
+    get "/community", CommunityController, :index
     # NO-04: the email summary's unsubscribe link, with no need to sign in.
     get "/email/unsubscribe/:token", EmailUnsubscribeController, :show
     # A user's URI (FD-01): the card an @mention leads to (TP-10).

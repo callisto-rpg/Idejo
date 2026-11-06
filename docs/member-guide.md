@@ -224,6 +224,12 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 
 ## Finding your way
 
+- On a phone, **Show the sidebar** at the top of the page opens the sidebar (a quick swipe
+  right does too); tap outside it, or swipe left, to close it.
+- When the forum belongs to a group of forums sharing one sign-in, its **icon** at the top
+  left opens a menu: this forum, the other forums you joined, and **Find more forums**, a list
+  of every forum in the group.
+
 - The **home page** shows the categories as cards, with their number of topics and last
   activity, and below them the **active topics**: the most recently active ones everywhere.
 - **View** (beside the home page's "Active topics" and at the top right of each category

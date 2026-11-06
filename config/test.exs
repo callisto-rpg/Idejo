@@ -73,3 +73,6 @@ config :idejo, gm_disconnect_grace_ms: :timer.hours(1)
 
 # TP-07: a topic view marks new messages read at once in tests (2 to 4 s later otherwise).
 config :idejo, read_mark_ms: {0, 0}
+
+# The community menu's requests go to a Req.Test stub, never the network.
+config :idejo, :community_req_options, plug: {Req.Test, Idejo.Community}
