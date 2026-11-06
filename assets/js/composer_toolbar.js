@@ -7,8 +7,9 @@
 // picker, which then inserts `:name:`), an image (as !image, at the caret), the text controls
 // (a new line, and Markdown around the selection) and + (the other commands: !spoiler,
 // !poll, !schedule, !new-topic). At the right, Send: a click is Enter; a right click, a double click, a long
-// press or the menu key opens its menu, whose one item is Ctrl+Enter ("Commit and start new
-// message", or ends an edit). Buttons never take the focus from the box when clicked, so the
+// press or the menu key opens its menu, pointing at it with a triangle: "Send" (Enter), "Send &
+// new line" (Enter, the caret then on a new line) and "Send & start new message" (Ctrl+Enter,
+// or ends an edit). Buttons never take the focus from the box when clicked, so the
 // caret, the selection and a phone's keyboard stay.
 
 import {InlineCard} from "./inline_cards"
@@ -85,6 +86,9 @@ export function mountToolbar(hook) {
   const send = bar.querySelector("#composer-send")
   const menu = bar.querySelector("#composer-send-menu")
   const item = bar.querySelector("#composer-send-new")
+  const plain = bar.querySelector("#composer-send-plain")
+  const line = bar.querySelector("#composer-send-line")
+  const items = [plain, line, item]
   const editing = () => hook.el.hasAttribute("data-editing")
   bar.hidden = false
 
@@ -111,7 +115,7 @@ export function mountToolbar(hook) {
     menu.hidden = false
     send.setAttribute("aria-expanded", "true")
     // From the keyboard, the focus goes into the menu; a click or a touch leaves it in the box.
-    if (document.activeElement === send) item.focus()
+    if (document.activeElement === send) plain.focus()
   }
 
   const closeMenu = (focusSend = false) => {
@@ -147,6 +151,17 @@ export function mountToolbar(hook) {
       if (pressed) { pressed = false; return }
       closeMenu()
       hook.send(false)
+    } else if (button === plain) {
+      closeMenu()
+      hook.send(false)
+      input.focus()
+    } else if (button === line) {
+      closeMenu()
+      // Sent, the caret goes on a new line; with nothing new to send, only the new line.
+      if (!hook.send(false, undefined, {}, "\n")) {
+        apply(input, formatEdit("newline", input.value, input.selectionStart, input.selectionEnd))
+      }
+      input.focus()
     } else if (button === item) {
       if (item.getAttribute("aria-disabled") === "true") return
       closeMenu()
@@ -179,7 +194,15 @@ export function mountToolbar(hook) {
   const onDoubleClick = e => { if (e.target.closest("#composer-send")) openMenu() }
 
   const onKeyDown = e => {
-    if (e.key === "Escape" && !menu.hidden) { e.preventDefault(); closeMenu(true) }
+    if (menu.hidden) return
+    if (e.key === "Escape") { e.preventDefault(); closeMenu(true); return }
+    // Arrows, Home and End move between the menu's items.
+    const at = items.indexOf(document.activeElement)
+    if (at === -1) return
+    const to = {ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1}[e.key]
+    if (to === undefined) return
+    e.preventDefault()
+    items[(to + items.length) % items.length].focus()
   }
 
   const onOutside = e => { if (!menu.hidden && !e.target.closest(".composer-send-wrap")) closeMenu() }

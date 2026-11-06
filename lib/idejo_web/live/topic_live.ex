@@ -3554,7 +3554,9 @@ defmodule IdejoWeb.TopicLive do
   # left an emoji button, an image button, a GIF button (while GIFs are on; 2026-11-03), a
   # button showing the text controls (Markdown around the selection) and + showing the other
   # commands; at the right Send, which is Enter, and
-  # whose menu (a right click, a double click, a long press or the menu key) holds Ctrl+Enter.
+  # whose menu (a right click, a double click, a long press or the menu key) holds Send
+  # (Enter), Send & new line (Enter, then a new line) and Send & start new message
+  # (Ctrl+Enter), and points at Send with a triangle like the other menus.
   # Monochrome icons, each named. The `Composer` hook runs them; without scripts nothing
   # would, so the bar is hidden until the hook shows it (phx-update="ignore" keeps that and
   # the open panels).
@@ -3599,7 +3601,7 @@ defmodule IdejoWeb.TopicLive do
       class="composer-toolbar"
       phx-update="ignore"
       hidden
-      data-label-new={gettext("Commit and start new message")}
+      data-label-new={gettext("Send & start new message")}
       data-label-end-edit={gettext("Save and end the edit")}
       data-label-too-soon={gettext("You cannot start a new message yet")}
     >
@@ -3716,15 +3718,22 @@ defmodule IdejoWeb.TopicLive do
           </span>
           <div
             id="composer-send-menu"
-            class="popup-menu composer-send-menu"
+            class="popup-menu composer-send-menu has-arrow arrow-right"
+            data-arrow="bottom"
             role="menu"
             aria-label={gettext("Send options")}
             hidden
           >
-            <button type="button" role="menuitem" id="composer-send-new">
+            <button type="button" role="menuitem" id="composer-send-plain" tabindex="-1">
+              {if @editing?, do: gettext("Save"), else: gettext("Send")}
+            </button>
+            <button type="button" role="menuitem" id="composer-send-line" tabindex="-1">
+              {if @editing?, do: gettext("Save & new line"), else: gettext("Send & new line")}
+            </button>
+            <button type="button" role="menuitem" id="composer-send-new" tabindex="-1">
               {if @editing?,
                 do: gettext("Save and end the edit"),
-                else: gettext("Commit and start new message")}
+                else: gettext("Send & start new message")}
             </button>
           </div>
         </div>

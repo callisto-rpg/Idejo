@@ -87,7 +87,10 @@ defmodule IdejoWeb.GraphicalComposerTest do
           "#composer-format-toggle[aria-controls=composer-format][aria-expanded=false]",
           "#composer-more-toggle[aria-controls=composer-more][aria-expanded=false]",
           "#composer-send[aria-haspopup=menu]",
-          "#composer-send-menu[role=menu][hidden] #composer-send-new[role=menuitem]"
+          "#composer-send-menu.has-arrow[data-arrow=bottom][role=menu][hidden]",
+          "#composer-send-menu #composer-send-plain[role=menuitem]",
+          "#composer-send-menu #composer-send-line[role=menuitem]",
+          "#composer-send-menu #composer-send-new[role=menuitem]"
         ] do
       assert has_element?(lv, selector), selector
     end

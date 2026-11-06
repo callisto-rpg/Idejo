@@ -600,9 +600,14 @@ The contract (M6; mark each item done here when its PR merges):
   the selection, `formatEdit/4`) and + (`#composer-more`: the `ComposerCommands` the author may use among
   spoiler, poll, schedule, new-topic, run by the hook's `command/1`); at the right Send
   (`#composer-send`): a click is Enter (`send(false)`); a right click, a double click, a
-  long press (touch, 500 ms) or the menu key opens `#composer-send-menu`, whose item is
-  Ctrl+Enter (`send(true)`): "Commit and start new message", "Save and end the edit" while
-  editing, disabled with "You cannot start a new message yet" before `mayStartNew()`.
+  long press (touch, 500 ms) or the menu key opens `#composer-send-menu` (`.has-arrow`,
+  `data-arrow="bottom"`: its triangle points at Send; arrows, Home and End move between its
+  items): "Send" (`#composer-send-plain`, Enter), "Send & new line" (`#composer-send-line`:
+  `send(false, undefined, {}, "\n")`, the sent text followed by a new line instead of a
+  space; with nothing new to send, only a new line) and "Send & start new message"
+  (`#composer-send-new`, Ctrl+Enter, `send(true)`); while editing "Save", "Save & new line"
+  and "Save and end the edit"; the last disabled with "You cannot start a new message yet"
+  before `mayStartNew()`.
   Clicks never move the focus out of the box. `assets/js/composer_toolbar.js`
   (`mountToolbar/1`, from the hook).
   It also draws the message as it will look (steward decision, 2026-11-05;

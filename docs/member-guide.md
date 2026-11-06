@@ -45,9 +45,11 @@ the change once reloaded) puts a row of small icons under the box:
   (**Spoiler**, **Poll**, **Schedule**, **Forward**, **New topic from this**), the same as
   typing `!`;
 - at the right, the **paper plane** sends, like **Enter**. Right-click it, double-click it,
-  hold it on a phone, or press the menu key on it for **Commit and start new message**, like
-  **Ctrl+Enter** (while you are editing a message, **Save and end the edit**). While you cannot
-  start a new message yet, it says so instead.
+  hold it on a phone, or press the menu key on it for its menu: **Send**, like **Enter**;
+  **Send & new line**, which sends and puts the cursor on a new line; and **Send & start new
+  message**, like **Ctrl+Enter** (while you are editing a message: **Save**, **Save & new
+  line** and **Save and end the edit**). While you cannot start a new message yet, the last
+  one says so instead.
 
 The graphical composer also shows your message as it will look once sent: as soon as you
 finish writing some Markdown, its signs disappear. `# ` makes a title, `- ` a bullet and `1. `
