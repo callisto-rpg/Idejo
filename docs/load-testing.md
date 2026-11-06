@@ -121,6 +121,12 @@ VM runs 4 schedulers (one per core) and the default `POOL_SIZE` of 10.
 
 Each run was flat over its five minutes (a spread under 1 MiB): nothing grows while idle.
 
+**2026-11-06**, after `RELEASE_MODE=interactive` went into the image, as a forum runs under
+Idejo Hub (`POOL_SIZE` 5, 384 MB, half a CPU), warmed over https (`X-Forwarded-Proto` from a
+trusted proxy: over plain http every page redirects, and nothing is warmed) and idle five
+minutes, 10 readings: **80.4–80.6 MiB** (≈ 84 MB). The same with the 0.2.3 image (embedded):
+207.5–208.0 MiB (≈ 218 MB).
+
 **As released today, an idle instance is over the target: about 204 MiB (214 MB), 227 MiB
 (238 MB) once pages have been served.** With `RELEASE_MODE=interactive` it is well under it.
 
@@ -138,13 +144,15 @@ Each run was flat over its five minutes (a spread under 1 MiB): nothing grows wh
 - The **page cache** of the release's files (84 MiB) is mostly not counted (inactive) and the
   kernel takes it back under pressure.
 
-### Cheapest reductions (not applied: a steward decision)
+### Cheapest reductions
 
-1. **`RELEASE_MODE=interactive`** (measured above): modules load the first time they are
-   used instead of all at boot. Warmed, **227 → 99 MiB**. One line (`ENV
-   RELEASE_MODE=interactive` in the Dockerfile's runtime stage, or in a new `rel/env.sh.eex`). Costs: the first use of each module takes a few milliseconds more (a
-   page's first visit after a restart), and memory grows towards the embedded figure as more
-   features are used: an instance whose members use everything ends between the two.
+1. **`RELEASE_MODE=interactive`** (measured above), **applied** (steward decision,
+   2026-11-06): `ENV RELEASE_MODE=interactive` in the Dockerfile's runtime stage. Modules
+   load the first time they are used instead of all at boot. Warmed, **227 → 99 MiB**.
+   Costs: the first use of each module takes a few milliseconds more (a page's first visit
+   after a restart), and memory grows towards the embedded figure as more features are
+   used: an instance whose members use everything ends between the two. An operator may set
+   `RELEASE_MODE=embedded` to load everything at boot again.
 2. **`POOL_SIZE`**: 10 database connections per instance (each also a PostgreSQL backend,
    several MiB on the database side). 5 is plenty for an idle or small forum. Not measured.
 3. **Schedulers**: the VM starts one scheduler per core of the host, each with its own
