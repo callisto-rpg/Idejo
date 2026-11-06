@@ -105,7 +105,14 @@ defmodule IdejoWeb.Layouts do
         />
         <span class="brand-name">{server_name()}</span>
       </a>
-      <.community_menu :if={@community_menu?} logo={@logo} user={@user} />
+      <%!-- No dropdown arrow while the breadcrumb follows the forum's name (steward request,
+           2026-11-07): it shows for a category, a topic or a private conversation. --%>
+      <.community_menu
+        :if={@community_menu?}
+        logo={@logo}
+        user={@user}
+        chevron={is_nil(@category) and is_nil(@conversation)}
+      />
 
       <.breadcrumb category={@category} topic={@topic} conversation={@conversation} />
 
@@ -180,6 +187,10 @@ defmodule IdejoWeb.Layouts do
   attr :logo, :string, required: true
   attr :user, :any, required: true
 
+  attr :chevron, :boolean,
+    default: true,
+    doc: "the dropdown arrow; none while the breadcrumb follows (steward request, 2026-11-07)"
+
   def community_menu(assigns) do
     assigns =
       assign(assigns,
@@ -202,7 +213,7 @@ defmodule IdejoWeb.Layouts do
           height="32"
         />
         <span class="brand-name">{server_name()}</span>
-        <.icon name="hero-chevron-down-micro" class="size-4 community-chevron" />
+        <.icon :if={@chevron} name="hero-chevron-down-micro" class="size-4 community-chevron" />
       </summary>
       <div class="community-panel popup-menu has-arrow">
         <%!-- First, above the forums (steward decision, 2026-11-06): narrow screens only. --%>
