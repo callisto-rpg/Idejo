@@ -15,7 +15,7 @@ defmodule IdejoWeb.OIDCComponents do
   attr :sign_up, :boolean, default: false
 
   def oidc_button(assigns) do
-    assigns = assign(assigns, :label, OIDC.label())
+    assigns = assign(assigns, label: OIDC.label(), create_url: OIDC.sign_up_url())
 
     ~H"""
     <a
@@ -29,6 +29,10 @@ defmodule IdejoWeb.OIDCComponents do
         do: gettext("Sign up with %{provider}", provider: @label),
         else: gettext("Sign in with %{provider}", provider: @label)}
     </a>
+    <p :if={@label && @create_url} id={@id <> "-create"} class="text-sm text-center">
+      {gettext("No %{provider} yet?", provider: @label)}
+      <a href={@create_url} class="link">{gettext("Create one")}</a>
+    </p>
     """
   end
 end
