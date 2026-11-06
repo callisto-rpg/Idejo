@@ -6,6 +6,15 @@
 // of /community (Idejo.Community) and listed, each a link; none, the list stays hidden. A
 // click outside or Escape closes it (account_menu.js).
 
+// Whether an address is a secure web address (a malformed one is not).
+const secure = (url) => {
+  try {
+    return new URL(url).protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 const load = (list) => {
   if (list.dataset.loaded) return
   list.dataset.loaded = "true"
@@ -17,7 +26,22 @@ const load = (list) => {
         const item = document.createElement("li")
         const link = document.createElement("a")
         link.href = url
-        link.textContent = name
+        // Each forum's logo at Idejo's fixed address (`/logo`, 0.2.9), drawn like this
+        // forum's; a forum that has none to give (older) shows its name alone.
+        if (secure(url)) {
+          const logo = document.createElement("img")
+          logo.src = new URL("logo", url).href
+          logo.alt = ""
+          logo.width = 20
+          logo.height = 20
+          logo.loading = "lazy"
+          logo.className = "community-mark"
+          logo.addEventListener("error", () => logo.remove())
+          link.append(logo)
+        }
+        const label = document.createElement("span")
+        label.textContent = name
+        link.append(label)
         item.append(link)
         list.append(item)
       }

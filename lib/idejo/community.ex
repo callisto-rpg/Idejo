@@ -44,6 +44,23 @@ defmodule Idejo.Community do
     end
   end
 
+  @doc """
+  Where the menu may load the other communities' logos from (steward request, 2026-11-06):
+  `https://*.<domain>` when the directory is at `https://<name>.<domain>/` with `<domain>`
+  of two labels or more (a group's forums share its domain), else nil. For the content
+  security policy's `img-src`.
+  """
+  @spec logo_source() :: String.t() | nil
+  def logo_source do
+    with "https://" <> _ = url <- directory_url(),
+         %URI{host: host} when is_binary(host) <- URI.parse(url),
+         [_name | domain] when length(domain) >= 2 <- String.split(host, ".") do
+      "https://*." <> Enum.join(domain, ".")
+    else
+      _ -> nil
+    end
+  end
+
   @doc "The public directory of the communities, or nil."
   @spec directory_url() :: String.t() | nil
   def directory_url,
