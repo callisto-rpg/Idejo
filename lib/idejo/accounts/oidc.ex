@@ -26,6 +26,7 @@ defmodule Idejo.Accounts.OIDC do
 
   alias Idejo.Accounts
   alias Idejo.Accounts.{OIDCRegistry, User, UserIdentity}
+  alias Idejo.Community.Profile
   alias Idejo.Repo
   alias Oidcc.ProviderConfiguration.Worker
 
@@ -283,11 +284,16 @@ defmodule Idejo.Accounts.OIDC do
   defp register(claims, email, invite_code) do
     verified? = claims["email_verified"] in [true, "true"]
     name = display_name(claims)
+    # The provider's public profile, where it keeps one (Idejo.Community.Profile).
+    profile = Profile.fetch(claims["sub"])
 
     attrs = %{
       "email" => email,
       "username" =>
-        Accounts.free_username(public(claims["preferred_username"]) || public(claims["name"])),
+        Accounts.free_username(
+          (profile && profile.username) || public(claims["preferred_username"]) ||
+            public(claims["name"])
+        ),
       "display_name" => name,
       # Nobody knows it: the provider signs them in. "Forgot your password?" can set one.
       "password" => random(32),
@@ -301,8 +307,12 @@ defmodule Idejo.Accounts.OIDC do
       end
     end)
     |> case do
-      {:ok, user} -> {:ok, user, if(verified?, do: :new, else: :unverified)}
-      {:error, %Ecto.Changeset{} = changeset} -> {:error, registration_error(changeset)}
+      {:ok, user} ->
+        Profile.adopt_picture(user, profile)
+        {:ok, Repo.get!(User, user.id), if(verified?, do: :new, else: :unverified)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:error, registration_error(changeset)}
     end
   end
 
@@ -344,9 +354,17 @@ defmodule Idejo.Accounts.OIDC do
       {%User{id: ^user_id}, identity} -> {:ok, identity}
       {%User{}, _} -> {:error, :taken}
       {nil, %UserIdentity{}} -> {:error, :already_linked}
-      {nil, nil} -> insert_identity(user, claims)
+      {nil, nil} -> insert_identity(user, claims) |> shared(user, claims)
     end
   end
+
+  # A link offers the provider this account's username and picture (it keeps what it lacks).
+  defp shared({:ok, _identity} = linked, user, %{"sub" => subject}) do
+    Profile.share(user, subject)
+    linked
+  end
+
+  defp shared(other, _user, _claims), do: other
 
   @doc "The account's link to the provider, or nil."
   @spec identity(User.t()) :: UserIdentity.t() | nil

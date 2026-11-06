@@ -1,3 +1,6 @@
 Config.CSWH: Cross-Site Websocket Hijacking,lib/idejo_web/endpoint.ex:19,3FCCB9C
 Config.CSWH: Cross-Site Websocket Hijacking,lib/idejo_web/endpoint.ex:47,46C1C63
 Config.HTTPS: HTTPS Not Enabled,config/prod.exs:0,2B5C077
+Traversal.FileModule: Directory Traversal in `File.read`,lib/idejo/community/profile.ex:95,727552A
+Traversal.FileModule: Directory Traversal in `File.rm`,lib/idejo/community/profile.ex:63,512CB31
+Traversal.FileModule: Directory Traversal in `File.write!`,lib/idejo/community/profile.ex:60,709D301
