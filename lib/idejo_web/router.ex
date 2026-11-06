@@ -38,6 +38,9 @@ defmodule IdejoWeb.Router do
     get "/theme.css", ThemeController, :show
     # CL-01: the web app manifest, so the site can be installed.
     get "/manifest.webmanifest", ManifestController, :show
+    # AD-11 (steward decision, 2026-11-06): the forum's logo at a fixed public address, for
+    # directories and link previews.
+    get "/logo", LogoController, :show
     # PN-17: the service worker, from the root so its scope is the whole site, and the key
     # it subscribes with.
     get "/sw.js", ServiceWorkerController, :show

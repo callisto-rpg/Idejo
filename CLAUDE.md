@@ -1392,7 +1392,9 @@ The contract (M6; mark each item done here when its PR merges):
   header: **Admin → Settings** → Logo uploads it at once (`Uploads.store_logo/2`: fitted
   inside 256 px, shape and transparency kept, WebP) and keeps its address in the
   `brand_logo` setting (only `/uploads/<uuid>.webp` or empty; audited as `settings.update`;
-  `Uploads.delete_unused/1` keeps it, a replaced one is deleted); `.brand-mark.is-custom`
+  `Uploads.delete_unused/1` keeps it, a replaced one is deleted; `GET /logo`, public and
+  without a session, redirects to it or to the small Idejo logo, cached an hour, a fixed
+  address for directories of forums: steward decision, 2026-11-06); `.brand-mark.is-custom`
   draws it whole (`object-fit: contain`), without the tile's rounding and shadow. The
   favicon and app icons stay Idejo's. Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface. The small logo, rendered from `logo-small.svg` at 180,
