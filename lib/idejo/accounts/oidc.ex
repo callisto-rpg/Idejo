@@ -43,6 +43,13 @@ defmodule Idejo.Accounts.OIDC do
   @spec enabled?() :: boolean()
   def enabled?, do: Application.get_env(:idejo, :oidc) != nil
 
+  @doc """
+  Where people without an account at the provider make one (`IDEJO_OIDC_SIGN_UP_URL`; steward
+  decision, 2026-11-06), or nil. Only with the provider set up.
+  """
+  @spec sign_up_url() :: String.t() | nil
+  def sign_up_url, do: if(enabled?(), do: Application.get_env(:idejo, :oidc_sign_up_url))
+
   @doc "The sign-in button's provider name (`IDEJO_OIDC_LABEL`)."
   @spec label() :: String.t() | nil
   def label, do: config(:label)

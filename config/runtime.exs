@@ -147,6 +147,22 @@ end
 
 config :idejo, :local_accounts, local_accounts
 
+# AC-09 (steward decision, 2026-11-06): where people without an account at the provider make
+# one, linked under its button ("No … yet? Create one"); for a provider whose own sign-in
+# screen does not offer it. Optional; only shown with the provider set up.
+config :idejo,
+       :oidc_sign_up_url,
+       (case System.get_env("IDEJO_OIDC_SIGN_UP_URL", "") |> String.trim() do
+          "" ->
+            nil
+
+          "http" <> _ = url ->
+            url
+
+          _ ->
+            raise "environment variable IDEJO_OIDC_SIGN_UP_URL must be an http:// or https:// address."
+        end)
+
 # The community menu (steward decision, 2026-11-06): optional, for an install that belongs to
 # a group of communities (several forums sharing one sign-in). IDEJO_COMMUNITY_URL answers
 # which communities a member joined (asked by this server, with its OpenID Connect client's
