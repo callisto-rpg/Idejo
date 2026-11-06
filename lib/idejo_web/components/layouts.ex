@@ -118,10 +118,13 @@ defmodule IdejoWeb.Layouts do
       <.sidebar user={@user} current={@category} topic={@topic} />
 
       <div class="app-column">
-        <%!-- Narrow screens (steward decision, 2026-11-06): a visible button at the top opens
-             the sidebar's drawer (assets/js/sidebar.js); hidden on wide screens, where the
-             sidebar always shows, and without scripts, where it would do nothing. --%>
+        <%!-- Narrow screens (steward decision, 2026-11-06): a visible button opens the sidebar's
+             drawer (assets/js/sidebar.js); hidden on wide screens, where the sidebar always
+             shows, and without scripts, where it would do nothing. With the community menu it
+             is that menu's first item instead (steward decision, 2026-11-06); here only
+             without it, as on a standalone install. --%>
         <button
+          :if={!Idejo.Community.menu?()}
           type="button"
           id="sidebar-show"
           class="sidebar-show btn btn-sm btn-ghost"
@@ -175,7 +178,11 @@ defmodule IdejoWeb.Layouts do
   attr :user, :any, required: true
 
   def community_menu(assigns) do
-    assigns = assign(assigns, :directory, Idejo.Community.directory_url())
+    assigns =
+      assign(assigns,
+        directory: Idejo.Community.directory_url(),
+        unlinked?: Idejo.Community.unlinked?(assigns.user)
+      )
 
     ~H"""
     <details id="community-menu" class="community-menu">
@@ -195,6 +202,17 @@ defmodule IdejoWeb.Layouts do
         <.icon name="hero-chevron-down-micro" class="size-4 community-chevron" />
       </summary>
       <div class="community-panel popup-menu has-arrow">
+        <%!-- First, above the forums (steward decision, 2026-11-06): narrow screens only. --%>
+        <button
+          type="button"
+          id="sidebar-show"
+          class="sidebar-show community-sidebar"
+          aria-controls="sidebar"
+          aria-expanded="false"
+        >
+          <.icon name="hero-bars-3" class="size-4" />
+          {gettext("Show the sidebar")}
+        </button>
         <a href={~p"/"} id="community-home" class="community-current">
           <img
             src={Idejo.Settings.Logo.url(@logo)}
@@ -214,6 +232,17 @@ defmodule IdejoWeb.Layouts do
           hidden
         >
         </ul>
+        <%!-- A member not linked to the provider has no list of other forums (steward
+             decision, 2026-11-06): Profile and account links one, or creates one and links it. --%>
+        <a
+          :if={@unlinked?}
+          href={~p"/users/settings#oidc-section"}
+          id="community-connect"
+          class="community-connect"
+        >
+          <.icon name="hero-link" class="size-4" />
+          {gettext("Connect %{provider} to view more forums", provider: Idejo.Accounts.OIDC.label())}
+        </a>
         <a :if={@directory} href={@directory} id="community-directory" class="community-more">
           <.icon name="hero-plus" class="size-4" />
           {gettext("Find more forums")}

@@ -362,6 +362,7 @@
     & .community-current { font-weight: 600; }
     & .community-mark { width: 1.25rem; height: 1.25rem; border-radius: 0.25rem; object-fit: contain; }
     & .community-more { border-top: 1px solid var(--hairline); margin-top: 0.25rem; padding-top: 0.625rem; }
+    & .community-connect { color: var(--color-primary); }
   }
   /* The small Idejo logo (steward decision, 2026-10-23): rounded already. */
   .brand-mark {
@@ -3764,6 +3765,14 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
     gap: 0.375rem;
     align-self: flex-start;
     margin: 0.75rem 1rem 0;
+  }
+  /* In the community menu, its first item (steward decision, 2026-11-06). */
+  :root[data-js] .community-menu .sidebar-show {
+    display: flex;
+    align-self: auto;
+    margin: 0 0 0.25rem;
+    border-bottom: 1px solid var(--hairline);
+    border-radius: 0;
   }
 }
 :root:not([data-js]) .sidebar-toggle { display: none; }

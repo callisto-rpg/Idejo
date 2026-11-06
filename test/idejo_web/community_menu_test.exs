@@ -142,14 +142,43 @@ defmodule IdejoWeb.CommunityMenuTest do
     assert build_conn() |> get(~p"/community") |> json_response(200) == %{"communities" => []}
   end
 
-  test "narrow screens get a visible Show the sidebar button", %{conn: conn} do
+  test "standalone: Show the sidebar stays at the top of the page", %{conn: conn} do
+    Application.put_env(:idejo, :community, url: nil, directory_url: nil)
     html = conn |> get(~p"/") |> html_response(200)
-
-    button =
-      html
-      |> LazyHTML.from_document()
-      |> LazyHTML.query(~s(button#sidebar-show[aria-controls="sidebar"]))
-
+    doc = LazyHTML.from_document(html)
+    button = LazyHTML.query(doc, ~s(.app-column > button#sidebar-show[aria-controls="sidebar"]))
     assert LazyHTML.text(button) =~ "Show the sidebar"
+  end
+
+  test "with the community menu, Show the sidebar is its first item, above the forums",
+       %{conn: conn} do
+    community_on()
+    html = conn |> get(~p"/") |> html_response(200)
+    doc = LazyHTML.from_document(html)
+    assert doc |> LazyHTML.query("#sidebar-show") |> Enum.count() == 1
+    first = LazyHTML.query(doc, ".community-panel > :first-child")
+    assert LazyHTML.attribute(first, "id") == ["sidebar-show"]
+    assert LazyHTML.text(first) =~ "Show the sidebar"
+  end
+
+  test "a member not linked to the provider is offered to connect it, to see more forums",
+       %{conn: conn} do
+    community_on()
+    Req.Test.stub(Community, &Req.Test.json(&1, %{"communities" => []}))
+
+    unlinked = conn |> log_in_user(user_fixture()) |> get(~p"/") |> html_response(200)
+
+    link =
+      unlinked |> LazyHTML.from_document() |> LazyHTML.query("#community-menu #community-connect")
+
+    assert LazyHTML.attribute(link, "href") == ["/users/settings#oidc-section"]
+    assert LazyHTML.text(link) =~ "Connect Example ID to view more forums"
+    assert Accessibility.audit(unlinked) == []
+
+    linked =
+      build_conn() |> log_in_user(linked_member("ada-9")) |> get(~p"/") |> html_response(200)
+
+    refute linked =~ "community-connect"
+    refute build_conn() |> get(~p"/") |> html_response(200) =~ "community-connect"
   end
 end

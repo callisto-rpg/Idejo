@@ -29,6 +29,21 @@ defmodule Idejo.Community do
   @spec menu?() :: boolean()
   def menu?, do: directory_url() != nil or url() != nil
 
+  @doc """
+  Whether `user` is a signed-in member not linked to the OpenID Connect provider (AC-09):
+  they have no list of other communities until they link it (steward decision, 2026-11-06).
+  False for visitors and without the provider.
+  """
+  @spec unlinked?(User.t() | nil) :: boolean()
+  def unlinked?(nil), do: false
+
+  def unlinked?(%User{} = user) do
+    case Application.get_env(:idejo, :oidc) do
+      oidc when is_list(oidc) -> subject(user, oidc[:issuer]) == nil
+      _ -> false
+    end
+  end
+
   @doc "The public directory of the communities, or nil."
   @spec directory_url() :: String.t() | nil
   def directory_url, do: config(:directory_url)
