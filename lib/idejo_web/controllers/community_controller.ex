@@ -15,6 +15,7 @@ defmodule IdejoWeb.CommunityController do
 
     conn
     |> put_resp_header("cache-control", "private, no-store")
+    |> put_resp_header("x-content-type-options", "nosniff")
     |> json(%{communities: Idejo.Community.communities(user)})
   end
 end
