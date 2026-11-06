@@ -81,7 +81,7 @@ defmodule IdejoWeb.OIDCSignUpLinkTest do
     assert has_element?(
              view,
              ~s(#oidc-create-link[href="#{@url}"][target="_blank"][rel="noopener"]),
-             "Create a Example ID and link"
+             "Create Example ID and link"
            )
 
     assert has_element?(view, "#oidc-create-hint")

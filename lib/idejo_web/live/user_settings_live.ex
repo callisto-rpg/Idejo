@@ -790,7 +790,7 @@ defmodule IdejoWeb.UserSettingsLive do
               rel="noopener"
               class="btn btn-ghost"
             >
-              {gettext("Create a %{provider} and link", provider: @oidc_label)}
+              {gettext("Create %{provider} and link", provider: @oidc_label)}
             </a>
           </div>
           <p :if={@oidc_sign_up_url} id="oidc-create-hint" class="text-sm mt-2">
