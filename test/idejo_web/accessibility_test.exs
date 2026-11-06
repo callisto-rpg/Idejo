@@ -254,6 +254,7 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/admin/info-boxes",
       ~p"/admin/automessages",
       ~p"/admin/email",
+      ~p"/admin/idejo-id",
       ~p"/admin/users",
       ~p"/admin/users/#{admin.id}",
       ~p"/admin/invites",

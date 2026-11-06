@@ -777,7 +777,7 @@ defmodule Idejo.Accounts do
 
   defp user_by_identity(subject) do
     with issuer when is_binary(issuer) <-
-           (Application.get_env(:idejo, :oidc) || [])[:issuer] || {:error, :no_provider},
+           (OIDC.config() || [])[:issuer] || {:error, :no_provider},
          %User{status: status} = user when status != "deleted" <-
            OIDC.find_user(%{"iss" => issuer, "sub" => subject}) || {:error, :not_found} do
       {:ok, user}

@@ -72,6 +72,9 @@ defmodule IdejoWeb.Layouts do
       assigns
       |> assign(:user, assigns.current_scope && assigns.current_scope.user)
       |> assign(:logo, Idejo.Settings.get(:brand_logo))
+      # One answer per render, as an assign: LiveView re-renders every place reading it
+      # together (the menu may start while a page is open: Admin → Idejo ID).
+      |> assign(:community_menu?, Idejo.Community.menu?())
 
     ~H"""
     <header class="app-header">
@@ -90,7 +93,7 @@ defmodule IdejoWeb.Layouts do
         <.icon name="hero-bars-3" class="size-5" />
       </button>
 
-      <a :if={!Idejo.Community.menu?()} href={~p"/"} class="brand" id="brand">
+      <a :if={!@community_menu?} href={~p"/"} class="brand" id="brand">
         <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23),
              or the forum's own logo (AD-11). --%>
         <img
@@ -102,7 +105,7 @@ defmodule IdejoWeb.Layouts do
         />
         <span class="brand-name">{server_name()}</span>
       </a>
-      <.community_menu :if={Idejo.Community.menu?()} logo={@logo} user={@user} />
+      <.community_menu :if={@community_menu?} logo={@logo} user={@user} />
 
       <.breadcrumb category={@category} topic={@topic} conversation={@conversation} />
 
@@ -124,7 +127,7 @@ defmodule IdejoWeb.Layouts do
              is that menu's first item instead (steward decision, 2026-11-06); here only
              without it, as on a standalone install. --%>
         <button
-          :if={!Idejo.Community.menu?()}
+          :if={!@community_menu?}
           type="button"
           id="sidebar-show"
           class="sidebar-show btn btn-sm btn-ghost"
@@ -1320,6 +1323,7 @@ defmodule IdejoWeb.Layouts do
     values: [
       :settings,
       :email,
+      :idejo_id,
       :users,
       :invites,
       :roles,
@@ -1364,6 +1368,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :email && "page"}
         >
           {gettext("Email")}
+        </.link>
+        <.link
+          navigate={~p"/admin/idejo-id"}
+          class={["tab", @section == :idejo_id && "tab-active"]}
+          aria-current={@section == :idejo_id && "page"}
+        >
+          {gettext("Idejo ID")}
         </.link>
         <.link
           navigate={~p"/admin/users"}

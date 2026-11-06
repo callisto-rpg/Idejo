@@ -132,4 +132,8 @@ config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
+# AC-09 (steward decisions, 2026-11-06): the Idejo ID registry an administrator may connect
+# this server to from the admin panel (`IDEJO_ID_REGISTRY_URL`, `off` to hide it).
+config :idejo, :id_registry_url, "https://login.idejo.org"
+
 import_config "#{config_env()}.exs"
