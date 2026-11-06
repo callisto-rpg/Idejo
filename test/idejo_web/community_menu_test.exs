@@ -206,4 +206,26 @@ defmodule IdejoWeb.CommunityMenuTest do
       refute csp =~ "https://*.", inspect(directory)
     end
   end
+
+  test "the dropdown arrow shows only while no breadcrumb follows the forum's name", %{
+    conn: conn
+  } do
+    community_on()
+    admin = user_with_role_fixture(:administrator)
+    {:ok, category} = Idejo.Forum.create_category(admin, %{"name" => "Garden"})
+
+    {:ok, topic} =
+      Idejo.Forum.create_topic(admin, category, %{"title" => "Plans", "body" => "Soon."})
+
+    home = conn |> get(~p"/") |> html_response(200)
+    assert home =~ "community-chevron"
+    refute home =~ ~s(id="breadcrumb")
+
+    for path <- [~p"/c/#{category.slug}", ~p"/t/#{topic.id}/#{topic.slug}"] do
+      page = build_conn() |> get(path) |> html_response(200)
+      assert page =~ ~s(id="breadcrumb"), path
+      assert page =~ ~s(id="community-menu"), path
+      refute page =~ "community-chevron", path
+    end
+  end
 end
