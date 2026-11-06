@@ -189,4 +189,21 @@ defmodule IdejoWeb.CommunityMenuTest do
     refute linked =~ "community-connect"
     refute build_conn() |> get(~p"/") |> html_response(200) =~ "community-connect"
   end
+
+  test "the menu may show the other forums' logos: their shared domain, images only", %{
+    conn: conn
+  } do
+    community_on()
+    [csp] = conn |> get(~p"/") |> get_resp_header("content-security-policy")
+    [img] = csp |> String.split("; ") |> Enum.filter(&String.starts_with?(&1, "img-src"))
+    assert img =~ " https://*.example.test"
+    refute csp =~ ~r/(connect|script|default)-src[^;]*\*\.example\.test/
+
+    # Standalone, or a directory one label under a top-level domain: nothing added.
+    for directory <- [nil, "https://forums.org/"] do
+      Application.put_env(:idejo, :community, url: nil, directory_url: directory)
+      [csp] = build_conn() |> get(~p"/") |> get_resp_header("content-security-policy")
+      refute csp =~ "https://*.", inspect(directory)
+    end
+  end
 end
