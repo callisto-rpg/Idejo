@@ -503,24 +503,25 @@ export const Composer = {
   },
 
   // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler"), with
-  // `extra` for it (the spoiler's `label`).
-  send(isBreak, then, extra = {}) {
+  // `extra` for it (the spoiler's `label`). `separator` follows the sent text: a new line after
+  // Ctrl+Enter, else a space, or a new line for the graphical composer's "Send & new line".
+  // True when something went to the server.
+  send(isBreak, then, extra = {}, separator = isBreak ? "\n" : " ") {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value, this.el.dataset.punctuate !== "false")
     // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
     // delete it.
     if (body === "" && this.el.hasAttribute("data-editing")) {
       if (this.sent !== "") this.pushEvent("commit", {body: "", break: isBreak})
-      return
+      return this.sent !== ""
     }
-    if (body === "") return
-    if (!isBreak && body === this.sent.replace(/\s+$/, "")) return
+    if (body === "") return false
+    if (!isBreak && body === this.sent.replace(/\s+$/, "")) return false
 
     const before = this.sent
     // Seen when sent (steward decision, 2026-10-25): it stays in sight, unless the author had
     // scrolled away from it.
     const shown = this.inView()
-    const separator = isBreak ? "\n" : " "
     // Keep the caret where it was unless it was at the end of the text (GM-02).
     const atEnd = caret >= this.input.value.replace(/\s+$/, "").length
     this.input.value = body + separator
@@ -555,6 +556,7 @@ export const Composer = {
       // message, under the author's name).
       if (shown) this.reveal()
     })
+    return true
   },
 
   // TP-11, the graphical composer (steward decision, 2026-11-05; composer_view.js): the text

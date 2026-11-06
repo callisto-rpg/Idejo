@@ -2413,10 +2413,12 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
   user-select: none;
 }
 .composer-send-wrap { position: relative; }
+/* Above Send, its triangle (.has-arrow, data-arrow="bottom") pointing at the button's middle. */
 .composer-send-menu {
+  --arrow-x: 1.125rem;
   position: absolute;
   right: 0;
-  bottom: calc(100% + 0.25rem);
+  bottom: calc(100% + 0.625rem);
   z-index: 30;
   width: max-content;
   max-width: 80vw;
