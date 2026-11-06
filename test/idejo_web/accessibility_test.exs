@@ -480,7 +480,6 @@ defmodule IdejoWeb.AccessibilityTest do
     admin: admin
   } do
     {:ok, _} = Idejo.Settings.update_settings(admin, %{"gm_early_reply" => "false"})
-    [first | _] = Forum.list_messages(topic)
 
     {:ok, view, _html} =
       live_isolated(log_in_user(build_conn(), member), IdejoWeb.TopicLive,
@@ -488,7 +487,9 @@ defmodule IdejoWeb.AccessibilityTest do
       )
 
     render_hook(view, "commit", %{"body" => "Open", "break" => false})
-    render_hook(view, "reply", %{"id" => first.id})
+    # Reply on a message below the open one starts a new message (steward decision, 2026-11-06).
+    {:ok, below} = Forum.post_message(admin, topic, %{"body" => "Below"})
+    render_hook(view, "reply", %{"id" => below.id, "flushed" => true})
     render_hook(view, "commit", %{"body" => "A reply", "break" => false})
     assert has_element?(view, "#too-soon-dialog")
     assert_fragment_accessible(render(view), "too soon")

@@ -419,9 +419,26 @@ The contract (M6; mark each item done here when its PR merges):
   (`#replying-to`) stays over the author's open message after its first Enter, read from
   the message's `reply_to` (`TopicLive.replying/1`, as `carried/1` for forwards), with
   "Cancel reply" only before that Enter; it goes when the message closes.
+  Reply in a live page (steward decision, 2026-11-06; `TopicLive.reply/3`, by where the
+  message stands against the one being written, `writing/1`, `above?/3`): on a message
+  above the author's open message, an edit, or a new message already replying or
+  forwarding, its quote goes into that message, at the end of the box, inline
+  (`IdejoWeb.InlineReplies.markdown/1`, pushed as `"composer_quote"`, the hook's
+  `insertQuote/1`): a block quote of two links to its permalink, "Replying to NAME:" and
+  its excerpt, escaped, so the words quoted never mention anyone; several per message.
+  `.message-body blockquote:has(> p > a[href^="/m/"]:first-child)` draws it like the reply
+  box. `Markdown.quoted_messages/1` (permalinks inside quotes) lets `Notifications` notify
+  the quoted authors of the same topic as replies, at open (`notify_new/2`) and when an
+  append or an edit adds one (`notify_mentions/2`). Sent text ending in a quote is followed
+  by a blank line in the box (`separatorAfter/1`), so what follows does not join the quote.
+  On a message below the open one, the hook first sends what is not sent
+  (`"composer_flush"`, back as `"reply"` with `flushed`), then the composer is cleared
+  (`"composer_sent"` with `clear`) for a new message replying (below). With nothing being
+  written, the composer replies. The `?reply_to=` link without JavaScript is unchanged.
   Reply starts a new message (steward decision, 2026-10-24): with the author's message still
-  open, `TopicLive` sets `draft_over` (that message's id), shows it like the others and puts
-  an empty composer at the end; Enter commits with `new: true`, which closes the open
+  open, `TopicLive` sets `draft_over` (that message's id; read through `draft_over/1`, which
+  checks it is still open: the id stays after the reply is sent), shows it like the others
+  and puts an empty composer at the end; Enter commits with `new: true`, which closes the open
   message and opens the reply (`Messages.commit/4`). That is allowed at any time while the
   `gm_early_reply` setting ("Allow replies even if the timer is still running", **Admin →
   Settings**, on by default) is on, else and without a reply (after "Cancel reply") only when

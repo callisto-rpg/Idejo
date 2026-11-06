@@ -27,6 +27,7 @@ defmodule Idejo.Notifications do
   alias Idejo.Access
   alias Idejo.Accounts.User
   alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Markdown
   alias Idejo.Messages.{Body, Message}
   alias Idejo.Notifications.Notification
   alias Idejo.Reading.Follow
@@ -36,13 +37,13 @@ defmodule Idejo.Notifications do
   @spec notify_new(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_new(%Message{} = message, %Topic{} = topic) do
     {mentioned, role_members} = mentioned(message, topic)
-    replied = replied_author(message)
+    replied = replied_authors(message)
     followers = followers(topic)
 
     kinds =
       Map.new(followers, &{&1, "follow"})
       |> Map.merge(Map.new(role_members, &{&1, "role_mention"}))
-      |> Map.merge(Map.new(List.wrap(replied), &{&1, "reply"}))
+      |> Map.merge(Map.new(replied, &{&1, "reply"}))
       |> Map.merge(Map.new(mentioned, &{&1, "mention"}))
       |> Map.delete(message.author_id)
 
@@ -73,7 +74,7 @@ defmodule Idejo.Notifications do
 
   @doc """
   Notifies the users newly @mentioned or +role mentioned by an append to, or an edit of, a
-  message in `topic`.
+  message in `topic`, and the authors of the messages it newly quotes (an inline reply, TP-08).
   """
   @spec notify_mentions(Message.t(), Topic.t()) :: {:ok, non_neg_integer()}
   def notify_mentions(%Message{} = message, %Topic{} = topic) do
@@ -87,7 +88,10 @@ defmodule Idejo.Notifications do
 
     {members, _} = insert_mentions(role_members, "role_mention", ~w(follow), topic, message)
 
-    {:ok, users + members}
+    replied = quoted_authors(message) -- [message.author_id]
+    {replies, _} = insert_mentions(replied, "reply", ~w(role_mention follow), topic, message)
+
+    {:ok, users + members + replies}
   end
 
   defp insert_mentions(user_ids, kind, weaker, topic, message) do
@@ -142,10 +146,31 @@ defmodule Idejo.Notifications do
     {users, role_members}
   end
 
+  # The authors it replies to: of the message it answers (TP-08), and of the messages of the
+  # same topic it quotes inline (steward decision, 2026-11-06).
+  defp replied_authors(%Message{} = message),
+    do: Enum.uniq(List.wrap(replied_author(message)) ++ quoted_authors(message))
+
   defp replied_author(%Message{reply_to_id: nil}), do: nil
 
   defp replied_author(%Message{reply_to_id: id}),
     do: Repo.one(from m in Message, where: m.id == ^id, select: m.author_id)
+
+  defp quoted_authors(%Message{} = message) do
+    case Markdown.quoted_messages(message.body_md) do
+      [] -> []
+      ids -> authors_of(ids, message.topic_id)
+    end
+  end
+
+  defp authors_of(ids, topic_id) do
+    Repo.all(
+      from m in Message,
+        where: m.id in ^ids and m.topic_id == ^topic_id and is_nil(m.deleted_at),
+        select: m.author_id,
+        distinct: true
+    )
+  end
 
   # A topic followed by everyone (steward decision, 2026-10-23): every active user who did
   # not unfollow it; `may_view/2` then keeps those who may view it.

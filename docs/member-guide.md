@@ -122,9 +122,14 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
 
 - **Reply** under someone's message: "Replying to …" appears above your box (**Cancel
   reply** to undo it, until your first Enter), and the box is a new message, shown as a
-  reply to theirs. The quote stays above your message while you go on writing it. If your
-  own message is still open, sending the reply completes it (when the server allows replies
-  while the timer runs, as it does unless an administrator turned it off). Cancel the reply
+  reply to theirs. The quote stays above your message while you go on writing it.
+  While you are writing a message, **Reply** on a message above it puts a "Replying to …"
+  box into your message, where you are writing, with a blank line under it for your answer;
+  one message can answer several others this way, and their authors are told you replied.
+  **Reply** on a message below yours sends what you had not sent yet, then gives you a new,
+  empty message replying to it; sending it completes your earlier message (when the server
+  allows replies while the timer runs, as it does unless an administrator turned it off).
+  Cancel the reply
   and the box stays a new message: Enter then says **You cannot post a new message yet**
   until your open message could be completed with Ctrl+Enter. **Append to my message** puts
   what you typed back after your open message instead.

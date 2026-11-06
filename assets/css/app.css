@@ -3095,6 +3095,20 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 }
 
 /* GM-06: a body taller than the screen is collapsed until "Show all" (assets/js/show_all.js). */
+/* TP-08, inline replies (steward decision, 2026-11-06; IdejoWeb.InlineReplies): a quote whose
+   links lead to a message's permalink is drawn like the reply box over a message, "Replying
+   to NAME:" then the excerpt, soft. The sanitiser keeps no classes: told by the address. */
+.message-body blockquote:has(> p > a[href^="/m/"]:first-child) {
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid color-mix(in oklab, var(--color-primary) 45%, transparent);
+  border-radius: 0 var(--radius-field) var(--radius-field) 0;
+  background: color-mix(in oklab, var(--color-base-content) 3.5%, transparent);
+  font-size: 0.875rem;
+  & a[href^="/m/"] { display: block; text-decoration: none; }
+  & a[href^="/m/"]:first-child { font-weight: 500; }
+  & a[href^="/m/"] + a[href^="/m/"] { color: var(--ink-soft); }
+  & a[href^="/m/"]:hover { text-decoration: underline; }
+}
 .message-collapsible > .show-all { display: none; }
 .message-collapsible[data-collapsed] > .show-all { display: inline; }
 .message-collapsible[data-collapsed] > .message-body {

@@ -122,9 +122,25 @@ export function insertAtCaret(input, text) {
 // Anything else, the message itself included, would be shown twice.
 export function keptAfterReload(value, sent) {
   if (sent === "" || value === "") return ""
-  const start = sent + " "
+  const start = sent + separatorAfter(sent)
   if (value.startsWith(start)) return value.slice(start.length)
   return value.startsWith(sent) ? value.slice(sent.length).replace(/^ /, "") : ""
+}
+
+// What follows sent text in the box: a space, so the next words continue its line, or a blank
+// line after a quote (an inline reply), so they do not join the quote.
+export function separatorAfter(body) {
+  const last = body.slice(body.lastIndexOf("\n") + 1)
+  return /^ {0,3}>/.test(last) ? "\n\n" : " "
+}
+
+// TP-08, an inline reply (steward decision, 2026-11-06): the quote's Markdown at the end of
+// `value`, a block of its own, with a blank line after it for the answer.
+export function quoteEdit(value, markdown) {
+  const lead = value.trim() === "" ? "" : value.endsWith("\n\n") ? "" : value.endsWith("\n") ? "\n" : "\n\n"
+  const text = lead + markdown + "\n\n"
+  const end = value.length + text.length
+  return {text, from: value.length, to: value.length, select: [end, end]}
 }
 
 import {Suggest} from "./suggest"
@@ -328,7 +344,17 @@ export const Composer = {
     }
     window.addEventListener("scroll", this.onScroll, {passive: true})
     // The server says what it holds of the open message, e.g. after a reconnect.
-    this.handleEvent("composer_sent", ({body}) => this.restore(body))
+    this.handleEvent("composer_sent", ({body, clear}) => {
+      // A new message after Reply (steward decision, 2026-11-06): a blank box, whatever it held.
+      if (clear) { this.input.value = ""; this.sent = ""; this.paint() } else this.restore(body)
+    })
+    // TP-08, Reply on a message above the one being written: its quote goes into it, inline.
+    this.handleEvent("composer_quote", ({markdown}) => this.insertQuote(markdown))
+    // Reply on a message below it: what is not sent yet joins it first, then the new message.
+    this.handleEvent("composer_flush", ({id}) => {
+      this.send(false)
+      this.pushEvent("reply", {id, flushed: true})
+    })
     // Edit (steward decision, 2026-10-24): the box takes the focus, the caret at the end.
     this.handleEvent("composer_focus", () => this.focusEnd())
     // TP-12: an image pasted or dropped here uploads; its Markdown comes back to the caret,
@@ -482,14 +508,29 @@ export const Composer = {
   // is in it already and leaves the box; only text typed since stays, unsent.
   restore(body) {
     // The usual reconnect: the server holds what the box already has; edits stay as they are.
-    if (body !== "" && this.sent === body + " ") return
+    if (body !== "" && this.sent === body + separatorAfter(body)) return
     const old = this.sent
     const value = this.input.value
     const typed = old !== "" && value.startsWith(old) ? value.slice(old.length) : (old === "" ? value : "")
-    const sent = body === "" ? "" : body + " "
+    const sent = body === "" ? "" : body + separatorAfter(body)
     this.input.value = sent + typed
     this.sent = sent
     this.paint()
+  },
+
+  // The quote's Markdown at the end of the box, unsent, through the browser's own typing (undo
+  // works), the caret on the blank line after it.
+  insertQuote(markdown) {
+    const {text, from, to, select} = quoteEdit(this.input.value, markdown)
+    this.input.focus()
+    this.input.setSelectionRange(from, to)
+    if (!document.execCommand?.("insertText", false, text)) {
+      this.input.setRangeText(text, from, to, "end")
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+    this.input.setSelectionRange(select[0], select[1])
+    this.paint()
+    if (this.inView()) this.reveal()
   },
 
   // Counts Enters in a row; true at the third, which then starts the count again.
@@ -504,11 +545,13 @@ export const Composer = {
 
   // `then`: what the server does once it is stored ("new_topic", "poll" or "spoiler"), with
   // `extra` for it (the spoiler's `label`). `separator` follows the sent text: a new line after
-  // Ctrl+Enter, else a space, or a new line for the graphical composer's "Send & new line".
+  // Ctrl+Enter, else a space (a blank line after a quote), or a new line for the graphical
+  // composer's "Send & new line".
   // True when something went to the server.
-  send(isBreak, then, extra = {}, separator = isBreak ? "\n" : " ") {
+  send(isBreak, then, extra = {}, separator) {
     const caret = this.input.selectionStart
     const body = finishSentence(this.input.value, this.el.dataset.punctuate !== "false")
+    separator ??= isBreak ? "\n" : separatorAfter(body)
     // Editing a message (steward decision, 2026-10-24): emptied, the server asks whether to
     // delete it.
     if (body === "" && this.el.hasAttribute("data-editing")) {

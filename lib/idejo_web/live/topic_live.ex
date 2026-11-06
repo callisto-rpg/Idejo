@@ -411,6 +411,71 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  defp reply(socket, message, flushed?) do
+    assigns = socket.assigns
+    writing = writing(assigns)
+
+    cond do
+      writing && above?(assigns.messages, message, writing) ->
+        quote_inline(socket, message)
+
+      # Below the edited message: the edit goes on, and the reply waits for it to end.
+      assigns.composing_edit != nil ->
+        assign(socket, :reply_to, message)
+
+      writing && flushed? ->
+        reply_with_new(socket, message)
+
+      writing ->
+        push_event(socket, "composer_flush", %{id: message.id})
+
+      # A new message, already replying or forwarding: one more quote, inline.
+      quoting?(assigns) ->
+        quote_inline(socket, message)
+
+      true ->
+        assign(socket, :reply_to, message)
+    end
+  end
+
+  # The message the composer is writing in: the edited one, or the author's open message
+  # while the composer has not left it. `draft_over/1`, not the assign: once the new message
+  # is sent the one it left is closed, and the id kept is stale (it made the next Reply carry
+  # the open message's text into a new one).
+  defp writing(%{composing_edit: id} = assigns) when is_binary(id),
+    do: editing_in_composer(assigns)
+
+  defp writing(assigns) do
+    if draft_over(assigns) == nil,
+      do: open_message(assigns.messages, user_of(assigns))
+  end
+
+  defp user_of(%{current_scope: %{user: user}}), do: user
+  defp user_of(_assigns), do: nil
+
+  # `message` comes before `mine` in the topic (the window's order: the opening message first).
+  defp above?(messages, message, mine) do
+    case {index_of(messages, message.id), index_of(messages, mine.id)} do
+      {nil, _} -> false
+      {_, nil} -> true
+      {at, own} -> at < own
+    end
+  end
+
+  defp index_of(messages, id), do: Enum.find_index(messages, &(&1.id == id))
+
+  defp quote_inline(socket, message),
+    do:
+      push_event(socket, "composer_quote", %{markdown: IdejoWeb.InlineReplies.markdown(message)})
+
+  # A blank new message replying, at the end; the open message closes when it is sent.
+  defp reply_with_new(socket, message) do
+    socket
+    |> assign(:reply_to, message)
+    |> put_draft()
+    |> push_event("composer_sent", %{body: "", clear: true})
+  end
+
   # The open message the composer left, while it is still open.
   defp draft_over(%{draft_over: nil}), do: nil
 
@@ -1832,9 +1897,14 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  # TP-08: Reply without a page load. With the author's message open, the composer leaves
-  # it for a new message at the end (`put_draft/1`), keeping only what was not sent yet.
-  defp event("reply", %{"id" => id}, socket) do
+  # TP-08: Reply without a page load (steward decision, 2026-11-06). On a message above the
+  # one being written (the author's open message, an edit, or a new message already replying
+  # or forwarding), its quote goes into that message, inline (`IdejoWeb.InlineReplies`). On a
+  # message below the open one, what is not sent yet joins it (`"composer_flush"`, which
+  # comes back with `flushed`), then the composer leaves it for a new, blank message at the
+  # end, replying (`put_draft/1`); sending it closes the open one. With nothing being
+  # written, the composer replies.
+  defp event("reply", %{"id" => id} = params, socket) do
     case socket.assigns.can_post? &&
            Enum.find(socket.assigns.messages, &(&1.id == id and is_nil(&1.deleted_at))) do
       %Messages.Message{} = message ->
@@ -1845,17 +1915,7 @@ defmodule IdejoWeb.TopicLive do
             do: socket,
             else: socket |> to_end() |> push_event("scroll_to_end", %{})
 
-        left? = socket.assigns.draft_over == nil
-
-        socket =
-          socket
-          |> assign(:reply_to, message)
-          |> put_draft()
-
-        socket =
-          if left? and socket.assigns.draft_over != nil and socket.assigns.composing_edit == nil,
-            do: push_event(socket, "composer_sent", %{body: ""}),
-            else: socket
+        socket = reply(socket, message, params["flushed"] == true)
 
         # AX-01: the box takes the focus, as the link's `#composer` did.
         {:noreply, push_event(socket, "composer_focus", %{})}

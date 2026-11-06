@@ -191,6 +191,38 @@ defmodule Idejo.Markdown do
     end
   end
 
+  @quoted ~r"\A/m/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\z"
+
+  @doc """
+  Returns the ids of the messages the Markdown quotes, each once: links to a message's
+  permalink (`/m/{id}`) inside a quote, as an inline reply writes them (TP-08; steward
+  decision, 2026-11-06).
+  """
+  @spec quoted_messages(String.t()) :: [String.t()]
+  def quoted_messages(markdown) when is_binary(markdown) do
+    if String.contains?(markdown, "/m/") and String.contains?(markdown, ">") do
+      markdown
+      |> parse()
+      |> quoted(false)
+      |> Enum.uniq()
+    else
+      []
+    end
+  end
+
+  defp quoted(%MDEx.BlockQuote{nodes: nodes}, _in_quote?),
+    do: Enum.flat_map(nodes, &quoted(&1, true))
+
+  defp quoted(%MDEx.Link{url: url}, true) do
+    case Regex.run(@quoted, url, capture: :all_but_first) do
+      [id] -> [id]
+      nil -> []
+    end
+  end
+
+  defp quoted(%{nodes: nodes}, in_quote?), do: Enum.flat_map(nodes, &quoted(&1, in_quote?))
+  defp quoted(_node, _in_quote?), do: []
+
   defp reference(<<sigil::binary-size(1), name::binary>>),
     do: {Map.fetch!(@sigils, sigil), String.downcase(name)}
 
