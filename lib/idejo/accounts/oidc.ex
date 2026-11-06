@@ -4,7 +4,9 @@
 defmodule Idejo.Accounts.OIDC do
   @moduledoc """
   Sign-in through one OpenID Connect provider (AC-09), set by the environment
-  (`IDEJO_OIDC_*`, read by `config/runtime.exs` into `config :idejo, :oidc`).
+  (`IDEJO_OIDC_*`, read by `config/runtime.exs` into `config :idejo, :oidc`) or, without it,
+  connected from the admin panel (`Idejo.Accounts.OIDCRegistry`; steward decisions,
+  2026-11-06). `config/0` is the one place either is read.
 
   The protocol is `oidcc`'s (Apache-2.0): the provider's settings are discovered from its
   `/.well-known/openid-configuration` and kept fresh by a worker started with the app
@@ -23,7 +25,7 @@ defmodule Idejo.Accounts.OIDC do
   import Ecto.Query
 
   alias Idejo.Accounts
-  alias Idejo.Accounts.{User, UserIdentity}
+  alias Idejo.Accounts.{OIDCRegistry, User, UserIdentity}
   alias Idejo.Repo
   alias Oidcc.ProviderConfiguration.Worker
 
@@ -41,14 +43,22 @@ defmodule Idejo.Accounts.OIDC do
 
   @doc "Whether sign-in through OpenID Connect is set up."
   @spec enabled?() :: boolean()
-  def enabled?, do: Application.get_env(:idejo, :oidc) != nil
+  def enabled?, do: config() != nil
+
+  @doc """
+  The provider's settings (`issuer`, `client_id`, `client_secret`, `label`): the
+  environment's, else the admin panel's connection, else nil.
+  """
+  @spec config() :: keyword() | nil
+  def config, do: Application.get_env(:idejo, :oidc) || OIDCRegistry.config()
 
   @doc """
   Where people without an account at the provider make one (`IDEJO_OIDC_SIGN_UP_URL`; steward
   decision, 2026-11-06), or nil. Only with the provider set up.
   """
   @spec sign_up_url() :: String.t() | nil
-  def sign_up_url, do: if(enabled?(), do: Application.get_env(:idejo, :oidc_sign_up_url))
+  def sign_up_url,
+    do: if(enabled?(), do: Application.get_env(:idejo, :oidc_sign_up_url) || config(:sign_up_url))
 
   @doc "The sign-in button's provider name (`IDEJO_OIDC_LABEL`)."
   @spec label() :: String.t() | nil
@@ -66,11 +76,20 @@ defmodule Idejo.Accounts.OIDC do
   @doc "The provider worker to start with the app, when sign-in through it is set up."
   @spec child_specs() :: [Supervisor.child_spec() | {module(), term()}]
   def child_specs do
-    if enabled?() do
+    # The admin panel's connection is started by `OIDCRegistry` once the repo runs.
+    case Application.get_env(:idejo, :oidc) do
+      nil -> []
+      oidc -> worker_specs(oidc)
+    end
+  end
+
+  @doc false
+  def worker_specs(oidc) do
+    if oidc do
       [
         {Worker,
          %{
-           issuer: config(:issuer),
+           issuer: oidc[:issuer],
            name: @provider,
            # A provider down at boot is asked again, never stopping the app.
            backoff_type: :random_exponential,
@@ -87,7 +106,7 @@ defmodule Idejo.Accounts.OIDC do
   @spec provider() :: atom()
   def provider, do: @provider
 
-  defp config(key), do: (Application.get_env(:idejo, :oidc) || [])[key]
+  defp config(key), do: (config() || [])[key]
 
   ## The flow
 

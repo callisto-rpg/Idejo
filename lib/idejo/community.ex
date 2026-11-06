@@ -19,7 +19,7 @@ defmodule Idejo.Community do
 
   import Ecto.Query
 
-  alias Idejo.Accounts.{User, UserIdentity}
+  alias Idejo.Accounts.{OIDC, OIDCRegistry, User, UserIdentity}
   alias Idejo.Repo
 
   @table __MODULE__
@@ -38,7 +38,7 @@ defmodule Idejo.Community do
   def unlinked?(nil), do: false
 
   def unlinked?(%User{} = user) do
-    case Application.get_env(:idejo, :oidc) do
+    case OIDC.config() do
       oidc when is_list(oidc) -> subject(user, oidc[:issuer]) == nil
       _ -> false
     end
@@ -46,7 +46,8 @@ defmodule Idejo.Community do
 
   @doc "The public directory of the communities, or nil."
   @spec directory_url() :: String.t() | nil
-  def directory_url, do: config(:directory_url)
+  def directory_url,
+    do: config(:directory_url) || OIDCRegistry.config()[:directory_url]
 
   @doc """
   The other communities `user` joined: `[%{name:, url:}]`, empty when none can be asked.
@@ -56,7 +57,7 @@ defmodule Idejo.Community do
 
   def communities(%User{id: id} = user) do
     with url when is_binary(url) <- url(),
-         oidc when is_list(oidc) <- Application.get_env(:idejo, :oidc),
+         oidc when is_list(oidc) <- OIDC.config(),
          subject when is_binary(subject) <- subject(user, oidc[:issuer]) do
       cached(id, fn -> fetch(url, subject, oidc) end)
     else

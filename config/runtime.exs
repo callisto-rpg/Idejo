@@ -163,6 +163,16 @@ config :idejo,
             raise "environment variable IDEJO_OIDC_SIGN_UP_URL must be an http:// or https:// address."
         end)
 
+# AC-09 (steward decisions, 2026-11-06): the Idejo ID registry an administrator may connect
+# this server to from the admin panel, when the environment sets no provider. Default
+# https://login.idejo.org (config.exs); `off` hides connecting.
+case System.get_env("IDEJO_ID_REGISTRY_URL", "") |> String.trim() do
+  "" -> :ok
+  "off" -> config :idejo, :id_registry_url, nil
+  "https://" <> _ = url -> config :idejo, :id_registry_url, String.trim_trailing(url, "/")
+  _ -> raise "environment variable IDEJO_ID_REGISTRY_URL must be an https:// address or off."
+end
+
 # The community menu (steward decision, 2026-11-06): optional, for an install that belongs to
 # a group of communities (several forums sharing one sign-in). IDEJO_COMMUNITY_URL answers
 # which communities a member joined (asked by this server, with its OpenID Connect client's

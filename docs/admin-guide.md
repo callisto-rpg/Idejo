@@ -170,6 +170,24 @@ the page says so above the form, with its host and port: email already works, an
 host here replaces that server. [The deployment guide](deploying.md#outgoing-email) has more
 detail.
 
+### Idejo ID
+
+Lets members sign in with their **Idejo ID**, one account for every Idejo forum that uses
+it; local accounts keep working.
+
+- **Connect to Idejo ID** (login.idejo.org unless your server's host set another): it
+  checks that your server answers at its own address, then gives it its sign-in
+  credentials. The sign-in and sign-up pages then offer the Idejo ID button.
+- **Renew the connection** gets new credentials (after a restore, for example);
+  **Disconnect** stops sign-in with Idejo ID here (members keep their accounts).
+- **Forums directory:** once connected, tick **List this forum on the forums directory** to
+  ask to be listed. The directory's operator approves it; the page shows "Waiting for the
+  directory's approval", then "Listed in the directory". Untick it to leave at once. Only
+  forums that sign in with Idejo ID can be listed.
+
+When the server's host sets a sign-in provider itself (`IDEJO_OIDC_*`, as Idejo Hub does),
+this page only says so.
+
 ### Users
 
 Everyone who has an account, with their roles, newest first. Open a person to:

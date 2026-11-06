@@ -28,6 +28,8 @@ defmodule Idejo.Application do
       {Idejo.RateLimit, clean_period: :timer.minutes(10)},
       # AC-09: the OpenID Connect provider's settings and keys, kept fresh (when set up).
       OIDC.child_specs(),
+      # The admin panel's connection to Idejo ID, read once the repo runs.
+      Idejo.Accounts.OIDCRegistry,
       # The community menu's answers, kept a few minutes (Idejo.Community).
       Idejo.Community,
       if(Application.get_env(:idejo, :recover_open_messages, true),
