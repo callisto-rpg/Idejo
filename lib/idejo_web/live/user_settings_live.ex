@@ -56,6 +56,7 @@ defmodule IdejoWeb.UserSettingsLive do
   defp assign_oidc(socket, user, reauth_at) do
     socket
     |> assign(:oidc_label, OIDC.label())
+    |> assign(:oidc_sign_up_url, OIDC.sign_up_url())
     |> assign(:identity, OIDC.enabled?() && OIDC.identity(user))
     |> assign(:password?, OIDC.local_accounts?() or Access.administrator?(user))
     |> assign(:reauth_at, if(OIDC.fresh_reauth?(reauth_at), do: reauth_at))
@@ -775,9 +776,29 @@ defmodule IdejoWeb.UserSettingsLive do
               provider: @oidc_label
             )}
           </p>
-          <a id="oidc-link" href={~p"/users/oidc?intent=link"} class="btn">
-            {gettext("Link %{provider}", provider: @oidc_label)}
-          </a>
+          <div class="flex flex-wrap gap-2">
+            <a id="oidc-link" href={~p"/users/oidc?intent=link"} class="btn">
+              {gettext("Link %{provider}", provider: @oidc_label)}
+            </a>
+            <%!-- Steward decision, 2026-11-06: for someone without one yet (IDEJO_OIDC_SIGN_UP_URL),
+                 in a new tab, so this page stays to press Link once it exists. --%>
+            <a
+              :if={@oidc_sign_up_url}
+              id="oidc-create-link"
+              href={@oidc_sign_up_url}
+              target="_blank"
+              rel="noopener"
+              class="btn btn-ghost"
+            >
+              {gettext("Create a %{provider} and link", provider: @oidc_label)}
+            </a>
+          </div>
+          <p :if={@oidc_sign_up_url} id="oidc-create-hint" class="text-sm mt-2">
+            {gettext(
+              "No %{provider} yet? Create one in the new tab, confirm it from the email, then come back here and choose Link.",
+              provider: @oidc_label
+            )}
+          </p>
         </div>
       </section>
 
