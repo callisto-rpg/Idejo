@@ -116,6 +116,10 @@ RUN mkdir -p /data/uploads /data/backups && chown nobody /data/uploads /data/bac
 
 # set runner ENV
 ENV MIX_ENV="prod"
+# NF-12 (steward decision, 2026-11-06): modules load the first time they are used instead of
+# all at boot, so an idle instance stays well under 200 MB (docs/load-testing.md). The
+# release's start script reads it; an operator may still set RELEASE_MODE=embedded.
+ENV RELEASE_MODE=interactive
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/idejo ./
