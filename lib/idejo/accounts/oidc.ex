@@ -262,7 +262,7 @@ defmodule Idejo.Accounts.OIDC do
   @doc "What the consent page shows: the email and the display name a new member would get."
   def consent_details(claims) do
     {:ok, email} = email(claims)
-    %{email: email, display_name: display_name(claims, email |> String.split("@") |> hd())}
+    %{email: email, display_name: display_name(claims)}
   end
 
   defp create(claims, invite_code) do
@@ -278,14 +278,17 @@ defmodule Idejo.Accounts.OIDC do
 
   defp email(_claims), do: {:error, :no_email}
 
+  # Never from the email, in any part: a username and a display name are public (steward
+  # report, 2026-11-06: providers may give the email as `preferred_username`).
   defp register(claims, email, invite_code) do
-    local = email |> String.split("@") |> hd()
     verified? = claims["email_verified"] in [true, "true"]
+    name = display_name(claims)
 
     attrs = %{
       "email" => email,
-      "username" => Accounts.free_username(claims["preferred_username"] || local),
-      "display_name" => display_name(claims, local),
+      "username" =>
+        Accounts.free_username(public(claims["preferred_username"]) || public(claims["name"])),
+      "display_name" => name,
       # Nobody knows it: the provider signs them in. "Forgot your password?" can set one.
       "password" => random(32),
       "invite_code" => invite_code
@@ -303,12 +306,18 @@ defmodule Idejo.Accounts.OIDC do
     end
   end
 
-  defp display_name(claims, local) do
-    [claims["name"], claims["preferred_username"], local]
-    |> Enum.find(&(is_binary(&1) and String.trim(&1) != ""))
-    |> String.trim()
+  defp display_name(claims) do
+    (public(claims["name"]) || public(claims["preferred_username"]) || "Member")
     |> String.slice(0, 60)
   end
+
+  # A claim fit to show others: text, and nothing that looks like an email address.
+  defp public(value) when is_binary(value) do
+    value = String.trim(value)
+    if value != "" and not String.contains?(value, "@"), do: value
+  end
+
+  defp public(_value), do: nil
 
   defp registration_error(%Ecto.Changeset{errors: errors} = changeset) do
     cond do
