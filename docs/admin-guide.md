@@ -271,7 +271,12 @@ warns that invite links do not work.
 
 CSS that every page loads after Idejo's own styles, so its rules win: change colours,
 spacing, or anything else. **Save** applies it as pages load; **Reset to default** brings back
-the stylesheet Idejo came with. The default sets how see-through the menus are (the
+the stylesheet Idejo came with. It may load nothing from another site and run nothing, so a
+stylesheet with `@import`, a `url(…)` to another address (anything but a path on this server,
+such as `/uploads/…`, or a `data:` image or font), or something that once ran script in
+browsers (`expression(…)`, `behavior:`, `-moz-binding`, `javascript:`) is not saved: the page
+says what it found, and your text stays in the box to fix. Upload an image first (in a
+message, or as the logo) to use its `/uploads/…` address. The default sets how see-through the menus are (the
 account menu, a topic's menu and the dropdowns: `--menu-opacity`, `--menu-blur`: 70% and
 4px; any element with the `popup-menu` class), the cards and dialogs over a page, which
 follow the menus (`--card-opacity`, `--card-blur`: give them values of their own to set

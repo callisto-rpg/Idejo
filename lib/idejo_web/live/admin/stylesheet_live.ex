@@ -34,16 +34,26 @@ defmodule IdejoWeb.Admin.StylesheetLive do
     save(socket, Settings.default(:custom_css), gettext("Stylesheet reset to the default."))
   end
 
+  # AD-11: too long, or something it may not do (Idejo.Settings.Stylesheet).
+  defp refusal(changeset) do
+    case changeset.errors[:custom_css] do
+      nil ->
+        gettext("The stylesheet could not be saved.")
+
+      {message, opts} ->
+        if opts[:validation] == :length,
+          do: gettext("The stylesheet is too long (100,000 characters at most)."),
+          else: gettext("Not saved: the stylesheet %{reason}.", reason: message)
+    end
+  end
+
   defp save(socket, css, done) do
     case Settings.update_settings(admin(socket), %{"custom_css" => css}) do
       {:ok, _} ->
         {:noreply, socket |> put_flash(:info, done) |> assign_form(Settings.get(:custom_css))}
 
-      {:error, _changeset} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, gettext("The stylesheet is too long (100,000 characters at most)."))
-         |> assign_form(css)}
+      {:error, changeset} ->
+        {:noreply, socket |> put_flash(:error, refusal(changeset)) |> assign_form(css)}
     end
   end
 
