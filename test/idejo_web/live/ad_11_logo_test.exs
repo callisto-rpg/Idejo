@@ -113,4 +113,19 @@ defmodule IdejoWeb.AD11LogoTest do
     Uploads.delete_unused(DateTime.add(DateTime.utc_now(), 1, :day))
     assert Uploads.get_by_name(Path.basename(url))
   end
+
+  @tag req: "AD-11"
+  test "AD-11 the forum's logo has a fixed public address, /logo, for directories", %{
+    admin: admin
+  } do
+    conn = get(build_conn(), ~p"/logo")
+    assert redirected_to(conn, 302) == "/images/logo-small.svg"
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=3600"]
+    # No session: nothing set, nothing personal.
+    assert get_resp_header(conn, "set-cookie") == []
+
+    {:ok, url} = Logo.set(admin, image_file(:png))
+    assert redirected_to(get(build_conn(), ~p"/logo"), 302) == url
+    assert get(build_conn(), url).status == 200
+  end
 end
