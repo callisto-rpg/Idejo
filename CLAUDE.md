@@ -189,7 +189,9 @@ Rules for every change in this repo:
 
 - **No multi-forum code in Idejo**: no tenant or forum column, no list of other forums, no
   `if hub` branch, no Hub-specific setting. Everything below must make sense for a standalone
-  install too.
+  install too. One exception (steward decision, 2026-11-06): the **community menu**, generic
+  and optional, below: the forum asks a configured address which communities a member
+  joined, and lists what it answers; unset, as on a standalone install, nothing changes.
 - The interfaces below are a **public contract**. Changing or removing one (a variable, a
   command, its flags or exit codes, the `/health` JSON shape) needs a steward decision and a
   release note; adding is fine. Keep `deploy/.env.example`, `docs/deploying.md` and the
@@ -207,6 +209,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output. Added (for the Hub's forum list): `stats`, one line of JSON `{"members", "topics", "messages", "database_bytes", "uploads_bytes"}` (active accounts without server accounts; topics without private conversations; messages not deleted), counts and sizes only | Done (M5); `stats` added 2026-11-03 (`Release.stats/0`) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | Done (`deploy/docker-compose.external-proxy.yml`, `ClientIp.trusted?/1`; `test/idejo_web/ad_16_proxy_test.exs`) |
+| Community menu | — | Optional (steward decision, 2026-11-06; `Idejo.Community`): `IDEJO_COMMUNITY_URL`, asked by the server `GET ?subject=<the member's subject at the provider>` with HTTP Basic (the OpenID Connect client id and secret), answering `{"communities": [{"name", "url"}]}` (http(s) links only kept; two seconds at most, empty on any failure; kept five minutes per member); `IDEJO_COMMUNITY_DIRECTORY_URL`, a public page linked as "Find more forums". Either one turns the forum's icon into the menu (`Layouts.community_menu/1`, `#community-menu`: this forum, `#community-list` filled from `GET /community` by `assets/js/community_menu.js` on first opening, `#community-directory`); unset, `#brand` stays a link home | Done (0.2.5; `test/idejo_web/community_menu_test.exs`) |
 | Sign-in | AC-09 | OpenID Connect client: `IDEJO_OIDC_ISSUER`, `IDEJO_OIDC_CLIENT_ID`, `IDEJO_OIDC_CLIENT_SECRET`, `IDEJO_OIDC_LABEL` (button text), `IDEJO_LOCAL_ACCOUNTS=on\|off` (default on). Code flow with PKCE, `state`, `nonce`; scopes `openid email profile`. Link table keyed on (issuer, subject), never on email. Added (for Idejo Hub's ID-05, ID-06): `bin/idejo-admin delete-account --oidc-subject SUB` (the linked account anonymised as AC-07, `Accounts.delete_user_by_identity/1`; the last owner refused) and `leave --oidc-subject SUB` (sessions end, pushes and email summaries stop, account and link kept, `leave_by_identity/1`); exit 0 done, 2 no linked account, 1 otherwise; audited `user.delete_by_identity` / `user.leave`. First sign-in creates a local member under the registration mode (invite-only still needs an invite). The provider never grants a role; roles, profile, bans, moderation history stay local. Matching an existing local account with the same email: never automatic; the member links from their profile while signed in (steward decision, 2026-11-02). Extra review (DV-06) | Done (`Idejo.Accounts.OIDC`, `IdejoWeb.OIDCController`; `test/idejo_web/ac_09_openid_connect_test.exs`) |
 | Cookies | SP-10 | Every cookie is host-only (no `Domain`); a test signs in, triggers every cookie the app sets and checks none has `Domain`. All forums are same-site to browsers, so CSRF tokens (SP-05) stay on every state-changing request | Done (`test/idejo_web/sp_10_cookies_test.exs`) |
 | Image | AD-01 | Official image `ghcr.io/callisto-rpg/idejo:X.Y.Z` (and `X.Y`), pushed by `.github/workflows/publish-image.yml` when a tag `vX.Y.Z` matching `mix.exs` is pushed, after the M6 exit check passes. Built from the tagged commit, so its "Source code" link points at it (LI-03). linux/amd64 only. The image exists only once that run ends (about 7 minutes): a Hub update to the new version before then fails with "could not be pulled" | Workflow added; published: v0.1.0 2026-11-03, v0.2.0 2026-11-04, v0.2.1 2026-11-06 |
@@ -1304,7 +1307,9 @@ The contract (M6; mark each item done here when its PR merges):
   as a drawer on narrow ones (`100dvh` tall, so phones' bottom bars never cover the pinned
   Private Conversations), where a quick sideways swipe right opens it and left closes it,
   and the header's `#sidebar-toggle` (not shown in the bar: visually hidden until it has the
-  keyboard focus, AX-01; never on wide screens) opens it too; followed topics there carry a dot for what is
+  keyboard focus, AX-01; never on wide screens) opens it too, as does the visible
+  `#sidebar-show` button, "Show the sidebar", at the top of the content column on narrow
+  screens (steward decision, 2026-11-06; with scripts only); followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their
   notifications: grey new, blue a +role mention, orange a reply, red an @mention; the
   strongest wins) and a bolder

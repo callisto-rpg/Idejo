@@ -12,7 +12,11 @@ const toggle = () => document.getElementById("sidebar-toggle")
 
 const isShown = () => wide.matches || root.dataset.drawer === "open"
 
-const sync = () => toggle()?.setAttribute("aria-expanded", String(isShown()))
+// Both buttons that open the drawer: the header's (keyboard) and the visible one at the top
+// of narrow screens (steward decision, 2026-11-06).
+const sync = () =>
+  ["sidebar-toggle", "sidebar-show"].forEach((id) =>
+    document.getElementById(id)?.setAttribute("aria-expanded", String(isShown())))
 
 // Tutorial bubbles in the sidebar (steward decisions, 2026-10-25): the ×'s "close & unfollow
 // thread" and a category's fold button's (its `data-bubble`, or `data-bubble-folded` while
@@ -103,7 +107,7 @@ const flip = () => {
 }
 
 document.addEventListener("click", (e) => {
-  if (e.target.closest("#sidebar-toggle")) return flip()
+  if (e.target.closest("#sidebar-toggle, #sidebar-show")) return flip()
   // A tap outside the open drawer closes it.
   if (root.dataset.drawer === "open" && !e.target.closest("#sidebar")) closeDrawer()
 })

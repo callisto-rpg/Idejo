@@ -147,6 +147,28 @@ end
 
 config :idejo, :local_accounts, local_accounts
 
+# The community menu (steward decision, 2026-11-06): optional, for an install that belongs to
+# a group of communities (several forums sharing one sign-in). IDEJO_COMMUNITY_URL answers
+# which communities a member joined (asked by this server, with its OpenID Connect client's
+# credentials, so it needs the provider above); IDEJO_COMMUNITY_DIRECTORY_URL is a public page
+# listing them all. Either one turns the forum's icon into a menu; unset, it stays a link home.
+community_env = fn name ->
+  case System.get_env(name, "") |> String.trim() do
+    "" ->
+      nil
+
+    "http" <> _ = url ->
+      url
+
+    _ ->
+      raise "environment variable #{name} must be an http:// or https:// address."
+  end
+end
+
+config :idejo, :community,
+  url: community_env.("IDEJO_COMMUNITY_URL"),
+  directory_url: community_env.("IDEJO_COMMUNITY_DIRECTORY_URL")
+
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")

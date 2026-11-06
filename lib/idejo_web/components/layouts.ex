@@ -90,7 +90,7 @@ defmodule IdejoWeb.Layouts do
         <.icon name="hero-bars-3" class="size-5" />
       </button>
 
-      <a href={~p"/"} class="brand" id="brand">
+      <a :if={!Idejo.Community.menu?()} href={~p"/"} class="brand" id="brand">
         <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23),
              or the forum's own logo (AD-11). --%>
         <img
@@ -102,6 +102,7 @@ defmodule IdejoWeb.Layouts do
         />
         <span class="brand-name">{server_name()}</span>
       </a>
+      <.community_menu :if={Idejo.Community.menu?()} logo={@logo} user={@user} />
 
       <.breadcrumb category={@category} topic={@topic} conversation={@conversation} />
 
@@ -117,6 +118,19 @@ defmodule IdejoWeb.Layouts do
       <.sidebar user={@user} current={@category} topic={@topic} />
 
       <div class="app-column">
+        <%!-- Narrow screens (steward decision, 2026-11-06): a visible button at the top opens
+             the sidebar's drawer (assets/js/sidebar.js); hidden on wide screens, where the
+             sidebar always shows, and without scripts, where it would do nothing. --%>
+        <button
+          type="button"
+          id="sidebar-show"
+          class="sidebar-show btn btn-sm btn-ghost"
+          aria-controls="sidebar"
+          aria-expanded="false"
+        >
+          <.icon name="hero-bars-3" class="size-4" />
+          {gettext("Show the sidebar")}
+        </button>
         <div
           :if={@user && !Idejo.Accounts.confirmed?(@user)}
           role="status"
@@ -147,6 +161,65 @@ defmodule IdejoWeb.Layouts do
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
     <.topic_menu :if={@user} user={@user} />
+    """
+  end
+
+  @doc """
+  The community menu (steward decision, 2026-11-06; `Idejo.Community`): with
+  `IDEJO_COMMUNITY_URL` or `IDEJO_COMMUNITY_DIRECTORY_URL` set, the forum's icon opens a menu:
+  this forum, the member's other communities (`#community-list`, filled from `/community`
+  by `assets/js/community_menu.js` when the menu first opens) and "Find more forums" (the
+  directory). A `<details>`, so it opens without scripts (this forum and the directory).
+  """
+  attr :logo, :string, required: true
+  attr :user, :any, required: true
+
+  def community_menu(assigns) do
+    assigns = assign(assigns, :directory, Idejo.Community.directory_url())
+
+    ~H"""
+    <details id="community-menu" class="community-menu">
+      <summary
+        class="brand"
+        id="brand"
+        aria-label={gettext("%{name}: communities", name: server_name())}
+      >
+        <img
+          src={Idejo.Settings.Logo.url(@logo)}
+          alt=""
+          class={["brand-mark", @logo != "" && "is-custom"]}
+          width="32"
+          height="32"
+        />
+        <span class="brand-name">{server_name()}</span>
+        <.icon name="hero-chevron-down-micro" class="size-4 community-chevron" />
+      </summary>
+      <div class="community-panel popup-menu has-arrow">
+        <a href={~p"/"} id="community-home" class="community-current">
+          <img
+            src={Idejo.Settings.Logo.url(@logo)}
+            alt=""
+            class="community-mark"
+            width="20"
+            height="20"
+          />
+          <span>{server_name()}</span>
+        </a>
+        <ul
+          :if={@user}
+          id="community-list"
+          class="community-list"
+          data-src={~p"/community"}
+          aria-label={gettext("Your other forums")}
+          hidden
+        >
+        </ul>
+        <a :if={@directory} href={@directory} id="community-directory" class="community-more">
+          <.icon name="hero-plus" class="size-4" />
+          {gettext("Find more forums")}
+        </a>
+      </div>
+    </details>
     """
   end
 
