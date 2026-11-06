@@ -1301,7 +1301,8 @@ The contract (M6; mark each item done here when its PR merges):
   (`idejo:folded-categories`) and applied again by `applyFolds()` after the Notifier swaps
   the sidebar; steward decision, 2026-10-23); on wide screens it always shows (steward decision, 2026-11-03: no
   hiding; `theme.js` clears the old `idejo:sidebar` choice); `assets/js/sidebar.js` opens it
-  as a drawer on narrow ones, where a quick sideways swipe right opens it and left closes it,
+  as a drawer on narrow ones (`100dvh` tall, so phones' bottom bars never cover the pinned
+  Private Conversations), where a quick sideways swipe right opens it and left closes it,
   and the header's `#sidebar-toggle` (not shown in the bar: visually hidden until it has the
   keyboard focus, AX-01; never on wide screens) opens it too; followed topics there carry a dot for what is
   new since last opened (`Reading.activity/2` over the unread messages and their

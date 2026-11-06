@@ -773,6 +773,11 @@
       position: fixed;
       left: 0;
       z-index: 45;
+      /* Phones: 100vh reaches under a browser's bottom bar (Safari's, Chrome's or Samsung
+         Internet's address bar, Android's navigation buttons), hiding the pinned Private
+         Conversations under it; 100dvh is the height actually visible. The 100vh above stays
+         for browsers without dvh. */
+      height: calc(100dvh - var(--header-h));
       background: var(--color-base-100);
       box-shadow: var(--shadow-lift);
       transform: translateX(-105%);
