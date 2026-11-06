@@ -360,7 +360,10 @@ The contract (M6; mark each item done here when its PR merges):
   `join` (rate-limited `:sign_up`) or `cancel` (nothing kept). Then `OIDC.sign_in/2` finds the link or
   registers a member through `Accounts.register_user/2` (registration mode and invites
   apply; `email_verified` or Idejo's verification email; username from
-  `Accounts.free_username/2`; a random password nobody knows), refuses an email an account
+  `Accounts.free_username/2` over `preferred_username`, else `name`, never anything holding
+  `@` (no part of the email ever names an account: steward decision, 2026-11-06; accounts
+  named after their email before are renamed once by a migration,
+  `Accounts.UsernamePrivacy`, their mentions rewritten); a random password nobody knows), refuses an email an account
   already has (`:email_taken`; the member links from Profile and account, `OIDC.link/2`)
   and reads no other claim: no role ever comes from the provider; bans hold. Local accounts
   off: no password sign-up or reset by email and the sign-in form only at

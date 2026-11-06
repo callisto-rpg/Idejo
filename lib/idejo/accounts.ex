@@ -133,9 +133,14 @@ defmodule Idejo.Accounts do
     base = (candidate || "") |> String.replace(~r/[^A-Za-z0-9_]/, "_") |> String.slice(0, 30)
     base = if String.length(base) < 3, do: fallback, else: base
 
-    if username_taken?(base),
-      do: String.slice(base, 0, 25) <> "_" <> Integer.to_string(:rand.uniform(9999)),
-      else: base
+    if username_taken?(base), do: suffixed(String.slice(base, 0, 25), 10), else: base
+  end
+
+  defp suffixed(base, 0), do: base <> "_" <> Integer.to_string(System.unique_integer([:positive]))
+
+  defp suffixed(base, tries) do
+    candidate = base <> "_" <> Integer.to_string(:rand.uniform(9999))
+    if username_taken?(candidate), do: suffixed(base, tries - 1), else: candidate
   end
 
   defp username_taken?(username) do
