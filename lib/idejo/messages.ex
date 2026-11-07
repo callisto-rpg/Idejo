@@ -25,6 +25,7 @@ defmodule Idejo.Messages do
   """
 
   import Ecto.Query, warn: false
+  use Gettext, backend: IdejoWeb.Gettext
 
   alias Idejo.Accounts.User
   alias Idejo.Federation
@@ -552,6 +553,17 @@ defmodule Idejo.Messages do
       {:ok, message}
     end
   end
+
+  @doc """
+  The name a message is shown under: its author's, or for the opening message of a topical
+  topic (Topic Type, steward request, 2026-11-07; `anonymous`), "the topic", so the starter
+  never shows. The author must be loaded for others.
+  """
+  @spec author_name(Message.t()) :: String.t()
+  def author_name(%Message{anonymous: true}),
+    do: gettext("the topic")
+
+  def author_name(%Message{author: author}), do: author.display_name
 
   @doc "Whether a deleted message was deleted by its author rather than by a moderator."
   @spec deleted_by_author?(Message.t()) :: boolean()

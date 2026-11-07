@@ -292,7 +292,7 @@
   <blockquote :if={@forked_from} id="forked-from" class="message-quote">
     <.link href={~p"/m/#{@forked_from.id}"} class="font-medium">
       {gettext("Continued from %{name} in “%{topic}”",
-        name: @forked_from.author.display_name,
+        name: Idejo.Messages.author_name(@forked_from),
         topic: @forked_from.topic.title
       )}
     </.link>

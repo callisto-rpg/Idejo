@@ -1345,6 +1345,7 @@ defmodule IdejoWeb.Layouts do
       :invites,
       :roles,
       :categories,
+      :topic_icons,
       :tags,
       :permissions,
       :stylesheet,
@@ -1406,6 +1407,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :categories && "page"}
         >
           {gettext("Categories")}
+        </.link>
+        <.link
+          navigate={~p"/admin/topic-icons"}
+          class={["tab", @section == :topic_icons && "tab-active"]}
+          aria-current={@section == :topic_icons && "page"}
+        >
+          {gettext("Topic icons")}
         </.link>
         <.link
           navigate={~p"/admin/tags"}

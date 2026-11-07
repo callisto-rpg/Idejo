@@ -34,6 +34,9 @@ defmodule Idejo.Messages.Message do
     # `!spoiler:overlay text:` (steward decision, 2026-10-28): what the cover says, or nil.
     field :spoiler_label, :string
     # MO-02: deleted by a moderator; readers see a placeholder, moderators the text.
+    # The opening message of a topical topic (Topic Type): shown without its author
+    # (`Idejo.Messages.author_name/1`).
+    field :anonymous, :boolean, default: false
     field :deleted_at, :utc_datetime_usec
     belongs_to :deleted_by, Idejo.Accounts.User
     belongs_to :topic, Idejo.Forum.Topic

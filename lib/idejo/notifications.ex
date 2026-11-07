@@ -313,7 +313,7 @@ defmodule Idejo.Notifications do
       message_id: message.id,
       topic_id: message.topic_id,
       topic_title: message.topic.title,
-      author_name: message.author.display_name,
+      author_name: Idejo.Messages.author_name(message),
       excerpt: Idejo.Forum.excerpt(message),
       emoji: emoji
     }

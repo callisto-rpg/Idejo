@@ -53,6 +53,7 @@ defmodule IdejoWeb.NewTopicLive do
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
              |> assign(:tags, Tags.available_tags(default))
+             |> assign(icons: Forum.icons_for(default), icon_picker?: false)
              |> assign(:form, to_form(Forum.change_new_topic(sent(user, params)), as: :topic))
              |> assign(editor_mode: :write, preview_html: "")
              |> ImageUploads.allow(:editor_image)}
@@ -74,6 +75,7 @@ defmodule IdejoWeb.NewTopicLive do
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
            |> assign(source: nil, categories: [], category: category)
            |> assign(:tags, Tags.available_tags(category))
+           |> assign(icons: Forum.icons_for(category), icon_picker?: false)
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
            |> assign(editor_mode: :write, preview_html: "")
            |> ImageUploads.allow(:editor_image)}
@@ -103,7 +105,11 @@ defmodule IdejoWeb.NewTopicLive do
   @impl true
   def handle_event("validate", %{"topic" => params}, socket) do
     socket = choose_category(socket, params)
-    form = params |> Forum.change_new_topic(socket.assigns.tags) |> Map.put(:action, :validate)
+
+    form =
+      params
+      |> Forum.change_new_topic(socket.assigns.tags, socket.assigns.icons)
+      |> Map.put(:action, :validate)
 
     {:noreply,
      socket |> assign(:form, to_form(form, as: :topic)) |> ImageUploads.check(:editor_image)}
@@ -121,6 +127,24 @@ defmodule IdejoWeb.NewTopicLive do
            category_id: socket.assigns.category.id
          )
      )}
+  end
+
+  # Topic Type: in a topical category, the icon is chosen in a dialog.
+  def handle_event("open_icon_picker", _params, socket),
+    do: {:noreply, assign(socket, :icon_picker?, socket.assigns.icons != nil)}
+
+  def handle_event("close_icon_picker", _params, socket),
+    do: {:noreply, assign(socket, :icon_picker?, false)}
+
+  def handle_event("pick_icon", %{"id" => id}, socket) do
+    params = Map.put(socket.assigns.form.params, "icon_id", id)
+
+    form =
+      params
+      |> Forum.change_new_topic(socket.assigns.tags, socket.assigns.icons)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, form: to_form(form, as: :topic), icon_picker?: false)}
   end
 
   # TP-10: suggestions while typing an inline link.
@@ -175,7 +199,12 @@ defmodule IdejoWeb.NewTopicLive do
 
     if category.id == socket.assigns.category.id,
       do: socket,
-      else: assign(socket, category: category, tags: Tags.available_tags(category))
+      else:
+        assign(socket,
+          category: category,
+          tags: Tags.available_tags(category),
+          icons: Forum.icons_for(category)
+        )
   end
 
   # A topic from a message goes to the chosen category, one the user may start topics in.
@@ -194,6 +223,14 @@ defmodule IdejoWeb.NewTopicLive do
 
   defp tag_errors(_form), do: []
 
+  defp icon_errors(%{source: %{action: :insert}} = form),
+    do: Enum.map(form[:icon_id].errors, &translate_error/1)
+
+  defp icon_errors(_form), do: []
+
+  defp chosen_icon(icons, form),
+    do: icons && Enum.find(icons, &(&1.id == form.params["icon_id"]))
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -208,7 +245,7 @@ defmodule IdejoWeb.NewTopicLive do
       <blockquote :if={@source} id="forked-from" class="border-l-2 border-base-300 pl-3 text-sm">
         <.link href={~p"/m/#{@source.id}"} class="link">
           {gettext("From %{name} in “%{topic}”",
-            name: @source.author.display_name,
+            name: Idejo.Messages.author_name(@source),
             topic: @source.topic.title
           )}
         </.link>
@@ -249,6 +286,40 @@ defmodule IdejoWeb.NewTopicLive do
             <.icon name="hero-exclamation-circle" class="size-5" />{error}
           </p>
         </fieldset>
+        <%!-- Topic Type: a topical category's topic shows an icon, not its starter. --%>
+        <fieldset :if={@icons} id="topic-icon">
+          <legend class="label mb-1">{gettext("Icon")}</legend>
+          <p class="text-sm opacity-70 mb-2">
+            {gettext("Topics here show an icon instead of who started them.")}
+          </p>
+          <input type="hidden" name="topic[icon_id]" value={@form.params["icon_id"]} />
+          <div class="flex items-center gap-3">
+            <img
+              :if={chosen_icon(@icons, @form)}
+              id="topic-icon-chosen"
+              src={Idejo.Forum.TopicIcons.url(chosen_icon(@icons, @form))}
+              alt={chosen_icon(@icons, @form).name}
+              class="topic-icon-preview"
+            />
+            <button
+              type="button"
+              id="choose-icon"
+              class="btn btn-sm"
+              phx-click="open_icon_picker"
+            >
+              {if chosen_icon(@icons, @form),
+                do: gettext("Change icon"),
+                else: gettext("Choose an icon")}
+            </button>
+          </div>
+          <p
+            :for={error <- icon_errors(@form)}
+            id="topic-icon-error"
+            class="mt-1.5 flex gap-2 items-center text-sm text-error"
+          >
+            <.icon name="hero-exclamation-circle" class="size-5" />{error}
+          </p>
+        </fieldset>
         <MessageComponents.editor
           field={@form[:body]}
           label={gettext("First message (Markdown)")}
@@ -259,6 +330,14 @@ defmodule IdejoWeb.NewTopicLive do
         />
         <.button class="btn btn-primary">{gettext("Post topic")}</.button>
       </.form>
+      <TopicComponents.icon_dialog
+        :if={@icon_picker?}
+        id="icon-picker"
+        icons={@icons}
+        current={@form.params["icon_id"]}
+        event="pick_icon"
+        close_event="close_icon_picker"
+      />
     </Layouts.app>
     """
   end

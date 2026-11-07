@@ -1206,6 +1206,42 @@
   .category-sections { display: grid; gap: 2rem; }
   .category-sections > section { margin-top: 0; }
 
+  /* Topic Type: a topical topic's icon in place of its starter's avatar, and the dialog
+     choosing it. */
+  .topic-icon > span {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--color-base-200);
+  }
+  .topic-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .topic-icon-none { width: 60%; height: 60%; color: var(--ink-soft); }
+  .topic-icon-preview { width: 2.5rem; height: 2.5rem; object-fit: contain; border-radius: 0.5rem; }
+  .topic-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(3.5rem, 1fr));
+    gap: 0.5rem;
+    margin-block: 0.75rem;
+  }
+  .topic-icon-choice {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0.375rem;
+    border: 1px solid var(--color-base-300);
+    border-radius: 0.625rem;
+    cursor: pointer;
+    transition: border-color 120ms, background-color 120ms;
+    & img { width: 100%; height: 100%; object-fit: contain; }
+    &:hover { background: var(--color-base-200); }
+    &[aria-pressed="true"] {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 1px var(--color-primary);
+    }
+  }
+
   /* MO-04: the reader's own topics waiting for approval, above the list. */
   .own-pending {
     margin-bottom: 1rem;

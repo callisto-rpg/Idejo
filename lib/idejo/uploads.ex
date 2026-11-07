@@ -122,6 +122,34 @@ defmodule Idejo.Uploads do
     end
   end
 
+  @icon_size 128
+
+  @doc """
+  Stores the image at `path` as a topic icon (Topic Type, steward request, 2026-11-07),
+  uploaded by `admin`: checked like any image, then fitted inside #{@icon_size} px, keeping its
+  shape and transparency, as a WebP without metadata. Only the first frame of an animation.
+  """
+  @spec store_icon(User.t(), Path.t()) ::
+          {:ok, Upload.t()}
+          | {:error, :too_large | :not_an_image | :too_many_pixels | :not_saved | :rate_limited}
+  def store_icon(%User{} = admin, path) do
+    with :ok <- check_size(path),
+         :ok <- RateLimit.check(:upload, admin.id),
+         {:ok, image, {ext, _mime}} <- open(path, 1),
+         :ok <- check_pixels(image),
+         image = if(ext == "jpg", do: Image.autorotate!(image), else: image),
+         {:ok, fitted} <- Image.thumbnail(image, @icon_size, resize: :down) do
+      save(admin, fitted, {"webp", "image/webp"})
+    else
+      {:error, reason}
+      when reason in [:too_large, :not_an_image, :too_many_pixels, :not_saved, :rate_limited] ->
+        {:error, reason}
+
+      _ ->
+        {:error, :not_an_image}
+    end
+  end
+
   @doc """
   The public path of a user's avatar, or `nil` when they have none (AC-04). A server account
   without one (`Idejo.Messages.Automessages`) shows the Idejo picture.
@@ -181,13 +209,14 @@ defmodule Idejo.Uploads do
 
     avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
     dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)
+    icons = from(i in Idejo.Forum.TopicIcon, where: i.upload_id == parent_as(:upload).id)
 
     {_count, names} =
       Repo.delete_all(
         from(u in Upload,
           as: :upload,
           where: u.created_at < ^before,
-          where: not exists(avatars) and not exists(dark_avatars),
+          where: not exists(avatars) and not exists(dark_avatars) and not exists(icons),
           where: u.path not in subquery(named),
           select: u.path
         )

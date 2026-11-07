@@ -99,6 +99,7 @@ defmodule IdejoWeb.TopicLive do
            can_post?: false,
            lost_access?: false,
            ignored: MapSet.new(),
+           icon_picker: nil,
            roles: %{},
            committed: nil,
            read_timer: nil,
@@ -156,6 +157,7 @@ defmodule IdejoWeb.TopicLive do
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
         if connected?(socket), do: subscribe(topic, user)
+        topic = with_icon(topic)
 
         can_post? = Forum.can_post?(user, topic)
 
@@ -168,6 +170,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:can_fork?, can_fork?(user, topic))
          # AC-06: whose messages are collapsed for this reader.
          |> assign(:ignored, Idejo.Accounts.ignored_ids(user))
+         |> assign(:icon_picker, nil)
          |> assign(:automessages, automessages(user, topic))
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
@@ -1214,6 +1217,12 @@ defmodule IdejoWeb.TopicLive do
   # Someone started a topic from one of these messages (TP-09).
   defp info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
 
+  # Topic Type: a moderator changed the topical topic's icon.
+  defp info({:topic_icon, icon}, socket) do
+    topic = %{socket.assigns.topic | icon: icon, icon_id: icon && icon.id}
+    {:noreply, assign(socket, :topic, topic)}
+  end
+
   # A scheduled message was added, cancelled or posted: only its author's views reload.
   defp info({:scheduled, author_id}, socket) do
     if mine?(socket, %{author_id: author_id}),
@@ -1283,22 +1292,26 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # Topic Type: a topical topic's icon, shown on its opening message.
+  defp with_icon(%Forum.Topic{topical: true} = topic), do: Repo.preload(topic, icon: :upload)
+  defp with_icon(topic), do: topic
+
   defp opened_text(socket, message) do
     if mine?(socket, message),
       do: gettext("You started a message."),
-      else: gettext("%{name} started a message.", name: message.author.display_name)
+      else: gettext("%{name} started a message.", name: Messages.author_name(message))
   end
 
   defp closed_text(socket, message) do
     if mine?(socket, message),
       do: gettext("Your message is complete."),
-      else: gettext("%{name}’s message is complete.", name: message.author.display_name)
+      else: gettext("%{name}’s message is complete.", name: Messages.author_name(message))
   end
 
   defp posted_text(socket, message) do
     if mine?(socket, message),
       do: gettext("You posted a message."),
-      else: gettext("New message from %{name}.", name: message.author.display_name)
+      else: gettext("New message from %{name}.", name: Messages.author_name(message))
   end
 
   # `!new-topic` (steward decision, 2026-10-23): "New topic from this" (TP-09) from the
@@ -2293,6 +2306,34 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # Topic Type: a moderator changes a topical topic's icon, chosen in a dialog.
+  defp event("open_icon_picker", _params, socket) do
+    if socket.assigns.topic.topical and socket.assigns.can_moderate?,
+      do: {:noreply, assign(socket, :icon_picker, Forum.TopicIcons.list())},
+      else: {:noreply, socket}
+  end
+
+  defp event("close_icon_picker", _params, socket),
+    do: {:noreply, assign(socket, :icon_picker, nil)}
+
+  defp event("pick_topic_icon", %{"id" => id}, %{assigns: %{icon_picker: [_ | _]}} = socket) do
+    icon = Forum.TopicIcons.get(id)
+
+    case icon && Forum.set_topic_icon(user(socket), socket.assigns.topic, icon) do
+      {:ok, _topic} ->
+        # The topic's viewers, this one too, get the new icon as an event.
+        {:noreply, assign(socket, :icon_picker, nil)}
+
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:icon_picker, nil)
+         |> put_flash(:error, gettext("The icon could not be changed."))}
+    end
+  end
+
+  defp event("pick_topic_icon", _params, socket), do: {:noreply, socket}
+
   # The Delete button in the message's controls (steward request, 2026-11-07): the author's
   # own closed message, not the opening one, asked first. The question offers Edit instead.
   defp event("ask_delete_own", %{"id" => id}, socket) do
@@ -2477,6 +2518,14 @@ defmodule IdejoWeb.TopicLive do
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
       <.forward_dialog :if={@forward_card} card={@forward_card} />
       <.too_soon_dialog :if={@too_soon?} />
+      <TopicComponents.icon_dialog
+        :if={@icon_picker}
+        id="icon-picker"
+        icons={@icon_picker}
+        current={@topic.icon_id}
+        event="pick_topic_icon"
+        close_event="close_icon_picker"
+      />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
         message={@moderated}
@@ -2719,7 +2768,7 @@ defmodule IdejoWeb.TopicLive do
       >
         <summary>
           {gettext("A message from %{name}, whom you ignore. Show it",
-            name: @message.author.display_name
+            name: Messages.author_name(@message)
           )}
         </summary>
         <.message
@@ -2936,7 +2985,10 @@ defmodule IdejoWeb.TopicLive do
       edit: edit_state(assigns, message),
       own_closed?: own_closed?,
       own_deletable?: own_deletable?(assigns, message),
-      ignored?: is_nil(message.deleted_at) and MapSet.member?(assigns.ignored, message.author_id),
+      # Never for a topical topic's opening message, whose author does not show.
+      ignored?:
+        is_nil(message.deleted_at) and not message.anonymous and
+          MapSet.member?(assigns.ignored, message.author_id),
       mod_edit?: mod_edit?
     }
   end
@@ -3148,6 +3200,20 @@ defmodule IdejoWeb.TopicLive do
   attr :role?, :boolean, default: true, doc: "false: the role waits (the composer's status)"
   slot :status, doc: "a bubble at the right of the name, in place of the role"
 
+  attr :topical, :any,
+    default: nil,
+    doc: "Topic Type: the topic, when this is its topical opening message: its icon, no author"
+
+  defp author_line(%{topical: %Forum.Topic{}} = assigns) do
+    ~H"""
+    <span class="author-line">
+      <TopicComponents.topic_icon topic={@topical} />
+      <span class="sr-only">{gettext("Opening message")}</span>
+      {render_slot(@status)}
+    </span>
+    """
+  end
+
   defp author_line(assigns) do
     ~H"""
     <span class="author-line">
@@ -3209,10 +3275,15 @@ defmodule IdejoWeb.TopicLive do
             phx-value-id={@message.id}
           />
           <span class="sr-only">
-            {gettext("Select the message by %{name}", name: @message.author.display_name)}
+            {gettext("Select the message by %{name}", name: Messages.author_name(@message))}
           </span>
         </label>
-        <.author_line author={@message.author} role={@entry.role} role?={!@entry.committed?}>
+        <.author_line
+          author={@message.author}
+          role={@entry.role}
+          role?={!@entry.committed?}
+          topical={@message.anonymous && @topic}
+        >
           <:status :if={@entry.committed?}>
             <span class="tutorial-bubble is-always composer-status" data-status="committed">
               {gettext("sent & committed")}
@@ -3247,7 +3318,7 @@ defmodule IdejoWeb.TopicLive do
       >
         <%= if @entry.reply_shown? do %>
           <.link href={~p"/m/#{@message.reply_to.id}"} class="font-medium">
-            {gettext("In reply to %{name}", name: @message.reply_to.author.display_name)}
+            {gettext("In reply to %{name}", name: Messages.author_name(@message.reply_to))}
           </.link>
           <span :if={is_nil(@message.reply_to.deleted_at)} class="opacity-70">
             {Forum.excerpt(@message.reply_to)}
@@ -3450,7 +3521,7 @@ defmodule IdejoWeb.TopicLive do
           class="message-action"
           phx-click="reply"
           phx-value-id={@message.id}
-          aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
+          aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
         >
           <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
         </button>
@@ -3458,7 +3529,7 @@ defmodule IdejoWeb.TopicLive do
           :if={!@live? and @can_post? and is_nil(@message.deleted_at)}
           href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
           class="message-action"
-          aria-label={gettext("Reply to %{name}", name: @message.author.display_name)}
+          aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
         >
           <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
         </.link>
@@ -3471,9 +3542,19 @@ defmodule IdejoWeb.TopicLive do
           class="message-action"
           phx-click="forward"
           phx-value-id={@message.id}
-          aria-label={gettext("Forward the message of %{name}", name: @message.author.display_name)}
+          aria-label={gettext("Forward the message of %{name}", name: Messages.author_name(@message))}
         >
           <.icon name="hero-arrow-uturn-right-micro" class="size-4" />{gettext("Forward")}
+        </button>
+        <%!-- Topic Type: moderators change a topical topic's icon. --%>
+        <button
+          :if={@message.anonymous and @can_moderate? and @live?}
+          type="button"
+          id={"message-#{@message.id}-icon"}
+          class="message-action"
+          phx-click="open_icon_picker"
+        >
+          <.icon name="hero-photo-micro" class="size-4" />{gettext("Change icon")}
         </button>
         <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
         <button
@@ -3631,11 +3712,11 @@ defmodule IdejoWeb.TopicLive do
       <.icon name="hero-arrow-uturn-right-micro" class="size-4" />
       <%= cond do %>
         <% @text? and @place -> %>
-          {gettext("%{name} message forwarded from", name: @source.author.display_name)}
+          {gettext("%{name} message forwarded from", name: Messages.author_name(@source))}
           <.link href={~p"/m/#{@source.id}"} class="font-medium">{@place}</.link>
         <% @text? -> %>
           {gettext("%{name} message forwarded from a topic you cannot view",
-            name: @source.author.display_name
+            name: Messages.author_name(@source)
           )}
         <% true -> %>
           {gettext("A message forwarded from a topic you cannot view")}
@@ -3690,7 +3771,7 @@ defmodule IdejoWeb.TopicLive do
       <div class="modal-box forward-card">
         <h2 id="forward-dialog-title" class="inline-card-title">{gettext("Forward message")}</h2>
         <p class="inline-card-meta">
-          {@card.message.author.display_name}: {Forum.excerpt(@card.message)}
+          {Messages.author_name(@card.message)}: {Forum.excerpt(@card.message)}
         </p>
         <.form for={%{}} id="forward-search" phx-change="forward_search" phx-submit="forward_search">
           <label for="forward-query" class="sr-only">{gettext("Find a topic")}</label>
@@ -4028,7 +4109,7 @@ defmodule IdejoWeb.TopicLive do
       </p>
       <div :if={@replying} id="replying-to" class="message-quote">
         <p>
-          {gettext("Replying to %{name}:", name: @replying.author.display_name)}
+          {gettext("Replying to %{name}:", name: Messages.author_name(@replying))}
           <button :if={@reply_to} type="button" class="link ml-2" phx-click="cancel_reply">
             {gettext("Cancel reply")}
           </button>

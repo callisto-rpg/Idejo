@@ -93,7 +93,7 @@ defmodule Idejo.Push.Payload do
 
   defp text("reply", %{count: 1}, _user, message) do
     {gettext("%{name} replied in %{topic}",
-       name: message.author.display_name,
+       name: Idejo.Messages.author_name(message),
        topic: message.topic.title
      ), excerpt(message), permalink(message)}
   end
@@ -105,7 +105,7 @@ defmodule Idejo.Push.Payload do
 
   defp text("mention", %{count: 1}, _user, message) do
     {gettext("%{name} mentioned you in %{topic}",
-       name: message.author.display_name,
+       name: Idejo.Messages.author_name(message),
        topic: message.topic.title
      ), excerpt(message), permalink(message)}
   end
@@ -117,7 +117,7 @@ defmodule Idejo.Push.Payload do
 
   defp text("role_mention", %{count: 1}, user, message) do
     {gettext("%{name} mentioned +%{role} in %{topic}",
-       name: message.author.display_name,
+       name: Idejo.Messages.author_name(message),
        role: role_mentioned(user, message),
        topic: message.topic.title
      ), excerpt(message), permalink(message)}

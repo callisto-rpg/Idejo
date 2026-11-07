@@ -195,6 +195,15 @@ defmodule IdejoWeb.Admin.CategoriesLive do
     ]
   end
 
+  # Topic Type (steward request, 2026-11-07): "User" topics show their starter; "Topical"
+  # ones an icon from Admin → Topic icons, with no starter, and moderators edit them.
+  defp topic_type_options do
+    [
+      {gettext("User: shown as started by its author"), "user"},
+      {gettext("Topical: shown with an icon, without its author"), "topical"}
+    ]
+  end
+
   defp new_topics_label("approval"), do: gettext("New topics approved")
   defp new_topics_label("new_users"), do: gettext("New users' topics approved")
   defp new_topics_label("closed"), do: gettext("New topics closed")
@@ -274,6 +283,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                   label={gettext("New topics")}
                   options={new_topics_options()}
                 />
+                <.input
+                  :if={!category.archive}
+                  field={form[:topic_type]}
+                  type="select"
+                  label={gettext("Topic Type")}
+                  options={topic_type_options()}
+                />
                 <div class="flex gap-2">
                   <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                   <button type="button" class="btn btn-sm" phx-click="cancel_edit">
@@ -285,6 +301,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
               <div class="flex flex-wrap items-center gap-3">
                 <span class="font-semibold">{category.name}</span>
                 <span :if={category.archive} class="badge badge-sm">{gettext("Archive")}</span>
+                <span
+                  :if={category.topic_type == "topical"}
+                  id={"topic-type-#{category.id}"}
+                  class="badge badge-sm badge-ghost"
+                >
+                  {gettext("Topical")}
+                </span>
                 <span
                   :if={category.new_topics != "open"}
                   id={"new-topics-#{category.id}"}
@@ -518,6 +541,12 @@ defmodule IdejoWeb.Admin.CategoriesLive do
             type="select"
             label={gettext("New topics")}
             options={new_topics_options()}
+          />
+          <.input
+            field={@new_form[:topic_type]}
+            type="select"
+            label={gettext("Topic Type")}
+            options={topic_type_options()}
           />
           <.input
             field={@new_form[:slug]}

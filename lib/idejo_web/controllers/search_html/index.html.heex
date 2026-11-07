@@ -43,7 +43,7 @@
       <%!-- One line: whitespace between the segments would show before punctuation. --%>
       <p class="text-sm" phx-no-format><%= for {kind, text} <- excerpt do %><mark :if={kind == :match}>{text}</mark><span :if={kind == :text}>{text}</span><% end %></p>
       <p class="text-sm opacity-70">
-        {message.topic.category.name} · {message.author.display_name} ·
+        {message.topic.category.name} · {Idejo.Messages.author_name(message)} ·
         <time datetime={DateTime.to_iso8601(message.opened_at)}>
           {Calendar.strftime(message.opened_at, "%Y-%m-%d %H:%M UTC")}
         </time>
