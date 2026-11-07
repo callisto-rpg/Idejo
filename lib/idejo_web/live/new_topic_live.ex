@@ -138,6 +138,16 @@ defmodule IdejoWeb.NewTopicLive do
       {:ok, topic} ->
         {:noreply, redirect(socket, to: ~p"/t/#{topic.id}/#{topic.slug}")}
 
+      # MO-04: the category asks a moderator to approve it first.
+      {:pending, _pending} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext("Your topic was sent. It will appear once a moderator approves it.")
+         )
+         |> redirect(to: ~p"/c/#{category.slug}")}
+
       {:error, :forbidden} ->
         {:noreply,
          socket

@@ -36,11 +36,15 @@ defmodule Idejo.Moderation do
 
     * `:reason` - why, in the moderator's words (shown in the log).
     * `:details` - a JSON-ready map of what changed, e.g. a topic's old and new category.
+    * `:category_id` - the category the entry is about, when the target does not say it (a
+      topic rejected from the approval queue, MO-04, logged against its author).
   """
   @spec record(User.t(), String.t(), Message.t() | Topic.t() | User.t(), keyword()) ::
           {:ok, Action.t()} | {:error, Ecto.Changeset.t()}
   def record(%User{} = moderator, action, target, opts \\ []) do
     {type, category_id} = target_of(target)
+    # MO-04: a rejected topic is logged against its author, in its category.
+    category_id = Keyword.get(opts, :category_id, category_id)
 
     Repo.insert(%Action{
       moderator_id: moderator.id,

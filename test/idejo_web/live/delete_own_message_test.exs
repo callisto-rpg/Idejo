@@ -125,4 +125,57 @@ defmodule IdejoWeb.DeleteOwnMessageTest do
     assert has_element?(lv, "#message-#{opening.id} #composer[data-editing]")
     assert Repo.reload!(opening).body_md == "Hi"
   end
+
+  @tag req: "GM-10"
+  test "GM-10 Delete in the message's controls asks Cancel, Edit or Delete", %{
+    author: author,
+    topic: topic,
+    opening: opening,
+    message: message
+  } do
+    {:ok, lv, _html} = watch(log_in_user(build_conn(), author), topic)
+    {:ok, other, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+
+    # Only the author's own messages, never the opening one.
+    refute has_element?(lv, "#message-#{opening.id}-delete")
+    refute has_element?(other, "#message-#{message.id}-delete")
+
+    lv |> element("#message-#{message.id}-delete") |> render_click()
+    assert has_element?(lv, "#delete-own-dialog", "Delete the whole message?")
+
+    assert has_element?(
+             lv,
+             "#delete-own-dialog",
+             "This cannot be undone. If you made a mistake, you can edit your message instead."
+           )
+
+    # Cancel: nothing changes.
+    render_hook(lv, "cancel_delete_own", %{})
+    refute has_element?(lv, "#delete-own-dialog")
+    assert is_nil(Repo.reload!(message).deleted_at)
+
+    # Edit: the message opens in the composer instead.
+    lv |> element("#message-#{message.id}-delete") |> render_click()
+    lv |> element("#delete-own-edit") |> render_click()
+    refute has_element?(lv, "#delete-own-dialog")
+    assert has_element?(lv, "#message-#{message.id} #composer[data-editing]")
+    assert is_nil(Repo.reload!(message).deleted_at)
+  end
+
+  @tag req: "GM-10"
+  test "GM-10 Delete in the question deletes the message", %{
+    author: author,
+    topic: topic,
+    message: message
+  } do
+    {:ok, lv, _html} = watch(log_in_user(build_conn(), author), topic)
+
+    lv |> element("#message-#{message.id}-delete") |> render_click()
+    lv |> element("#delete-own-confirm") |> render_click()
+
+    refute has_element?(lv, "#delete-own-dialog")
+    assert has_element?(lv, "#message-#{message.id}-deleted", "Message deleted by user")
+    refute has_element?(lv, "#message-#{message.id}-delete")
+    assert Repo.reload!(message).deleted_by_id == author.id
+  end
 end

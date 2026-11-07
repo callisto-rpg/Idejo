@@ -17,7 +17,7 @@ defmodule Idejo.Accounts do
   alias Idejo.Repo
   alias Idejo.Uploads
 
-  alias Idejo.Accounts.{Invite, OIDC, User, UserIdentity, UserNotifier, UserToken}
+  alias Idejo.Accounts.{Invite, OIDC, User, UserIdentity, UserIgnore, UserNotifier, UserToken}
   alias Idejo.Audit
   alias Idejo.Settings
 
@@ -607,6 +607,76 @@ defmodule Idejo.Accounts do
     }
   end
 
+  ## Ignoring a user (AC-06)
+
+  @doc """
+  `user` ignores `other` (AC-06): `other`'s messages are collapsed for them. Private: nothing
+  is logged and `other` is never told. Refused for oneself, a deleted account and a server
+  account (`{:error, :forbidden}`). Ignoring twice is fine.
+  """
+  @spec ignore_user(User.t(), User.t()) :: :ok | {:error, :forbidden}
+  def ignore_user(%User{} = user, %User{} = other) do
+    if may_ignore?(user, other) do
+      now = DateTime.utc_now(:second)
+
+      Repo.insert_all(UserIgnore, [%{user_id: user.id, ignored_id: other.id, inserted_at: now}],
+        on_conflict: :nothing
+      )
+
+      :ok
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc "`user` no longer ignores `other` (AC-06). Fine when they did not."
+  @spec unignore_user(User.t(), User.t()) :: :ok
+  def unignore_user(%User{} = user, %User{} = other) do
+    Repo.delete_all(
+      from i in UserIgnore, where: i.user_id == ^user.id and i.ignored_id == ^other.id
+    )
+
+    :ok
+  end
+
+  @doc "Whether `user` may ignore `other`: someone else, with an active account."
+  @spec may_ignore?(User.t() | nil, User.t()) :: boolean()
+  def may_ignore?(nil, _other), do: false
+  def may_ignore?(%User{id: id}, %User{id: id}), do: false
+  def may_ignore?(%User{}, %User{status: status}), do: status == "active"
+
+  @doc "Whether `user` ignores `other` (AC-06); nobody signed in ignores no one."
+  @spec ignoring?(User.t() | nil, User.t()) :: boolean()
+  def ignoring?(nil, _other), do: false
+
+  def ignoring?(%User{} = user, %User{} = other),
+    do:
+      Repo.exists?(
+        from i in UserIgnore, where: i.user_id == ^user.id and i.ignored_id == ^other.id
+      )
+
+  @doc "The ids of the users `user` ignores (AC-06), in one query; none for a visitor."
+  @spec ignored_ids(User.t() | nil) :: MapSet.t(Ecto.UUID.t())
+  def ignored_ids(nil), do: MapSet.new()
+
+  def ignored_ids(%User{} = user) do
+    from(i in UserIgnore, where: i.user_id == ^user.id, select: i.ignored_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc "The users `user` ignores (AC-06), by display name, for Profile and account."
+  @spec list_ignored(User.t()) :: [User.t()]
+  def list_ignored(%User{} = user) do
+    Repo.all(
+      from u in User,
+        join: i in UserIgnore,
+        on: i.ignored_id == u.id,
+        where: i.user_id == ^user.id,
+        order_by: [asc: fragment("lower(?)", u.display_name)]
+    )
+  end
+
   ## Bans (MO-02)
 
   @doc """
@@ -799,6 +869,13 @@ defmodule Idejo.Accounts do
       Repo.delete_all(from ur in UserRole, where: ur.user_id == ^user.id)
       # AC-09: the provider's person is no longer this account.
       Repo.delete_all(from i in UserIdentity, where: i.user_id == ^user.id)
+      # MO-04: their topics still waiting for approval.
+      Repo.delete_all(from p in Idejo.Forum.PendingTopic, where: p.author_id == ^user.id)
+      # AC-06: whom they ignored, and who ignored them.
+      Repo.delete_all(
+        from i in UserIgnore, where: i.user_id == ^user.id or i.ignored_id == ^user.id
+      )
+
       :ok = Push.delete_for_user(user)
 
       # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.

@@ -33,6 +33,8 @@ defmodule IdejoWeb.CategoryController do
           category: category,
           page_title: category.name,
           can_start?: Forum.can_start_topic?(user, category),
+          # MO-04: the reader's own topics waiting for approval here.
+          own_pending: Forum.list_own_pending_topics(user, category),
           topics: topics,
           unread: Reading.unread_counts(user, Enum.map(topics, & &1.id)),
           page: page,

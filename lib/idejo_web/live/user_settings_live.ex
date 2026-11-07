@@ -38,6 +38,7 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
      |> assign(:controls_form, to_form(Accounts.change_user_controls(user), as: :controls))
      |> assign(:private_form, private_form(user))
+     |> assign(:ignored, Accounts.list_ignored(user))
      |> assign(:bio_form, bio_form(user))
      |> assign(bio_mode: :write, bio_preview: "")
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
@@ -601,6 +602,39 @@ defmodule IdejoWeb.UserSettingsLive do
           </p>
           <.button class="btn btn-primary">{gettext("Save private messages preference")}</.button>
         </.form>
+      </section>
+
+      <%!-- AC-06: the people this user ignores, each with "Stop ignoring" (a plain form to
+           IgnoreController, back here). One ignores someone from their card. --%>
+      <section class="mt-10" id="ignored-section" aria-labelledby="ignored-heading">
+        <h2 id="ignored-heading" class="font-semibold mb-2">{gettext("Ignored users")}</h2>
+        <p class="text-sm opacity-70 mb-3">
+          {gettext(
+            "Their messages are collapsed for you. To ignore someone, choose Ignore on their card."
+          )}
+        </p>
+        <p :if={@ignored == []} id="ignored-none" class="text-sm">
+          {gettext("You ignore nobody.")}
+        </p>
+        <ul :if={@ignored != []} id="ignored-list" class="space-y-2">
+          <li :for={user <- @ignored} id={"ignored-#{user.id}"} class="flex items-center gap-3">
+            <.link href={~p"/u/#{user.id}"} class="font-medium">{user.display_name}</.link>
+            <.form
+              for={%{}}
+              action={~p"/u/#{user.id}/ignore"}
+              method="delete"
+              id={"unignore-#{user.id}"}
+            >
+              <input type="hidden" name="return_to" value="/users/settings" />
+              <button
+                class="btn btn-xs"
+                aria-label={gettext("Stop ignoring %{name}", name: user.display_name)}
+              >
+                {gettext("Stop ignoring")}
+              </button>
+            </.form>
+          </li>
+        </ul>
       </section>
 
       <section class="mt-10" aria-labelledby="email-notifications-heading">

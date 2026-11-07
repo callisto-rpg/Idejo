@@ -185,6 +185,20 @@ defmodule IdejoWeb.Admin.CategoriesLive do
      |> load()}
   end
 
+  # MO-04: how the category takes new topics. Its moderators' topics never wait.
+  defp new_topics_options do
+    [
+      {gettext("Open: anyone who may start topics"), "open"},
+      {gettext("Every new topic needs a moderator's approval"), "approval"},
+      {gettext("New users' topics need a moderator's approval"), "new_users"},
+      {gettext("Closed: only moderators start topics"), "closed"}
+    ]
+  end
+
+  defp new_topics_label("approval"), do: gettext("New topics approved")
+  defp new_topics_label("new_users"), do: gettext("New users' topics approved")
+  defp new_topics_label("closed"), do: gettext("New topics closed")
+
   defp group_name(groups, category),
     do: Enum.find_value(groups, &(&1.id == category.group_id && &1.name))
 
@@ -253,6 +267,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
                   options={group_options(@groups)}
                 />
                 <Admin.look form={form} id={"edit-#{category.id}"} item_id={category.id} />
+                <.input
+                  :if={!category.archive}
+                  field={form[:new_topics]}
+                  type="select"
+                  label={gettext("New topics")}
+                  options={new_topics_options()}
+                />
                 <div class="flex gap-2">
                   <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                   <button type="button" class="btn btn-sm" phx-click="cancel_edit">
@@ -264,6 +285,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
               <div class="flex flex-wrap items-center gap-3">
                 <span class="font-semibold">{category.name}</span>
                 <span :if={category.archive} class="badge badge-sm">{gettext("Archive")}</span>
+                <span
+                  :if={category.new_topics != "open"}
+                  id={"new-topics-#{category.id}"}
+                  class="badge badge-sm badge-ghost"
+                >
+                  {new_topics_label(category.new_topics)}
+                </span>
                 <span :if={group_name(@groups, category)} class="badge badge-sm badge-ghost">
                   {group_name(@groups, category)}
                 </span>
@@ -485,6 +513,12 @@ defmodule IdejoWeb.Admin.CategoriesLive do
             options={group_options(@groups)}
           />
           <Admin.look form={@new_form} id="new" item_id={nil} />
+          <.input
+            field={@new_form[:new_topics]}
+            type="select"
+            label={gettext("New topics")}
+            options={new_topics_options()}
+          />
           <.input
             field={@new_form[:slug]}
             type="text"

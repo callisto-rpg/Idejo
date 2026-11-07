@@ -31,6 +31,21 @@
     </.link>
   </header>
 
+  <%!-- MO-04: only their author sees their topics waiting for approval. --%>
+  <section
+    :if={@own_pending != []}
+    id="own-pending"
+    class="own-pending"
+    aria-labelledby="own-pending-heading"
+  >
+    <h2 id="own-pending-heading" class="font-semibold">
+      {gettext("Your topics waiting for a moderator's approval")}
+    </h2>
+    <ul class="list-disc pl-5">
+      <li :for={pending <- @own_pending} id={"own-pending-#{pending.id}"}>{pending.title}</li>
+    </ul>
+  </section>
+
   <p :if={@topics == [] and @page == 1} id="no-topics" class="empty-state">
     {gettext("No topics yet.")}
   </p>

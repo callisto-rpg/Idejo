@@ -9,9 +9,13 @@ defmodule IdejoWeb.ModerationController do
       moderates (all of them for owners and administrators), grouped by message; resolving or
       dismissing posts to `/moderation/reports/{message id}` with an optional note.
     * `/moderation/log`, the moderation log (MO-03), newest first, 30 a page.
+    * MO-04: above the reports, the new topics waiting for approval in the categories the
+      viewer moderates, each approved or rejected (with an optional reason) by a post to
+      `/moderation/topics/{id}`.
   """
   use IdejoWeb, :controller
 
+  alias Idejo.Forum
   alias Idejo.Moderation
 
   def index(conn, _params) do
@@ -19,8 +23,39 @@ defmodule IdejoWeb.ModerationController do
 
     render(conn, :index,
       page_title: gettext("Moderation"),
-      queue: Moderation.list_open_reports(user)
+      queue: Moderation.list_open_reports(user),
+      pending: Forum.list_pending_topics(user)
     )
+  end
+
+  # MO-04: approve or reject a topic waiting for approval.
+  def handle_pending(conn, %{"id" => id, "outcome" => outcome} = params)
+      when outcome in ["approve", "reject"] do
+    user = moderator!(conn)
+
+    result =
+      case Forum.get_pending_topic(user, id) do
+        nil -> {:error, :not_found}
+        pending when outcome == "approve" -> Forum.approve_topic(user, pending)
+        pending -> Forum.reject_topic(user, pending, params["note"])
+      end
+
+    case {outcome, result} do
+      {"approve", {:ok, topic}} ->
+        conn
+        |> put_flash(:info, gettext("Topic approved: “%{title}”.", title: topic.title))
+        |> redirect(to: ~p"/moderation")
+
+      {"reject", {:ok, _pending}} ->
+        conn
+        |> put_flash(:info, gettext("Topic rejected."))
+        |> redirect(to: ~p"/moderation")
+
+      _ ->
+        conn
+        |> put_flash(:error, gettext("This topic could not be handled."))
+        |> redirect(to: ~p"/moderation")
+    end
   end
 
   # Steward decision, 2026-10-27: a reported private message is deleted from the queue, the

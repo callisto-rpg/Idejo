@@ -17,6 +17,10 @@
         <.link href={target_path(entry)} class="link">{target_label(entry)}</.link>
       </p>
       <p :if={ban_until(entry)} class="text-sm">{ban_until(entry)}</p>
+      <%!-- MO-04: a rejected topic is gone; its title stays here. --%>
+      <p :if={entry.action == "topic.reject"} class="text-sm">
+        {gettext("Title: %{title}", title: entry.details["title"])}
+      </p>
       <p :if={entry.reason} class="text-sm">
         {gettext("Reason:")} <span class="mod-action-reason">{entry.reason}</span>
       </p>

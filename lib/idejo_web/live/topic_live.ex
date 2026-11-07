@@ -98,6 +98,7 @@ defmodule IdejoWeb.TopicLive do
            topic: nil,
            can_post?: false,
            lost_access?: false,
+           ignored: MapSet.new(),
            roles: %{},
            committed: nil,
            read_timer: nil,
@@ -122,6 +123,7 @@ defmodule IdejoWeb.TopicLive do
            forward_card: nil,
            moderating: nil,
            confirm_delete: nil,
+           delete_asked_from: nil,
            selected: nil,
            select_for: nil,
            move_to: nil,
@@ -164,6 +166,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(committed: nil, read_timer: nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
          |> assign(:can_fork?, can_fork?(user, topic))
+         # AC-06: whose messages are collapsed for this reader.
+         |> assign(:ignored, Idejo.Accounts.ignored_ids(user))
          |> assign(:automessages, automessages(user, topic))
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
@@ -186,6 +190,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(
            moderating: nil,
            confirm_delete: nil,
+           delete_asked_from: nil,
            selected: nil,
            select_for: nil,
            move_to: nil,
@@ -312,7 +317,8 @@ defmodule IdejoWeb.TopicLive do
         assigns.forward_access,
         assigns.select_for,
         assigns.selected == nil,
-        assigns.opening_id
+        assigns.opening_id,
+        assigns.ignored
       },
       deleted_runs: assigns.deleted_runs,
       mention_glows: assigns.mention_glows,
@@ -2287,10 +2293,28 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
+  # The Delete button in the message's controls (steward request, 2026-11-07): the author's
+  # own closed message, not the opening one, asked first. The question offers Edit instead.
+  defp event("ask_delete_own", %{"id" => id}, socket) do
+    if own_deletable?(socket.assigns, Enum.find(socket.assigns.messages, &(&1.id == id))),
+      do: {:noreply, assign(socket, confirm_delete: id, delete_asked_from: :controls)},
+      else: {:noreply, socket}
+  end
+
+  # "Edit" in the question: the message opens for editing instead.
+  defp event("edit_instead_of_delete", _params, %{assigns: %{confirm_delete: id}} = socket)
+       when is_binary(id) do
+    socket
+    |> assign(confirm_delete: nil, delete_asked_from: nil)
+    |> then(&event("edit", %{"id" => id}, &1))
+  end
+
+  defp event("edit_instead_of_delete", _params, socket), do: {:noreply, socket}
+
   defp event("delete_own", _params, %{assigns: %{confirm_delete: id}} = socket)
        when is_binary(id) do
     message = Enum.find(socket.assigns.messages, &(&1.id == id))
-    socket = assign(socket, :confirm_delete, nil)
+    socket = assign(socket, confirm_delete: nil, delete_asked_from: nil)
 
     # The deleted message arrives as an event, like everyone else's view of it.
     case message && Messages.delete_own(user(socket), message) do
@@ -2312,8 +2336,9 @@ defmodule IdejoWeb.TopicLive do
   defp event("delete_own", _params, socket), do: {:noreply, socket}
 
   # "No", Escape or a click outside: back to the editor, the text still empty.
+  # From the controls, Cancel leaves the message as it was (the focus back on Delete).
   defp event("cancel_delete_own", _params, socket),
-    do: {:noreply, assign(socket, :confirm_delete, nil)}
+    do: {:noreply, assign(socket, confirm_delete: nil, delete_asked_from: nil)}
 
   # AX-01: the keyboard focus goes back to the message's Edit button, which the editor
   # replaced (it takes the focus when it is mounted again).
@@ -2333,7 +2358,9 @@ defmodule IdejoWeb.TopicLive do
   defp commit_edit(socket, message, "", _break?) do
     # Emptied: ask whether to delete it, as the editor does (not the opening message).
     if message.id != socket.assigns.opening_id,
-      do: {:reply, %{error: true}, assign(socket, :confirm_delete, message.id)},
+      do:
+        {:reply, %{error: true},
+         assign(socket, confirm_delete: message.id, delete_asked_from: :editor)},
       else: {:reply, %{error: true}, socket}
   end
 
@@ -2445,7 +2472,7 @@ defmodule IdejoWeb.TopicLive do
       <IdejoWeb.GifComponents.gif_picker :if={@gifs && @can_post?} gifs={@gifs} />
       <ReactionComponents.reaction_who :if={@reaction_who && !@reaction_who.all?} who={@reaction_who} />
       <ReactionComponents.reaction_card :if={@reaction_who && @reaction_who.all?} who={@reaction_who} />
-      <.delete_own_dialog :if={@confirm_delete} />
+      <.delete_own_dialog :if={@confirm_delete} from={@delete_asked_from} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
       <.forward_dialog :if={@forward_card} card={@forward_card} />
@@ -2682,7 +2709,33 @@ defmodule IdejoWeb.TopicLive do
       phx-mounted={@entry.glow && JS.ignore_attributes(["data-glowing"])}
     >
       <.unread_line :if={@entry.unread} message_id={@message.id} count={@entry.unread} />
+      <%!-- AC-06: a message from someone the reader ignores, collapsed; a <details>, so it
+           opens without JavaScript too, and stays open across updates. --%>
+      <details
+        :if={@entry.ignored?}
+        id={"message-#{@message.id}-ignored"}
+        class="message-ignored"
+        phx-mounted={JS.ignore_attributes(["open"])}
+      >
+        <summary>
+          {gettext("A message from %{name}, whom you ignore. Show it",
+            name: @message.author.display_name
+          )}
+        </summary>
+        <.message
+          message={@message}
+          entry={@entry}
+          topic={@topic}
+          can_post?={@can_post?}
+          viewer={@viewer}
+          can_moderate?={@can_moderate?}
+          can_fork?={@can_fork?}
+          can_react?={@can_react?}
+          live?={@live?}
+        />
+      </details>
       <.message
+        :if={!@entry.ignored?}
         message={@message}
         entry={@entry}
         topic={@topic}
@@ -2882,6 +2935,8 @@ defmodule IdejoWeb.TopicLive do
       refocus?: assigns.refocus == id,
       edit: edit_state(assigns, message),
       own_closed?: own_closed?,
+      own_deletable?: own_deletable?(assigns, message),
+      ignored?: is_nil(message.deleted_at) and MapSet.member?(assigns.ignored, message.author_id),
       mod_edit?: mod_edit?
     }
   end
@@ -2893,6 +2948,17 @@ defmodule IdejoWeb.TopicLive do
 
   defp selection(%{selected: selected} = assigns, message),
     do: {MapSet.member?(selected, message.id), selectable_in_view?(assigns, message)}
+
+  # The Delete button: the author's own closed message, not deleted and not the opening one,
+  # where they may post (as `Messages.delete_own/2` checks).
+  defp own_deletable?(_assigns, nil), do: false
+
+  defp own_deletable?(assigns, message) do
+    viewer = assigns.current_scope && assigns.current_scope.user
+
+    viewer != nil and message.author_id == viewer.id and message.state == "closed" and
+      is_nil(message.deleted_at) and message.id != assigns.opening_id and assigns.can_post?
+  end
 
   defp edit_rights(_assigns, _message, nil), do: {false, false}
 
@@ -2970,6 +3036,53 @@ defmodule IdejoWeb.TopicLive do
   # Steward decision, 2026-10-23: asked when the author saves their message with no text.
   # "No" closes the dialog natively (a `method="dialog"` form), so the focus goes back to the
   # editor; the dialog's close event tells the server.
+  attr :from, :atom, default: :editor
+
+  # Emptied in the editor: Yes or No. From the message's Delete button (steward request,
+  # 2026-11-07): Cancel, Edit (the message opens for editing instead) or Delete. The focus
+  # goes back to the button when it closes (`data-return-focus`).
+  defp delete_own_dialog(%{from: :controls} = assigns) do
+    ~H"""
+    <dialog
+      id="delete-own-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="cancel_delete_own"
+      data-return-focus
+      aria-labelledby="delete-own-title"
+      aria-describedby="delete-own-text"
+    >
+      <div class="modal-box inline-card">
+        <h2 id="delete-own-title" class="inline-card-title">
+          {gettext("Delete the whole message?")}
+        </h2>
+        <p id="delete-own-text">
+          {gettext("This cannot be undone. If you made a mistake, you can edit your message instead.")}
+        </p>
+        <form method="dialog" class="modal-action">
+          <button id="delete-own-cancel" class="btn btn-sm" autofocus>{gettext("Cancel")}</button>
+          <button
+            id="delete-own-edit"
+            type="button"
+            class="btn btn-sm"
+            phx-click="edit_instead_of_delete"
+          >
+            {gettext("Edit")}
+          </button>
+          <button
+            id="delete-own-confirm"
+            type="button"
+            class="btn btn-sm btn-error"
+            phx-click="delete_own"
+          >
+            {gettext("Delete")}
+          </button>
+        </form>
+      </div>
+    </dialog>
+    """
+  end
+
   defp delete_own_dialog(assigns) do
     ~H"""
     <dialog
@@ -3297,6 +3410,17 @@ defmodule IdejoWeb.TopicLive do
           phx-value-id={@message.id}
         >
           <.icon name="hero-pencil-square-micro" class="size-4" />{gettext("Edit")}
+        </button>
+        <%!-- The author deletes their own message (steward request, 2026-11-07), asked first. --%>
+        <button
+          :if={@entry.own_deletable? and !@entry.edit and @live?}
+          id={"message-#{@message.id}-delete"}
+          type="button"
+          class="message-action"
+          phx-click="ask_delete_own"
+          phx-value-id={@message.id}
+        >
+          <.icon name="hero-trash-micro" class="size-4" />{gettext("Delete")}
         </button>
         <%!-- MO-01: anyone signed in may report someone else's message. --%>
         <.link

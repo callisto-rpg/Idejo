@@ -1171,9 +1171,12 @@ defmodule IdejoWeb.Layouts do
   attr :user, :map, required: true
 
   # MO-01, MO-03: the Moderation screen, for users who may moderate somewhere, with the number
-  # of reported messages waiting.
+  # of reported messages waiting, and of new topics waiting for approval (MO-04).
   defp moderation_link(assigns) do
-    assigns = assign(assigns, :reports, Idejo.Moderation.open_report_count(assigns.user))
+    assigns =
+      assigns
+      |> assign(:reports, Idejo.Moderation.open_report_count(assigns.user))
+      |> assign(:pending, Idejo.Forum.pending_topic_count(assigns.user))
 
     ~H"""
     <a
@@ -1186,6 +1189,9 @@ defmodule IdejoWeb.Layouts do
       <span class="header-link-text">{gettext("Moderation")}</span>
       <span :if={@reports > 0} class="header-badge header-badge-warning">
         {@reports}<span class="sr-only">{gettext(" open reports")}</span>
+      </span>
+      <span :if={@pending > 0} id="pending-topics-badge" class="header-badge">
+        {@pending}<span class="sr-only">{gettext(" topics waiting for approval")}</span>
       </span>
     </a>
     """

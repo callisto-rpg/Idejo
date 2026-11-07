@@ -841,6 +841,13 @@ The contract (M6; mark each item done here when its PR merges):
   one less, kept for moderators) but `deleted_by_id` is the author, nothing is logged, and
   the topic's opening message is refused (it stays "can't be blank"). Readers see "Message
   deleted by user" (`Messages.deleted_by_author?/1`; runs of deletions are grouped by kind).
+  The message's controls also have **Delete** (steward request, 2026-11-07; `#message-{id}-delete`,
+  the author's own closed message, not the opening one, where they may post, while it is not
+  being edited: `own_deletable?/2`): `"ask_delete_own"` opens the same dialog in its other
+  form (`delete_asked_from: :controls`): "Delete the whole message?", "This cannot be undone.
+  If you made a mistake, you can edit your message instead.", with Cancel, Edit
+  (`"edit_instead_of_delete"`, the message opens in the composer as Edit would) and Delete
+  (`"delete_own"`); the focus returns to the button (`data-return-focus`).
 - **Closing** (GM-12, GM-16): archiving topics closes their open messages
   (`Messages.close_open_in_topics/1` inside the transaction, `announce_closed/1` after it);
   locking (TP-14, `Forum.moderate_topic/4`) does the same. `Idejo.Messages.Authors` tracks live topic views
@@ -1479,6 +1486,31 @@ The contract (M6; mark each item done here when its PR merges):
   message, oldest first; Resolve or Dismiss closes all of a message's open reports
   (`Moderation.handle_reports/4`), logged as `report.resolve` / `report.dismiss`. The header's
   Moderation link shows how many messages wait (`Moderation.open_report_count/1`).
+- **Ignoring a user** (AC-06, `Accounts.ignore_user/2`, `unignore_user/2`, `ignored_ids/1`;
+  table `user_ignores`, private: not logged, never shown to the ignored): "Ignore" / "Stop
+  ignoring" on the user card (`card_data/3`'s `ignoring?`, nil when the viewer may not: a
+  visitor, themselves, an account not `active`; `IgnoreController`, POST / DELETE
+  `/u/{id}/ignore`, back through a checked `return_to`, the topic or `/users/settings`).
+  `TopicLive` reads the ids once at mount (`@ignored`, a global entry input) and wraps each of
+  their messages not deleted in a `<details class="message-ignored">` ("A message from …,
+  whom you ignore. Show it"; its `open` ignored by patches). Notifications and lists are
+  unchanged. Profile and account lists them (`#ignored-section`, `list_ignored/1`).
+- **Approval queue** (MO-04, `Idejo.Forum`; steward request, 2026-11-07): each category's
+  `new_topics` (Admin → Categories, "New topics"): `open`; `approval`, every new topic waits;
+  `new_users`, a new user's waits (`Forum.new_user?/1`: no topic of theirs exists yet, private
+  conversations aside, so their first one is approved and later ones start at once); `closed`,
+  only its moderators start topics (`can_start_topic?/2`, `list_startable_categories/1`).
+  Those who may moderate the category never wait. A waiting topic is a `PendingTopic` (title,
+  body, tag ids, fork source), **not** a `Topic`, so no list, search, feed or notification can
+  show it: `create_topic/4` returns `{:pending, pending}` and `NewTopicLive` goes back to the
+  category, which lists the author's own waiting topics (`#own-pending`). `/moderation` lists
+  them above the reports for the category's moderators (`list_pending_topics/1`, rendered
+  Markdown), Approve or Reject with a reason (POST `/moderation/topics/{id}`):
+  `approve_topic/2` starts it then, as its author (`insert_topic/4`, then the usual
+  notifications), logged `topic.approve`; `reject_topic/3` deletes it, logged `topic.reject`
+  against the author with the category (`record/4`'s `:category_id`) and the title. The
+  header's Moderation link adds a badge of waiting topics (`pending_topic_count/1`). Uploads
+  named in a waiting topic are kept; deleting an account deletes its waiting topics.
 - **Moderator delete and edit** (MO-02): `Messages.delete_as_moderator/3` sets
   `deleted_at`/`deleted_by_id` (closing an open message first), counts the topic one message
   less and resolves its open reports; the text and versions stay for moderators (steward
