@@ -53,7 +53,8 @@ defmodule IdejoWeb.NewTopicLive do
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
              |> assign(:tags, Tags.available_tags(default))
-             |> assign(icons: Forum.icons_for(default), icon_picker?: false)
+             |> assign(icon_picker?: false)
+             |> put_icons(%{})
              |> assign(:form, to_form(Forum.change_new_topic(sent(user, params)), as: :topic))
              |> assign(editor_mode: :write, preview_html: "")
              |> ImageUploads.allow(:editor_image)}
@@ -75,7 +76,8 @@ defmodule IdejoWeb.NewTopicLive do
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
            |> assign(source: nil, categories: [], category: category)
            |> assign(:tags, Tags.available_tags(category))
-           |> assign(icons: Forum.icons_for(category), icon_picker?: false)
+           |> assign(icon_picker?: false)
+           |> put_icons(%{})
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
            |> assign(editor_mode: :write, preview_html: "")
            |> ImageUploads.allow(:editor_image)}
@@ -104,7 +106,7 @@ defmodule IdejoWeb.NewTopicLive do
 
   @impl true
   def handle_event("validate", %{"topic" => params}, socket) do
-    socket = choose_category(socket, params)
+    socket = socket |> choose_category(params) |> put_icons(params)
 
     form =
       params
@@ -199,12 +201,21 @@ defmodule IdejoWeb.NewTopicLive do
 
     if category.id == socket.assigns.category.id,
       do: socket,
-      else:
-        assign(socket,
-          category: category,
-          tags: Tags.available_tags(category),
-          icons: Forum.icons_for(category)
-        )
+      else: assign(socket, category: category, tags: Tags.available_tags(category))
+  end
+
+  # Topic Type: the icons on offer, when the topic will be topical: always in a topical
+  # category; in a user category, when a moderator of it ticks "Post as a topical topic"
+  # (`can_topical?`; steward request, 2026-11-07).
+  defp put_icons(socket, params) do
+    user = socket.assigns.current_scope.user
+    category = socket.assigns.category
+
+    can_topical? =
+      category.topic_type == "user" and Idejo.Access.can?(user, :moderate, category)
+
+    topical? = can_topical? and params["topical"] in ["true", true]
+    assign(socket, can_topical?: can_topical?, icons: Forum.icons_for(category, topical?))
   end
 
   # A topic from a message goes to the chosen category, one the user may start topics in.
@@ -286,6 +297,13 @@ defmodule IdejoWeb.NewTopicLive do
             <.icon name="hero-exclamation-circle" class="size-5" />{error}
           </p>
         </fieldset>
+        <%!-- Steward request, 2026-11-07: moderators post a topical topic anyway. --%>
+        <.input
+          :if={@can_topical?}
+          field={@form[:topical]}
+          type="checkbox"
+          label={gettext("Post as a topical topic (an icon, without your name)")}
+        />
         <%!-- Topic Type: a topical category's topic shows an icon, not its starter. --%>
         <fieldset :if={@icons} id="topic-icon">
           <legend class="label mb-1">{gettext("Icon")}</legend>
