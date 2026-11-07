@@ -50,7 +50,11 @@ defmodule IdejoWeb.CardComponents do
     </p>
     <h2 id="inline-card-name" class="inline-card-title">{@card.topic.title}</h2>
     <p class="inline-card-meta">
-      {gettext("Started by %{name}", name: @card.topic.author.display_name)} · {ngettext(
+      <%!-- Topic Type: a topical topic never names its starter. --%>
+      <span :if={!@card.topic.topical}>
+        {gettext("Started by %{name}", name: @card.topic.author.display_name)} ·
+      </span>
+      {ngettext(
         "1 message",
         "%{count} messages",
         @card.topic.message_count

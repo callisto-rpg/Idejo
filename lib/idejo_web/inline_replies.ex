@@ -28,11 +28,13 @@ defmodule IdejoWeb.InlineReplies do
 
   @doc "The Markdown of a quote of `message`, which must have its author loaded."
   @spec markdown(Message.t()) :: String.t()
-  def markdown(%Message{id: id, author: author} = message) do
+  def markdown(%Message{id: id} = message) do
     path = "/m/" <> id
 
     head =
-      "> [" <> escape(gettext("Replying to %{name}:", name: author.display_name)) <> "](#{path})"
+      "> [" <>
+        escape(gettext("Replying to %{name}:", name: Idejo.Messages.author_name(message))) <>
+        "](#{path})"
 
     case Forum.excerpt(message) do
       "" -> head

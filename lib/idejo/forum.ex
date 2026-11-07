@@ -17,7 +17,7 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.{Category, CategoryGroup, PendingTopic, Tags, Topic}
+  alias Idejo.Forum.{Category, CategoryGroup, PendingTopic, Tags, Topic, TopicIcons}
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
@@ -1254,8 +1254,8 @@ defmodule Idejo.Forum do
   tags (`tag_ids`, TP-19), chosen among `available` (`Tags.available_tags/1` of the
   category): at least one when there are any.
   """
-  def change_new_topic(attrs \\ %{}, available \\ []) do
-    types = %{title: :string, body: :string, tag_ids: {:array, :string}}
+  def change_new_topic(attrs \\ %{}, available \\ [], icons \\ nil) do
+    types = %{title: :string, body: :string, tag_ids: {:array, :string}, icon_id: :string}
 
     {%{}, types}
     |> Ecto.Changeset.cast(attrs, Map.keys(types))
@@ -1263,7 +1263,35 @@ defmodule Idejo.Forum do
     |> Ecto.Changeset.validate_required([:title, :body])
     |> Ecto.Changeset.validate_length(:title, max: 150)
     |> validate_tag_choice(available)
+    |> validate_icon_choice(icons)
   end
+
+  # Topic Type: in a topical category (`icons` the set on offer, not nil), one of them, when
+  # there are any; elsewhere none.
+  defp validate_icon_choice(changeset, nil), do: Ecto.Changeset.delete_change(changeset, :icon_id)
+
+  defp validate_icon_choice(changeset, icons) do
+    chosen = Ecto.Changeset.get_field(changeset, :icon_id)
+
+    cond do
+      chosen in [nil, ""] and icons != [] ->
+        Ecto.Changeset.add_error(changeset, :icon_id, "choose an icon")
+
+      chosen in [nil, ""] ->
+        Ecto.Changeset.delete_change(changeset, :icon_id)
+
+      Enum.any?(icons, &(&1.id == chosen)) ->
+        changeset
+
+      true ->
+        Ecto.Changeset.add_error(changeset, :icon_id, "is not one of the icons")
+    end
+  end
+
+  @doc "Topic Type: the icons on offer in `category`: the set when topical, else nil."
+  @spec icons_for(Category.t()) :: [Idejo.Forum.TopicIcon.t()] | nil
+  def icons_for(%Category{topic_type: "topical"}), do: TopicIcons.list()
+  def icons_for(_category), do: nil
 
   defp validate_tag_choice(changeset, available) do
     chosen = changeset |> Ecto.Changeset.get_field(:tag_ids) |> List.wrap() |> chosen_ids()
@@ -1305,7 +1333,7 @@ defmodule Idejo.Forum do
           | {:pending, PendingTopic.t()}
           | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
-    form = change_new_topic(attrs, Tags.available_tags(category))
+    form = change_new_topic(attrs, Tags.available_tags(category), icons_for(category))
     source = opts[:forked_from]
 
     result =
@@ -1389,6 +1417,40 @@ defmodule Idejo.Forum do
 
   def can_start_topic?(%User{} = user, category), do: Access.can?(user, :start, category)
 
+  ## Topic Type (steward request, 2026-11-07)
+
+  @doc """
+  Changes a topical topic's icon (`nil` for none), as a moderator of its category. Logged
+  (`topic.icon`, MO-03); the topic's viewers get `{:topic_updated, topic}`.
+  """
+  @spec set_topic_icon(User.t(), Topic.t(), Idejo.Forum.TopicIcon.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def set_topic_icon(%User{} = moderator, %Topic{} = topic, icon) do
+    category = Repo.get!(Category, topic.category_id)
+
+    if topic.topical and Access.can?(moderator, :moderate, category) do
+      result = Repo.transact(fn -> update_icon(moderator, topic, icon) end)
+
+      with {:ok, updated} <- result,
+           do: Messages.broadcast(topic.id, {:topic_icon, updated.icon})
+
+      result
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp update_icon(moderator, topic, icon) do
+    with {:ok, updated} <-
+           topic |> Ecto.Changeset.change(icon_id: icon && icon.id) |> Repo.update(),
+         {:ok, _} <-
+           Moderation.record(moderator, "topic.icon", updated,
+             details: %{"icon" => icon && icon.name}
+           ) do
+      {:ok, %{updated | icon: icon}}
+    end
+  end
+
   ## Approval queue (MO-04)
 
   @doc """
@@ -1420,6 +1482,7 @@ defmodule Idejo.Forum do
       title: form.title,
       body: form.body,
       tag_ids: Map.get(form, :tag_ids, []),
+      icon_id: Map.get(form, :icon_id),
       forked_from_message_id: source && source.id
     }
     |> Repo.insert()
@@ -1496,7 +1559,12 @@ defmodule Idejo.Forum do
              true <- author.status == "active" || {:error, :forbidden},
              source =
                pending.forked_from_message_id && Repo.get(Message, pending.forked_from_message_id),
-             form = %{title: pending.title, body: pending.body, tag_ids: pending.tag_ids},
+             form = %{
+               title: pending.title,
+               body: pending.body,
+               tag_ids: pending.tag_ids,
+               icon_id: pending.icon_id
+             },
              {:ok, topic} <- insert_topic(author, category, form, source),
              {:ok, _} <- Moderation.record(moderator, "topic.approve", topic) do
           Repo.delete!(pending)
@@ -1565,7 +1633,10 @@ defmodule Idejo.Forum do
         slug: slugify(title, "topic"),
         forked_from_message_id: source && source.id,
         message_count: 1,
-        last_activity_at: now
+        last_activity_at: now,
+        # Topic Type: a topical category's topics show an icon instead of their starter.
+        topical: category.topic_type == "topical",
+        icon_id: (category.topic_type == "topical" && Map.get(form, :icon_id)) || nil
       }
       |> Topic.create_changeset(%{title: title})
 
@@ -1577,7 +1648,8 @@ defmodule Idejo.Forum do
         author_id: user.id,
         opened_at: now,
         closes_at: now,
-        closed_at: now
+        closed_at: now,
+        anonymous: category.topic_type == "topical"
       }
       # The topic is not stored yet: its category says where the links are written.
       |> Message.closed_changeset(%{body_md: body}, author: user, category_id: category.id)

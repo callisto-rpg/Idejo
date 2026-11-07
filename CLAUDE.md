@@ -1495,6 +1495,22 @@ The contract (M6; mark each item done here when its PR merges):
   their messages not deleted in a `<details class="message-ignored">` ("A message from …,
   whom you ignore. Show it"; its `open` ignored by patches). Notifications and lists are
   unchanged. Profile and account lists them (`#ignored-section`, `list_ignored/1`).
+- **Topic Type** (steward request, 2026-11-07): each category's `topic_type` (Admin →
+  Categories, "Topic Type"): `user`, as always; `topical`, its topics (`topics.topical`, set at
+  creation and kept when moved) show an icon (`topics.icon_id`) in place of their starter and
+  never name them. The icons are images administrators upload in **Admin → Topic icons**
+  (`TopicIconsLive`, `Forum.TopicIcons`, `topic_icons`, `Uploads.store_icon/2`, fitted inside
+  128 px, kept by `delete_unused/1`; audited `topic_icon.create` / `.delete`; deleting one
+  leaves its topics with none, a speech bubble). The new-topic form picks one in a dialog
+  (`TopicComponents.icon_dialog/1`, `#icon-picker`, required while any exist,
+  `Forum.change_new_topic/3`); a waiting topic (MO-04) keeps it. The opening message carries
+  `messages.anonymous`: **show an author's name only through `Messages.author_name/1`**
+  ("the topic" for it; quotes, notifications, push, search, reports, forwards) and draw
+  avatars through `TopicComponents.topic_icon/1` when `message.anonymous` or `topic.topical`
+  (topic rows, previews, `TopicLive`'s `author_line/1` with `topical`). Moderation screens
+  still name the author. Moderators edit it (as any message, MO-02) and change the icon
+  ("Change icon", `Forum.set_topic_icon/3`, logged `topic.icon`, `{:topic_icon, icon}` to
+  viewers); its starter edits it too. Ignoring (AC-06) never folds it.
 - **Approval queue** (MO-04, `Idejo.Forum`; steward request, 2026-11-07): each category's
   `new_topics` (Admin → Categories, "New topics"): `open`; `approval`, every new topic waits;
   `new_users`, a new user's waits (`Forum.new_user?/1`: no topic of theirs exists yet, private

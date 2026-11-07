@@ -33,6 +33,9 @@ defmodule Idejo.Forum.Category do
     # "new_users", those of new users wait (`Idejo.Forum.new_user?/1`); "closed", none.
     # Its moderators' own topics never wait, and they may start topics while it is closed.
     field :new_topics, :string, default: "open"
+    # Topic Type (steward request, 2026-11-07): "user", topics are their starter's; "topical",
+    # the opening message shows a topic icon instead of its author, and moderators edit it.
+    field :topic_type, :string, default: "user"
     # Sub-categories wait for v1 (RP-05); the column exists but is never set in v0.1.
     belongs_to :parent, __MODULE__
     # RP-03: the group it is listed under, if any (steward decision, 2026-10-23).
@@ -47,9 +50,19 @@ defmodule Idejo.Forum.Category do
   """
   def create_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :slug, :icon, :colour, :group_id, :new_topics])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :slug,
+      :icon,
+      :colour,
+      :group_id,
+      :new_topics,
+      :topic_type
+    ])
     |> validate_name_and_description()
     |> validate_inclusion(:new_topics, new_topics_modes())
+    |> validate_inclusion(:topic_type, ~w(user topical))
     |> validate_look()
     |> update_change(:slug, &(&1 && String.trim(&1)))
     |> validate_required([:id, :uri, :position, :slug])
@@ -67,9 +80,10 @@ defmodule Idejo.Forum.Category do
   """
   def update_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :icon, :colour, :group_id, :new_topics])
+    |> cast(attrs, [:name, :description, :icon, :colour, :group_id, :new_topics, :topic_type])
     |> validate_name_and_description()
     |> validate_inclusion(:new_topics, new_topics_modes())
+    |> validate_inclusion(:topic_type, ~w(user topical))
     |> validate_look()
   end
 

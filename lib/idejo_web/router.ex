@@ -239,6 +239,7 @@ defmodule IdejoWeb.Router do
       live "/roles", RolesLive
       live "/users/:id", UserLive
       live "/categories", CategoriesLive
+      live "/topic-icons", TopicIconsLive
       live "/tags", TagsLive
       live "/permissions", PermissionsLive
       live "/permissions/:slug", PermissionsLive

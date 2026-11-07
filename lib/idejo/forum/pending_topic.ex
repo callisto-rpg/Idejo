@@ -20,6 +20,8 @@ defmodule Idejo.Forum.PendingTopic do
     field :title, :string
     field :body, :string
     field :tag_ids, {:array, :string}, default: []
+    # Topic Type: the icon chosen in a topical category.
+    belongs_to :icon, Idejo.Forum.TopicIcon
     belongs_to :forked_from, Idejo.Messages.Message, foreign_key: :forked_from_message_id
 
     timestamps(type: :utc_datetime, inserted_at: :created_at, updated_at: false)

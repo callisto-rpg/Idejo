@@ -13,9 +13,87 @@ defmodule IdejoWeb.TopicComponents do
   import IdejoWeb.CoreComponents, only: [icon: 1]
 
   alias Idejo.Forum.CategoryIcons
+  alias Idejo.Forum.{TopicIcon, TopicIcons}
   alias IdejoWeb.UserComponents
 
   @hues 8
+
+  attr :topic, :map, required: true, doc: "a topical topic (`topic.icon_id`)"
+  attr :size, :atom, values: [:small, :list], default: :list
+  attr :class, :any, default: nil
+
+  @doc """
+  Topic Type (steward request, 2026-11-07): a topical topic's icon, where its starter's
+  avatar would be; a speech bubble when it has none. Decorative, like avatars.
+  """
+  def topic_icon(assigns) do
+    icon =
+      case assigns.topic do
+        %{icon: %TopicIcon{} = icon} -> icon
+        %{icon_id: nil} -> nil
+        %{icon_id: id} -> Map.get(TopicIcons.index(), id)
+      end
+
+    assigns = assign(assigns, url: TopicIcons.url(icon))
+
+    ~H"""
+    <span class={["avatar topic-icon shrink-0", @class]} aria-hidden="true">
+      <span class={[if(@size == :small, do: "w-6", else: "w-9"), "rounded-lg"]}>
+        <img :if={@url} src={@url} alt="" />
+        <.icon :if={!@url} name="hero-chat-bubble-left-right" class="topic-icon-none" />
+      </span>
+    </span>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :icons, :list, required: true
+  attr :current, :string, default: nil
+  attr :event, :string, required: true, doc: "pushed with the chosen icon's `id`"
+  attr :close_event, :string, required: true
+
+  @doc """
+  Topic Type: the dialog to choose a topic icon among those administrators uploaded, a grid
+  of buttons named by each icon's name; the current one is pressed. Opened by the server
+  (the `InlineCard` hook); Escape or a click outside sends `close_event`.
+  """
+  def icon_dialog(assigns) do
+    ~H"""
+    <dialog
+      id={@id}
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event={@close_event}
+      data-return-focus
+      aria-labelledby={"#{@id}-title"}
+    >
+      <div class="modal-box inline-card">
+        <h2 id={"#{@id}-title"} class="inline-card-title">{gettext("Choose an icon")}</h2>
+        <p :if={@icons == []} id={"#{@id}-none"} class="text-sm">
+          {gettext("Administrators have not added any topic icons yet.")}
+        </p>
+        <ul :if={@icons != []} class="topic-icon-grid">
+          <li :for={icon <- @icons}>
+            <button
+              type="button"
+              id={"#{@id}-#{icon.id}"}
+              class="topic-icon-choice"
+              aria-pressed={to_string(icon.id == @current)}
+              phx-click={@event}
+              phx-value-id={icon.id}
+              title={icon.name}
+            >
+              <img src={TopicIcons.url(icon)} alt={icon.name} />
+            </button>
+          </li>
+        </ul>
+        <form method="dialog" class="modal-action">
+          <button class="btn btn-sm">{gettext("Cancel")}</button>
+        </form>
+      </div>
+    </dialog>
+    """
+  end
 
   @doc """
   A category's mark (decorative; the name is always next to it):
@@ -138,7 +216,13 @@ defmodule IdejoWeb.TopicComponents do
     >
       <span class="topic-row-avatar">
         <.category_mark :if={@lead == :category} category={@topic.category} />
-        <UserComponents.avatar :if={@lead == :author} user={@topic.author} size={:list} />
+        <%!-- Topic Type: a topical topic shows its icon, never its starter. --%>
+        <.topic_icon :if={@lead == :author && @topic.topical} topic={@topic} />
+        <UserComponents.avatar
+          :if={@lead == :author && !@topic.topical}
+          user={@topic.author}
+          size={:list}
+        />
       </span>
       <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="topic-row-title">{@topic.title}</a>
       <span class="topic-row-badges">
@@ -170,9 +254,11 @@ defmodule IdejoWeb.TopicComponents do
           <.category_mark category={@topic.category} />
           {@topic.category.name}
         </a>
-        <span :if={@lead == :author && @category} aria-hidden="true">·</span>
-        <span :if={@lead == :author} class="topic-starter">{@topic.author.display_name}</span>
-        <span aria-hidden="true">·</span>
+        <span :if={@lead == :author && @category && !@topic.topical} aria-hidden="true">·</span>
+        <span :if={@lead == :author && !@topic.topical} class="topic-starter">
+          {@topic.author.display_name}
+        </span>
+        <span :if={@lead == :category || @category || !@topic.topical} aria-hidden="true">·</span>
         <span>
           {gettext("last activity")} <.time_ago at={@topic.last_activity_at} />
         </span>
@@ -238,9 +324,10 @@ defmodule IdejoWeb.TopicComponents do
         <p class="topic-preview-heading">{gettext("Latest messages")}</p>
         <ol>
           <li :for={message <- @preview.latest} class="topic-preview-message">
-            <UserComponents.avatar user={message.author} size={:small} />
+            <.topic_icon :if={message.anonymous} topic={@topic} size={:small} />
+            <UserComponents.avatar :if={!message.anonymous} user={message.author} size={:small} />
             <a href={~p"/m/#{message.id}"} class="topic-preview-message-link">
-              <span class="font-medium">{message.author.display_name}</span>
+              <span class="font-medium">{Idejo.Messages.author_name(message)}</span>
               <span class="topic-preview-message-text">
                 <.segments segments={Idejo.Forum.excerpt_segments(message, 200)} />
               </span>

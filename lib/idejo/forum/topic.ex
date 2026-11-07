@@ -34,6 +34,10 @@ defmodule Idejo.Forum.Topic do
     field :last_activity_at, :utc_datetime_usec
     belongs_to :category, Idejo.Forum.Category
     belongs_to :author, Idejo.Accounts.User
+    # Topic Type (steward request, 2026-11-07): started in a "topical" category, its opening
+    # message shows `icon` instead of its author. Kept when the topic moves.
+    field :topical, :boolean, default: false
+    belongs_to :icon, Idejo.Forum.TopicIcon
     # TP-09: the message this topic was started from, if any.
     belongs_to :forked_from, Idejo.Messages.Message, foreign_key: :forked_from_message_id
     has_many :messages, Idejo.Messages.Message

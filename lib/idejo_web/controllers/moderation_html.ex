@@ -29,6 +29,7 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("topic.delete"), do: gettext("Deleted a topic for good")
   def action_label("topic.approve"), do: gettext("Approved a new topic")
   def action_label("topic.reject"), do: gettext("Rejected a new topic")
+  def action_label("topic.icon"), do: gettext("Changed the icon of a topic")
   def action_label("messages.move"), do: gettext("Moved messages to another thread")
   def action_label("report.resolve"), do: gettext("Resolved reports about a message")
   def action_label("report.dismiss"), do: gettext("Dismissed reports about a message")
