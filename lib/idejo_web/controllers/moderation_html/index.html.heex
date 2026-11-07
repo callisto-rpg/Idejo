@@ -5,12 +5,67 @@
 <Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>
     {gettext("Moderation")}
-    <:subtitle>{gettext("Reported messages, the longest waiting first.")}</:subtitle>
+    <:subtitle>
+      {gettext(
+        "New topics waiting for approval and reported messages, the longest waiting first."
+      )}
+    </:subtitle>
     <:actions>
       <.link href={~p"/moderation/log"} class="link" id="log-link">{gettext("Moderation log")}</.link>
     </:actions>
   </.header>
 
+  <%!-- MO-04: new topics waiting for approval, in the categories this moderator moderates. --%>
+  <section :if={@pending != []} id="pending-topics" aria-labelledby="pending-heading" class="mb-8">
+    <h2 id="pending-heading" class="section-divider">{gettext("Waiting for approval")}</h2>
+    <ol class="divide-y divide-base-300">
+      <li :for={pending <- @pending} id={"pending-#{pending.id}"} class="py-4 space-y-2">
+        <p>
+          <span class="font-semibold pending-title">{pending.title}</span>
+          <span class="text-sm opacity-70">
+            {gettext("by %{name} in %{category}",
+              name: pending.author.display_name,
+              category: pending.category.name
+            )}
+          </span>
+          <time class="text-sm opacity-70" datetime={DateTime.to_iso8601(pending.created_at)}>
+            ({Calendar.strftime(pending.created_at, "%Y-%m-%d %H:%M UTC")})
+          </time>
+        </p>
+        <p :if={pending.forked_from && pending.forked_from.topic} class="text-sm opacity-70">
+          {gettext("Started from a message in “%{topic}”", topic: pending.forked_from.topic.title)}
+        </p>
+        <div class="message-quote" id={"pending-body-#{pending.id}"}>
+          <MessageComponents.body html={
+            Idejo.Messages.Body.to_html(pending.body,
+              author: pending.author,
+              category_id: pending.category_id
+            )
+          } />
+        </div>
+        <.form
+          for={%{}}
+          action={~p"/moderation/topics/#{pending.id}"}
+          method="post"
+          id={"handle-pending-#{pending.id}"}
+          class="flex flex-wrap items-end gap-2"
+        >
+          <label class="grow">
+            <span class="label mb-1">{gettext("Reason (shown in the moderation log)")}</span>
+            <input type="text" name="note" maxlength="500" class="input input-sm w-full" />
+          </label>
+          <button name="outcome" value="approve" class="btn btn-sm btn-primary">
+            {gettext("Approve")}
+          </button>
+          <button name="outcome" value="reject" class="btn btn-sm btn-error">
+            {gettext("Reject")}
+          </button>
+        </.form>
+      </li>
+    </ol>
+  </section>
+
+  <h2 :if={@pending != []} class="section-divider">{gettext("Reported messages")}</h2>
   <p :if={@queue == []} id="no-reports">{gettext("No open reports.")}</p>
 
   <ol :if={@queue != []} id="reports" class="divide-y divide-base-300">

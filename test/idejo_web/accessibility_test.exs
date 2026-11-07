@@ -500,6 +500,12 @@ defmodule IdejoWeb.AccessibilityTest do
     render_hook(view, "commit", %{"body" => "", "break" => false})
     assert has_element?(view, "#delete-own-dialog")
     assert_fragment_accessible(render(view), "deleting one's own message")
+
+    # The Delete button's question: Cancel, Edit or Delete.
+    render_hook(view, "cancel_delete_own", %{})
+    render_hook(view, "ask_delete_own", %{"id" => edited.id})
+    assert has_element?(view, "#delete-own-edit")
+    assert_fragment_accessible(render(view), "the Delete button's question")
   end
 
   @tag req: "AX-01"

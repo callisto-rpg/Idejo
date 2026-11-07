@@ -164,7 +164,7 @@ defmodule Idejo.Uploads do
   (default: #{@unused_after_hours} hours ago). Used means: a user's avatar (light or dark),
   or named in the Markdown of a message, deleted ones included (moderators still read them,
   MO-02), of an earlier version of one (GM-11), of a setting (About, Rules, the
-  stylesheet) or of an info box. Returns the file names deleted.
+  stylesheet), of an info box or of a topic waiting for approval (MO-04). Returns the file names deleted.
   """
   @spec delete_unused(DateTime.t()) :: [String.t()]
   def delete_unused(before \\ DateTime.add(DateTime.utc_now(), -@unused_after_hours, :hour)) do
@@ -176,6 +176,8 @@ defmodule Idejo.Uploads do
       |> union_all(^named_in(InfoBox, :body_md))
       # AC-04: a bio may show an image by its address.
       |> union_all(^named_in(User, :bio_md))
+      # MO-04: a topic waiting for approval.
+      |> union_all(^named_in(Idejo.Forum.PendingTopic, :body))
 
     avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
     dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)

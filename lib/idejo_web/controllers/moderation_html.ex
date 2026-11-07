@@ -27,6 +27,8 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("topic.unarchive"), do: gettext("Unarchived a topic")
   def action_label("topic.inactive"), do: gettext("Marked a topic inactive")
   def action_label("topic.delete"), do: gettext("Deleted a topic for good")
+  def action_label("topic.approve"), do: gettext("Approved a new topic")
+  def action_label("topic.reject"), do: gettext("Rejected a new topic")
   def action_label("messages.move"), do: gettext("Moved messages to another thread")
   def action_label("report.resolve"), do: gettext("Resolved reports about a message")
   def action_label("report.dismiss"), do: gettext("Dismissed reports about a message")

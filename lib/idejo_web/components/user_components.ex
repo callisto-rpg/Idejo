@@ -25,12 +25,14 @@ defmodule IdejoWeb.UserComponents do
   @doc """
   Loads what the card shows to `viewer`: the user and their roles, highest first (RP-06),
   without the implicit guest, the moderation actions the viewer may take on the account
-  (`actions`, nil for everyone but server moderators), and whether the viewer may send them
-  a private message (`message?`).
+  (`actions`, nil for everyone but server moderators), whether the viewer may send them
+  a private message (`message?`), and whether the viewer ignores them (`ignoring?`, AC-06;
+  nil when they may not ignore them).
 
   ## Options
 
-    * `:return_to` - a topic path the ban forms come back to, when the card is in its dialog.
+    * `:return_to` - a topic path the ban and ignore forms come back to, when the card is in
+      its dialog.
   """
   @spec card_data(Accounts.User.t(), Accounts.User.t() | nil, keyword()) :: map()
   def card_data(user, viewer \\ nil, opts \\ []) do
@@ -41,7 +43,10 @@ defmodule IdejoWeb.UserComponents do
       roles: roles,
       actions: actions(viewer, user, opts[:return_to]),
       # Steward decision, 2026-10-27: "Private Message", when the viewer may write to them.
-      message?: Idejo.Conversations.may_message?(viewer, user)
+      message?: Idejo.Conversations.may_message?(viewer, user),
+      # AC-06: nil when the viewer may not ignore them, else whether they do.
+      ignoring?: if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
+      return_to: opts[:return_to]
     }
   end
 
@@ -109,6 +114,25 @@ defmodule IdejoWeb.UserComponents do
           <button class="btn btn-sm btn-primary" id="private-message">
             <.icon name="hero-chat-bubble-left-right" class="size-4" />
             {gettext("Private Message")}
+          </button>
+        </.form>
+        <%!-- AC-06: ignore them, or stop; a plain form. --%>
+        <.form
+          :if={is_boolean(@card[:ignoring?])}
+          for={%{}}
+          action={~p"/u/#{@card.user.id}/ignore"}
+          method={if(@card.ignoring?, do: "delete", else: "post")}
+          id="ignore-form"
+          class="mt-3"
+        >
+          <input :if={@card[:return_to]} type="hidden" name="return_to" value={@card.return_to} />
+          <button :if={!@card.ignoring?} class="btn btn-sm" id="ignore-user">
+            <.icon name="hero-eye-slash" class="size-4" />
+            {gettext("Ignore")}
+          </button>
+          <button :if={@card.ignoring?} class="btn btn-sm" id="unignore-user">
+            <.icon name="hero-eye" class="size-4" />
+            {gettext("Stop ignoring")}
           </button>
         </.form>
         <.user_actions :if={@card[:actions]} user={@card.user} actions={@card.actions} />

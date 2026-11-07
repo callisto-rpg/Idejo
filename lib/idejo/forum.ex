@@ -17,7 +17,7 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.{Category, CategoryGroup, Tags, Topic}
+  alias Idejo.Forum.{Category, CategoryGroup, PendingTopic, Tags, Topic}
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
@@ -1295,9 +1295,15 @@ defmodule Idejo.Forum do
   `forked_from: message` starts it from a message of another topic (TP-09, "New topic from
   this"), any message the user may view, theirs or someone else's. The new topic links back
   to it, and the source topic's viewers get `{:forked, message_id}`.
+
+  MO-04: where the category's `new_topics` asks for it (`needs_approval?/2`), nothing is
+  started yet: the topic waits for a moderator as a `PendingTopic`, `{:pending, pending}`,
+  and becomes a topic when approved (`approve_topic/2`).
   """
   @spec create_topic(User.t(), Category.t(), map(), keyword()) ::
-          {:ok, Topic.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
+          {:ok, Topic.t()}
+          | {:pending, PendingTopic.t()}
+          | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
     form = change_new_topic(attrs, Tags.available_tags(category))
     source = opts[:forked_from]
@@ -1308,6 +1314,7 @@ defmodule Idejo.Forum do
         source && !forkable?(user, source) -> {:error, :forbidden}
         not form.valid? -> {:error, Map.put(form, :action, :insert)}
         RateLimit.check(:new_topic, user.id) != :ok -> {:error, :rate_limited}
+        needs_approval?(user, category) -> hold_topic(user, category, form.changes, source)
         true -> Repo.transact(fn -> insert_topic(user, category, form.changes, source) end)
       end
 
@@ -1337,7 +1344,14 @@ defmodule Idejo.Forum do
   def list_startable_categories(nil), do: []
 
   def list_startable_categories(%User{} = user) do
-    from(c in Category, where: not c.archive, order_by: [asc: c.position, asc: c.name])
+    # MO-04: a category closed to new topics, only for its moderators.
+    moderated = Category |> Access.where_allowed(user, :moderate) |> select([c], c.id)
+
+    from(c in Category,
+      where: not c.archive,
+      where: c.new_topics != "closed" or c.id in subquery(moderated),
+      order_by: [asc: c.position, asc: c.name]
+    )
     |> Access.where_allowed(user, [:start, :view])
     |> Repo.all()
   end
@@ -1368,7 +1382,172 @@ defmodule Idejo.Forum do
   @spec can_start_topic?(User.t() | nil, Category.t()) :: boolean()
   def can_start_topic?(nil, _category), do: false
   def can_start_topic?(_user, %Category{archive: true}), do: false
+
+  # MO-04: closed to new topics, but not for its moderators.
+  def can_start_topic?(%User{} = user, %Category{new_topics: "closed"} = category),
+    do: Access.can?(user, :start, category) and Access.can?(user, :moderate, category)
+
   def can_start_topic?(%User{} = user, category), do: Access.can?(user, :start, category)
+
+  ## Approval queue (MO-04)
+
+  @doc """
+  Whether a topic `user` starts in `category` waits for a moderator (MO-04): always under
+  "approval", under "new_users" when they are new (`new_user?/1`); never for those who may
+  moderate the category (owners and administrators everywhere).
+  """
+  @spec needs_approval?(User.t(), Category.t()) :: boolean()
+  def needs_approval?(%User{} = user, %Category{new_topics: "approval"} = category),
+    do: not Access.can?(user, :moderate, category)
+
+  def needs_approval?(%User{} = user, %Category{new_topics: "new_users"} = category),
+    do: not Access.can?(user, :moderate, category) and new_user?(user)
+
+  def needs_approval?(_user, _category), do: false
+
+  @doc """
+  A new user, for MO-04's "new_users": nobody has seen a topic of theirs yet, that is, they
+  have no topic (private conversations aside), approved or started where none waits.
+  """
+  @spec new_user?(User.t()) :: boolean()
+  def new_user?(%User{id: id}),
+    do: not Repo.exists?(from t in Topic, where: t.author_id == ^id and not t.private)
+
+  defp hold_topic(user, category, form, source) do
+    %PendingTopic{
+      category_id: category.id,
+      author_id: user.id,
+      title: form.title,
+      body: form.body,
+      tag_ids: Map.get(form, :tag_ids, []),
+      forked_from_message_id: source && source.id
+    }
+    |> Repo.insert()
+    |> case do
+      {:ok, pending} -> {:pending, pending}
+      error -> error
+    end
+  end
+
+  # The waiting topics in the categories the moderator may moderate (all for owners and
+  # administrators).
+  defp pending_for(moderator) do
+    moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
+    from p in PendingTopic, where: p.category_id in subquery(moderated)
+  end
+
+  @doc """
+  The topics waiting for approval that the moderator may handle (MO-04), the longest waiting
+  first, with their author, category and the message they were started from.
+  """
+  @spec list_pending_topics(User.t()) :: [PendingTopic.t()]
+  def list_pending_topics(%User{} = moderator) do
+    moderator
+    |> pending_for()
+    |> order_by([p], asc: p.created_at, asc: p.id)
+    |> preload([:author, :category, forked_from: :topic])
+    |> Repo.all()
+  end
+
+  @doc "How many topics wait for the moderator's approval (MO-04)."
+  @spec pending_topic_count(User.t() | nil) :: non_neg_integer()
+  def pending_topic_count(nil), do: 0
+
+  def pending_topic_count(%User{} = moderator),
+    do: moderator |> pending_for() |> select([p], count(p.id)) |> Repo.one()
+
+  @doc "The author's own topics waiting for approval in the category (MO-04), oldest first."
+  @spec list_own_pending_topics(User.t() | nil, Category.t()) :: [PendingTopic.t()]
+  def list_own_pending_topics(nil, _category), do: []
+
+  def list_own_pending_topics(%User{id: id}, %Category{id: category_id}) do
+    Repo.all(
+      from p in PendingTopic,
+        where: p.author_id == ^id and p.category_id == ^category_id,
+        order_by: [asc: p.created_at, asc: p.id]
+    )
+  end
+
+  @doc "A waiting topic the moderator may handle (MO-04), or nil."
+  @spec get_pending_topic(User.t(), String.t()) :: PendingTopic.t() | nil
+  def get_pending_topic(%User{} = moderator, id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> moderator |> pending_for() |> where([p], p.id == ^id) |> Repo.one()
+      :error -> nil
+    end
+  end
+
+  @doc """
+  Approves a waiting topic (MO-04): it is started now, as its author wrote it, as
+  `create_topic/4` would have (tags no longer offered by the category are dropped), and
+  logged (`topic.approve`, MO-03). Refused (`{:error, :forbidden}`) when the moderator may not
+  moderate its category or its author's account is gone; `{:error, :not_found}` when someone
+  already handled it.
+  """
+  @spec approve_topic(User.t(), PendingTopic.t()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | :not_found | Ecto.Changeset.t()}
+  def approve_topic(%User{} = moderator, %PendingTopic{id: id}) do
+    result =
+      Repo.transact(fn ->
+        with %PendingTopic{} = pending <- lock_pending(id),
+             category = Repo.get!(Category, pending.category_id),
+             author = Repo.get!(User, pending.author_id),
+             true <- Access.can?(moderator, :moderate, category) || {:error, :forbidden},
+             true <- author.status == "active" || {:error, :forbidden},
+             source =
+               pending.forked_from_message_id && Repo.get(Message, pending.forked_from_message_id),
+             form = %{title: pending.title, body: pending.body, tag_ids: pending.tag_ids},
+             {:ok, topic} <- insert_topic(author, category, form, source),
+             {:ok, _} <- Moderation.record(moderator, "topic.approve", topic) do
+          Repo.delete!(pending)
+          {:ok, {topic, source}}
+        else
+          nil -> {:error, :not_found}
+          error -> error
+        end
+      end)
+
+    case result do
+      {:ok, {topic, source}} ->
+        Idejo.Notifications.announce(topic)
+        if source, do: Messages.broadcast(source.topic_id, {:forked, source.id})
+        {:ok, topic}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Rejects a waiting topic (MO-04): it is deleted, and logged against its author
+  (`topic.reject`, MO-03, in its category, with its title), with the moderator's reason.
+  Refused like `approve_topic/2`.
+  """
+  @spec reject_topic(User.t(), PendingTopic.t(), String.t() | nil) ::
+          {:ok, PendingTopic.t()} | {:error, :forbidden | :not_found | Ecto.Changeset.t()}
+  def reject_topic(%User{} = moderator, %PendingTopic{id: id}, reason \\ nil) do
+    Repo.transact(fn ->
+      with %PendingTopic{} = pending <- lock_pending(id),
+           category = Repo.get!(Category, pending.category_id),
+           true <- Access.can?(moderator, :moderate, category) || {:error, :forbidden},
+           author = Repo.get!(User, pending.author_id),
+           {:ok, _} <-
+             Moderation.record(moderator, "topic.reject", author,
+               reason: reason,
+               category_id: category.id,
+               details: %{"title" => pending.title}
+             ) do
+        Repo.delete!(pending)
+        {:ok, pending}
+      else
+        nil -> {:error, :not_found}
+        error -> error
+      end
+    end)
+  end
+
+  defp lock_pending(id),
+    do: Repo.one(from p in PendingTopic, where: p.id == ^id, lock: "FOR UPDATE")
 
   defp insert_topic(user, category, %{title: title, body: body} = form, source) do
     tags = Enum.filter(Tags.available_tags(category), &(&1.id in Map.get(form, :tag_ids, [])))

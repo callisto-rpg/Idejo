@@ -29,6 +29,10 @@ defmodule Idejo.Forum.Category do
     field :visibility, :string, default: "public"
     # The one built-in Archive category (RP-03, TP-14), made by `Idejo.Forum` on first use.
     field :archive, :boolean, default: false
+    # MO-04: how it takes new topics: "open"; "approval", each waits for a moderator;
+    # "new_users", those of new users wait (`Idejo.Forum.new_user?/1`); "closed", none.
+    # Its moderators' own topics never wait, and they may start topics while it is closed.
+    field :new_topics, :string, default: "open"
     # Sub-categories wait for v1 (RP-05); the column exists but is never set in v0.1.
     belongs_to :parent, __MODULE__
     # RP-03: the group it is listed under, if any (steward decision, 2026-10-23).
@@ -43,8 +47,9 @@ defmodule Idejo.Forum.Category do
   """
   def create_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :slug, :icon, :colour, :group_id])
+    |> cast(attrs, [:name, :description, :slug, :icon, :colour, :group_id, :new_topics])
     |> validate_name_and_description()
+    |> validate_inclusion(:new_topics, new_topics_modes())
     |> validate_look()
     |> update_change(:slug, &(&1 && String.trim(&1)))
     |> validate_required([:id, :uri, :position, :slug])
@@ -62,10 +67,15 @@ defmodule Idejo.Forum.Category do
   """
   def update_changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description, :icon, :colour, :group_id])
+    |> cast(attrs, [:name, :description, :icon, :colour, :group_id, :new_topics])
     |> validate_name_and_description()
+    |> validate_inclusion(:new_topics, new_topics_modes())
     |> validate_look()
   end
+
+  @doc "MO-04: the ways a category takes new topics."
+  @spec new_topics_modes() :: [String.t()]
+  def new_topics_modes, do: ~w(open approval new_users closed)
 
   # An icon from the set, or none; a colour as #rrggbb, or none (the tint from the id).
   defp validate_look(changeset) do
