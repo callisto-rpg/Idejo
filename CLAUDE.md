@@ -1510,7 +1510,12 @@ The contract (M6; mark each item done here when its PR merges):
   (topic rows, previews, `TopicLive`'s `author_line/1` with `topical`). Moderation screens
   still name the author. Moderators edit it (as any message, MO-02) and change the icon
   ("Change icon", `Forum.set_topic_icon/3`, logged `topic.icon`, `{:topic_icon, icon}` to
-  viewers); its starter edits it too. Ignoring (AC-06) never folds it.
+  viewers); its starter edits it too. Ignoring (AC-06) never folds it. In a `user`
+  category (steward request, 2026-11-07) those who may moderate it post a topical topic
+  anyway ("Post as a topical topic", `topic[topical]`, `Forum.topical_topic?/3`; ignored for
+  others), and make a user topic's opening message topical ("Make topical" on it, the same
+  icon dialog, "Without an icon" while there are none; `Forum.make_topical/3`, logged
+  `topic.topical`, then `{:topic_icon, icon}` and the opening message to viewers).
 - **Approval queue** (MO-04, `Idejo.Forum`; steward request, 2026-11-07): each category's
   `new_topics` (Admin → Categories, "New topics"): `open`; `approval`, every new topic waits;
   `new_users`, a new user's waits (`Forum.new_user?/1`: no topic of theirs exists yet, private

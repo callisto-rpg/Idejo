@@ -1255,7 +1255,13 @@ defmodule Idejo.Forum do
   category): at least one when there are any.
   """
   def change_new_topic(attrs \\ %{}, available \\ [], icons \\ nil) do
-    types = %{title: :string, body: :string, tag_ids: {:array, :string}, icon_id: :string}
+    types = %{
+      title: :string,
+      body: :string,
+      tag_ids: {:array, :string},
+      icon_id: :string,
+      topical: :boolean
+    }
 
     {%{}, types}
     |> Ecto.Changeset.cast(attrs, Map.keys(types))
@@ -1288,10 +1294,28 @@ defmodule Idejo.Forum do
     end
   end
 
-  @doc "Topic Type: the icons on offer in `category`: the set when topical, else nil."
-  @spec icons_for(Category.t()) :: [Idejo.Forum.TopicIcon.t()] | nil
-  def icons_for(%Category{topic_type: "topical"}), do: TopicIcons.list()
-  def icons_for(_category), do: nil
+  @doc """
+  Topic Type: the icons on offer for a topic in `category`: the set when the topic is topical
+  (`topical?`: the category's type, or a moderator's choice), else nil.
+  """
+  @spec icons_for(Category.t(), boolean()) :: [Idejo.Forum.TopicIcon.t()] | nil
+  def icons_for(category, topical? \\ false)
+  def icons_for(%Category{topic_type: "topical"}, _topical?), do: TopicIcons.list()
+  def icons_for(_category, true), do: TopicIcons.list()
+  def icons_for(_category, _topical?), do: nil
+
+  @doc """
+  Topic Type: whether a topic `user` starts in `category` with `attrs` is topical: always in
+  a topical category; in a user category when one who may moderate it asks for it
+  (`"topical"`, steward request, 2026-11-07).
+  """
+  @spec topical_topic?(User.t(), Category.t(), map()) :: boolean()
+  def topical_topic?(_user, %Category{topic_type: "topical"}, _attrs), do: true
+
+  def topical_topic?(%User{} = user, %Category{} = category, attrs) do
+    Map.get(attrs, "topical", Map.get(attrs, :topical)) in [true, "true"] and
+      Access.can?(user, :moderate, category)
+  end
 
   defp validate_tag_choice(changeset, available) do
     chosen = changeset |> Ecto.Changeset.get_field(:tag_ids) |> List.wrap() |> chosen_ids()
@@ -1333,7 +1357,13 @@ defmodule Idejo.Forum do
           | {:pending, PendingTopic.t()}
           | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def create_topic(%User{} = user, %Category{} = category, attrs, opts \\ []) do
-    form = change_new_topic(attrs, Tags.available_tags(category), icons_for(category))
+    topical? = topical_topic?(user, category, attrs)
+
+    form =
+      attrs
+      |> change_new_topic(Tags.available_tags(category), icons_for(category, topical?))
+      |> Ecto.Changeset.put_change(:topical, topical?)
+
     source = opts[:forked_from]
 
     result =
@@ -1449,6 +1479,56 @@ defmodule Idejo.Forum do
            ) do
       {:ok, %{updated | icon: icon}}
     end
+  end
+
+  @doc """
+  Makes a user topic topical (steward request, 2026-11-07), as a moderator of its category:
+  its opening message no longer shows its starter, and shows `icon` (nil for none). Logged
+  (`topic.topical`, MO-03); the topic's viewers get the icon and the opening message again.
+  """
+  @spec make_topical(User.t(), Topic.t(), Idejo.Forum.TopicIcon.t() | nil) ::
+          {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
+  def make_topical(%User{} = moderator, %Topic{} = topic, icon) do
+    category = Repo.get!(Category, topic.category_id)
+
+    if not topic.topical and not topic.private and Access.can?(moderator, :moderate, category) do
+      result = Repo.transact(fn -> mark_topical(moderator, topic, icon) end)
+
+      with {:ok, {_updated, opening}} <- result do
+        Messages.broadcast(topic.id, {:topic_icon, icon})
+        Messages.broadcast(topic.id, {:message, opening})
+      end
+
+      with {:ok, {updated, _opening}} <- result, do: {:ok, updated}
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  defp mark_topical(moderator, topic, icon) do
+    opening = first_message(topic)
+
+    with {:ok, updated} <-
+           topic
+           |> Ecto.Changeset.change(topical: true, icon_id: icon && icon.id)
+           |> Repo.update(),
+         {:ok, opening} <- opening |> Ecto.Changeset.change(anonymous: true) |> Repo.update(),
+         {:ok, _} <-
+           Moderation.record(moderator, "topic.topical", updated,
+             details: %{"icon" => icon && icon.name}
+           ) do
+      {:ok, {%{updated | icon: icon}, opening}}
+    end
+  end
+
+  # The topic's opening message, deleted or not.
+  defp first_message(%Topic{id: id}) do
+    Repo.one(
+      from m in Message,
+        where: m.topic_id == ^id,
+        order_by: [asc: m.opened_at, asc: m.id],
+        limit: 1
+    )
   end
 
   ## Approval queue (MO-04)
@@ -1634,9 +1714,9 @@ defmodule Idejo.Forum do
         forked_from_message_id: source && source.id,
         message_count: 1,
         last_activity_at: now,
-        # Topic Type: a topical category's topics show an icon instead of their starter.
-        topical: category.topic_type == "topical",
-        icon_id: (category.topic_type == "topical" && Map.get(form, :icon_id)) || nil
+        # Topic Type: a topical topic shows an icon instead of its starter.
+        topical: topical?(category, form),
+        icon_id: (topical?(category, form) && Map.get(form, :icon_id)) || nil
       }
       |> Topic.create_changeset(%{title: title})
 
@@ -1649,7 +1729,7 @@ defmodule Idejo.Forum do
         opened_at: now,
         closes_at: now,
         closed_at: now,
-        anonymous: category.topic_type == "topical"
+        anonymous: topical?(category, form)
       }
       # The topic is not stored yet: its category says where the links are written.
       |> Message.closed_changeset(%{body_md: body}, author: user, category_id: category.id)
@@ -1670,6 +1750,10 @@ defmodule Idejo.Forum do
       {:ok, topic}
     end
   end
+
+  # A topical category's topics, and those a moderator made topical (`create_topic/4`).
+  defp topical?(%Category{topic_type: "topical"}, _form), do: true
+  defp topical?(_category, form), do: Map.get(form, :topical) == true
 
   defp topic_payload(title, nil), do: %{"type" => "Page", "name" => title}
 

@@ -211,4 +211,114 @@ defmodule IdejoWeb.TopicTypeTest do
     assert Repo.reload!(chat).topic_type == "topical"
     assert has_element?(cats, "#topic-type-#{chat.id}", "Topical")
   end
+
+  defp category_moderator(admin, category) do
+    {:ok, role} = Idejo.Access.create_role(admin, %{"name" => unique_role_name("Mods")})
+    {:ok, _} = Idejo.Access.set_permission(admin, role, category, :moderate, :allow)
+    mod = user_fixture(%{display_name: "Moderator Mo"})
+    {:ok, _} = Idejo.Access.assign_role(admin, mod, role)
+    mod
+  end
+
+  test "in a user category, a moderator may post a topical topic; members may not", %{
+    conn: conn,
+    admin: admin,
+    chat: chat,
+    star: star,
+    starter: starter
+  } do
+    mod = category_moderator(admin, chat)
+
+    {:ok, member_topic} = start(starter, chat, %{"topical" => "true", "icon_id" => star.id})
+    refute member_topic.topical
+
+    assert {:error, changeset} = start(mod, chat, %{"topical" => "true"})
+    assert changeset.errors[:icon_id]
+
+    {:ok, topic} = start(mod, chat, %{"topical" => "true", "icon_id" => star.id})
+    assert topic.topical
+    assert topic.icon_id == star.id
+    assert hd(Forum.list_messages(topic)).anonymous
+
+    # The form: the box only for moderators; ticked, the icon is chosen.
+    {:ok, member_lv, _html} = live(log_in_user(build_conn(), starter), ~p"/c/#{chat.slug}/new")
+    refute has_element?(member_lv, "#topic_topical")
+    refute has_element?(member_lv, "#topic-icon")
+
+    {:ok, lv, _html} = live(log_in_user(conn, mod), ~p"/c/#{chat.slug}/new")
+    assert has_element?(lv, "#topic_topical")
+    refute has_element?(lv, "#topic-icon")
+    lv |> form("#new-topic-form", topic: %{topical: "true"}) |> render_change()
+    assert has_element?(lv, "#topic-icon")
+    lv |> element("#choose-icon") |> render_click()
+    lv |> element("#icon-picker-#{star.id}") |> render_click()
+
+    lv
+    |> form("#new-topic-form", topic: %{title: "Announcement", body: "News", topical: "true"})
+    |> render_submit()
+
+    made = Repo.one!(from t in Idejo.Forum.Topic, where: t.title == "Announcement")
+    assert made.topical
+    assert made.icon_id == star.id
+  end
+
+  test "a moderator makes a user topic's first post topical", %{
+    admin: admin,
+    chat: chat,
+    star: star,
+    starter: starter
+  } do
+    mod = category_moderator(admin, chat)
+    {:ok, topic} = start(starter, chat, %{})
+    [opening] = Forum.list_messages(topic)
+    {:ok, reply} = Forum.post_message(user_fixture(), topic, %{"body" => "Hm"})
+
+    {:ok, reader, _html} = watch(build_conn(), topic)
+    assert render(reader) =~ "Secret Starter"
+
+    {:ok, member_lv, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+    refute has_element?(member_lv, "#message-#{opening.id}-make-topical")
+    assert Forum.make_topical(starter, topic, star) == {:error, :forbidden}
+
+    {:ok, lv, _html} = watch(log_in_user(build_conn(), mod), topic)
+    refute has_element?(lv, "#message-#{reply.id}-make-topical")
+    lv |> element("#message-#{opening.id}-make-topical") |> render_click()
+    assert has_element?(lv, "#icon-picker-title", "Make topical")
+    lv |> element("#icon-picker-#{star.id}") |> render_click()
+
+    topic = Repo.reload!(topic)
+    assert topic.topical
+    assert topic.icon_id == star.id
+    assert Repo.reload!(opening).anonymous
+    assert Repo.get_by!(Action, action: "topic.topical").target_id == topic.id
+
+    # Open pages follow at once: the icon, no starter, and no button any more.
+    assert has_element?(reader, "#message-#{opening.id} .topic-icon img")
+    refute has_element?(reader, "#message-#{opening.id} .author-name")
+    refute has_element?(lv, "#message-#{opening.id}-make-topical")
+    assert has_element?(lv, "#message-#{opening.id}-icon")
+    assert Forum.make_topical(mod, topic, star) == {:error, :forbidden}
+  end
+
+  test "with no icons yet, a topic is made topical without one", %{
+    admin: admin,
+    chat: chat,
+    star: star,
+    moon: moon,
+    starter: starter
+  } do
+    {:ok, _} = TopicIcons.delete(admin, star)
+    {:ok, _} = TopicIcons.delete(admin, moon)
+    {:ok, topic} = start(starter, chat, %{})
+    [opening] = Forum.list_messages(topic)
+
+    {:ok, lv, _html} = watch(log_in_user(build_conn(), admin), topic)
+    lv |> element("#message-#{opening.id}-make-topical") |> render_click()
+    lv |> element("#icon-picker-none-choice") |> render_click()
+
+    topic = Repo.reload!(topic)
+    assert topic.topical
+    assert topic.icon_id == nil
+    assert has_element?(lv, "#message-#{opening.id} .topic-icon .topic-icon-none")
+  end
 end

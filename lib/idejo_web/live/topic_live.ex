@@ -1217,9 +1217,9 @@ defmodule IdejoWeb.TopicLive do
   # Someone started a topic from one of these messages (TP-09).
   defp info({:forked, _message_id}, socket), do: {:noreply, put_forks(socket)}
 
-  # Topic Type: a moderator changed the topical topic's icon.
+  # Topic Type: a moderator changed the topical topic's icon, or made the topic topical.
   defp info({:topic_icon, icon}, socket) do
-    topic = %{socket.assigns.topic | icon: icon, icon_id: icon && icon.id}
+    topic = %{socket.assigns.topic | icon: icon, icon_id: icon && icon.id, topical: true}
     {:noreply, assign(socket, :topic, topic)}
   end
 
@@ -2307,8 +2307,9 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # Topic Type: a moderator changes a topical topic's icon, chosen in a dialog.
+  # Steward request, 2026-11-07: a user topic's opening message is made topical the same way.
   defp event("open_icon_picker", _params, socket) do
-    if socket.assigns.topic.topical and socket.assigns.can_moderate?,
+    if socket.assigns.can_moderate? and not socket.assigns.topic.private,
       do: {:noreply, assign(socket, :icon_picker, Forum.TopicIcons.list())},
       else: {:noreply, socket}
   end
@@ -2316,10 +2317,28 @@ defmodule IdejoWeb.TopicLive do
   defp event("close_icon_picker", _params, socket),
     do: {:noreply, assign(socket, :icon_picker, nil)}
 
-  defp event("pick_topic_icon", %{"id" => id}, %{assigns: %{icon_picker: [_ | _]}} = socket) do
+  defp event("pick_topic_icon", %{"id" => id}, %{assigns: %{icon_picker: icons}} = socket)
+       when is_list(icons) do
+    topic = socket.assigns.topic
     icon = Forum.TopicIcons.get(id)
 
-    case icon && Forum.set_topic_icon(user(socket), socket.assigns.topic, icon) do
+    result =
+      cond do
+        # No icons yet: made topical without one.
+        id == "" and icons == [] and not topic.topical ->
+          Forum.make_topical(user(socket), topic, nil)
+
+        icon == nil ->
+          :error
+
+        topic.topical ->
+          Forum.set_topic_icon(user(socket), topic, icon)
+
+        true ->
+          Forum.make_topical(user(socket), topic, icon)
+      end
+
+    case result do
       {:ok, _topic} ->
         # The topic's viewers, this one too, get the new icon as an event.
         {:noreply, assign(socket, :icon_picker, nil)}
@@ -2525,6 +2544,8 @@ defmodule IdejoWeb.TopicLive do
         current={@topic.icon_id}
         event="pick_topic_icon"
         close_event="close_icon_picker"
+        title={if(@topic.topical, do: gettext("Choose an icon"), else: gettext("Make topical"))}
+        allow_none={!@topic.topical and @icon_picker == []}
       />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
@@ -2986,6 +3007,10 @@ defmodule IdejoWeb.TopicLive do
       own_closed?: own_closed?,
       own_deletable?: own_deletable?(assigns, message),
       # Never for a topical topic's opening message, whose author does not show.
+      # Steward request, 2026-11-07: moderators make a user topic's opening message topical.
+      make_topical?:
+        assigns.can_moderate? and message.id == assigns.opening_id and
+          not assigns.topic.topical and not assigns.topic.private,
       ignored?:
         is_nil(message.deleted_at) and not message.anonymous and
           MapSet.member?(assigns.ignored, message.author_id),
@@ -3555,6 +3580,15 @@ defmodule IdejoWeb.TopicLive do
           phx-click="open_icon_picker"
         >
           <.icon name="hero-photo-micro" class="size-4" />{gettext("Change icon")}
+        </button>
+        <button
+          :if={@entry.make_topical? and @live?}
+          type="button"
+          id={"message-#{@message.id}-make-topical"}
+          class="message-action"
+          phx-click="open_icon_picker"
+        >
+          <.icon name="hero-photo-micro" class="size-4" />{gettext("Make topical")}
         </button>
         <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
         <button

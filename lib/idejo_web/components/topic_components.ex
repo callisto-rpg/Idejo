@@ -51,6 +51,8 @@ defmodule IdejoWeb.TopicComponents do
   attr :current, :string, default: nil
   attr :event, :string, required: true, doc: "pushed with the chosen icon's `id`"
   attr :close_event, :string, required: true
+  attr :title, :string, default: nil, doc: "the dialog's title; \"Choose an icon\" by default"
+  attr :allow_none, :boolean, default: false, doc: "offer \"Without an icon\" (an empty id)"
 
   @doc """
   Topic Type: the dialog to choose a topic icon among those administrators uploaded, a grid
@@ -68,7 +70,9 @@ defmodule IdejoWeb.TopicComponents do
       aria-labelledby={"#{@id}-title"}
     >
       <div class="modal-box inline-card">
-        <h2 id={"#{@id}-title"} class="inline-card-title">{gettext("Choose an icon")}</h2>
+        <h2 id={"#{@id}-title"} class="inline-card-title">
+          {@title || gettext("Choose an icon")}
+        </h2>
         <p :if={@icons == []} id={"#{@id}-none"} class="text-sm">
           {gettext("Administrators have not added any topic icons yet.")}
         </p>
@@ -88,6 +92,16 @@ defmodule IdejoWeb.TopicComponents do
           </li>
         </ul>
         <form method="dialog" class="modal-action">
+          <button
+            :if={@allow_none}
+            type="button"
+            id={"#{@id}-none-choice"}
+            class="btn btn-sm btn-primary"
+            phx-click={@event}
+            phx-value-id=""
+          >
+            {gettext("Without an icon")}
+          </button>
           <button class="btn btn-sm">{gettext("Cancel")}</button>
         </form>
       </div>
