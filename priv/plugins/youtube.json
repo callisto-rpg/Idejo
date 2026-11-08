@@ -1,0 +1,18 @@
+{
+  "idejo_plugin": 1,
+  "command": "youtube",
+  "name": "YouTube video",
+  "description": "Add a YouTube video under your message",
+  "help": "Type !youtube:link: with the video's link to add it under your message at once, or choose !youtube and paste the link. The video plays from youtube-nocookie.com, which sees the address of everyone who plays it.",
+  "argument": "link",
+  "block": "video",
+  "video": {
+    "match": [
+      "^https?://(?:www\\.|m\\.)?youtube\\.com/watch\\?(?:[^#]*&)?v=(?<id>[A-Za-z0-9_-]{11})",
+      "^https?://youtu\\.be/(?<id>[A-Za-z0-9_-]{11})",
+      "^https?://(?:www\\.|m\\.)?youtube\\.com/(?:shorts|embed|live)/(?<id>[A-Za-z0-9_-]{11})",
+      "^https?://(?:www\\.)?youtube-nocookie\\.com/embed/(?<id>[A-Za-z0-9_-]{11})"
+    ],
+    "embed": "https://www.youtube-nocookie.com/embed/{id}"
+  }
+}

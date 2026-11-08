@@ -1,0 +1,9 @@
+{
+  "idejo_plugin": 1,
+  "command": "card",
+  "name": "Card",
+  "description": "Add a button that opens a card",
+  "help": "Type !card:label: to add a button with that label, then write what the card shows, formatted like a message.",
+  "argument": "text",
+  "block": "card"
+}

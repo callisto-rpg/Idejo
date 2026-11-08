@@ -232,6 +232,7 @@ defmodule IdejoWeb.Router do
       live "/", SettingsLive
       live "/info-boxes", InfoBoxesLive
       live "/automessages", AutomessagesLive
+      live "/plugins", PluginsLive
       live "/email", EmailLive
       live "/idejo-id", IdejoIdLive
       live "/users", UsersLive

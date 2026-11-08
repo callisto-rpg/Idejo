@@ -206,6 +206,13 @@ defmodule Idejo.Uploads do
       |> union_all(^named_in(User, :bio_md))
       # MO-04: a topic waiting for approval.
       |> union_all(^named_in(Idejo.Forum.PendingTopic, :body))
+      # Plugins: a card's Markdown (steward request, 2026-11-08).
+      |> union_all(
+        ^from(e in Idejo.Plugins.Embed,
+          where: like(fragment("?->>'body_md'", e.data), "%/uploads/%"),
+          select: fragment("(regexp_matches(?->>'body_md', ?, 'g'))[1]", e.data, ^@named)
+        )
+      )
 
     avatars = from(a in User, where: a.avatar_id == parent_as(:upload).id)
     dark_avatars = from(a in User, where: a.avatar_dark_id == parent_as(:upload).id)

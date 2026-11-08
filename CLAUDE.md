@@ -781,6 +781,44 @@ The contract (M6; mark each item done here when its PR merges):
   `Body`'s `roles_as:`, and `Access.mentionable_roles/1` lets server accounts tag any role,
   so its notifications match), notified, with an activity, logged `message.automessage` as
   the user's (MO-03), then broadcast; `{:error, {:cooldown, until}}` while it waits.
+- **Plugins** (steward request, 2026-11-08; `Idejo.Plugins`, `plugin_settings`,
+  `message_embeds`; extra review: DV-06): composer commands defined by JSON files, one per
+  plugin, all in `Plugins.dir/0` (`IDEJO_PLUGINS_DIR`, default `plugins/` inside
+  `:uploads_dir`, so on the uploads volume; backups and `Uploads` ignore folders). A plugin
+  is **data, never code** (steward decision: uploaded plugins must not run on the server):
+  `Plugins.Definition.parse/1` checks `idejo_plugin: 1`, `command` (`[a-z0-9-]`, at most 30,
+  never `Automessages.reserved/0` or an automessage's), `name`, `description`, `help`,
+  `argument` (`link`, `text`, `none`) and `block`, one of four Idejo draws itself
+  (`IdejoWeb.PluginComponents`): `video` (its `match` regexes' `id` group fills `{id}` in an
+  https `embed` address), `iframe` (any https address, never this host's: only `src` is
+  kept from pasted code; `sandbox` without forms or top navigation), `button` (label,
+  http(s) link) and `card` (label, Markdown rendered with `Body.to_html/2` as the author,
+  shown in `#plugin-card` once connected, a `<details>` without scripts). Bundled:
+  `priv/plugins/{youtube,iframe,button,card}.json` (youtube-nocookie.com), copied into the
+  folder once at boot (`Plugins.seed/0`, a `Task` child; never again once a settings row
+  exists, so a deleted one stays deleted). **Deleting a file removes its plugin**: its
+  command leaves the composer and its embeds stop showing (`Plugins.shown/2`; rows stay).
+  **Admin → Plugins** (`Admin.PluginsLive`): "Enabled" (off by default,
+  `Plugins.set_enabled/3`), "Add role" (a dialog of roles, `set_roles/3`; owners and
+  administrators always may), "Add custom plugin" (a `.json` upload, `install/2`, written as
+  `<command>.json`, off); audited `plugin.enable|disable|roles|install`. `Plugins.active/0`
+  (enabled, valid, file present) is cached in an ETS table for `:plugins_cache_ms` (5 s; 0
+  in tests, which use `tmp/test_plugins` and are not async); `reload/0` after changes.
+  `usable/3`: active plugins whose roles the user holds, where they may post.
+  `ComposerCommands.for_composer/5` lists them last (`plugin: true`, `argument`; an
+  automessage of the same name wins), also under the graphical composer's +. The `Composer`
+  hook sends what is new with `then: "plugin"` (`plugin`, `arg`) or pushes `"open_plugin"`;
+  typed `!command:argument:` (`PLUGIN_ARGUMENT`: an http(s) link for `link`, else words
+  without a colon) runs at its closing colon. `TopicLive` opens `#plugin-dialog`
+  (`plugin_form`) for the author's open message (`Plugins.attach/4`) or, with none, a closed
+  message of its own whose text is the link or label (`Plugins.post/5`); a video's typed link
+  is added at once. At most 10 embeds per message, rate-limited as `:commit`, an `update`
+  activity, then `{:message, m}`. `Messages.shown/0` preloads `:embeds` only while a plugin
+  is active (NF-04: no query on servers without one); `entry/3` reads `active_plugins`
+  (read at mount). The content security policy's `frame-src` is `'self'` plus
+  `Plugins.frame_sources/0`: active video plugins' embed origins and `https:` while a frame
+  plugin is on (a steward-chosen exception to SP-04, like GIFs). `Uploads.delete_unused/1`
+  reads cards' Markdown. `/help` lists active plugins (`#help-plugins`).
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
   server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`

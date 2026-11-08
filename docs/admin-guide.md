@@ -159,6 +159,57 @@ name of whoever used it. Links in the text are resolved as that person may see t
 `+role` tags notify the role's members whoever sends it, since you wrote the text.
 **Edit** changes one, **Delete** removes it (what it posted stays).
 
+### Plugins
+
+Plugins add `!` commands to the composer. Idejo comes with four:
+
+- `!youtube` puts a YouTube video under the message, from its link (`!youtube:link:`, or
+  choose `!youtube` and paste it). Videos play from `youtube-nocookie.com`, which sees the
+  address of everyone who plays one.
+- `!iframe` shows another site's page in a frame under the message: paste the frame's code
+  the site gives (`<iframe …>`) or its https address. Only the address is kept, and the
+  frame is closed off: it cannot reach the forum, send forms or move the page. While it is
+  on, the forum allows frames from any https site.
+- `!button` adds a button in the theme's colour that opens a link (`!button:label:`, then
+  the link).
+- `!card` adds a button that opens a card of text formatted like a message
+  (`!card:label:`, then the text).
+
+Each plugin is **off** until you tick **Enabled**. Owners and administrators may then use
+it; **Add role** opens a list of roles: tick those whose members may use it too, then
+**Save**. Members also need the right to post where they use it.
+
+Each plugin is one `.json` file in the plugins folder (`IDEJO_PLUGINS_DIR`, by default
+`plugins` in the uploads volume). **Delete a file there to remove its plugin**: its command
+leaves the composer and what it added under messages stops showing (it shows again if the
+file comes back). A plugin of Idejo's own that you delete is not put back by updates.
+
+**Add custom plugin** uploads a plugin file. A plugin is never code: it names a command and
+one of the four blocks above, so it can only do what they do. For example, a Vimeo plugin:
+
+```json
+{
+  "idejo_plugin": 1,
+  "command": "vimeo",
+  "name": "Vimeo video",
+  "description": "Add a Vimeo video under your message",
+  "help": "Type !vimeo:link: with the video's link.",
+  "argument": "link",
+  "block": "video",
+  "video": {
+    "match": ["^https://vimeo\\.com/(?<id>\\d+)"],
+    "embed": "https://player.vimeo.com/video/{id}"
+  }
+}
+```
+
+`command` takes lower-case letters, digits and `-`, and may not be one of Idejo's commands
+or an automessage's. `argument` is `link` (a video's), `text` (a button's or card's label)
+or `none`; `block` is `video`, `iframe`, `button` or `card`. A video plugin's `match`
+patterns (regular expressions) each find the video's `id`, which fills `{id}` in its https
+`embed` address. A new plugin is installed off. A file Idejo cannot use is listed with the
+reason.
+
 ### Email
 
 New members must verify their email address before they can write, and password resets

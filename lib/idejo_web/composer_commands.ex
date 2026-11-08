@@ -81,11 +81,18 @@ defmodule IdejoWeb.ComposerCommands do
   GIFs are on (`Idejo.Gifs.enabled?/0`, `gifs?`), `!new-topic` when they may start a topic
   somewhere, then the `automessages` they may send there
   (`Idejo.Messages.Automessages.commands_for/2`; steward decisions, 2026-11-01), marked `auto`
-  for the `Composer` hook. Only what the list needs.
+  for the `Composer` hook, and last the `plugins` they may use (`Idejo.Plugins.usable/2`;
+  steward request, 2026-11-08), marked `plugin` with their `argument`, unless an automessage
+  took the name. Only what the list needs.
   """
-  @spec for_composer(boolean(), boolean(), [%{name: String.t(), sender: String.t()}], boolean()) ::
-          [map()]
-  def for_composer(upload?, can_fork?, automessages \\ [], gifs? \\ false) do
+  @spec for_composer(
+          boolean(),
+          boolean(),
+          [%{name: String.t(), sender: String.t()}],
+          boolean(),
+          [Idejo.Plugins.Definition.t()]
+        ) :: [map()]
+  def for_composer(upload?, can_fork?, automessages \\ [], gifs? \\ false, plugins \\ []) do
     own =
       for %{name: name} = command <- all(),
           name != "image" or upload?,
@@ -93,13 +100,27 @@ defmodule IdejoWeb.ComposerCommands do
           name != "new-topic" or can_fork?,
           do: Map.take(command, [:name, :label, :detail])
 
-    own ++
+    auto =
       for %{name: name, sender: sender} <- automessages do
         %{
           name: name,
           label: "!" <> name,
           detail: gettext("Automessage: the server posts it, as %{sender}", sender: sender),
           auto: true
+        }
+      end
+
+    taken = MapSet.new(own ++ auto, & &1.name)
+
+    own ++
+      auto ++
+      for %{command: name} = plugin <- plugins, not MapSet.member?(taken, name) do
+        %{
+          name: name,
+          label: "!" <> name,
+          detail: plugin.description,
+          plugin: true,
+          argument: plugin.argument
         }
       end
   end

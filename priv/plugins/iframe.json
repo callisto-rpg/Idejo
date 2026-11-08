@@ -1,0 +1,9 @@
+{
+  "idejo_plugin": 1,
+  "command": "iframe",
+  "name": "Embedded page",
+  "description": "Show another site's page in a frame under your message",
+  "help": "Choose !iframe and paste the frame's code a site gives you to embed it (or just its https address). Only the address is kept; the page shows in a closed-off frame that cannot reach this forum.",
+  "argument": "none",
+  "block": "iframe"
+}

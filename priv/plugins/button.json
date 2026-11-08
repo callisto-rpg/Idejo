@@ -1,0 +1,9 @@
+{
+  "idejo_plugin": 1,
+  "command": "button",
+  "name": "Link button",
+  "description": "Add a button that opens a link",
+  "help": "Type !button:label: to add a button with that label, then give the link it opens.",
+  "argument": "text",
+  "block": "button"
+}

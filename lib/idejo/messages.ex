@@ -59,7 +59,9 @@ defmodule Idejo.Messages do
   """
   @spec broadcast(Ecto.UUID.t(), term()) :: :ok | {:error, term()}
   def broadcast(topic_id, {:message, %Message{} = message}) do
-    [message] = message |> Repo.preload(@shown, force: true) |> List.wrap() |> with_version_html()
+    [message] =
+      message |> Repo.preload(shown(), force: true) |> List.wrap() |> with_version_html()
+
     # The role next to the author's name, once here rather than by each viewer new to the
     # author: 200 viewers of a topic where 30 people start writing asked for it 6,000 times.
     message = %{
@@ -100,7 +102,11 @@ defmodule Idejo.Messages do
 
   @doc "What a topic view shows of a message besides its own fields, for `Repo.preload/2`."
   @spec shown() :: list()
-  def shown, do: @shown
+  def shown do
+    # Plugins (steward request, 2026-11-08): what they added, only while one is on (a query
+    # less on every page of a server without any).
+    if Idejo.Plugins.active() == %{}, do: @shown, else: [:embeds | @shown]
+  end
 
   @doc "Returns the author's open message in the topic, or `nil` (GM-09: at most one)."
   @spec open_message(User.t(), Topic.t()) :: Message.t() | nil

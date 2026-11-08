@@ -204,6 +204,14 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
     to show those words over the hidden message, such as `!spoiler:Ending of book 3:`;
     quotes then read *(spoiler: Ending of book 3)*. It runs as soon as you type the last
     colon.
+  - **Plugins** add more commands, when an administrator has turned them on for you; **Help**
+    lists those of your forum. Those Idejo comes with: **!youtube** puts a video under your
+    message (type `!youtube:` then the video's link and a last `:`, or choose it and paste
+    the link), **!iframe** shows another site's page in a frame (paste the code the site
+    gives to embed it), **!button** adds a button opening a link (`!button:label:`, then the
+    link) and **!card** a button opening a card of text (`!card:label:`, then the text).
+    Like **!poll**, they go under the message you are writing, or with nothing written, are
+    posted on their own. They can also be found under **+** in the graphical composer.
   - To hide only part of a message, put **||** on each side of it: `The killer is ||the
     butler||.` Readers see a filled bar where those words are, and click it (or select it
     and press Enter) to read them; quotes, search results and notifications show

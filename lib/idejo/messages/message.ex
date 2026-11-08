@@ -51,6 +51,8 @@ defmodule Idejo.Messages.Message do
     field :author_role, :any, virtual: true, default: :unknown
     # Earlier versions, kept only when sent text was changed (GM-11, TP-05).
     has_many :versions, Idejo.Messages.Version, preload_order: [asc: :created_at]
+    # Plugins (steward request, 2026-11-08): what their commands added under it.
+    has_many :embeds, Idejo.Plugins.Embed, preload_order: [asc: :created_at, asc: :id]
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
