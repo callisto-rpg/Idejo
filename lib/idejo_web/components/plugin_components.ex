@@ -1,0 +1,328 @@
+# SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+defmodule IdejoWeb.PluginComponents do
+  @moduledoc """
+  What plugins draw (steward request, 2026-11-08; `Idejo.Plugins`): their blocks under a
+  message (`embeds/1`), the dialog that asks for what a block needs (`plugin_dialog/1`) and
+  a card opened from its button (`plugin_card/1`). Every block is drawn here from checked
+  data; a plugin file only chooses which.
+  """
+  use IdejoWeb, :html
+
+  alias Idejo.Plugins
+  alias Idejo.Plugins.Definition
+
+  # Frames run their own page, never this forum's (`Plugins` refuses this host): no forms,
+  # no leaving the page they are in.
+  @video_sandbox "allow-scripts allow-same-origin allow-popups allow-presentation"
+  @frame_sandbox "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+  @link_rel "noopener noreferrer nofollow ugc"
+
+  attr :embeds, :list, required: true, doc: "the message's embeds that show (`Plugins.shown/2`)"
+  attr :message_id, :string, required: true
+  attr :live?, :boolean, default: false
+
+  @doc "A message's plugin blocks, in the order they were added."
+  def embeds(assigns) do
+    ~H"""
+    <div :if={@embeds != []} id={"message-#{@message_id}-embeds"} class="plugin-embeds">
+      <.embed :for={embed <- @embeds} embed={embed} live?={@live?} />
+    </div>
+    """
+  end
+
+  attr :embed, :map, required: true
+  attr :live?, :boolean, required: true
+
+  defp embed(%{embed: %{block: "video"}} = assigns) do
+    assigns =
+      assign(assigns,
+        sandbox: @video_sandbox,
+        rel: @link_rel,
+        host: host(assigns.embed.data["link"])
+      )
+
+    ~H"""
+    <figure id={"embed-#{@embed.id}"} class="plugin-embed plugin-video">
+      <iframe
+        src={@embed.data["src"]}
+        title={gettext("Video from %{host}", host: @host)}
+        class="plugin-frame is-video"
+        sandbox={@sandbox}
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowfullscreen
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+      <figcaption class="plugin-caption">
+        <a href={@embed.data["link"]} rel={@rel} target="_blank">
+          {gettext("Watch on %{host}", host: @host)}
+        </a>
+      </figcaption>
+    </figure>
+    """
+  end
+
+  defp embed(%{embed: %{block: "iframe"}} = assigns) do
+    assigns =
+      assign(assigns,
+        sandbox: @frame_sandbox,
+        rel: @link_rel,
+        host: host(assigns.embed.data["src"])
+      )
+
+    ~H"""
+    <figure id={"embed-#{@embed.id}"} class="plugin-embed plugin-iframe">
+      <iframe
+        src={@embed.data["src"]}
+        title={gettext("Page from %{host}", host: @host)}
+        class="plugin-frame is-page"
+        sandbox={@sandbox}
+        allow="fullscreen"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+      <figcaption class="plugin-caption">
+        <a href={@embed.data["src"]} rel={@rel} target="_blank">
+          {gettext("Open %{host}", host: @host)}
+        </a>
+      </figcaption>
+    </figure>
+    """
+  end
+
+  defp embed(%{embed: %{block: "button"}} = assigns) do
+    assigns = assign(assigns, rel: @link_rel)
+
+    ~H"""
+    <a
+      id={"embed-#{@embed.id}"}
+      href={@embed.data["url"]}
+      rel={@rel}
+      target="_blank"
+      class="btn btn-primary btn-sm plugin-embed plugin-button"
+    >
+      {@embed.data["label"]}
+    </a>
+    """
+  end
+
+  # Once connected, a button opening the card over the page; without scripts, the card's
+  # text folded under its label (AX-04).
+  defp embed(%{embed: %{block: "card"}} = assigns) do
+    ~H"""
+    <button
+      :if={@live?}
+      id={"embed-#{@embed.id}"}
+      type="button"
+      class="btn btn-primary btn-sm plugin-embed plugin-card-button"
+      phx-click="open_plugin_card"
+      phx-value-id={@embed.id}
+      aria-haspopup="dialog"
+    >
+      {@embed.data["label"]}
+    </button>
+    <details :if={!@live?} id={"embed-#{@embed.id}"} class="plugin-embed plugin-card-details">
+      <summary class="btn btn-primary btn-sm">{@embed.data["label"]}</summary>
+      <MessageComponents.body html={@embed.data["body_html"] || ""} />
+    </details>
+    """
+  end
+
+  defp embed(assigns), do: ~H""
+
+  defp host(nil), do: ""
+  defp host(address), do: URI.parse(address).host || ""
+
+  attr :card, :map, required: true, doc: "a card embed"
+
+  @doc "The card a card button opens (`InlineCard` hook; Escape or Close closes it)."
+  def plugin_card(assigns) do
+    ~H"""
+    <dialog
+      id="plugin-card"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="close_plugin_card"
+      data-return-focus
+      aria-labelledby="plugin-card-title"
+    >
+      <div class="modal-box plugin-card">
+        <h2 id="plugin-card-title" class="inline-card-title">{@card.data["label"]}</h2>
+        <MessageComponents.body html={@card.data["body_html"] || ""} />
+        <div class="modal-action">
+          <button
+            type="button"
+            class="btn btn-sm btn-primary"
+            phx-click="close_plugin_card"
+            phx-mounted={JS.focus()}
+          >
+            {gettext("Close")}
+          </button>
+        </div>
+      </div>
+    </dialog>
+    """
+  end
+
+  attr :form, :map,
+    required: true,
+    doc:
+      "%{definition, message_id, params, error}: the plugin, the message it goes under (nil: one of its own)"
+
+  @doc "Asks for what the plugin's block needs (`\"plugin_submit\"`)."
+  def plugin_dialog(assigns) do
+    assigns =
+      assign(assigns,
+        definition: assigns.form.definition,
+        params: assigns.form.params,
+        max_label: Plugins.max_label(),
+        max_card: Plugins.max_card()
+      )
+
+    ~H"""
+    <dialog
+      id="plugin-dialog"
+      class="modal"
+      phx-hook="InlineCard"
+      data-close-event="hide_plugin"
+      data-return-focus
+      aria-labelledby="plugin-dialog-title"
+    >
+      <div class="modal-box plugin-dialog">
+        <h2 id="plugin-dialog-title" class="inline-card-title">{@definition.name}</h2>
+        <p :if={@definition.description != ""} class="text-sm mb-2">{@definition.description}</p>
+        <.form for={%{}} as={:plugin} id="plugin-form" phx-submit="plugin_submit">
+          <.plugin_fields
+            definition={@definition}
+            params={@params}
+            max_label={@max_label}
+            max_card={@max_card}
+          />
+          <p :if={@form.error} id="plugin-error" role="alert" class="text-sm text-error mt-1">
+            {@form.error}
+          </p>
+          <div class="modal-action">
+            <button class="btn btn-sm btn-primary">{gettext("Add")}</button>
+            <button type="button" class="btn btn-sm btn-ghost" phx-click="hide_plugin">
+              {gettext("Cancel")}
+            </button>
+          </div>
+        </.form>
+      </div>
+    </dialog>
+    """
+  end
+
+  attr :definition, Definition, required: true
+  attr :params, :map, required: true
+  attr :max_label, :integer, required: true
+  attr :max_card, :integer, required: true
+
+  defp plugin_fields(%{definition: %{block: "video"}} = assigns) do
+    ~H"""
+    <label for="plugin-link" class="label mb-1">{gettext("The video's link")}</label>
+    <input
+      id="plugin-link"
+      name="plugin[link]"
+      type="url"
+      value={@params["link"]}
+      required
+      class="input input-sm w-full"
+      phx-mounted={JS.focus()}
+    />
+    """
+  end
+
+  defp plugin_fields(%{definition: %{block: "iframe"}} = assigns) do
+    ~H"""
+    <label for="plugin-code" class="label mb-1">
+      {gettext("Paste the frame's code (<iframe …>) or its https address")}
+    </label>
+    <textarea
+      id="plugin-code"
+      name="plugin[code]"
+      rows="4"
+      required
+      class="textarea textarea-sm w-full font-mono"
+      phx-mounted={JS.focus()}
+    >{@params["code"]}</textarea>
+    """
+  end
+
+  defp plugin_fields(%{definition: %{block: "button"}} = assigns) do
+    ~H"""
+    <label for="plugin-label" class="label mb-1">{gettext("Label")}</label>
+    <input
+      id="plugin-label"
+      name="plugin[label]"
+      type="text"
+      value={@params["label"]}
+      maxlength={@max_label}
+      required
+      class="input input-sm w-full mb-2"
+      phx-mounted={!@params["label"] && JS.focus()}
+    />
+    <label for="plugin-url" class="label mb-1">{gettext("The link it opens")}</label>
+    <input
+      id="plugin-url"
+      name="plugin[url]"
+      type="url"
+      value={@params["url"]}
+      placeholder="https://"
+      required
+      class="input input-sm w-full"
+      phx-mounted={@params["label"] && JS.focus()}
+    />
+    """
+  end
+
+  defp plugin_fields(%{definition: %{block: "card"}} = assigns) do
+    ~H"""
+    <label for="plugin-label" class="label mb-1">{gettext("Button label")}</label>
+    <input
+      id="plugin-label"
+      name="plugin[label]"
+      type="text"
+      value={@params["label"]}
+      maxlength={@max_label}
+      required
+      class="input input-sm w-full mb-2"
+      phx-mounted={!@params["label"] && JS.focus()}
+    />
+    <label for="plugin-body" class="label mb-1">
+      {gettext("What the card shows (formatted like a message)")}
+    </label>
+    <textarea
+      id="plugin-body"
+      name="plugin[body]"
+      rows="6"
+      maxlength={@max_card}
+      required
+      class="textarea textarea-sm w-full"
+      phx-mounted={@params["label"] && JS.focus()}
+    >{@params["body"]}</textarea>
+    """
+  end
+
+  @doc "The words for what `Idejo.Plugins.prepare/2` refused."
+  @spec error(atom()) :: String.t()
+  def error(:link), do: gettext("That link is not one this plugin can show.")
+  def error(:code), do: gettext("Give an https address, or the frame's code holding one.")
+
+  def error(:label),
+    do: gettext("Write a label, at most %{max} characters.", max: Plugins.max_label())
+
+  def error(:url), do: gettext("Give a link starting with https:// or http://.")
+
+  def error(:body),
+    do: gettext("Write what the card shows, at most %{max} characters.", max: Plugins.max_card())
+
+  def error(:too_many), do: gettext("This message has as many plugin blocks as it can take.")
+
+  def error(:rate_limited),
+    do: gettext("You are sending very fast. Wait a moment, then try again.")
+
+  def error(_), do: gettext("You cannot use this command here.")
+end

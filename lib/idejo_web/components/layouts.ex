@@ -1350,7 +1350,8 @@ defmodule IdejoWeb.Layouts do
       :permissions,
       :stylesheet,
       :info_boxes,
-      :automessages
+      :automessages,
+      :plugins
     ]
 
   slot :inner_block, required: true
@@ -1379,6 +1380,13 @@ defmodule IdejoWeb.Layouts do
           aria-current={@section == :automessages && "page"}
         >
           {gettext("Automessages")}
+        </.link>
+        <.link
+          navigate={~p"/admin/plugins"}
+          class={["tab", @section == :plugins && "tab-active"]}
+          aria-current={@section == :plugins && "page"}
+        >
+          {gettext("Plugins")}
         </.link>
         <.link
           navigate={~p"/admin/email"}

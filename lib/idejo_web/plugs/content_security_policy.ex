@@ -46,6 +46,9 @@ defmodule IdejoWeb.Plugs.ContentSecurityPolicy do
         Enum.join(["img-src 'self' data: blob:" | gifs.img ++ logos], " "),
         "font-src 'self' data:",
         Enum.join(["connect-src 'self'" | gifs.connect], " "),
+        # Plugins (steward request, 2026-11-08): video embeds' hosts, and any https page
+        # while a frame plugin is on; frames only, sandboxed by the page.
+        Enum.join(["frame-src 'self'" | Idejo.Plugins.frame_sources()], " "),
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

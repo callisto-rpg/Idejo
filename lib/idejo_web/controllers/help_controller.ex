@@ -11,7 +11,8 @@ defmodule IdejoWeb.HelpController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Messages.Body
+  alias Idejo.Messages.{Automessages, Body}
+  alias Idejo.Plugins
 
   def show(conn, _params) do
     render(conn, :show,
@@ -19,8 +20,22 @@ defmodule IdejoWeb.HelpController do
       window: Idejo.Settings.get(:gm_window_seconds),
       unanswered: Idejo.Settings.get(:gm_unanswered_minutes),
       commands: IdejoWeb.ComposerCommands.all(),
+      plugins: plugins(),
       formatting: formatting()
     )
+  end
+
+  # Plugins turned on (steward request, 2026-11-08), whoever may use them.
+  defp plugins do
+    taken = MapSet.new(Automessages.reserved())
+
+    for {command, %{definition: d}} <- Enum.sort(Plugins.active()),
+        not MapSet.member?(taken, command),
+        do: %{
+          name: command,
+          label: "!" <> command,
+          help: if(d.help != "", do: d.help, else: d.description)
+        }
   end
 
   @doc """

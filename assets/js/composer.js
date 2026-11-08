@@ -20,6 +20,12 @@
 // then act on the message: the poll dialog opens, or the message is hidden as a spoiler (or
 // shown again). `!spoiler:overlay text:` (steward decision, 2026-10-28), typed out, runs at
 // its closing colon: the message is hidden with those words over it.
+//
+// Plugins (steward request, 2026-11-08; Idejo.Plugins): commands marked `plugin` in
+// data-commands send what is new, then the server opens the plugin's dialog for the message
+// (or, with nothing new, for the open message or a message of its own). Typed out,
+// `!command:argument:` runs at its closing colon with the argument: a link (http or https)
+// for plugins whose `argument` is "link", else words like a spoiler's.
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code,
@@ -168,6 +174,9 @@ const ENTER_RUN = 3
 // `!spoiler:overlay text:` just typed, at the start of a word: the whole of it, and the words.
 export const SPOILER_LABEL = /(?:^|[\s(])(!spoiler:([^:\n]{1,100}):)$/
 const ENTER_RUN_MS = 1000
+// `!command:argument:` just typed: the whole of it, the command, and the argument (a link,
+// whose own colons are part of it, or words without a colon).
+export const PLUGIN_ARGUMENT = /(?:^|[\s(])(!([a-z0-9]+(?:-[a-z0-9]+)*):(https?:\/\/\S+?|[^:\n]{1,100}):)$/
 
 // Marks, for each character of `after`, whether it is new since `before`: what a send burns.
 export function burnMarks(before, after) {
@@ -286,7 +295,7 @@ export const Composer = {
       this.enters = 0
       this.justSent = false
       this.typed = [this.input.value, this.input.selectionStart]
-      if (e.inputType?.startsWith("insert") && this.labelledSpoiler()) return
+      if (e.inputType?.startsWith("insert") && (this.labelledSpoiler() || this.pluginArgument())) return
       this.paint()
     })
     // The caret drawn in the backdrop follows the focus and the selection.
@@ -460,8 +469,39 @@ export const Composer = {
     return true
   },
 
-  command(name, label) {
-    if (name === "gif") {
+  // `!command:argument:` of a plugin typed up to its closing colon: it leaves the text and
+  // runs with the argument. Only for a plugin taking one, and a link only for a link.
+  pluginArgument() {
+    const caret = this.input.selectionStart
+    if (caret !== this.input.selectionEnd) return false
+    const match = PLUGIN_ARGUMENT.exec(this.input.value.slice(0, caret))
+    if (!match) return false
+    const plugin = this.plugin(match[2])
+    const arg = match[3].trim()
+    if (!plugin || arg === "" || plugin.argument === "none") return false
+    if ((plugin.argument === "link") !== /^https?:\/\//.test(arg)) return false
+    const start = caret - match[1].length
+    const value = this.input.value
+    this.input.value = value.slice(0, start) + value.slice(caret).replace(/^ /, "")
+    this.input.setSelectionRange(start, start)
+    this.paint()
+    this.command(match[2], undefined, arg)
+    return true
+  },
+
+  plugin(name) {
+    const commands = JSON.parse(this.el.dataset.commands || "[]")
+    return commands.find(command => command.plugin && command.name === name)
+  },
+
+  command(name, label, arg) {
+    if (this.plugin(name)) {
+      // A plugin (steward request, 2026-11-08): its dialog gives the focus back to the box.
+      InlineCard.opener = this.input
+      const extra = arg ? {plugin: name, arg} : {plugin: name}
+      if (this.unsent().trim() !== "") this.send(false, "plugin", extra)
+      else this.pushEvent("open_plugin", {name, ...(arg ? {arg} : {})})
+    } else if (name === "gif") {
       // GIFs (steward decision, 2026-11-03): the overlay (gif_picker.js) sends the chosen
       // one back as `idejo:gif`, and gives the focus back to the box.
       window.dispatchEvent(new CustomEvent("idejo:gif-open", {detail: {opener: this.input}}))

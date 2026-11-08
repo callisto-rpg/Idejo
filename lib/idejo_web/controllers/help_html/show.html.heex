@@ -115,6 +115,17 @@
           <dd>{command.help}</dd>
         </div>
       </dl>
+      <%!-- Plugins (steward request, 2026-11-08): those turned on on this server. --%>
+      <h3 :if={@plugins != []} id="help-plugins-title">{gettext("Plugins on this server")}</h3>
+      <p :if={@plugins != []}>
+        {gettext("Administrators choose which roles may use each one.")}
+      </p>
+      <dl :if={@plugins != []} id="help-plugins" class="help-list">
+        <div :for={plugin <- @plugins} id={"help-plugin-#{plugin.name}"}>
+          <dt><code>{plugin.label}</code></dt>
+          <dd>{plugin.help}</dd>
+        </div>
+      </dl>
     </section>
 
     <%!-- Steward decision, 2026-10-28. --%>

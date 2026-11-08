@@ -200,6 +200,8 @@ if config_env() == :prod do
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")
   # AD-05: nightly backups, on local disk (the Compose volume).
   config :idejo, :backup_dir, System.get_env("IDEJO_BACKUP_DIR", "/data/backups")
+  # Plugins (steward request, 2026-11-08): one JSON file each; by default in the uploads volume.
+  config :idejo, :plugins_dir, System.get_env("IDEJO_PLUGINS_DIR")
 
   database_url =
     System.get_env("DATABASE_URL") ||

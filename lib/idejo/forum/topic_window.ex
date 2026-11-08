@@ -22,7 +22,6 @@ defmodule Idejo.Forum.TopicWindow do
   alias Idejo.Settings
 
   # What a topic view shows of each message, as Idejo.Forum.list_messages/1.
-  @preload Idejo.Messages.shown()
 
   @normal %{before: 10, after: 30, step: 40, cap: 200, page: 50}
 
@@ -178,5 +177,5 @@ defmodule Idejo.Forum.TopicWindow do
 
   # What a topic view shows of each message, earlier versions rendered (GM-11).
   defp shown(messages),
-    do: messages |> Repo.preload(@preload) |> Idejo.Messages.with_version_html()
+    do: messages |> Repo.preload(Idejo.Messages.shown()) |> Idejo.Messages.with_version_html()
 end

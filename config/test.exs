@@ -63,6 +63,10 @@ config :idejo, :push_resolver, {Idejo.FakeDNS, :getaddrs}
 # TP-12: uploads go to a scratch directory, emptied by test_helper.exs.
 config :idejo, :uploads_dir, Path.expand("../tmp/test_uploads", __DIR__)
 config :idejo, :backup_dir, Path.expand("../tmp/test_backups", __DIR__)
+# Plugins: their own folder, read again at every call, nothing copied at boot.
+config :idejo, :plugins_dir, Path.expand("../tmp/test_plugins", __DIR__)
+config :idejo, :plugins_cache_ms, 0
+config :idejo, :seed_plugins, false
 
 # Jobs run only when a test runs them (Oban.Testing).
 config :idejo, Oban, testing: :manual

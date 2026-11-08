@@ -12,6 +12,9 @@ defmodule Idejo.Application do
 
   @impl true
   def start(_type, _args) do
+    # Plugins: the table that keeps the active ones for a few seconds.
+    :ok = Idejo.Plugins.init_cache()
+
     children = [
       IdejoWeb.Telemetry,
       Idejo.Repo,
@@ -32,6 +35,10 @@ defmodule Idejo.Application do
       Idejo.Accounts.OIDCRegistry,
       # The community menu's answers, kept a few minutes (Idejo.Community).
       Idejo.Community,
+      # Plugins: the bundled ones copied into the plugins folder, each once.
+      if(Application.get_env(:idejo, :seed_plugins, true),
+        do: Supervisor.child_spec({Task, &Idejo.Plugins.seed/0}, id: :seed_plugins)
+      ),
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),

@@ -668,6 +668,7 @@ message naming it.
 | `ECTO_IPV6` | no | off | `true` or `1` to reach the database over IPv6. |
 | `IDEJO_UPLOADS_DIR` | no | `/data/uploads` | Where uploaded images are kept. |
 | `IDEJO_BACKUP_DIR` | no | `/data/backups` | Where nightly backups are written. |
+| `IDEJO_PLUGINS_DIR` | no | `plugins` in `IDEJO_UPLOADS_DIR` | Where plugin files are kept (Admin → Plugins). Deleting a file removes that plugin. |
 | `IDEJO_PG_BIN_DIR` | no | the `PATH` | Where `pg_dump` and `pg_restore` are; they must match the database's major version. |
 | `IDEJO_SOURCE_URL` | no | upstream at the built commit | The footer's "Source code" link. Required by the AGPL if you run modified code. |
 | `IDEJO_SMTP_HOST` | no | none | SMTP server used while **Admin → Email** has no host. |

@@ -43,11 +43,13 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Forum.TopicWindow
   alias Idejo.Messages
   alias Idejo.Messages.{Automessages, Polls, Scheduling}
+  alias Idejo.Plugins
   alias Idejo.Reading
   alias Idejo.Repo
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.MessageModerationComponents
+  alias IdejoWeb.PluginComponents
   alias IdejoWeb.PollComponents
   alias IdejoWeb.ReactionComponents
   alias IdejoWeb.UserComponents
@@ -112,6 +114,10 @@ defmodule IdejoWeb.TopicLive do
            forks: %{},
            can_fork?: false,
            automessages: [],
+           plugins: [],
+           active_plugins: %{},
+           plugin_form: nil,
+           plugin_card: nil,
            card: nil,
            image_error: nil,
            reactions: %{},
@@ -172,6 +178,10 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:ignored, Idejo.Accounts.ignored_ids(user))
          |> assign(:icon_picker, nil)
          |> assign(:automessages, automessages(user, topic))
+         # Plugins (steward request, 2026-11-08): read at mount, like the automessages.
+         |> assign(:active_plugins, Plugins.active())
+         |> then(&assign(&1, :plugins, Plugins.usable(user, topic, &1.assigns.active_plugins)))
+         |> assign(plugin_form: nil, plugin_card: nil)
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
@@ -321,7 +331,8 @@ defmodule IdejoWeb.TopicLive do
         assigns.select_for,
         assigns.selected == nil,
         assigns.opening_id,
-        assigns.ignored
+        assigns.ignored,
+        assigns.active_plugins
       },
       deleted_runs: assigns.deleted_runs,
       mention_glows: assigns.mention_glows,
@@ -1259,7 +1270,8 @@ defmodule IdejoWeb.TopicLive do
            can_post?: Forum.can_post?(user, topic),
            can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
            can_fork?: can_fork?(user, topic),
-           automessages: automessages(user, topic)
+           automessages: automessages(user, topic),
+           plugins: Plugins.usable(user, topic)
          )
          |> put_viewable_replies(socket.assigns.messages)
          |> assign(:forward_access, %{})
@@ -1331,8 +1343,69 @@ defmodule IdejoWeb.TopicLive do
   defp after_send(socket, "spoiler", message, params),
     do: socket |> assign(reply_to: nil, forward: nil) |> toggle_spoiler(message, params["label"])
 
+  defp after_send(socket, "plugin", message, params),
+    do:
+      socket
+      |> assign(reply_to: nil, forward: nil)
+      |> open_plugin(message, params["plugin"], params["arg"])
+
   defp after_send(socket, _then, _message, _params),
     do: assign(socket, reply_to: nil, forward: nil)
+
+  # A plugin's command (steward request, 2026-11-08): its dialog, for the author's message or,
+  # with none, a message of its own; a video's link typed with the command adds it at once.
+  defp open_plugin(socket, message, name, arg) do
+    case Enum.find(socket.assigns.plugins, &(&1.command == name)) do
+      nil ->
+        put_flash(socket, :error, PluginComponents.error(:forbidden))
+
+      definition ->
+        form = %{
+          definition: definition,
+          message_id: message && message.id,
+          params: plugin_params(definition, arg),
+          error: nil
+        }
+
+        if definition.block == "video" and is_binary(arg) and arg != "",
+          do: submit_plugin(socket, form, form.params),
+          else: assign(socket, :plugin_form, form)
+    end
+  end
+
+  defp plugin_params(_definition, arg) when arg in [nil, ""], do: %{}
+  defp plugin_params(%{block: "video"}, arg), do: %{"link" => arg}
+  defp plugin_params(%{block: block}, arg) when block in ~w(button card), do: %{"label" => arg}
+  defp plugin_params(_definition, _arg), do: %{}
+
+  defp submit_plugin(socket, form, params) do
+    %{topic: topic, reply_to: reply_to} = socket.assigns
+    command = form.definition.command
+
+    result =
+      case form.message_id && Repo.get(Messages.Message, form.message_id) do
+        nil -> Plugins.post(user(socket), topic, command, params, reply_to && reply_to.id)
+        message -> Plugins.attach(user(socket), message, command, params)
+      end
+
+    case result do
+      {:ok, _message} ->
+        socket = assign(socket, :plugin_form, nil)
+        if form.message_id, do: socket, else: assign(socket, :reply_to, nil)
+
+      {:error, reason} when reason in [:link, :code, :label, :url, :body] ->
+        assign(socket, :plugin_form, %{
+          form
+          | params: params,
+            error: PluginComponents.error(reason)
+        })
+
+      {:error, reason} ->
+        socket
+        |> assign(:plugin_form, nil)
+        |> put_flash(:error, PluginComponents.error(reason))
+    end
+  end
 
   # The message a commit completed: this one (Ctrl+Enter), or the open one a new message
   # closed (after Reply).
@@ -1626,6 +1699,37 @@ defmodule IdejoWeb.TopicLive do
         {:noreply, new_topic_from(socket, message)}
     end
   end
+
+  # A plugin's command with nothing new to send: for the open message, else on its own.
+  defp event("open_plugin", %{"name" => name} = params, socket) when is_binary(name) do
+    arg = if is_binary(params["arg"]), do: params["arg"]
+    message = open_message(socket.assigns.messages, user(socket))
+    {:noreply, open_plugin(socket, message, name, arg)}
+  end
+
+  defp event("plugin_submit", %{"plugin" => params}, %{assigns: %{plugin_form: form}} = socket)
+       when is_map(params) and form != nil,
+       do: {:noreply, submit_plugin(socket, form, params)}
+
+  defp event("plugin_submit", _params, socket), do: {:noreply, socket}
+
+  defp event("hide_plugin", _params, socket), do: {:noreply, assign(socket, :plugin_form, nil)}
+
+  # A card's button: the card, from the messages shown (only one whose plugin is on).
+  defp event("open_plugin_card", %{"id" => id}, socket) when is_binary(id) do
+    card =
+      Enum.find_value(socket.assigns.messages, fn message ->
+        (is_nil(message.deleted_at) or socket.assigns.can_moderate?) &&
+          message.embeds
+          |> Plugins.shown(socket.assigns.active_plugins)
+          |> Enum.find(&(&1.id == id and &1.block == "card"))
+      end)
+
+    {:noreply, assign(socket, :plugin_card, card)}
+  end
+
+  defp event("close_plugin_card", _params, socket),
+    do: {:noreply, assign(socket, :plugin_card, nil)}
 
   # `!poll` and `!spoiler` with nothing new to send: for the open message.
   # With nothing open, `!poll` posts the poll as a message of its own (steward decision,
@@ -2535,6 +2639,8 @@ defmodule IdejoWeb.TopicLive do
       <.delete_own_dialog :if={@confirm_delete} from={@delete_asked_from} />
       <.schedule_dialog :if={@schedule} schedule={@schedule} error={@schedule_error} />
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
+      <PluginComponents.plugin_dialog :if={@plugin_form} form={@plugin_form} />
+      <PluginComponents.plugin_card :if={@plugin_card} card={@plugin_card} />
       <.forward_dialog :if={@forward_card} card={@forward_card} />
       <.too_soon_dialog :if={@too_soon?} />
       <TopicComponents.icon_dialog
@@ -2658,7 +2764,8 @@ defmodule IdejoWeb.TopicLive do
                   @images?,
                   @can_fork?,
                   @automessages,
-                  @gifs != nil
+                  @gifs != nil,
+                  @plugins
                 )
               }
               punctuate?={@punctuate?}
@@ -2675,6 +2782,7 @@ defmodule IdejoWeb.TopicLive do
               upload={if @images?, do: @uploads.composer_image}
               image_error={@image_error}
               poll={@mine && @polls[@mine.id]}
+              embeds={if @mine, do: Plugins.shown(@mine.embeds, @active_plugins), else: []}
               answered?={@answered?}
               unanswered_minutes={@unanswered_minutes}
               private?={@topic.private}
@@ -2997,6 +3105,7 @@ defmodule IdejoWeb.TopicLive do
       forks: Map.get(assigns.forks, id, []),
       reactions: Map.get(assigns.reactions, id, []),
       poll: assigns.polls[id],
+      embeds: Plugins.shown(message.embeds, assigns.active_plugins),
       selected: selected,
       selectable?: selectable?,
       revealed?: MapSet.member?(assigns.revealed, id),
@@ -3436,6 +3545,12 @@ defmodule IdejoWeb.TopicLive do
             viewer={@viewer}
             can_vote?={@can_post? and is_nil(@message.deleted_at)}
             now={DateTime.utc_now()}
+          />
+          <PluginComponents.embeds
+            :if={is_nil(@message.deleted_at) or @can_moderate?}
+            embeds={@entry.embeds}
+            message_id={@message.id}
+            live?={@live?}
           />
         </div>
         <div :if={@message.spoiler and !@entry.revealed?} class="spoiler-cover">
@@ -3891,7 +4006,11 @@ defmodule IdejoWeb.TopicLive do
             ],
             MapSet.member?(names, name),
             do: {name, icon, label}
-          )
+          ) ++
+            for(
+              %{plugin: true, name: name} = command <- assigns.commands,
+              do: {name, "hero-puzzle-piece", command.label}
+            )
       )
 
     ~H"""
@@ -4072,6 +4191,7 @@ defmodule IdejoWeb.TopicLive do
   attr :upload, :any, required: true
   attr :image_error, :string, required: true
   attr :poll, :map, default: nil, doc: "the open message's poll (`!poll`)"
+  attr :embeds, :list, default: [], doc: "what plugins added under the open message"
   attr :answered?, :boolean, default: true, doc: "someone wrote below the open message"
   attr :unanswered_minutes, :integer, default: 10
   attr :private?, :boolean, default: false, doc: "a private conversation: no slow mode"
@@ -4310,6 +4430,7 @@ defmodule IdejoWeb.TopicLive do
         can_vote?={true}
         now={@now}
       />
+      <PluginComponents.embeds :if={@mine} embeds={@embeds} message_id={@mine.id} live?={true} />
       <%!-- `!schedule`: what waits to be posted here; only its author sees it. --%>
       <section
         :if={@pending != []}

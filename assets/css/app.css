@@ -2194,6 +2194,32 @@
 .schedule-card { max-width: 24rem; display: grid; gap: 0.75rem; }
 .schedule-excerpt { color: var(--ink-soft); font-size: 0.875rem; }
 
+/* Plugins (steward request, 2026-11-08; IdejoWeb.PluginComponents): their blocks under a
+   message. Frames keep a fixed shape (no style attributes: SP-05), as wide as the message
+   allows. */
+.plugin-embeds {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.plugin-embed.plugin-video,
+.plugin-embed.plugin-iframe,
+.plugin-card-details { flex-basis: 100%; max-width: 40rem; margin: 0; }
+.plugin-frame {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-box);
+  background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
+  &.is-video { aspect-ratio: 16 / 9; }
+  &.is-page { height: 26rem; }
+}
+.plugin-caption { font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.25rem; }
+.plugin-card-details > .message-body { margin-top: 0.5rem; }
+.plugin-card .message-body { max-height: 60vh; overflow-y: auto; }
+
 /* !poll (steward decision, 2026-10-23): the poll under a message, and the dialog that adds
    one. Since 2026-11-02 (steward decision) the answers stand side by side, each a column: a
    thick vertical bar (an SVG whose height and fill are attributes, never a style: SP-05; the
