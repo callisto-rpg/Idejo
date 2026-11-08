@@ -14,7 +14,8 @@ defmodule Idejo.Plugins.Definition do
         "description": "…",                // one line, in the composer's ! list
         "help": "…",                       // optional, the Help page
         "argument": "link",                // "link", "text" or "none": what !command:…: carries
-        "block": "video",                  // "video", "iframe", "button" or "card"
+        "block": "video",                  // "video", "iframe", "button", "card",
+                                           // "collapse" or "forum"
         "video": {                         // only for "video"
           "match": ["^https://youtu\\.be/(?<id>[A-Za-z0-9_-]{11})"],
           "embed": "https://www.youtube-nocookie.com/embed/{id}"
@@ -25,16 +26,32 @@ defmodule Idejo.Plugins.Definition do
   `id` group fills `{id}` in `embed`, an https address); `iframe` a frame's code or address;
   `button` a label and a link; `card` a label and Markdown. `argument` fills the first of
   those: a `link` argument a video's link, a `text` one a button's or card's label.
+
+  Two more (steward request, 2026-11-09): `collapse` asks for nothing and draws nothing under
+  the message: in the author's text, `!command title` followed by lines starting with `:`
+  folds those lines under the title (`Idejo.Plugins.Folds`). `forum` searches a forums
+  directory, `"directory": "https://…"` (its `GET /api/forums?q=` answers
+  `{"forums": [{"name", "url", "logo", "join"}]}`; a `text` argument starts the search), and
+  draws the chosen forum as a small card: logo, name, Join.
   """
 
   use Gettext, backend: IdejoWeb.Gettext
 
-  @blocks ~w(video iframe button card)
+  @blocks ~w(video iframe button card collapse forum)
   @arguments ~w(link text none)
   @max_bytes 32_768
 
   @enforce_keys [:command, :name, :block, :argument]
-  defstruct [:command, :name, :block, :argument, description: "", help: "", video: nil]
+  defstruct [
+    :command,
+    :name,
+    :block,
+    :argument,
+    description: "",
+    help: "",
+    video: nil,
+    directory: nil
+  ]
 
   @type t :: %__MODULE__{
           command: String.t(),
@@ -43,7 +60,8 @@ defmodule Idejo.Plugins.Definition do
           argument: String.t(),
           description: String.t(),
           help: String.t(),
-          video: %{match: [Regex.t()], embed: String.t(), origin: String.t()} | nil
+          video: %{match: [Regex.t()], embed: String.t(), origin: String.t()} | nil,
+          directory: String.t() | nil
         }
 
   @doc "The largest plugin file read, in bytes."
@@ -79,7 +97,8 @@ defmodule Idejo.Plugins.Definition do
          {:ok, block} <- one_of(json["block"], @blocks, "block"),
          {:ok, argument} <- one_of(json["argument"] || "none", @arguments, "argument"),
          :ok <- argument_fits(block, argument),
-         {:ok, video} <- video(block, json["video"]) do
+         {:ok, video} <- video(block, json["video"]),
+         {:ok, directory} <- directory(block, json["directory"]) do
       {:ok,
        %__MODULE__{
          command: command,
@@ -88,7 +107,8 @@ defmodule Idejo.Plugins.Definition do
          help: help,
          block: block,
          argument: argument,
-         video: video
+         video: video,
+         directory: directory
        }}
     end
   end
@@ -142,7 +162,8 @@ defmodule Idejo.Plugins.Definition do
   end
 
   defp argument_fits("video", argument) when argument in ~w(link none), do: :ok
-  defp argument_fits("iframe", "none"), do: :ok
+  defp argument_fits(block, "none") when block in ~w(iframe collapse), do: :ok
+  defp argument_fits("forum", argument) when argument in ~w(text none), do: :ok
 
   defp argument_fits(block, argument) when block in ~w(button card) and argument in ~w(text none),
     do: :ok
@@ -169,6 +190,21 @@ defmodule Idejo.Plugins.Definition do
        gettext(~s|A "video" plugin needs "video" with "match" (1 to 10 patterns) and "embed".|)}
 
   defp video(_block, _), do: {:ok, nil}
+
+  # A forums directory: an https address, no query or fragment (`/api/forums` is added).
+  defp directory("forum", directory) when is_binary(directory) do
+    uri = URI.parse(directory)
+
+    if uri.scheme == "https" and is_binary(uri.host) and uri.host != "" and is_nil(uri.userinfo) and
+         is_nil(uri.query) and is_nil(uri.fragment),
+       do: {:ok, String.trim_trailing(directory, "/")},
+       else: {:error, gettext(~s|"directory" must be an https address.|)}
+  end
+
+  defp directory("forum", _),
+    do: {:error, gettext(~s|A "forum" plugin needs "directory", its forums directory's address.|)}
+
+  defp directory(_block, _), do: {:ok, nil}
 
   defp patterns(patterns) do
     Enum.reduce_while(patterns, {:ok, []}, fn pattern, {:ok, acc} ->

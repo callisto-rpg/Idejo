@@ -38,7 +38,7 @@ defmodule Idejo.PluginsTest do
 
   test "the bundled plugins are copied into the folder once, off; a deleted one stays deleted" do
     files = Plugins.dir() |> File.ls!() |> Enum.sort()
-    assert files == ~w(button.json card.json iframe.json youtube.json)
+    assert files == ~w(button.json card.json collapse.json forum.json iframe.json youtube.json)
 
     assert Enum.all?(Plugins.list(), &(&1.error == nil and &1.setting.enabled == false))
     assert Plugins.active() == %{}

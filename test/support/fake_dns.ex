@@ -21,7 +21,11 @@ defmodule Idejo.FakeDNS do
     "ipv6-loopback.push.apple.com" => [{0, 0, 0, 0, 0, 0, 0, 1}],
     "metadata.push.apple.com" => [{169, 254, 169, 254}],
     "mapped.push.apple.com" => [{0, 0, 0, 0, 0, 0xFFFF, 0xC0A8, 0x0101}],
-    "ula.push.apple.com" => [{0xFD12, 0x3456, 0, 0, 0, 0, 0, 1}]
+    "ula.push.apple.com" => [{0xFD12, 0x3456, 0, 0, 0, 0, 0, 1}],
+    # Plugins' requests (Idejo.Plugins.Remote): a forums directory and forums, and one inside.
+    "forums.idejo.test" => [{93, 184, 215, 20}],
+    "garden.idejo.test" => [{93, 184, 215, 21}],
+    "inside.idejo.test" => [{10, 0, 0, 9}]
   }
 
   @doc "The addresses of `host`, as `Idejo.Push.Endpoint.getaddrs/1` would give them."

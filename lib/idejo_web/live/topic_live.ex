@@ -1068,6 +1068,25 @@ defmodule IdejoWeb.TopicLive do
   defp open_message(messages, user),
     do: Enum.find(messages, &(&1.state == "open" and &1.author_id == user.id))
 
+  # `forum`: the directory's answer, for the search the dialog still shows.
+  @impl true
+  def handle_async(:forum_search, {:ok, {query, results}}, socket) do
+    case socket.assigns.plugin_form do
+      %{query: ^query} = form ->
+        {:noreply, assign(socket, :plugin_form, %{form | results: results, searching?: false})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_async(:forum_search, {:exit, _reason}, socket) do
+    case socket.assigns.plugin_form do
+      %{} = form -> {:noreply, assign(socket, :plugin_form, %{form | searching?: false})}
+      nil -> {:noreply, socket}
+    end
+  end
+
   # Every event and message goes through `sync_entries/1` afterwards, which brings the
   # message list's entries up to date with what changed (NF-01).
   @impl true
@@ -1359,18 +1378,40 @@ defmodule IdejoWeb.TopicLive do
       nil ->
         put_flash(socket, :error, PluginComponents.error(:forbidden))
 
+      # Collapsible text is written in the message itself: the composer puts its command in.
+      %{block: "collapse"} ->
+        socket
+
       definition ->
         form = %{
           definition: definition,
           message_id: message && message.id,
           params: plugin_params(definition, arg),
-          error: nil
+          error: nil,
+          query: arg || "",
+          results: [],
+          searching?: definition.block == "forum"
         }
 
-        if definition.block == "video" and is_binary(arg) and arg != "",
-          do: submit_plugin(socket, form, form.params),
-          else: assign(socket, :plugin_form, form)
+        start_plugin(socket, form, arg)
     end
+  end
+
+  defp start_plugin(socket, %{definition: %{block: "video"}} = form, arg)
+       when is_binary(arg) and arg != "",
+       do: submit_plugin(socket, form, form.params)
+
+  defp start_plugin(socket, %{definition: %{block: "forum"} = definition} = form, _arg),
+    do: socket |> assign(:plugin_form, form) |> search_forums(definition, form.query)
+
+  defp start_plugin(socket, form, _arg), do: assign(socket, :plugin_form, form)
+
+  # `forum` (steward request, 2026-11-09): the directory asked away from the view's process;
+  # only the latest search's answer is kept.
+  defp search_forums(socket, definition, query) do
+    start_async(socket, :forum_search, fn ->
+      {query, Plugins.search_forums(definition, query)}
+    end)
   end
 
   defp plugin_params(_definition, arg) when arg in [nil, ""], do: %{}
@@ -1714,6 +1755,28 @@ defmodule IdejoWeb.TopicLive do
   defp event("plugin_submit", _params, socket), do: {:noreply, socket}
 
   defp event("hide_plugin", _params, socket), do: {:noreply, assign(socket, :plugin_form, nil)}
+
+  defp event("plugin_forum_search", %{"q" => q}, %{assigns: %{plugin_form: %{} = form}} = socket)
+       when is_binary(q) do
+    {:noreply,
+     socket
+     |> assign(:plugin_form, %{form | query: q, searching?: true})
+     |> search_forums(form.definition, q)}
+  end
+
+  defp event(
+         "plugin_forum_pick",
+         %{"index" => index},
+         %{assigns: %{plugin_form: %{} = form}} = socket
+       ) do
+    case Integer.parse(to_string(index)) do
+      {i, ""} when i >= 0 and i < length(form.results) ->
+        {:noreply, submit_plugin(socket, form, %{"forum" => Enum.at(form.results, i)})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
 
   # A card's button: the card, from the messages shown (only one whose plugin is on).
   defp event("open_plugin_card", %{"id" => id}, socket) when is_binary(id) do

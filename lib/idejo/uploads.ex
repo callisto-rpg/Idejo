@@ -206,11 +206,12 @@ defmodule Idejo.Uploads do
       |> union_all(^named_in(User, :bio_md))
       # MO-04: a topic waiting for approval.
       |> union_all(^named_in(Idejo.Forum.PendingTopic, :body))
-      # Plugins: a card's Markdown (steward request, 2026-11-08).
+      # Plugins: a card's Markdown (steward request, 2026-11-08), a forum card's copied logo
+      # (2026-11-09): anywhere in what a plugin stored.
       |> union_all(
         ^from(e in Idejo.Plugins.Embed,
-          where: like(fragment("?->>'body_md'", e.data), "%/uploads/%"),
-          select: fragment("(regexp_matches(?->>'body_md', ?, 'g'))[1]", e.data, ^@named)
+          where: like(fragment("?::text", e.data), "%/uploads/%"),
+          select: fragment("(regexp_matches(?::text, ?, 'g'))[1]", e.data, ^@named)
         )
       )
 

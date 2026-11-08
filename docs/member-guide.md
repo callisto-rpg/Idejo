@@ -209,7 +209,12 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
     message (type `!youtube:` then the video's link and a last `:`, or choose it and paste
     the link), **!iframe** shows another site's page in a frame (paste the code the site
     gives to embed it), **!button** adds a button opening a link (`!button:label:`, then the
-    link) and **!card** a button opening a card of text (`!card:label:`, then the text).
+    link), **!card** a button opening a card of text (`!card:label:`, then the text) and
+    **!forum** a small card for another Idejo forum, with a **Join** button (search the
+    forums, then **Choose** one). **!collapse** folds part of your message: write
+    `!collapse` and a title on one line, then each line to hide starting with `:` (use
+    **Shift+Enter** between lines); readers unroll it with the arrow or by clicking the
+    title.
     Like **!poll**, they go under the message you are writing, or with nothing written, are
     posted on their own. They can also be found under **+** in the graphical composer.
   - To hide only part of a message, put **||** on each side of it: `The killer is ||the

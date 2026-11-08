@@ -160,6 +160,97 @@ defmodule IdejoWeb.PluginsLiveTest do
     refute has_element?(view, "#plugin-card")
   end
 
+  test "!forum searches the directory and puts the chosen forum's card under the message", %{
+    conn: conn,
+    admin: admin,
+    member: member,
+    topic: topic
+  } do
+    {:ok, _} = Plugins.set_enabled(admin, "forum", true)
+    {:ok, _} = Plugins.set_roles(admin, "forum", [member_role().id])
+
+    # The bundled file names forums.idejo.org; this test's directory is its own.
+    file = Path.join(Plugins.dir(), "forum.json")
+    File.write!(file, String.replace(File.read!(file), "forums.idejo.org", "forums.idejo.test"))
+
+    png = File.read!(Idejo.ImageFixtures.image_file(:png))
+
+    Req.Test.stub(Idejo.Plugins, fn conn ->
+      case conn.request_path do
+        "/api/forums" ->
+          q = Plug.Conn.fetch_query_params(conn).query_params["q"]
+
+          forums =
+            if q == "nothing",
+              do: [],
+              else: [
+                %{
+                  "name" => "Garden club",
+                  "url" => "https://garden.idejo.test/",
+                  "logo" => "https://garden.idejo.test/logo",
+                  "join" => "https://garden.idejo.test/users/oidc"
+                }
+              ]
+
+          Req.Test.json(conn, %{forums: forums})
+
+        "/logo" ->
+          conn |> Plug.Conn.put_resp_content_type("image/png") |> Plug.Conn.send_resp(200, png)
+      end
+    end)
+
+    {:ok, view, _html} = watch(conn, member, topic)
+    Req.Test.allow(Idejo.Plugins, self(), view.pid)
+
+    render_hook(view, "open_plugin", %{"name" => "forum", "arg" => "garden"})
+    assert has_element?(view, "#plugin-forum-q[value=garden]")
+    render_async(view)
+    assert has_element?(view, "#plugin-forum-results li", "Garden club")
+
+    view |> form("#plugin-forum-search", %{q: "nothing"}) |> render_change()
+    render_async(view)
+    assert has_element?(view, "#plugin-forum-none")
+
+    view |> form("#plugin-forum-search", %{q: "garden"}) |> render_change()
+    render_async(view)
+    view |> element("#plugin-forum-results button", "Choose") |> render_click()
+    refute has_element?(view, "#plugin-dialog")
+
+    assert has_element?(view, ".plugin-forum .plugin-forum-name", "Garden club")
+
+    assert has_element?(
+             view,
+             ~s(.plugin-forum a.btn-primary[href="https://garden.idejo.test/users/oidc"]),
+             "Join"
+           )
+
+    assert has_element?(view, ~s(.plugin-forum img.plugin-forum-logo[src^="/uploads/"]))
+  end
+
+  test "!collapse is offered as a command that writes itself into the message", %{
+    conn: conn,
+    admin: admin,
+    member: member,
+    topic: topic
+  } do
+    {:ok, _} = Plugins.set_enabled(admin, "collapse", true)
+    {:ok, _} = Plugins.set_roles(admin, "collapse", [member_role().id])
+    {:ok, view, _html} = watch(conn, member, topic)
+
+    assert %{"plugin" => true, "block" => "collapse", "argument" => "none"} =
+             Enum.find(commands(view), &(&1["name"] == "collapse"))
+
+    # No dialog: the text is the plugin.
+    render_hook(view, "open_plugin", %{"name" => "collapse"})
+    refute has_element?(view, "#plugin-dialog")
+
+    render_hook(view, "commit", %{"body" => "!collapse Plot\n:It was a dream", "break" => true})
+    [_opening, message] = Forum.list_messages(topic)
+
+    assert message.body_html =~
+             ~s(<details class="message-fold"><summary>Plot</summary><p>It was a dream.</p></details>)
+  end
+
   test "!youtube:link: with nothing open posts the video at once; the policy lets it play", %{
     conn: conn,
     admin: admin,

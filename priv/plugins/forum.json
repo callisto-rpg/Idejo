@@ -1,0 +1,10 @@
+{
+  "idejo_plugin": 1,
+  "command": "forum",
+  "name": "Forum card",
+  "description": "Add a card for an Idejo forum, with a Join button",
+  "help": "Choose !forum (or type !forum:words: to start with a search) and pick one of the forums listed at forums.idejo.org. A small card with its logo, its name and a Join button goes under your message.",
+  "argument": "text",
+  "block": "forum",
+  "directory": "https://forums.idejo.org"
+}

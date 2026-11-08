@@ -818,7 +818,31 @@ The contract (M6; mark each item done here when its PR merges):
   (read at mount). The content security policy's `frame-src` is `'self'` plus
   `Plugins.frame_sources/0`: active video plugins' embed origins and `https:` while a frame
   plugin is on (a steward-chosen exception to SP-04, like GIFs). `Uploads.delete_unused/1`
-  reads cards' Markdown. `/help` lists active plugins (`#help-plugins`).
+  reads what plugins stored (`data::text`: cards' Markdown, forum logos). `/help` lists
+  active plugins (`#help-plugins`).
+  Two more blocks (steward requests, 2026-11-09; bundled `collapse.json`, `forum.json`):
+  **`collapse`** draws nothing under the message: `Idejo.Plugins.Folds.split/2` cuts the
+  Markdown where a line is `!<command> title` (outside code; with no title, the next line)
+  followed by lines starting with `:` (the `:` and one space dropped), and `Body.to_html/2`
+  (messages only: `topic_id:` or `category_id:`, and only when the text holds `"\n:"`)
+  renders each part alone and a fold as `<details class="message-fold"><summary>title`,
+  for authors who may use an active collapse plugin (`Plugins.fold_commands/1`). Stored as
+  HTML (FD-03), so a fold stays when its plugin goes (steward decision); an edit then
+  renders it plain. In the composer, picking it only writes `!<command> ` at the start of a
+  line (`insertAtCaret/1`); the server's `"open_plugin"` ignores it. **`forum`** has a
+  `directory` (https; bundled `https://forums.idejo.org`, Idejo Hub's directory, whose
+  `GET /api/forums?q=` answers `{"forums": [{"name", "url", "logo", "join"}]}`, five at
+  most): `#plugin-dialog` shows a search (`"plugin_forum_search"`, `start_async`
+  `:forum_search`, `Plugins.search_forums/2`; a `text` argument is the first query) and the
+  answers by name and host only (no outside image), each with Choose
+  (`"plugin_forum_pick"`, from the results kept in `plugin_form`, never the client's).
+  `forum_entry/1` keeps https forums with Join and logo on their own host. When attached the
+  logo is copied once (steward decision; `Uploads.store_icon/2`, 128 px WebP; none on
+  failure), so readers never ask the forum; the card shows logo (or initial), name, host and
+  Join (`btn-primary`). Requests go through `Idejo.Plugins.Remote` (https, every resolved
+  address public by `Push.Endpoint.public?/1`, connecting to the checked address, no
+  redirects, short timeouts, size caps; tests: `:plugins_req_options` with `Req.Test`,
+  `Idejo.FakeDNS` hosts `forums.`/`garden.`/`inside.idejo.test`).
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
   server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`

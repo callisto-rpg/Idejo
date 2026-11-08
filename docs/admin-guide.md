@@ -174,6 +174,15 @@ Plugins add `!` commands to the composer. Idejo comes with four:
   the link).
 - `!card` adds a button that opens a card of text formatted like a message
   (`!card:label:`, then the text).
+- `!collapse` folds text: a line `!collapse title`, then lines starting with `:`. Readers
+  see the title and unroll the rest with its arrow or by clicking it. Folds are kept as
+  written: turning the plugin off or deleting it later does not unfold messages already
+  sent.
+- `!forum` searches the forums directory at `forums.idejo.org` and puts a small card for the
+  chosen forum under the message: its logo, its name and a **Join** button. The logo is
+  copied to this server when the card is posted, so readers' browsers never contact the
+  other forum. A custom `forum` plugin can name another directory (`"directory"`, an https
+  address answering `/api/forums?q=` like Idejo Hub's).
 
 Each plugin is **off** until you tick **Enabled**. Owners and administrators may then use
 it; **Add role** opens a list of roles: tick those whose members may use it too, then
@@ -205,7 +214,7 @@ one of the four blocks above, so it can only do what they do. For example, a Vim
 
 `command` takes lower-case letters, digits and `-`, and may not be one of Idejo's commands
 or an automessage's. `argument` is `link` (a video's), `text` (a button's or card's label)
-or `none`; `block` is `video`, `iframe`, `button` or `card`. A video plugin's `match`
+or `none`; `block` is `video`, `iframe`, `button`, `card`, `collapse` or `forum`. A video plugin's `match`
 patterns (regular expressions) each find the video's `id`, which fills `{id}` in its https
 `embed` address. A new plugin is installed off. A file Idejo cannot use is listed with the
 reason.
