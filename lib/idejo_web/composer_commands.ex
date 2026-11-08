@@ -120,7 +120,8 @@ defmodule IdejoWeb.ComposerCommands do
           label: "!" <> name,
           detail: plugin.description,
           plugin: true,
-          argument: plugin.argument
+          argument: plugin.argument,
+          block: plugin.block
         }
       end
   end

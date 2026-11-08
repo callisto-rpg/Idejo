@@ -32,9 +32,10 @@ defmodule Idejo.Plugins do
   alias Idejo.Forum.Topic
   alias Idejo.Messages
   alias Idejo.Messages.{Automessages, Body, Message}
-  alias Idejo.Plugins.{Definition, Embed, Setting}
+  alias Idejo.Plugins.{Definition, Embed, Remote, Setting}
   alias Idejo.RateLimit
   alias Idejo.Repo
+  alias Idejo.Uploads
 
   @table __MODULE__
   @max_embeds 10
@@ -225,15 +226,41 @@ defmodule Idejo.Plugins do
     if plugins == %{} or not Forum.can_post?(user, topic) do
       []
     else
-      roles = Access.roles_of(user)
-      admin? = Enum.any?(roles, &(&1.built_in and &1.name in ~w(owner administrator)))
-      held = MapSet.new(roles, & &1.id)
-
-      for {_command, %{definition: d, role_ids: ids}} <- Enum.sort(plugins),
-          admin? or Enum.any?(ids, &MapSet.member?(held, &1)),
-          do: d
+      allowed(user, plugins)
     end
   end
+
+  # The plugins, among `plugins`, a user may use: all for owners and administrators, else
+  # those allowing one of their roles.
+  defp allowed(user, plugins) do
+    roles = Access.roles_of(user)
+    admin? = Enum.any?(roles, &(&1.built_in and &1.name in ~w(owner administrator)))
+    held = MapSet.new(roles, & &1.id)
+
+    for {_command, %{definition: d, role_ids: ids}} <- Enum.sort(plugins),
+        admin? or Enum.any?(ids, &MapSet.member?(held, &1)),
+        do: d
+  end
+
+  @doc """
+  The commands (without `!`) of the active `collapse` plugins the author in a `Body` context
+  (`author:` or `author_id:`) may use, for `Idejo.Plugins.Folds` (steward request,
+  2026-11-09). Nothing is read unless such a plugin is on.
+  """
+  @spec fold_commands(keyword()) :: [String.t()]
+  def fold_commands(context) do
+    folds = for {c, %{definition: %{block: "collapse"}} = p} <- active(), into: %{}, do: {c, p}
+
+    with true <- folds != %{},
+         %User{} = user <- context[:author] || author(context[:author_id]) do
+      user |> allowed(folds) |> Enum.map(& &1.command)
+    else
+      _ -> []
+    end
+  end
+
+  defp author(id) when is_binary(id), do: Repo.get(User, id)
+  defp author(_id), do: nil
 
   @doc """
   What the content security policy needs (`frame-src`) while plugins are on: the embed
@@ -432,7 +459,9 @@ defmodule Idejo.Plugins do
   """
   @spec prepare(Definition.t(), map()) ::
           {:ok, map(), String.t()}
-          | {:error, :link | :code | :label | :url | :body}
+          | {:error, :link | :code | :label | :url | :body | :forum | :forbidden}
+  def prepare(%Definition{block: "collapse"}, _params), do: {:error, :forbidden}
+
   def prepare(%Definition{block: "video", video: video}, params) do
     link = String.trim(params["link"] || "")
 
@@ -454,6 +483,16 @@ defmodule Idejo.Plugins do
     end
   end
 
+  # `forum`: one of the directory's answers (`search_forums/2`), chosen by the author.
+  def prepare(%Definition{block: "forum"}, %{"forum" => %{} = forum}) do
+    case forum_entry(forum) do
+      nil -> {:error, :forum}
+      entry -> {:ok, entry, entry["name"] <> " " <> entry["url"]}
+    end
+  end
+
+  def prepare(%Definition{block: "forum"}, _params), do: {:error, :forum}
+
   def prepare(%Definition{block: "card"}, params) do
     body = String.trim(params["body"] || "")
 
@@ -461,6 +500,81 @@ defmodule Idejo.Plugins do
          :ok <-
            if(body != "" and String.length(body) <= @max_card, do: :ok, else: {:error, :body}) do
       {:ok, %{"label" => label, "body_md" => body}, label}
+    end
+  end
+
+  @doc """
+  `forum`: the directory's forums matching `query`, at most five, each
+  `%{"name", "url", "join", "logo"}` (https, Join and logo on the forum's own host). Empty
+  when the directory does not answer.
+  """
+  @spec search_forums(Definition.t(), String.t()) :: [map()]
+  def search_forums(%Definition{block: "forum", directory: directory}, query) do
+    query = query |> to_string() |> String.trim() |> String.slice(0, 100)
+
+    case Remote.get(directory <> "/api/forums", params: [q: query], max_bytes: 64_000) do
+      {:ok, %{"forums" => forums}} when is_list(forums) ->
+        forums |> Enum.map(&forum_entry/1) |> Enum.reject(&is_nil/1) |> Enum.take(5)
+
+      _ ->
+        []
+    end
+  end
+
+  # A directory answer fit to show: a name, the forum's https address, and Join and the logo
+  # on that host (anything else dropped).
+  defp forum_entry(%{"name" => name, "url" => url} = forum)
+       when is_binary(name) and is_binary(url) do
+    name = String.trim(name)
+    uri = URI.parse(url)
+
+    if name != "" and String.length(name) <= 100 and uri.scheme == "https" and
+         is_binary(uri.host) and is_nil(uri.userinfo) and String.length(url) <= @max_address do
+      %{
+        "name" => name,
+        "url" => url,
+        "join" => same_host(forum["join"], uri.host) || url,
+        "logo" => same_host(forum["logo"], uri.host)
+      }
+    end
+  end
+
+  defp forum_entry(_forum), do: nil
+
+  defp same_host(address, host) when is_binary(address) do
+    uri = URI.parse(address)
+
+    if uri.scheme == "https" and uri.host == host and is_nil(uri.userinfo) and
+         String.length(address) <= @max_address,
+       do: address
+  end
+
+  defp same_host(_address, _host), do: nil
+
+  # `forum`: the logo copied here once (steward decision): readers never ask the forum for it.
+  # Without one, or when it cannot be had, the card shows the name's initial.
+  defp local_logo(%Definition{block: "forum"}, %{"logo" => "https://" <> _ = logo} = data, user) do
+    with {:ok, bytes} when is_binary(bytes) <-
+           Remote.get(logo, decode_body: false, max_bytes: 512_000),
+         {:ok, upload} <- store_logo(user, bytes) do
+      Map.put(data, "logo", Uploads.url(upload))
+    else
+      _ -> Map.put(data, "logo", nil)
+    end
+  end
+
+  defp local_logo(_definition, data, _user), do: data
+
+  # A file of our own in the system's temporary folder, never a name from outside.
+  # sobelow_skip ["Traversal.FileModule"]
+  defp store_logo(user, bytes) do
+    path = Path.join(System.tmp_dir!(), "idejo-forum-logo-#{System.unique_integer([:positive])}")
+
+    try do
+      File.write!(path, bytes)
+      Uploads.store_icon(user, path)
+    after
+      File.rm(path)
     end
   end
 
@@ -562,6 +676,7 @@ defmodule Idejo.Plugins do
          :ok <- own(user, message),
          {:ok, data, _text} <- prepare(definition, params),
          :ok <- RateLimit.check(:commit, user.id),
+         data = local_logo(definition, data, user),
          {:ok, _embed} <- Repo.transact(fn -> insert(user, message, topic, definition, data) end) do
       message = Repo.get!(Message, message.id)
       Messages.broadcast(message.topic_id, {:message, message})

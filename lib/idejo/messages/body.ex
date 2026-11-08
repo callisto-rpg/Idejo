@@ -31,11 +31,47 @@ defmodule Idejo.Messages.Body do
   alias Idejo.Forum.{Category, Tag, Topic}
   alias Idejo.Markdown
   alias Idejo.Messages.Message
+  alias Idejo.Plugins
+  alias Idejo.Plugins.Folds
   alias Idejo.Repo
 
-  @doc "Renders a message's Markdown to sanitised HTML, with its inline links."
+  @doc """
+  Renders a message's Markdown to sanitised HTML, with its inline links. In messages
+  (`topic_id:` or `category_id:`), a `collapse` plugin's folds (`Idejo.Plugins.Folds`;
+  steward request, 2026-11-09) become `<details>` with the title as `<summary>`, each part
+  rendered and sanitised alone.
+  """
   @spec to_html(String.t(), keyword()) :: String.t()
   def to_html(markdown, context \\ []) when is_binary(markdown) do
+    case folds(markdown, context) do
+      nil -> render(markdown, context)
+      segments -> Enum.map_join(segments, &segment(&1, context))
+    end
+  end
+
+  defp folds(markdown, context) do
+    if (context[:topic_id] || context[:category_id]) && String.contains?(markdown, "\n:") do
+      Folds.split(markdown, Plugins.fold_commands(context))
+    end
+  end
+
+  defp segment({:text, markdown}, context), do: render(markdown, context)
+
+  defp segment({:fold, title, markdown}, context) do
+    ~s(<details class="message-fold"><summary>) <>
+      inline(render(title, context)) <>
+      "</summary>" <> render(markdown, context) <> "</details>\n"
+  end
+
+  # A one-line title's paragraph, without the paragraph.
+  defp inline(html) do
+    case Regex.run(~r{\A<p>(.*)</p>\s*\z}s, html) do
+      [_, inner] -> inner
+      nil -> html
+    end
+  end
+
+  defp render(markdown, context) do
     case Markdown.references(markdown) do
       [] -> Markdown.to_html(markdown)
       references -> Markdown.to_html(markdown, links: links(references, context))

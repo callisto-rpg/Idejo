@@ -1,0 +1,9 @@
+{
+  "idejo_plugin": 1,
+  "command": "collapse",
+  "name": "Collapsible text",
+  "description": "Fold lines under a title readers unroll",
+  "help": "Write !collapse and a title on one line, then the lines to hide each starting with : (use Shift+Enter between lines). Readers see the title and unroll the rest with the arrow or by clicking the title.",
+  "argument": "none",
+  "block": "collapse"
+}

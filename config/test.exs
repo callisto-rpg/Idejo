@@ -67,6 +67,7 @@ config :idejo, :backup_dir, Path.expand("../tmp/test_backups", __DIR__)
 config :idejo, :plugins_dir, Path.expand("../tmp/test_plugins", __DIR__)
 config :idejo, :plugins_cache_ms, 0
 config :idejo, :seed_plugins, false
+config :idejo, :plugins_req_options, plug: {Req.Test, Idejo.Plugins}
 
 # Jobs run only when a test runs them (Oban.Testing).
 config :idejo, Oban, testing: :manual

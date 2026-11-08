@@ -25,7 +25,9 @@
 // data-commands send what is new, then the server opens the plugin's dialog for the message
 // (or, with nothing new, for the open message or a message of its own). Typed out,
 // `!command:argument:` runs at its closing colon with the argument: a link (http or https)
-// for plugins whose `argument` is "link", else words like a spoiler's.
+// for plugins whose `argument` is "link", else words like a spoiler's. A `collapse` plugin
+// (steward request, 2026-11-09) only puts its `!command ` in the text at the start of a line:
+// the server folds the `:` lines under it when the message is stored.
 
 // The same rule as the server's (Idejo.Messages): a `.` is added after text that does not end
 // with punctuation, but never after or inside code, where it would become part of the code,
@@ -495,7 +497,11 @@ export const Composer = {
   },
 
   command(name, label, arg) {
-    if (this.plugin(name)) {
+    if (this.plugin(name)?.block === "collapse") {
+      // Collapsible text (steward request, 2026-11-09): written in the message itself, so
+      // its command goes back in, at the start of a line, for the title to follow.
+      this.insertAtCaret(`!${name} `)
+    } else if (this.plugin(name)) {
       // A plugin (steward request, 2026-11-08): its dialog gives the focus back to the box.
       InlineCard.opener = this.input
       const extra = arg ? {plugin: name, arg} : {plugin: name}
@@ -571,6 +577,20 @@ export const Composer = {
     this.input.setSelectionRange(select[0], select[1])
     this.paint()
     if (this.inView()) this.reveal()
+  },
+
+  // `text` at the caret, on a line of its own start, through the browser's own typing (undo
+  // works), unsent.
+  insertAtCaret(text) {
+    const at = this.input.selectionStart
+    const before = this.input.value.slice(0, at)
+    const insert = before === "" || before.endsWith("\n") ? text : "\n" + text
+    this.input.focus()
+    if (!document.execCommand?.("insertText", false, insert)) {
+      this.input.setRangeText(insert, at, this.input.selectionEnd, "end")
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+    this.paint()
   },
 
   // Counts Enters in a row; true at the third, which then starts the count again.

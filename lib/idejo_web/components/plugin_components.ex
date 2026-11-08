@@ -130,6 +130,35 @@ defmodule IdejoWeb.PluginComponents do
     """
   end
 
+  # `forum` (steward request, 2026-11-09): a small card, the logo copied here when posted.
+  defp embed(%{embed: %{block: "forum"}} = assigns) do
+    assigns = assign(assigns, rel: @link_rel, host: host(assigns.embed.data["url"]))
+
+    ~H"""
+    <div id={"embed-#{@embed.id}"} class="plugin-embed plugin-forum">
+      <img :if={@embed.data["logo"]} src={@embed.data["logo"]} alt="" class="plugin-forum-logo" />
+      <span :if={!@embed.data["logo"]} class="plugin-forum-logo is-initial" aria-hidden="true">
+        {String.first(@embed.data["name"] || "?")}
+      </span>
+      <span class="plugin-forum-text">
+        <a href={@embed.data["url"]} rel={@rel} target="_blank" class="plugin-forum-name">
+          {@embed.data["name"]}
+        </a>
+        <span class="plugin-forum-host">{@host}</span>
+      </span>
+      <a
+        href={@embed.data["join"]}
+        rel={@rel}
+        target="_blank"
+        class="btn btn-primary btn-sm"
+        aria-label={gettext("Join %{name}", name: @embed.data["name"])}
+      >
+        {gettext("Join")}
+      </a>
+    </div>
+    """
+  end
+
   defp embed(assigns), do: ~H""
 
   defp host(nil), do: ""
@@ -193,7 +222,14 @@ defmodule IdejoWeb.PluginComponents do
       <div class="modal-box plugin-dialog">
         <h2 id="plugin-dialog-title" class="inline-card-title">{@definition.name}</h2>
         <p :if={@definition.description != ""} class="text-sm mb-2">{@definition.description}</p>
-        <.form for={%{}} as={:plugin} id="plugin-form" phx-submit="plugin_submit">
+        <.forum_search :if={@definition.block == "forum"} form={@form} />
+        <.form
+          :if={@definition.block != "forum"}
+          for={%{}}
+          as={:plugin}
+          id="plugin-form"
+          phx-submit="plugin_submit"
+        >
           <.plugin_fields
             definition={@definition}
             params={@params}
@@ -210,8 +246,71 @@ defmodule IdejoWeb.PluginComponents do
             </button>
           </div>
         </.form>
+        <div :if={@definition.block == "forum"}>
+          <p :if={@form.error} id="plugin-error" role="alert" class="text-sm text-error mt-1">
+            {@form.error}
+          </p>
+          <div class="modal-action">
+            <button type="button" class="btn btn-sm btn-ghost" phx-click="hide_plugin">
+              {gettext("Cancel")}
+            </button>
+          </div>
+        </div>
       </div>
     </dialog>
+    """
+  end
+
+  attr :form, :map, required: true
+
+  # `forum`: the directory's search, then up to five forums to choose from. The logos stay
+  # out of the dialog: they are another server's, and only a chosen one is copied here.
+  defp forum_search(assigns) do
+    ~H"""
+    <form
+      id="plugin-forum-search"
+      phx-change="plugin_forum_search"
+      phx-submit="plugin_forum_search"
+      role="search"
+    >
+      <label for="plugin-forum-q" class="label mb-1">{gettext("Search the forums")}</label>
+      <input
+        id="plugin-forum-q"
+        name="q"
+        type="search"
+        value={@form.query}
+        phx-debounce="300"
+        autocomplete="off"
+        class="input input-sm w-full"
+        phx-mounted={JS.focus()}
+      />
+    </form>
+    <p :if={@form.searching?} class="text-sm mt-2" role="status">{gettext("Searching…")}</p>
+    <p
+      :if={!@form.searching? and @form.results == []}
+      id="plugin-forum-none"
+      class="text-sm mt-2"
+      role="status"
+    >
+      {gettext("No forum found.")}
+    </p>
+    <ul :if={@form.results != []} id="plugin-forum-results" class="plugin-forum-results">
+      <li :for={{forum, i} <- Enum.with_index(@form.results)}>
+        <span class="plugin-forum-text">
+          <span class="plugin-forum-name">{forum["name"]}</span>
+          <span class="plugin-forum-host">{URI.parse(forum["url"]).host}</span>
+        </span>
+        <button
+          type="button"
+          class="btn btn-primary btn-xs"
+          phx-click="plugin_forum_pick"
+          phx-value-index={i}
+          aria-label={gettext("Choose %{name}", name: forum["name"])}
+        >
+          {gettext("Choose")}
+        </button>
+      </li>
+    </ul>
     """
   end
 
@@ -319,6 +418,7 @@ defmodule IdejoWeb.PluginComponents do
   def error(:body),
     do: gettext("Write what the card shows, at most %{max} characters.", max: Plugins.max_card())
 
+  def error(:forum), do: gettext("Choose one of the forums found.")
   def error(:too_many), do: gettext("This message has as many plugin blocks as it can take.")
 
   def error(:rate_limited),
