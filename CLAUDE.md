@@ -1179,7 +1179,7 @@ The contract (M6; mark each item done here when its PR merges):
   new queries that way. Participants get in only through `Forum.get_readable_topic/2` and
   `get_readable_message/2` (TopicLive, `/m/{id}`, reports, reactions) and
   `Forum.can_post?/2` (`Conversations.can_post?/2`); everything else keeps
-  `get_viewable_topic/2`, which never returns one. `Conversations.start/2` (the user card's
+  `get_viewable_topic/2`, which never returns one. `Conversations.start/2` (the recipient or their id, from a client; the user card's
   "Private Message", `POST /u/{id}/message`, `ConversationController`) finds or makes the one
   conversation of a pair (an advisory lock), rate-limited as `:new_topic`; both participants
   follow it, so `Notifications` (whose `may_view/2` keeps participants) notifies the other.
