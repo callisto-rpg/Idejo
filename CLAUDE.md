@@ -1604,6 +1604,25 @@ The contract (M6; mark each item done here when its PR merges):
   badge. `Messages.edit_as_moderator/4` edits others' closed messages like an author's edit
   (versions kept). Each message has a "Moderate" form for moderators (`"moderate_message"`:
   close or delete, with a reason); every action is logged.
+- **Warnings** (MO-02 "warn"; steward request, 2026-11-09; `Idejo.Moderation.Warnings`,
+  `warnings`, `users.warning_pending`; extra review: DV-06): moderators of a message's
+  category (`can_moderate?`) see "Warn user" on others' messages not deleted
+  (`#message-{id}-warn`, `"open_warn"`), which opens `WarningComponents.warn_card/1`
+  (`#warn-dialog`): a reason (required, at most 1000), "View N previous warnings"
+  (`"warn_history"`, `Warnings.visible/2`: the categories they moderate, all for owners and
+  administrators; `count_visible/2`) and Warn (`Warnings.warn/3`; `warnable/2` refuses
+  oneself, owners and administrators, accounts not active, deleted messages and private
+  conversations). In one transaction: the row (with the message and its category), the
+  author's `warning_pending` set, `Moderation.record/4` `user.warn` against the author in that
+  category (`details.message_id`); then `{:warning, w}` on `"user:{id}"` and a push
+  (`Push.deliver/3`, tag `warning`, urgency high; no preference switch). `NotifierLive` (every
+  signed-in page) reads `Warnings.pending/1` at mount only while `warning_pending` is set (no
+  query otherwise, NF-04), and on `{:warning, w}` pushes a `"notification"` bubble (kind
+  `warning`, `.bubble.is-warning`) and shows `WarningComponents.warned_card/1`
+  (`#warning-card`, `role="alertdialog"`): open in the static render with a form to `POST
+  /warnings/seen` (`WarningController`, back through `ReturnBack`), once connected a modal
+  (`InlineCard`); "I understand" or closing it (`"warnings_seen"`) calls
+  `Warnings.acknowledge/1` (`seen_at`, flag cleared). Tests: `mo_02_warnings_test.exs`.
 - **Bans** (MO-02, `Accounts.ban_user/4`, `unban_user/3`; extra review: DV-06): only server
   moderators (`Access.server_moderator?/1`: owners, administrators, or a role allowing
   `:moderate` server-wide) ban, for 1/7/30/365 days or for good, from the "User actions"

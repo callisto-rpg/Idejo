@@ -54,6 +54,8 @@ defmodule Idejo.Accounts.User do
     # Whether other members may start a private conversation with this user, or write in one
     # (steward decision, 2026-10-27; Idejo.Conversations).
     field :accepts_private_messages, :boolean, default: true
+    # MO-02: a warning waits to be seen (Idejo.Moderation.Warnings), so pages ask only then.
+    field :warning_pending, :boolean, default: false
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
     field :invite_code, :string, virtual: true
 

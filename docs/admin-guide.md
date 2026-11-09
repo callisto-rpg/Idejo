@@ -454,6 +454,16 @@ good, and a reason. They are signed out at once and cannot sign in until the ban
 lifted with **Lift ban**, in the same menu. Their messages stay. Owners and administrators
 cannot be banned.
 
+**Warnings.** Moderators of a category see **Warn user** on others' messages there. It opens
+a card: write the reason (the member reads it), then **Warn**. **View N previous warnings**
+lists the earlier warnings of that person you may see (those given in the categories you
+moderate; owners and administrators see all), with who gave them and when. The member gets
+a notification at once, and a card with the reason over whatever page they are on; when
+they are away, the card waits for their next visit, on every page until they choose **I
+understand**. With push notifications on, their devices are told too. Warnings are in the
+moderation log as **Warned a member**. Owners, administrators, yourself and messages in
+private conversations cannot be warned.
+
 ## Backups and recovery
 
 These need the server's command line, not the admin panel; [the deployment

@@ -231,6 +231,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   Messages have no length limit; a long one shows a **Show all** button.
 - **New topic from this** turns a side question into its own topic, linked both ways: the
   new topic says where it continues from, and the message gets a **Continue topic** button.
+- **Warnings**: when a moderator warns you about one of your messages, a card shows their
+  reason, at once or on your next visit, until you choose **I understand**.
 - **Report** sends a message to the moderators, with a reason. Only they see that you
   reported it.
 - Each message's time is its **permanent link**.

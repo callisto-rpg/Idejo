@@ -16,6 +16,7 @@ defmodule IdejoWeb.ModerationHTML do
   def action_label("message.automessage"), do: gettext("Had the server post an automessage")
   def action_label("user.ban"), do: gettext("Banned an account")
   def action_label("user.unban"), do: gettext("Lifted a ban")
+  def action_label("user.warn"), do: gettext("Warned a member")
   def action_label("topic.lock"), do: gettext("Locked a topic")
   def action_label("topic.unlock"), do: gettext("Unlocked a topic")
   def action_label("topic.pin"), do: gettext("Pinned a topic")

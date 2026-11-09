@@ -203,6 +203,8 @@ defmodule IdejoWeb.Router do
     post "/t/:id/title", TopicTitleController, :update
     # The welcome card's and "Rules & Roles"' form: self-select roles, card seen.
     post "/welcome", WelcomeController, :update
+    # MO-02: the warned member's "I understand", without JavaScript.
+    post "/warnings/seen", WarningController, :seen
     post "/t/:id/follow", FollowController, :create
     # Followed by everyone, for administrators (steward decision, 2026-10-23).
     post "/t/:id/autofollow", TopicAutofollowController, :update
