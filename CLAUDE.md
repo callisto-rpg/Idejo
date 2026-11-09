@@ -928,7 +928,13 @@ The contract (M6; mark each item done here when its PR merges):
   message editor in place (`edit_as_moderator/4`). Otherwise (`version: :auto`), changing
   text already there keeps a version and sets `edited`; adding at the end does not.
   Edited messages, open or closed, show a "view earlier version" `<details>` (no JavaScript
-  needed) listing each version newest first with the span it was current. Each version's
+  needed) listing each version newest first with the span it was current, **to those who
+  moderate the category only** (`can_moderate?`; steward request, 2026-11-09, departing from
+  GM-11's "readers see it": MO-06), never to other readers or the author. A moderator's edit
+  of someone's message (`edit_as_moderator/4`) sets `messages.moderator_edited`, and every
+  reader sees "message edited by a moderator" (`#message-{id}-moderator-edited`,
+  `.message-moderator-edited`, small and faint like the versions tag) in `.message-meta`;
+  it stays when the author edits again. Each version's
   HTML is rendered once where messages are loaded or broadcast
   (`Messages.with_version_html/1`, the virtual `Version.body_html`), never by each viewer. `list_messages/1`
   preloads `:versions`.

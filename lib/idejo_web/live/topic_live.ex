@@ -3867,7 +3867,12 @@ defmodule IdejoWeb.TopicLive do
           </button>
         </div>
       </div>
-      <div :if={@message.edited or @message.scheduled} class="message-meta">
+      <%!-- Earlier versions only for those who moderate the category (steward request,
+           2026-11-09, MO-06); "message edited by a moderator" for every reader. --%>
+      <div
+        :if={(@message.edited and @can_moderate?) or @message.scheduled or @message.moderator_edited}
+        class="message-meta"
+      >
         <span
           :if={@message.scheduled}
           id={"message-#{@message.id}-scheduled"}
@@ -3875,7 +3880,14 @@ defmodule IdejoWeb.TopicLive do
         >
           {gettext("scheduled message")}
         </span>
-        <.versions :if={@message.edited} message={@message} />
+        <span
+          :if={@message.moderator_edited}
+          id={"message-#{@message.id}-moderator-edited"}
+          class="message-moderator-edited"
+        >
+          {gettext("message edited by a moderator")}
+        </span>
+        <.versions :if={@message.edited and @can_moderate?} message={@message} />
       </div>
       <%!-- TP-17: reactions under the message. --%>
       <ReactionComponents.reaction_bar

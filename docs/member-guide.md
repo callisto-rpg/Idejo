@@ -112,9 +112,10 @@ topic is locked, or when a moderator closes it.
   next to it (on a phone it always shows), change the title and **Save**. Its address
   changes with it; the old one still leads there. Locked and archived topics keep theirs.
 
-Once you change text you had already sent, a small **view earlier version** link appears
-under the message, so everyone can see what it said before. Adding to the end is not a
-change and keeps no history.
+Once you change text you had already sent, the text from before is kept. Only moderators
+see it, under a small **view earlier version** link. Adding to the end is not a change and
+keeps no history. When a moderator edits your message, everyone sees **message edited by a
+moderator** under it.
 
 ## Around a message
 

@@ -1059,11 +1059,18 @@ defmodule Idejo.Messages do
 
     with {:ok, _} <- if(edit?, do: keep_version(message, now), else: {:ok, nil}),
          {:ok, message} <- update_body(message, text, true, edit?),
+         {:ok, message} <- mark_moderator_edited(message),
          {:ok, _} <- Moderation.record(moderator, "message.edit", message, reason: reason),
          {:ok, _} <- activity(moderator, message, "update", topic_uri) do
       {:ok, message}
     end
   end
+
+  # Readers see "message edited by a moderator" from now on (steward request, 2026-11-09).
+  defp mark_moderator_edited(%Message{moderator_edited: true} = message), do: {:ok, message}
+
+  defp mark_moderator_edited(message),
+    do: message |> Ecto.Changeset.change(moderator_edited: true) |> Repo.update()
 
   @doc "Lists a message's earlier versions, oldest first (GM-11)."
   @spec list_versions(Message.t()) :: [Version.t()]

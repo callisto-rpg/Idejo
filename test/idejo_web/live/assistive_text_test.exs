@@ -185,13 +185,17 @@ defmodule IdejoWeb.AssistiveTextTest do
     {:ok, closed} = Messages.close(open)
     {:ok, _} = Messages.edit(author, closed, "Meet on Tuesday.")
 
-    {:ok, lv, _html} = watch(conn, topic)
+    # Shown to moderators only (steward request, 2026-11-09).
+    {:ok, lv, _html} = watch(log_in_user(build_conn(), user_with_role_fixture(:moderator)), topic)
 
     assert has_element?(
              lv,
              "#message-#{closed.id}-versions > summary",
              "view earlier version"
            )
+
+    {:ok, author_view, _html} = watch(conn, topic)
+    refute has_element?(author_view, "#message-#{closed.id}-versions")
 
     assert has_element?(lv, "#message-#{closed.id}-versions time[datetime]")
   end
