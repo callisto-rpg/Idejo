@@ -258,4 +258,24 @@ defmodule Idejo.MessagesRulesTest do
                Messages.save_edit(admin, first, "By a moderator", "Tidy")
     end
   end
+
+  # Plugins (steward request, 2026-11-09): a block with nothing written opens the message,
+  # empty; with one open, an empty `allow_empty:` commit changes nothing.
+  @tag req: "GM-01"
+  test "GM-01 allow_empty: opens an empty message, never empties one being written", %{
+    topic: topic
+  } do
+    author = user_fixture()
+    assert {:ok, nil} = Messages.commit(author, topic, "")
+
+    assert {:ok, %Message{state: "open", body_md: ""} = opened} =
+             Messages.commit(author, topic, "", allow_empty: true)
+
+    {:ok, written} = Messages.commit(author, topic, "Now with words")
+    assert written.id == opened.id
+
+    assert {:ok, same} = Messages.commit(author, topic, "", allow_empty: true)
+    assert same.id == opened.id
+    assert Repo.get!(Message, opened.id).body_md == "Now with words."
+  end
 end

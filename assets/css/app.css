@@ -2306,7 +2306,8 @@
   border-radius: var(--radius-box);
   background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
   &.is-video { aspect-ratio: 16 / 9; }
-  &.is-page { height: 26rem; }
+  /* The height its code asked for, when below this default (steward request, 2026-11-09). */
+  &.is-page:not([height]) { height: 26rem; }
 }
 .plugin-caption { font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.25rem; }
 .plugin-card-details > .message-body { margin-top: 0.5rem; }
