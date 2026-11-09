@@ -52,7 +52,10 @@ defmodule Idejo.Forum.TopicIcons do
   """
   @spec create(User.t(), Path.t(), map()) ::
           {:ok, TopicIcon.t()} | {:error, Ecto.Changeset.t() | atom()}
-  def create(%User{} = admin, path, attrs) do
+  def create(%User{} = admin, path, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_icon(admin, path, attrs) end)
+
+  defp as_admin_insert_icon(%User{} = admin, path, attrs) do
     changeset = change(attrs)
 
     with true <- changeset.valid? || {:error, %{changeset | action: :insert}},
@@ -76,7 +79,10 @@ defmodule Idejo.Forum.TopicIcons do
 
   @doc "Deletes an icon; its topics show none. Audited as `topic_icon.delete`."
   @spec delete(User.t(), TopicIcon.t()) :: {:ok, TopicIcon.t()} | {:error, Ecto.Changeset.t()}
-  def delete(%User{} = admin, %TopicIcon{} = icon) do
+  def delete(%User{} = admin, %TopicIcon{} = icon),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_delete_icon(admin, icon) end)
+
+  defp as_admin_delete_icon(%User{} = admin, %TopicIcon{} = icon) do
     Repo.transact(fn ->
       with {:ok, deleted} <- Repo.delete(icon),
            {:ok, _} <- Audit.record(admin, "topic_icon.delete", snapshot(icon), nil) do

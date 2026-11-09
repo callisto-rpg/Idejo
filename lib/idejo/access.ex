@@ -37,6 +37,17 @@ defmodule Idejo.Access do
   end
 
   @doc """
+  Runs `fun` when `user` is an owner or administrator (`administrator?/1`); else
+  `{:error, :forbidden}`. Every admin panel action goes through it in its context, so no
+  caller, the web pages or a later API, can act without the role (AD-02).
+  """
+  @spec as_administrator(User.t() | nil, (-> result)) :: result | {:error, :forbidden}
+        when result: term()
+  def as_administrator(user, fun) when is_function(fun, 0) do
+    if administrator?(user), do: fun.(), else: {:error, :forbidden}
+  end
+
+  @doc """
   Returns true when the user holds owner or administrator.
 
   Owners and administrators always have every right and can always use the admin panel
@@ -223,7 +234,10 @@ defmodule Idejo.Access do
   """
   @spec assign_role(User.t(), User.t(), Role.t()) ::
           {:ok, Role.t()} | {:error, :implicit_role | :owner_only}
-  def assign_role(%User{} = admin, %User{} = user, %Role{} = role) do
+  def assign_role(%User{} = admin, %User{} = user, %Role{} = role),
+    do: as_administrator(admin, fn -> as_admin_do_assign_role(admin, user, role) end)
+
+  defp as_admin_do_assign_role(%User{} = admin, %User{} = user, %Role{} = role) do
     Repo.transact(fn ->
       with :ok <- check_assignable(admin, role), do: insert_assignment(admin, user, role)
     end)
@@ -238,7 +252,10 @@ defmodule Idejo.Access do
   @spec unassign_role(User.t(), User.t(), Role.t()) ::
           {:ok, Role.t()}
           | {:error, :implicit_role | :owner_only | :last_owner | :own_administrator}
-  def unassign_role(%User{} = admin, %User{} = user, %Role{} = role) do
+  def unassign_role(%User{} = admin, %User{} = user, %Role{} = role),
+    do: as_administrator(admin, fn -> as_admin_do_unassign_role(admin, user, role) end)
+
+  defp as_admin_do_unassign_role(%User{} = admin, %User{} = user, %Role{} = role) do
     Repo.transact(fn ->
       with :ok <- check_assignable(admin, role),
            :ok <- check_not_own_administrator(admin, user, role),
@@ -382,7 +399,10 @@ defmodule Idejo.Access do
   Creates a custom role, as `admin`, ranked just above guest. Audited as `role.create`.
   """
   @spec create_role(User.t(), map()) :: {:ok, Role.t()} | {:error, Ecto.Changeset.t()}
-  def create_role(%User{} = admin, attrs) do
+  def create_role(%User{} = admin, attrs),
+    do: as_administrator(admin, fn -> as_admin_insert_role(admin, attrs) end)
+
+  defp as_admin_insert_role(%User{} = admin, attrs) do
     Repo.transact(fn ->
       lock_roles()
       guest = built_in_role!(:guest)
@@ -400,7 +420,10 @@ defmodule Idejo.Access do
   `role.update` with the old and new values.
   """
   @spec update_role(User.t(), Role.t(), map()) :: {:ok, Role.t()} | {:error, Ecto.Changeset.t()}
-  def update_role(%User{} = admin, %Role{} = role, attrs) do
+  def update_role(%User{} = admin, %Role{} = role, attrs),
+    do: as_administrator(admin, fn -> as_admin_save_role(admin, role, attrs) end)
+
+  defp as_admin_save_role(%User{} = admin, %Role{} = role, attrs) do
     case Role.changeset(role, attrs) do
       %Ecto.Changeset{changes: changes} when changes == %{} ->
         {:ok, role}
@@ -429,7 +452,11 @@ defmodule Idejo.Access do
   """
   @spec move_role(User.t(), Role.t(), :up | :down) ::
           {:ok, [Role.t()]} | {:error, :fixed_rank}
-  def move_role(%User{} = admin, %Role{} = role, direction) when direction in [:up, :down] do
+  def move_role(%User{} = admin, %Role{} = role, direction) when direction in [:up, :down],
+    do: as_administrator(admin, fn -> as_admin_do_move_role(admin, role, direction) end)
+
+  defp as_admin_do_move_role(%User{} = admin, %Role{} = role, direction)
+       when direction in [:up, :down] do
     Repo.transact(fn ->
       lock_roles()
       roles = list_roles()
@@ -477,7 +504,10 @@ defmodule Idejo.Access do
   @spec delete_role(User.t(), Role.t()) :: {:ok, Role.t()} | {:error, :built_in}
   def delete_role(%User{}, %Role{built_in: true}), do: {:error, :built_in}
 
-  def delete_role(%User{} = admin, %Role{} = role) do
+  def delete_role(%User{} = admin, %Role{} = role),
+    do: as_administrator(admin, fn -> as_admin_remove_role(admin, role) end)
+
+  defp as_admin_remove_role(%User{} = admin, %Role{} = role) do
     Repo.transact(fn ->
       lock_roles()
 
@@ -779,6 +809,17 @@ defmodule Idejo.Access do
   def set_permission(%User{}, %Role{}, :server, _right, :deny), do: {:error, :no_server_deny}
 
   def set_permission(%User{} = admin, %Role{} = role, scope, right, effect)
+      when right in @rights and effect in [:allow, :deny, :unset],
+      do: as_administrator(admin, fn -> put_permission(admin, role, scope, right, effect) end)
+
+  @doc """
+  `set_permission/5` without asking whether `admin` is an administrator: only for a context
+  that sets rights itself on someone's behalf, as `Idejo.Forum.archive_category/1` hides the
+  Archive when a moderator archives the first topic. Never from a request.
+  """
+  @spec put_permission(User.t(), Role.t(), Category.t() | :server, atom(), atom()) ::
+          {:ok, :allow | :deny | :unset} | {:error, term()}
+  def put_permission(%User{} = admin, %Role{} = role, scope, right, effect)
       when right in @rights and effect in [:allow, :deny, :unset] do
     :ok = Idejo.Memo.forget()
 

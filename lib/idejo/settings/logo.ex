@@ -27,7 +27,10 @@ defmodule Idejo.Settings.Logo do
 
   @doc "Makes the image at `path` the forum's logo, as `admin`."
   @spec set(User.t(), Path.t()) :: {:ok, String.t()} | {:error, atom() | Ecto.Changeset.t()}
-  def set(%User{} = admin, path) do
+  def set(%User{} = admin, path),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_store(admin, path) end)
+
+  defp as_admin_store(%User{} = admin, path) do
     with {:ok, upload} <- Uploads.store_logo(admin, path) do
       replace(admin, Uploads.url(upload))
     end
@@ -35,7 +38,8 @@ defmodule Idejo.Settings.Logo do
 
   @doc "Goes back to Idejo's small logo, as `admin`."
   @spec remove(User.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
-  def remove(%User{} = admin), do: replace(admin, "")
+  def remove(%User{} = admin),
+    do: Idejo.Access.as_administrator(admin, fn -> replace(admin, "") end)
 
   defp replace(admin, new) do
     old = Settings.get(:brand_logo)

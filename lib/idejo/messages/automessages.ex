@@ -174,13 +174,19 @@ defmodule Idejo.Messages.Automessages do
   @spec create(User.t(), map(), Path.t() | nil) ::
           {:ok, Automessage.t()} | {:error, Changeset.t() | atom()}
   def create(%User{} = admin, attrs, picture \\ nil),
-    do: save(admin, %Automessage{}, attrs, picture, "automessage.create")
+    do:
+      Access.as_administrator(admin, fn ->
+        save(admin, %Automessage{}, attrs, picture, "automessage.create")
+      end)
 
   @doc "Changes an automessage's command, text or sender, as `admin`."
   @spec update(User.t(), Automessage.t(), map(), Path.t() | nil) ::
           {:ok, Automessage.t()} | {:error, Changeset.t() | atom()}
   def update(%User{} = admin, %Automessage{} = automessage, attrs, picture \\ nil),
-    do: save(admin, automessage, attrs, picture, "automessage.update")
+    do:
+      Access.as_administrator(admin, fn ->
+        save(admin, automessage, attrs, picture, "automessage.update")
+      end)
 
   defp save(admin, automessage, attrs, picture, action) do
     automessage = Repo.preload(automessage, :sender)
@@ -259,7 +265,10 @@ defmodule Idejo.Messages.Automessages do
 
   @doc "Deletes an automessage, as `admin`. Its sender account stays, with its messages."
   @spec delete(User.t(), Automessage.t()) :: {:ok, Automessage.t()} | {:error, term()}
-  def delete(%User{} = admin, %Automessage{} = automessage) do
+  def delete(%User{} = admin, %Automessage{} = automessage),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_remove(admin, automessage) end)
+
+  defp as_admin_remove(%User{} = admin, %Automessage{} = automessage) do
     automessage = Repo.preload(automessage, :sender)
 
     Repo.transact(fn ->

@@ -262,11 +262,18 @@ defmodule Idejo.Settings do
   @doc """
   Saves the settings that changed, as `admin`, with one `settings.update` audit entry
   holding the old and new values of the changed keys. Nothing is written when nothing
-  changed.
+  changed. `admin` must be an owner or administrator (`{:error, :forbidden}` otherwise);
+  `nil` is the setup itself (`Idejo.Setup`, before anyone has a role), never a request.
   """
-  @spec update_settings(User.t(), map()) ::
-          {:ok, %{key() => String.t() | integer() | boolean()}} | {:error, Ecto.Changeset.t()}
-  def update_settings(admin, attrs) when is_struct(admin, User) or is_nil(admin) do
+  @spec update_settings(User.t() | nil, map()) ::
+          {:ok, %{key() => String.t() | integer() | boolean()}}
+          | {:error, :forbidden | Ecto.Changeset.t()}
+  def update_settings(nil, attrs), do: save_settings(nil, attrs)
+
+  def update_settings(%User{} = admin, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> save_settings(admin, attrs) end)
+
+  defp save_settings(admin, attrs) do
     changeset = change_settings(attrs)
 
     with {:ok, new} <- apply_action(changeset, :update) do

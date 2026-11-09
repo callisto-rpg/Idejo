@@ -115,7 +115,10 @@ defmodule Idejo.Forum.Tags do
   `tag.create`.
   """
   @spec create_tag(User.t(), map()) :: {:ok, Tag.t()} | {:error, Ecto.Changeset.t()}
-  def create_tag(%User{} = admin, attrs) do
+  def create_tag(%User{} = admin, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_tag(admin, attrs) end)
+
+  defp as_admin_insert_tag(%User{} = admin, attrs) do
     attrs = Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
     attrs = Map.update(attrs, "category_id", nil, &if(&1 == "", do: nil, else: &1))
     slug = free_slug(Forum.slugify(attrs["name"] || "", "tag"))
@@ -150,7 +153,10 @@ defmodule Idejo.Forum.Tags do
 
   @doc "Renames a tag, as `admin`; its slug and category stay. Audited as `tag.update`."
   @spec update_tag(User.t(), Tag.t(), map()) :: {:ok, Tag.t()} | {:error, Ecto.Changeset.t()}
-  def update_tag(%User{} = admin, %Tag{} = tag, attrs) do
+  def update_tag(%User{} = admin, %Tag{} = tag, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_save_tag(admin, tag, attrs) end)
+
+  defp as_admin_save_tag(%User{} = admin, %Tag{} = tag, attrs) do
     case Tag.update_changeset(tag, attrs) do
       %Ecto.Changeset{changes: changes} when changes == %{} ->
         {:ok, tag}
@@ -172,7 +178,10 @@ defmodule Idejo.Forum.Tags do
   `tag.delete`, with how many topics carried it.
   """
   @spec delete_tag(User.t(), Tag.t()) :: {:ok, Tag.t()} | {:error, term()}
-  def delete_tag(%User{} = admin, %Tag{} = tag) do
+  def delete_tag(%User{} = admin, %Tag{} = tag),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_remove_tag(admin, tag) end)
+
+  defp as_admin_remove_tag(%User{} = admin, %Tag{} = tag) do
     Repo.transact(fn ->
       topics =
         Repo.aggregate(

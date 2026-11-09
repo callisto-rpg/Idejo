@@ -112,7 +112,10 @@ defmodule Idejo.Accounts.OIDCRegistry do
   (the registry's own message when it gave one).
   """
   @spec connect(User.t()) :: {:ok, String.t()} | {:error, String.t() | atom()}
-  def connect(%User{} = admin) do
+  def connect(%User{} = admin),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_do_connect(admin) end)
+
+  defp as_admin_do_connect(%User{} = admin) do
     with url when is_binary(url) <- registry_url() || {:error, :no_registry},
          nil <- Application.get_env(:idejo, :oidc) && {:error, :environment},
          {:ok, %{"registration" => registration, "proof" => proof}} <-
@@ -196,7 +199,10 @@ defmodule Idejo.Accounts.OIDCRegistry do
 
   @doc "Disconnects: sign-in with the provider stops here (links to it are kept)."
   @spec disconnect(User.t()) :: :ok
-  def disconnect(%User{} = admin) do
+  def disconnect(%User{} = admin),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_do_disconnect(admin) end)
+
+  defp as_admin_do_disconnect(%User{} = admin) do
     if connected?(), do: set_listing_remote(false)
 
     {:ok, _} =
@@ -265,7 +271,10 @@ defmodule Idejo.Accounts.OIDCRegistry do
 
   @doc "Asks to be listed in the directory (`listed?` true) or to leave it, as `admin`."
   @spec set_listed(User.t(), boolean()) :: {:ok, String.t()} | {:error, term()}
-  def set_listed(%User{} = admin, listed?) do
+  def set_listed(%User{} = admin, listed?),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_do_set_listed(admin, listed?) end)
+
+  defp as_admin_do_set_listed(%User{} = admin, listed?) do
     with true <- connected?() || {:error, :not_connected},
          {:ok, status} <- set_listing_remote(listed?) do
       Audit.record(admin, "oidc.listing", %{}, %{"listed" => listed?, "listing" => status})

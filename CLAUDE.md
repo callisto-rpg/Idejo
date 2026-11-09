@@ -1402,7 +1402,12 @@ The contract (M6; mark each item done here when its PR merges):
 - **Admin panel** (AD-02): LiveViews under `/admin` in `lib/idejo_web/live/admin/`, wrapped in
   `<Layouts.admin section={...}>`. The route needs `require_administrator` (plug) and the
   `live_session` hook `{IdejoWeb.UserAuth, :require_administrator}`; both use
-  `Idejo.Access.administrator?/1` (owner or administrator, verified). Server-wide settings live
+  `Idejo.Access.administrator?/1` (owner or administrator, verified). Every admin action's
+  context function checks it again itself, through `Access.as_administrator/2`
+  (`{:error, :forbidden}`; test/idejo/admin_rules_test.exs): a new one does the same.
+  `Settings.update_settings(nil, …)` is only the setup's; `Access.put_permission/5` only for a
+  context acting on someone's behalf (the Archive, made by a moderator's first archive).
+  Server-wide settings live
   in `Idejo.Settings`: declare each key with its default in `@definitions`.
 - **Page frame and look**: `Layouts.app` draws the header bar (server name, then where the
   reader is, `breadcrumb/1`: `#breadcrumb`, "› Category › Topic" from its `category=` and
