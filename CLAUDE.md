@@ -1882,7 +1882,24 @@ The contract (M6; mark each item done here when its PR merges):
   `audit_log` row (SP-06): call `Idejo.Audit.record(admin, "subject.action", before, after)`
   in the same transaction as the change, with `Audit.snapshot/2` of the fields that matter and
   never a secret. The table is append-only (database trigger).
-- Contexts expose plain functions returning `{:ok, _} | {:error, _}`; LiveViews stay thin.
+- **Rules live in contexts** (steward approval, 2026-11-09; AP-01 preparation): every action
+  a person can take is one context function that takes the acting user first and checks
+  everything itself (rights, state, ownership, settings, rate limits), safe with any id or
+  param from an untrusted client: it loads what it needs and refuses with a documented
+  `{:error, atom}` (or a tagged tuple such as `{:cooldown, until}`), never trusting that the
+  page only offered allowed actions. Showing or hiding a button stays in the web layer, but
+  the context refuses on its own too. Its side effects (notifications, follows, audit and
+  moderation log, broadcasts, push) belong to the action. Read functions take the viewer and
+  return only what they may see; one taking a `%Topic{}` or `%Message{}` the caller got from
+  a viewer-aware getter needs no second check (NF-01). The web layer never touches `Repo` or
+  Ecto queries and only maps results to words and markup (`gettext` stays there: contexts
+  return atoms, e.g. `Plugins.problem/0` worded by `PluginComponents.problem/1`). Actions
+  need a signed-in actor (`nil` raises), and actors come only from
+  `Accounts.get_user_by_session_token/1` or a later API token lookup, which never return a
+  banned or inactive account (`Accounts.may_sign_in/1`); admin actions also check the role
+  (`Access.as_administrator/2`). Guarded by `test/idejo/layering_test.exs` (no `Repo` in
+  `lib/idejo_web/`; no web reference in `lib/idejo/` but its listed exceptions, each with its
+  reason) and the context-level `*_rules_test.exs` and `refusals_test.exs`.
 - No new dependency without a licence check: MIT, BSD, Apache-2.0 or similar only (LI-06).
 
 ## Workflow
