@@ -889,7 +889,8 @@ The contract (M6; mark each item done here when its PR merges):
   `users.intro_hidden`), `Layouts.app` shows `#intro-card` over the page while
   `Accounts.intro_due?/1` (due, not hidden, `welcomed_at` set: a new member sees the welcome
   card first): Help's "Sending" (`IdejoWeb.HelpComponents.sending/1`, the one markup the Help
-  page uses too, ids by its `id`) and "The sidebar" (topics written in are followed and listed
+  page uses too, ids by its `id`; the card passes `brief`: Enter and Ctrl+Enter only, without
+  the intro line, Shift+Enter or the delay note, which stay on `/help`) and "The sidebar" (topics written in are followed and listed
   there, the × unfollows, a swipe right shows it on phones). A plain form to `POST /intro`
   (`IntroController`, back through `ReturnBack`): "Close" (`close_intro/2`, until the next
   sign-in) and "Close and hide this in the future" (`hide: true`, for good: stored with the

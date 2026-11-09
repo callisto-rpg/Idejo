@@ -4,8 +4,8 @@
 defmodule IdejoWeb.HelpComponents do
   @moduledoc """
   Parts of the Help page that show elsewhere too: "Sending", the keys that send, on `/help`
-  and in the getting-started card (`IdejoWeb.Layouts`; steward request, 2026-11-09), so the
-  two always say the same.
+  and, shortened (`brief`), in the getting-started card (`IdejoWeb.Layouts`; steward
+  requests, 2026-11-09).
   """
   use IdejoWeb, :html
 
@@ -13,12 +13,16 @@ defmodule IdejoWeb.HelpComponents do
   attr :heading, :string, values: ~w(h2 h3), default: "h2"
   attr :class, :string, default: nil
 
+  attr :brief, :boolean,
+    default: false,
+    doc: "the getting-started card's version: no intro line, no Shift+Enter, no delay note"
+
   @doc "The keys that send: Enter, Shift+Enter and Ctrl+Enter (or Enter three times)."
   def sending(assigns) do
     ~H"""
     <section id={@id} aria-labelledby={"#{@id}-title"} class={@class}>
       <.dynamic_tag tag_name={@heading} id={"#{@id}-title"}>{gettext("Sending")}</.dynamic_tag>
-      <p>
+      <p :if={!@brief}>
         {gettext(
           "What you send with Enter joins one growing message, live for everyone, until you start a new one."
         )}
@@ -32,7 +36,7 @@ defmodule IdejoWeb.HelpComponents do
             )}
           </dd>
         </div>
-        <div>
+        <div :if={!@brief}>
           <dt><kbd>Shift</kbd>+<kbd>Enter</kbd></dt>
           <dd>{gettext("A new line in the box. Nothing is sent.")}</dd>
         </div>
@@ -42,7 +46,8 @@ defmodule IdejoWeb.HelpComponents do
             {gettext("or")}
             <kbd>Enter</kbd> ×3
           </dt>
-          <dd>
+          <dd :if={@brief}>{gettext("Finishes your current message and starts a new one.")}</dd>
+          <dd :if={!@brief}>
             {gettext(
               "Finishes your current message and starts a new one. If nobody has replied to your message yet, there will be a longer delay before you are allowed to create a new message."
             )}
