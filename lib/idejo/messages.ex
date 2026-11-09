@@ -10,7 +10,7 @@ defmodule Idejo.Messages do
 
     * With no open message in the topic, Enter opens one (GM-01). Its window is fixed now:
       `closes_at = timer_from + window` (GM-03), `timer_from` when the author started typing
-      (`started_at:`, steward request 2026-11-09; else the first commit), never before
+      (`typing/2`, steward request 2026-11-09; else the first commit), never after
       `opened_at`.
     * With one open, Enter commits to it in place (GM-02), whatever the time: the window only
       limits when a new message may start (GM-03, GM-04).
@@ -110,6 +110,13 @@ defmodule Idejo.Messages do
     if Idejo.Plugins.active() == %{}, do: @shown, else: [:embeds | @shown]
   end
 
+  @doc """
+  The message with what a topic view shows of it loaded (`shown/0`). A message from
+  `broadcast/2` has it all loaded already, so this costs no query then (NF-01).
+  """
+  @spec with_shown(Message.t()) :: Message.t()
+  def with_shown(%Message{} = message), do: Repo.preload(message, shown())
+
   @doc "Returns the author's open message in the topic, or `nil` (GM-09: at most one)."
   @spec open_message(User.t(), Topic.t()) :: Message.t() | nil
   def open_message(%User{id: author_id}, %Topic{id: topic_id}) do
@@ -135,6 +142,9 @@ defmodule Idejo.Messages do
     * `:forwarded_from_id` - when this Enter opens a message, the message it forwards (steward
       decision, 2026-11-02): any message the author may read, from any topic, not deleted;
       like a reply, it may start a new message early.
+    * `:started_at` - for callers on the server only (tests, imports), never a client's
+      value: when the author started typing the message this Enter opens. Without it, the
+      time `typing/2` kept in the calling process, else now.
     * `:new` - `text` is a new message, written after "Reply" (steward decision,
       2026-10-24), not the open one: the open message closes first. Allowed when Ctrl+Enter
       would start a new message (`may_start_new?/2`) or, for a reply, at any time while the
@@ -160,11 +170,13 @@ defmodule Idejo.Messages do
     case result do
       # The open message closed for the new one: announced first, so viewers see it end.
       {:ok, {closed, message}} ->
+        typing_done(topic)
         after_commit(closed)
         after_commit(message)
         {:ok, message}
 
       {:ok, %Message{} = message} ->
+        typing_done(topic)
         after_commit(message)
         result
 
@@ -182,11 +194,13 @@ defmodule Idejo.Messages do
         {:ok, nil}
 
       open != nil and opts[:new] == true ->
-        start_over(author, topic, open, text, now, opts)
+        start_over(author, topic, open, text, now, quotes(author, topic, opts))
 
       # SP-05: and a new message counts towards the new messages a minute. A message closed
       # early by Ctrl+Enter holds the next back until its timers run out.
       open == nil ->
+        opts = quotes(author, topic, opts)
+
         with :ok <- not_held(author, topic, now, opts),
              :ok <- RateLimit.check(:new_message, author.id),
              do: open_new(author, topic, text, now, opts)
@@ -209,12 +223,29 @@ defmodule Idejo.Messages do
     end
   end
 
+  # What a new message quotes, as the author may: the message it replies to, of this topic and
+  # not deleted (TP-08), and the one it forwards (`forwarded_from/2`). Ids that lead nowhere
+  # are dropped, so they neither quote nor let the message start early (`early_reply?/1`).
+  defp quotes(author, topic, opts) do
+    opts
+    |> Keyword.put(:reply_to_id, reply_to(topic, opts[:reply_to_id]))
+    |> Keyword.put(:forwarded_from_id, forwarded_from(author, opts[:forwarded_from_id]))
+  end
+
   # Reply or Forward starts a new message at any time while `gm_early_reply` is on (steward
-  # decision, 2026-10-24).
+  # decision, 2026-10-24). The ids are those `quotes/3` kept.
   defp early_reply?(opts) do
     quoting? = Enum.any?([opts[:reply_to_id], opts[:forwarded_from_id]], &(&1 not in [nil, ""]))
-    quoting? and Settings.get(:gm_early_reply)
+    quoting? and early_reply_allowed?()
   end
+
+  @doc """
+  Whether a Reply or a Forward may start a new message while the timers still run: the
+  `gm_early_reply` setting, "Allow replies even if the timer is still running" (steward
+  decision, 2026-10-24).
+  """
+  @spec early_reply_allowed?() :: boolean()
+  def early_reply_allowed?, do: Settings.get(:gm_early_reply)
 
   defp not_held(author, topic, now, opts) do
     case held_until(author, topic, now) do
@@ -248,10 +279,80 @@ defmodule Idejo.Messages do
 
   # When Ctrl+Enter would have started a new message: the window's end, and while nobody
   # wrote below, the unanswered message time's.
-  defp start_new_time(message) do
-    if answered?(message),
-      do: message.closes_at,
-      else: Enum.max([message.closes_at, unanswered_until(message)], DateTime)
+  defp start_new_time(message),
+    do: start_new_at(message, answered?(message), unanswered_seconds())
+
+  @doc """
+  When Ctrl+Enter may complete `message` and start a new one (GM-05): the window's end
+  (`closes_at`), and while nobody wrote below it (`answered?` false), also the end of the
+  unanswered message time, `unanswered_seconds` after its timers started (`timer_start/1`).
+  The one formula: `may_start_new?/2` and `held_until/3` use it, and so does a topic view
+  with what it shows (no query, NF-01). A private conversation counts as answered: it has no
+  unanswered message time.
+  """
+  @spec start_new_at(Message.t(), boolean(), non_neg_integer()) :: DateTime.t()
+  def start_new_at(%Message{closes_at: closes_at}, true = _answered?, _unanswered_seconds),
+    do: closes_at
+
+  def start_new_at(%Message{} = message, false, unanswered_seconds),
+    do:
+      Enum.max(
+        [message.closes_at, DateTime.add(timer_start(message), unanswered_seconds, :second)],
+        DateTime
+      )
+
+  @doc """
+  Whether someone wrote below `message` among `messages`, in topic order: a message after it
+  that is not deleted. `messages` are what a view holds; the database's answer is the same
+  for every message loaded after it.
+  """
+  @spec answered_among?([Message.t()], Message.t()) :: boolean()
+  def answered_among?(messages, %Message{id: id}) do
+    messages
+    |> Enum.drop_while(&(&1.id != id))
+    |> Enum.drop(1)
+    |> Enum.any?(&is_nil(&1.deleted_at))
+  end
+
+  @doc """
+  The window a new message opens with in `topic`, in seconds (GM-15): the
+  `gm_window_seconds` setting, or none in a private conversation (steward decision,
+  2026-10-27: no slow mode there).
+  """
+  @spec window_seconds(Topic.t()) :: non_neg_integer()
+  def window_seconds(%Topic{private: true}), do: 0
+  def window_seconds(%Topic{}), do: Settings.get(:gm_window_seconds)
+
+  @doc """
+  Notes that the author, in the calling process (a topic view), started typing a new message
+  in `topic` (`true`), or emptied it before sending (`false`); steward request, 2026-11-09.
+  The time is the server's, kept in the caller's process: the next message opened in that
+  topic from this process starts its timers then (`commit/4`), so a client can never set it
+  back. Returns the time kept, the first keystroke's (typing again changes nothing), or nil.
+  """
+  @spec typing(Topic.t(), boolean()) :: DateTime.t() | nil
+  def typing(%Topic{id: topic_id}, true) do
+    case Process.get({__MODULE__, :typing, topic_id}) do
+      %DateTime{} = at ->
+        at
+
+      nil ->
+        at = DateTime.utc_now()
+        Process.put({__MODULE__, :typing, topic_id}, at)
+        at
+    end
+  end
+
+  def typing(%Topic{} = topic, false) do
+    typing_done(topic)
+    nil
+  end
+
+  defp typing_started(%Topic{id: topic_id}), do: Process.get({__MODULE__, :typing, topic_id})
+
+  defp typing_done(%Topic{id: topic_id}) do
+    Process.delete({__MODULE__, :typing, topic_id})
+    :ok
   end
 
   # The text as sent: line ends trimmed, and a `.` after text that ends without punctuation,
@@ -277,17 +378,17 @@ defmodule Idejo.Messages do
 
   defp open_new(author, topic, text, now, opts) do
     id = Federation.generate_id()
-    # No slow mode in a private conversation (steward decision, 2026-10-27): no window.
-    window = if topic.private, do: 0, else: Settings.get(:gm_window_seconds)
-    timer_from = timer_from(opts[:started_at], now)
+    window = window_seconds(topic)
+    timer_from = timer_from(opts[:started_at] || typing_started(topic), now)
 
     message = %Message{
       id: id,
       uri: Federation.uri(:message, id),
       topic_id: topic.id,
       author_id: author.id,
-      reply_to_id: reply_to(topic, opts[:reply_to_id]),
-      forwarded_from_id: forwarded_from(author, opts[:forwarded_from_id]),
+      # Checked already (`quotes/3`).
+      reply_to_id: opts[:reply_to_id],
+      forwarded_from_id: opts[:forwarded_from_id],
       state: "open",
       opened_at: now,
       timer_from: timer_from,
@@ -315,12 +416,15 @@ defmodule Idejo.Messages do
   defp timer_from(_started_at, now), do: now
 
   # Forward: a message the author may read (a topic they may view, or a private conversation
-  # of theirs), not deleted.
+  # of theirs), and may forward (`Forwards.may_forward?/2`: not deleted, their own only once
+  # closed).
   defp forwarded_from(_author, blank) when blank in [nil, ""], do: nil
 
   defp forwarded_from(author, id) do
-    case Forum.get_readable_message(author, id) do
-      %Message{id: id, deleted_at: nil} -> id
+    with %Message{id: id} = message <- Forum.get_readable_message(author, id),
+         true <- Forum.Forwards.may_forward?(author, message) do
+      id
+    else
       _ -> nil
     end
   end
@@ -329,8 +433,8 @@ defmodule Idejo.Messages do
 
   defp reply_to(topic, id) do
     case Forum.get_topic_message(topic, id) do
-      %Message{id: id} -> id
-      nil -> nil
+      %Message{id: id, deleted_at: nil} -> id
+      _ -> nil
     end
   end
 
@@ -403,9 +507,9 @@ defmodule Idejo.Messages do
   """
   @spec may_start_new?(Message.t(), DateTime.t()) :: boolean()
   def may_start_new?(%Message{} = message, now \\ DateTime.utc_now()) do
-    window_ended?(message, now) and
-      (DateTime.compare(now, unanswered_until(message)) != :lt or answered?(message) or
-         private_topic?(message))
+    # `start_new_at/3`, asking the database whether it was answered only when that matters.
+    not DateTime.before?(now, start_new_at(message, false, unanswered_seconds())) or
+      (window_ended?(message, now) and (answered?(message) or private_topic?(message)))
   end
 
   @doc "Whether the message opened with no window (a private conversation, or a 0 s window)."
@@ -547,6 +651,19 @@ defmodule Idejo.Messages do
     with {:ok, message} <- result, do: broadcast(message.topic_id, {:message, message})
     result
   end
+
+  @doc """
+  Saves an edit of a closed message made in the message editor: the author's own edit
+  (`edit/4`, GM-10), or someone else's message edited as a moderator of its category
+  (`edit_as_moderator/4`, MO-02, logged with the optional `reason`). Each refuses on its own.
+  """
+  @spec save_edit(User.t(), Message.t(), String.t(), String.t() | nil) ::
+          {:ok, Message.t()} | {:error, atom() | Ecto.Changeset.t()}
+  def save_edit(%User{id: id} = actor, %Message{author_id: id} = message, text, _reason),
+    do: edit(actor, message, text)
+
+  def save_edit(%User{} = actor, %Message{} = message, text, reason),
+    do: edit_as_moderator(actor, message, text, reason)
 
   @doc """
   Deletes a message, as its author (steward decision, 2026-10-23): asked for when an edit

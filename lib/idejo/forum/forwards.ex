@@ -46,6 +46,21 @@ defmodule Idejo.Forum.Forwards do
   def may_forward?(%User{}, %Message{}), do: true
 
   @doc """
+  The message `id` as a forward's source for `user` (`?forward=`): one they may read (a topic
+  they may view, or a private conversation of theirs), not deleted, with its author and
+  topic; else nil.
+  """
+  @spec source(User.t() | nil, term()) :: Message.t() | nil
+  def source(_user, id) when not is_binary(id), do: nil
+
+  def source(user, id) do
+    case Forum.get_readable_message(user, id) do
+      %Message{deleted_at: nil} = message -> Repo.preload(message, [:author, :topic])
+      _ -> nil
+    end
+  end
+
+  @doc """
   Where `user` may forward to: with an empty `query`, the topics and conversations they
   read last; else those whose title (a conversation: the other person's name or username)
   contains it. At most #{@limit}; `except` (the topic forwarded from) left out.

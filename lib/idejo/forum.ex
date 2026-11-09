@@ -1449,6 +1449,11 @@ defmodule Idejo.Forum do
 
   ## Topic Type (steward request, 2026-11-07)
 
+  @doc "The topic with its icon loaded when it is topical, for its opening message."
+  @spec with_icon(Topic.t()) :: Topic.t()
+  def with_icon(%Topic{topical: true} = topic), do: Repo.preload(topic, icon: :upload)
+  def with_icon(%Topic{} = topic), do: topic
+
   @doc """
   Changes a topical topic's icon (`nil` for none), as a moderator of its category. Logged
   (`topic.icon`, MO-03); the topic's viewers get `{:topic_updated, topic}`.
