@@ -1395,6 +1395,15 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  Whether `user` may start a topic from a message of `topic` ("New Topic", TP-09): never from
+  a private conversation, and only when they may start a topic in some category. Offering
+  it grants nothing: `create_topic/4` checks the source and the target again.
+  """
+  @spec can_fork?(User.t() | nil, Topic.t()) :: boolean()
+  def can_fork?(_user, %Topic{private: true}), do: false
+  def can_fork?(user, %Topic{}), do: list_startable_categories(user) != []
+
+  @doc """
   The categories where the user may start a topic (TP-01, TP-09), in order: they may view
   them and have the `:start` right; never the Archive.
   """

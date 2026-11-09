@@ -6,9 +6,12 @@ defmodule IdejoWeb.ComposerCommands do
   The composer's `!` commands (steward decision, 2026-10-23), in one place: the list the
   `Suggest` class shows after `!` (`for_composer/3`) and the Help page (`all/0`). A new
   command is added here, then handled in the `Composer` hook (`assets/js/composer.js`), and
-  in the `!tutorial-commands` default (`Idejo.Messages.Automessages.Defaults`).
+  in the `!tutorial-commands` default (`Idejo.Messages.Automessages.Defaults`). Which ones
+  exist and who may use them is `Idejo.Messages.Commands`; this module only words them.
   """
   use Gettext, backend: IdejoWeb.Gettext
+
+  alias Idejo.Messages.Commands
 
   @type command :: %{name: String.t(), label: String.t(), detail: String.t(), help: String.t()}
 
@@ -93,11 +96,12 @@ defmodule IdejoWeb.ComposerCommands do
           [Idejo.Plugins.Definition.t()]
         ) :: [map()]
   def for_composer(upload?, can_fork?, automessages \\ [], gifs? \\ false, plugins \\ []) do
+    # Which ones: `Idejo.Messages.Commands`, the rule any client asks.
+    offered = Commands.builtin_available(upload?, can_fork?, gifs?)
+
     own =
       for %{name: name} = command <- all(),
-          name != "image" or upload?,
-          name != "gif" or gifs?,
-          name != "new-topic" or can_fork?,
+          name in offered,
           do: Map.take(command, [:name, :label, :detail])
 
     auto =

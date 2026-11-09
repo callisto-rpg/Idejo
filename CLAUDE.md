@@ -702,8 +702,11 @@ The contract (M6; mark each item done here when its PR merges):
   dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours; `!poll` and `!spoiler`
   send what is new with `then: "poll"` / `"spoiler"` (or push `"open_poll"` / `"spoiler"`
   for the open message; with nothing open, `!poll` opens the dialog alone and `!spoiler`
-  asks for the message first). The commands are defined
-  once, in `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/2` filters them for the list).
+  asks for the message first). Which commands exist and who may use them is
+  `Idejo.Messages.Commands` (`builtin/0`; `builtin_available/3`; `available/2`, every
+  command a user may use in a topic, as any client asks it); their words are
+  `IdejoWeb.ComposerCommands` (`all/0`; `for_composer/5` words the list from the same
+  rule). Offering a command grants nothing: each one's function refuses on its own.
 - **GIFs** (steward decisions, 2026-11-03; `Idejo.Gifs`): `!gif` and the graphical
   composer's GIF button open `#gif-picker` (`IdejoWeb.GifComponents.gif_picker/1`, rendered
   by `TopicLive` for posters while on; `phx-update="ignore"`, the `GifPicker` hook,
@@ -785,7 +788,7 @@ The contract (M6; mark each item done here when its PR merges):
 - **Automessages** (steward decisions, 2026-11-01; `Idejo.Messages.Automessages`,
   `automessages`): **Admin → Automessages** (`Admin.AutomessagesLive`; audited
   `automessage.create|update|delete`) makes `!command`s (unique, ignoring case, never one of
-  `ComposerCommands.all/0`'s names: `Automessages.reserved/0`, a test keeps them equal), each
+  `ComposerCommands.all/0`'s names: `Automessages.reserved/0`, which is `Commands.builtin/0`), each
   a Markdown text (the posted message stores its HTML, FD-03), "Allow everyone to use this
   command" (`everyone`) and "Wait before it can be used again (minutes)"
   (`cooldown_minutes`, 0–10080: per topic, for everyone, from the latest message not
@@ -830,7 +833,10 @@ The contract (M6; mark each item done here when its PR merges):
   **Admin → Plugins** (`Admin.PluginsLive`): "Enabled" (off by default,
   `Plugins.set_enabled/3`), "Add role" (a dialog of roles, `set_roles/3`; owners and
   administrators always may), "Add custom plugin" (a `.json` upload, `install/2`, written as
-  `<command>.json`, off); audited `plugin.enable|disable|roles|install`. `Plugins.active/0`
+  `<command>.json`, off); audited `plugin.enable|disable|roles|install`. Why a file cannot
+  be used or installed is an error term (`Plugins.problem/0`, `Definition.problem/0`), never
+  a sentence: the page words it with `PluginComponents.problem/1`. `Plugins.attach/4` takes
+  the message or its id. `Plugins.active/0`
   (enabled, valid, file present) is cached in an ETS table for `:plugins_cache_ms` (5 s; 0
   in tests, which use `tmp/test_plugins` and are not async); `reload/0` after changes.
   `usable/3`: active plugins whose roles the user holds, where they may post.

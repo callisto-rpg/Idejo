@@ -41,6 +41,7 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.Messages
   alias Idejo.Messages.Automessage
   alias Idejo.Messages.Body
+  alias Idejo.Messages.Commands
   alias Idejo.Messages.Message
   alias Idejo.Messages.Polls
   alias Idejo.Messages.Scheduling
@@ -48,14 +49,11 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.RateLimit
   alias Idejo.Repo
 
-  # The composer's own commands (IdejoWeb.ComposerCommands.all/0), never an automessage's.
-  @reserved ~w(image gif forward new-topic poll schedule spoiler)
-
   @default_username "idejo"
 
   @doc "The composer's own command names, which automessages may not take."
   @spec reserved() :: [String.t()]
-  def reserved, do: @reserved
+  def reserved, do: Commands.builtin()
 
   @doc "The sender username a new automessage's form starts with."
   @spec default_username() :: String.t()
@@ -106,7 +104,7 @@ defmodule Idejo.Messages.Automessages do
     automessage
     |> with_username()
     |> Map.put(:poll_on, automessage.poll != nil)
-    |> Automessage.changeset(attrs, @reserved)
+    |> Automessage.changeset(attrs, reserved())
     |> put_poll(attrs)
   end
 
