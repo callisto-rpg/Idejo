@@ -98,7 +98,7 @@ msgstr ""
 msgid "Member"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4704
+#: lib/idejo_web/live/topic_live.ex:4710
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -372,9 +372,9 @@ msgstr ""
 #: lib/idejo_web/live/admin/stylesheet_live.ex:84
 #: lib/idejo_web/live/admin/tags_live.ex:132
 #: lib/idejo_web/live/topic_live.ex:3802
-#: lib/idejo_web/live/topic_live.ex:4504
-#: lib/idejo_web/live/topic_live.ex:4508
-#: lib/idejo_web/live/topic_live.ex:4524
+#: lib/idejo_web/live/topic_live.ex:4510
+#: lib/idejo_web/live/topic_live.ex:4514
+#: lib/idejo_web/live/topic_live.ex:4530
 #: lib/idejo_web/live/user_settings_live.ex:452
 #, elixir-autogen, elixir-format
 msgid "Save"
@@ -806,9 +806,9 @@ msgstr ""
 #: lib/idejo_web/live/admin/tags_live.ex:134
 #: lib/idejo_web/live/topic_live.ex:3463
 #: lib/idejo_web/live/topic_live.ex:3804
-#: lib/idejo_web/live/topic_live.ex:4188
-#: lib/idejo_web/live/topic_live.ex:4337
-#: lib/idejo_web/live/topic_live.ex:4812
+#: lib/idejo_web/live/topic_live.ex:4194
+#: lib/idejo_web/live/topic_live.ex:4343
+#: lib/idejo_web/live/topic_live.ex:4818
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -834,7 +834,7 @@ msgstr ""
 #: lib/idejo_web/live/admin/tags_live.ex:161
 #: lib/idejo_web/live/admin/topic_icons_live.ex:115
 #: lib/idejo_web/live/topic_live.ex:3478
-#: lib/idejo_web/live/topic_live.ex:3942
+#: lib/idejo_web/live/topic_live.ex:3944
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr ""
@@ -985,8 +985,8 @@ msgid "Deny"
 msgstr ""
 
 #: lib/idejo_web/live/admin/permissions_live.ex:81
-#: lib/idejo_web/live/topic_live.ex:4011
-#: lib/idejo_web/live/topic_live.ex:4042
+#: lib/idejo_web/live/topic_live.ex:4017
+#: lib/idejo_web/live/topic_live.ex:4048
 #, elixir-autogen, elixir-format
 msgid "Moderate"
 msgstr ""
@@ -1382,7 +1382,7 @@ msgstr ""
 msgid "Permalink to this message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4654
+#: lib/idejo_web/live/topic_live.ex:4660
 #, elixir-autogen, elixir-format
 msgid "Cancel reply"
 msgstr ""
@@ -1392,20 +1392,20 @@ msgstr ""
 msgid "In reply to %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3974
-#: lib/idejo_web/live/topic_live.ex:3982
+#: lib/idejo_web/live/topic_live.ex:3980
+#: lib/idejo_web/live/topic_live.ex:3988
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3972
-#: lib/idejo_web/live/topic_live.ex:3980
+#: lib/idejo_web/live/topic_live.ex:3978
+#: lib/idejo_web/live/topic_live.ex:3986
 #, elixir-autogen, elixir-format
 msgid "Reply to %{name}"
 msgstr ""
 
 #: lib/idejo_web/inline_replies.ex:36
-#: lib/idejo_web/live/topic_live.ex:4652
+#: lib/idejo_web/live/topic_live.ex:4658
 #, elixir-autogen, elixir-format
 msgid "Replying to %{name}:"
 msgstr ""
@@ -1433,7 +1433,7 @@ msgstr ""
 msgid "You can no longer view this topic."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4616
+#: lib/idejo_web/live/topic_live.ex:4622
 #, elixir-autogen, elixir-format
 msgid "Your message"
 msgstr ""
@@ -1449,7 +1449,7 @@ msgstr ""
 msgid "This message cannot be edited."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4115
+#: lib/idejo_web/live/topic_live.ex:4121
 #, elixir-autogen, elixir-format
 msgid "view earlier version"
 msgstr ""
@@ -1484,7 +1484,7 @@ msgstr ""
 msgid "(still being written)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4747
+#: lib/idejo_web/live/topic_live.ex:4753
 #, elixir-autogen, elixir-format
 msgid "Enter starts a new message."
 msgstr ""
@@ -1509,9 +1509,9 @@ msgstr ""
 msgid "Your message is complete."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4749
-#: lib/idejo_web/live/topic_live.ex:4756
-#: lib/idejo_web/live/topic_live.ex:4763
+#: lib/idejo_web/live/topic_live.ex:4755
+#: lib/idejo_web/live/topic_live.ex:4762
+#: lib/idejo_web/live/topic_live.ex:4769
 #, elixir-autogen, elixir-format
 msgid "Your message is open."
 msgstr ""
@@ -1589,7 +1589,7 @@ msgstr ""
 msgid "New topic from a message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4383
+#: lib/idejo_web/live/topic_live.ex:4389
 #, elixir-autogen, elixir-format
 msgid "New topic from this"
 msgstr ""
@@ -1604,7 +1604,7 @@ msgstr ""
 #: lib/idejo_web/components/message_moderation_components.ex:107
 #: lib/idejo_web/components/plugin_components.ex:190
 #: lib/idejo_web/components/reaction_components.ex:158
-#: lib/idejo_web/components/reaction_components.ex:303
+#: lib/idejo_web/components/reaction_components.ex:305
 #: lib/idejo_web/live/topic_live.ex:2816
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -1932,7 +1932,7 @@ msgstr ""
 msgid "Only the moderators see your report and your name."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3951
+#: lib/idejo_web/live/topic_live.ex:3955
 #, elixir-autogen, elixir-format
 msgid "Report"
 msgstr ""
@@ -2020,7 +2020,7 @@ msgstr ""
 
 #: lib/idejo_web/live/topic_live.ex:3427
 #: lib/idejo_web/live/topic_live.ex:3758
-#: lib/idejo_web/live/topic_live.ex:4255
+#: lib/idejo_web/live/topic_live.ex:4261
 #, elixir-autogen, elixir-format
 msgid "Message deleted by a moderator"
 msgid_plural "%{count} messages deleted by a moderator"
@@ -2279,7 +2279,7 @@ msgid_plural "%{count} mentions of you and replies to your messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/topic_live.ex:4625
+#: lib/idejo_web/live/topic_live.ex:4631
 #, elixir-autogen, elixir-format
 msgid "%{count} messages above have been appended"
 msgstr ""
@@ -2351,12 +2351,12 @@ msgstr ""
 msgid "%{name} mentioned you in %{topic}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4242
+#: lib/idejo_web/live/topic_live.ex:4248
 #, elixir-autogen, elixir-format
 msgid "%{name} message forwarded from"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4245
+#: lib/idejo_web/live/topic_live.ex:4251
 #, elixir-autogen, elixir-format
 msgid "%{name} message forwarded from a topic you cannot view"
 msgstr ""
@@ -2408,7 +2408,7 @@ msgstr ""
 
 #: lib/idejo/forum.ex:2394
 #: lib/idejo/forum.ex:2442
-#: lib/idejo_web/live/topic_live.ex:4258
+#: lib/idejo_web/live/topic_live.ex:4264
 #, elixir-autogen, elixir-format
 msgid "(spoiler)"
 msgstr ""
@@ -2469,7 +2469,7 @@ msgid_plural "%{count} later messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/topic_live.ex:4624
+#: lib/idejo_web/live/topic_live.ex:4630
 #, elixir-autogen, elixir-format
 msgid "1 message above has been appended"
 msgstr ""
@@ -2587,7 +2587,7 @@ msgstr ""
 msgid "A list: - or * at the start of each line."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4249
+#: lib/idejo_web/live/topic_live.ex:4255
 #, elixir-autogen, elixir-format
 msgid "A message forwarded from a topic you cannot view"
 msgstr ""
@@ -2647,14 +2647,14 @@ msgstr ""
 msgid "Active topics"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:317
+#: lib/idejo_web/components/reaction_components.ex:319
 #, elixir-autogen, elixir-format
 msgid "Activities"
 msgstr ""
 
 #: lib/idejo_web/components/gif_components.ex:32
-#: lib/idejo_web/live/topic_live.ex:4468
-#: lib/idejo_web/live/topic_live.ex:4469
+#: lib/idejo_web/live/topic_live.ex:4474
+#: lib/idejo_web/live/topic_live.ex:4475
 #, elixir-autogen, elixir-format
 msgid "Add a GIF"
 msgstr ""
@@ -2669,7 +2669,7 @@ msgstr ""
 msgid "Add a poll under your message"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:271
+#: lib/idejo_web/components/reaction_components.ex:273
 #, elixir-autogen, elixir-format
 msgid "Add a reaction"
 msgstr ""
@@ -2679,8 +2679,8 @@ msgstr ""
 msgid "Add an answer"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4456
-#: lib/idejo_web/live/topic_live.ex:4457
+#: lib/idejo_web/live/topic_live.ex:4462
+#: lib/idejo_web/live/topic_live.ex:4463
 #, elixir-autogen, elixir-format
 msgid "Add an image"
 msgstr ""
@@ -2770,7 +2770,7 @@ msgstr ""
 msgid "Animals"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:314
+#: lib/idejo_web/components/reaction_components.ex:316
 #, elixir-autogen, elixir-format
 msgid "Animals & Nature"
 msgstr ""
@@ -2902,7 +2902,7 @@ msgstr ""
 msgid "Board games"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4367
+#: lib/idejo_web/live/topic_live.ex:4373
 #, elixir-autogen, elixir-format
 msgid "Bold"
 msgstr ""
@@ -2928,7 +2928,7 @@ msgstr ""
 msgid "Breadcrumb"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4373
+#: lib/idejo_web/live/topic_live.ex:4379
 #, elixir-autogen, elixir-format
 msgid "Bulleted list"
 msgstr ""
@@ -2958,12 +2958,12 @@ msgstr ""
 msgid "Can tag roles beneath"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4674
+#: lib/idejo_web/live/topic_live.ex:4680
 #, elixir-autogen, elixir-format
 msgid "Cancel forward"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4807
+#: lib/idejo_web/live/topic_live.ex:4813
 #, elixir-autogen, elixir-format
 msgid "Cancel the message scheduled for %{time}"
 msgstr ""
@@ -3009,7 +3009,7 @@ msgstr ""
 msgid "Choose a thread to move the messages to."
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:272
+#: lib/idejo_web/components/reaction_components.ex:274
 #, elixir-autogen, elixir-format
 msgid "Choose an emoji"
 msgstr ""
@@ -3069,7 +3069,7 @@ msgstr ""
 msgid "Closes"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4371
+#: lib/idejo_web/live/topic_live.ex:4377
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""
@@ -3104,7 +3104,7 @@ msgstr ""
 msgid "Compact"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4439
+#: lib/idejo_web/live/topic_live.ex:4445
 #, elixir-autogen, elixir-format
 msgid "Composer"
 msgstr ""
@@ -3139,7 +3139,7 @@ msgstr ""
 msgid "Continue topic: %{title}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4689
+#: lib/idejo_web/live/topic_live.ex:4695
 #, elixir-autogen, elixir-format
 msgid "Continue typing to add to your message"
 msgstr ""
@@ -3184,21 +3184,21 @@ msgstr ""
 msgid "Ctrl+Enter to start new message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4757
+#: lib/idejo_web/live/topic_live.ex:4763
 #, elixir-autogen, elixir-format
 msgid "Ctrl+Enter, or Enter three times, starts a new message in %{count} second."
 msgid_plural "Ctrl+Enter, or Enter three times, starts a new message in %{count} seconds."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/topic_live.ex:4750
+#: lib/idejo_web/live/topic_live.ex:4756
 #, elixir-autogen, elixir-format
 msgid "Ctrl+Enter, or Enter three times, starts a new message once someone writes below it, or in %{count} minute."
 msgid_plural "Ctrl+Enter, or Enter three times, starts a new message once someone writes below it, or in %{count} minutes."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/topic_live.ex:4764
+#: lib/idejo_web/live/topic_live.ex:4770
 #, elixir-autogen, elixir-format
 msgid "Ctrl+Enter, or Enter three times, starts a new message."
 msgstr ""
@@ -3379,12 +3379,12 @@ msgstr ""
 msgid "Enter a number of hours above 0, at most %{max}."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4687
+#: lib/idejo_web/live/topic_live.ex:4693
 #, elixir-autogen, elixir-format
 msgid "Enter to send"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4707
+#: lib/idejo_web/live/topic_live.ex:4713
 #, elixir-autogen, elixir-format
 msgid "Enter: send · Shift+Enter: new line · Ctrl+Enter / Enter×3: New message"
 msgstr ""
@@ -3458,8 +3458,8 @@ msgstr ""
 msgid "Find a thread (title, or paste its link)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4304
 #: lib/idejo_web/live/topic_live.ex:4310
+#: lib/idejo_web/live/topic_live.ex:4316
 #, elixir-autogen, elixir-format
 msgid "Find a topic"
 msgstr ""
@@ -3474,7 +3474,7 @@ msgstr ""
 msgid "First unread"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:320
+#: lib/idejo_web/components/reaction_components.ex:322
 #, elixir-autogen, elixir-format
 msgid "Flags"
 msgstr ""
@@ -3499,7 +3499,7 @@ msgstr ""
 msgid "Food"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:315
+#: lib/idejo_web/components/reaction_components.ex:317
 #, elixir-autogen, elixir-format
 msgid "Food & Drink"
 msgstr ""
@@ -3509,18 +3509,18 @@ msgstr ""
 msgid "Formatting text"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3997
-#: lib/idejo_web/live/topic_live.ex:4380
+#: lib/idejo_web/live/topic_live.ex:4003
+#: lib/idejo_web/live/topic_live.ex:4386
 #, elixir-autogen, elixir-format
 msgid "Forward"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4299
+#: lib/idejo_web/live/topic_live.ex:4305
 #, elixir-autogen, elixir-format
 msgid "Forward message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3994
+#: lib/idejo_web/live/topic_live.ex:4000
 #, elixir-autogen, elixir-format
 msgid "Forward the message of %{name}"
 msgstr ""
@@ -3545,7 +3545,7 @@ msgstr ""
 msgid "GIF provider key"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4696
+#: lib/idejo_web/live/topic_live.ex:4702
 #, elixir-autogen, elixir-format
 msgid "GIF:"
 msgstr ""
@@ -3752,14 +3752,14 @@ msgstr ""
 msgid "Info boxes"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:273
-#: lib/idejo_web/live/topic_live.ex:4445
-#: lib/idejo_web/live/topic_live.ex:4446
+#: lib/idejo_web/components/reaction_components.ex:275
+#: lib/idejo_web/live/topic_live.ex:4451
+#: lib/idejo_web/live/topic_live.ex:4452
 #, elixir-autogen, elixir-format
 msgid "Insert an emoji"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4370
+#: lib/idejo_web/live/topic_live.ex:4376
 #, elixir-autogen, elixir-format
 msgid "Insert link"
 msgstr ""
@@ -3769,7 +3769,7 @@ msgstr ""
 msgid "Introductions"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4368
+#: lib/idejo_web/live/topic_live.ex:4374
 #, elixir-autogen, elixir-format
 msgid "Italic"
 msgstr ""
@@ -3892,7 +3892,7 @@ msgstr ""
 msgid "Loading GIFs…"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:294
+#: lib/idejo_web/components/reaction_components.ex:296
 #, elixir-autogen, elixir-format
 msgid "Loading emoji…"
 msgstr ""
@@ -3994,7 +3994,7 @@ msgstr ""
 
 #: lib/idejo_web/live/topic_live.ex:3434
 #: lib/idejo_web/live/topic_live.ex:3757
-#: lib/idejo_web/live/topic_live.ex:4254
+#: lib/idejo_web/live/topic_live.ex:4260
 #, elixir-autogen, elixir-format
 msgid "Message deleted by user"
 msgid_plural "%{count} messages deleted by user"
@@ -4006,12 +4006,12 @@ msgstr[1] ""
 msgid "Message deleted. Its reports are resolved."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4692
+#: lib/idejo_web/live/topic_live.ex:4698
 #, elixir-autogen, elixir-format
 msgid "Message delivered!"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4693
+#: lib/idejo_web/live/topic_live.ex:4699
 #, elixir-autogen, elixir-format
 msgid "Message now visible to all!"
 msgstr ""
@@ -4032,9 +4032,9 @@ msgid "Moderate the message by %{name}"
 msgstr ""
 
 #: lib/idejo_web/category_icon_names.ex:82
-#: lib/idejo_web/live/topic_live.ex:4427
-#: lib/idejo_web/live/topic_live.ex:4493
-#: lib/idejo_web/live/topic_live.ex:4494
+#: lib/idejo_web/live/topic_live.ex:4433
+#: lib/idejo_web/live/topic_live.ex:4499
+#: lib/idejo_web/live/topic_live.ex:4500
 #, elixir-autogen, elixir-format
 msgid "More"
 msgstr ""
@@ -4044,8 +4044,8 @@ msgstr ""
 msgid "More GIFs"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:222
-#: lib/idejo_web/components/reaction_components.ex:223
+#: lib/idejo_web/components/reaction_components.ex:224
+#: lib/idejo_web/components/reaction_components.ex:225
 #, elixir-autogen, elixir-format
 msgid "More emoji"
 msgstr ""
@@ -4129,7 +4129,7 @@ msgstr ""
 msgid "New info box"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4366
+#: lib/idejo_web/live/topic_live.ex:4372
 #, elixir-autogen, elixir-format
 msgid "New line"
 msgstr ""
@@ -4207,7 +4207,7 @@ msgstr ""
 msgid "No device takes notifications yet. Turn them on first."
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:295
+#: lib/idejo_web/components/reaction_components.ex:297
 #, elixir-autogen, elixir-format
 msgid "No emoji by that name."
 msgstr ""
@@ -4252,7 +4252,7 @@ msgstr ""
 msgid "No thread found."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4333
+#: lib/idejo_web/live/topic_live.ex:4339
 #, elixir-autogen, elixir-format
 msgid "No topic you may write in matches."
 msgstr ""
@@ -4322,7 +4322,7 @@ msgstr ""
 msgid "Notifies everyone with that role who can read the topic. Which roles you may tag is set by the administrators."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4374
+#: lib/idejo_web/live/topic_live.ex:4380
 #, elixir-autogen, elixir-format
 msgid "Numbered list"
 msgstr ""
@@ -4333,7 +4333,7 @@ msgstr ""
 msgid "OK"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:318
+#: lib/idejo_web/components/reaction_components.ex:320
 #, elixir-autogen, elixir-format
 msgid "Objects"
 msgstr ""
@@ -4452,7 +4452,7 @@ msgstr ""
 msgid "Patience timer (unanswered message) (minutes)"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:313
+#: lib/idejo_web/components/reaction_components.ex:315
 #, elixir-autogen, elixir-format
 msgid "People & Body"
 msgstr ""
@@ -4515,7 +4515,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/automessages_live.ex:237
 #: lib/idejo_web/live/admin/automessages_live.ex:305
-#: lib/idejo_web/live/topic_live.ex:4381
+#: lib/idejo_web/live/topic_live.ex:4387
 #, elixir-autogen, elixir-format
 msgid "Poll"
 msgstr ""
@@ -4525,7 +4525,7 @@ msgstr ""
 msgid "Post a poll"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4167
+#: lib/idejo_web/live/topic_live.ex:4173
 #, elixir-autogen, elixir-format
 msgid "Post it in how many hours? (at most %{max})"
 msgstr ""
@@ -4577,7 +4577,7 @@ msgid "Private Message"
 msgstr ""
 
 #: lib/idejo_web/controllers/conversation_controller.ex:72
-#: lib/idejo_web/live/topic_live.ex:4326
+#: lib/idejo_web/live/topic_live.ex:4332
 #, elixir-autogen, elixir-format
 msgid "Private conversation"
 msgstr ""
@@ -4624,8 +4624,8 @@ msgstr ""
 msgid "Question"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:3960
-#: lib/idejo_web/live/topic_live.ex:4372
+#: lib/idejo_web/live/topic_live.ex:3966
+#: lib/idejo_web/live/topic_live.ex:4378
 #, elixir-autogen, elixir-format
 msgid "Quote"
 msgstr ""
@@ -4645,7 +4645,7 @@ msgstr ""
 msgid "Reactions"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4318
+#: lib/idejo_web/live/topic_live.ex:4324
 #, elixir-autogen, elixir-format
 msgid "Recent topics"
 msgstr ""
@@ -4722,7 +4722,7 @@ msgstr ""
 msgid "Reveal spoiler"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4513
+#: lib/idejo_web/live/topic_live.ex:4519
 #, elixir-autogen, elixir-format
 msgid "Right-click, double-click, long-press or the menu key for more."
 msgstr ""
@@ -4760,13 +4760,13 @@ msgstr ""
 msgid "Runs a command, listed below. What you typed for it leaves the box."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4527
+#: lib/idejo_web/live/topic_live.ex:4533
 #, elixir-autogen, elixir-format
 msgid "Save & new line"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4401
-#: lib/idejo_web/live/topic_live.ex:4531
+#: lib/idejo_web/live/topic_live.ex:4407
+#: lib/idejo_web/live/topic_live.ex:4537
 #, elixir-autogen, elixir-format
 msgid "Save and end the edit"
 msgstr ""
@@ -4811,18 +4811,18 @@ msgstr ""
 msgid "Save writing preferences"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4186
-#: lib/idejo_web/live/topic_live.ex:4382
+#: lib/idejo_web/live/topic_live.ex:4192
+#: lib/idejo_web/live/topic_live.ex:4388
 #, elixir-autogen, elixir-format
 msgid "Schedule"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4162
+#: lib/idejo_web/live/topic_live.ex:4168
 #, elixir-autogen, elixir-format
 msgid "Schedule this message"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4791
+#: lib/idejo_web/live/topic_live.ex:4797
 #, elixir-autogen, elixir-format
 msgid "Scheduled"
 msgstr ""
@@ -4837,8 +4837,8 @@ msgstr ""
 msgid "Search GIFs"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:286
-#: lib/idejo_web/components/reaction_components.ex:290
+#: lib/idejo_web/components/reaction_components.ex:288
+#: lib/idejo_web/components/reaction_components.ex:292
 #, elixir-autogen, elixir-format
 msgid "Search emoji"
 msgstr ""
@@ -4873,20 +4873,20 @@ msgstr ""
 msgid "Select to be moved"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4504
-#: lib/idejo_web/live/topic_live.ex:4508
-#: lib/idejo_web/live/topic_live.ex:4524
+#: lib/idejo_web/live/topic_live.ex:4510
+#: lib/idejo_web/live/topic_live.ex:4514
+#: lib/idejo_web/live/topic_live.ex:4530
 #, elixir-autogen, elixir-format
 msgid "Send"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4527
+#: lib/idejo_web/live/topic_live.ex:4533
 #, elixir-autogen, elixir-format
 msgid "Send & new line"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4400
-#: lib/idejo_web/live/topic_live.ex:4532
+#: lib/idejo_web/live/topic_live.ex:4406
+#: lib/idejo_web/live/topic_live.ex:4538
 #, elixir-autogen, elixir-format
 msgid "Send & start new message"
 msgstr ""
@@ -4896,7 +4896,7 @@ msgstr ""
 msgid "Send me a notification for:"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4520
+#: lib/idejo_web/live/topic_live.ex:4526
 #, elixir-autogen, elixir-format
 msgid "Send options"
 msgstr ""
@@ -4946,7 +4946,7 @@ msgstr ""
 msgid "Sends what you wrote. Keep typing and press Enter again: it joins the same message."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4688
+#: lib/idejo_web/live/topic_live.ex:4694
 #, elixir-autogen, elixir-format
 msgid "Sent!"
 msgstr ""
@@ -4961,7 +4961,7 @@ msgstr ""
 msgid "Show all tutorial bubbles"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4278
+#: lib/idejo_web/live/topic_live.ex:4284
 #, elixir-autogen, elixir-format
 msgid "Show full message"
 msgstr ""
@@ -5082,7 +5082,7 @@ msgstr ""
 msgid "Small text, greyed out: at the start of a line, with a space after the #."
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:312
+#: lib/idejo_web/components/reaction_components.ex:314
 #, elixir-autogen, elixir-format
 msgid "Smileys & Emotion"
 msgstr ""
@@ -5097,7 +5097,7 @@ msgstr ""
 msgid "Space"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4379
+#: lib/idejo_web/live/topic_live.ex:4385
 #, elixir-autogen, elixir-format
 msgid "Spoiler"
 msgstr ""
@@ -5138,7 +5138,7 @@ msgstr ""
 msgid "Stop these emails"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4369
+#: lib/idejo_web/live/topic_live.ex:4375
 #, elixir-autogen, elixir-format
 msgid "Strikethrough"
 msgstr ""
@@ -5180,7 +5180,7 @@ msgstr ""
 msgid "Swimming"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:319
+#: lib/idejo_web/components/reaction_components.ex:321
 #, elixir-autogen, elixir-format
 msgid "Symbols"
 msgstr ""
@@ -5267,9 +5267,9 @@ msgstr ""
 msgid "Text (Markdown)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4408
-#: lib/idejo_web/live/topic_live.ex:4480
-#: lib/idejo_web/live/topic_live.ex:4481
+#: lib/idejo_web/live/topic_live.ex:4414
+#: lib/idejo_web/live/topic_live.ex:4486
+#: lib/idejo_web/live/topic_live.ex:4487
 #, elixir-autogen, elixir-format
 msgid "Text formatting"
 msgstr ""
@@ -5309,7 +5309,7 @@ msgstr ""
 msgid "The category doesn't exist, was deleted, or you do not have permission to view it."
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:297
+#: lib/idejo_web/components/reaction_components.ex:299
 #, elixir-autogen, elixir-format
 msgid "The emoji could not be loaded. Close this and try again."
 msgstr ""
@@ -5416,7 +5416,7 @@ msgstr ""
 msgid "This image could not be added. Try a smaller one."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4743
+#: lib/idejo_web/live/topic_live.ex:4749
 #, elixir-autogen, elixir-format
 msgid "This is a new message. Enter sends it once your open message's timer has ended."
 msgstr ""
@@ -5447,7 +5447,7 @@ msgstr ""
 msgid "This poll has closed."
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:311
+#: lib/idejo_web/components/reaction_components.ex:313
 #, elixir-autogen, elixir-format
 msgid "This server"
 msgstr ""
@@ -5554,7 +5554,7 @@ msgstr ""
 msgid "Topics carrying any of these tags"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4318
+#: lib/idejo_web/live/topic_live.ex:4324
 #, elixir-autogen, elixir-format
 msgid "Topics found"
 msgstr ""
@@ -5579,7 +5579,7 @@ msgstr ""
 msgid "Travel"
 msgstr ""
 
-#: lib/idejo_web/components/reaction_components.ex:316
+#: lib/idejo_web/components/reaction_components.ex:318
 #, elixir-autogen, elixir-format
 msgid "Travel & Places"
 msgstr ""
@@ -5793,7 +5793,7 @@ msgstr ""
 msgid "Yes, delete this topic and all its messages for good"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4739
+#: lib/idejo_web/live/topic_live.ex:4745
 #, elixir-autogen, elixir-format
 msgid "You are editing your message. Enter saves it; Ctrl+Enter, or Enter three times, saves it and ends the edit."
 msgstr ""
@@ -5931,7 +5931,7 @@ msgstr ""
 msgid "[Enter] to send always works."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4232
+#: lib/idejo_web/live/topic_live.ex:4238
 #, elixir-autogen, elixir-format
 msgid "a private conversation"
 msgstr ""
@@ -5992,7 +5992,7 @@ msgid "highlighted"
 msgstr ""
 
 #: lib/idejo_web/components/topic_components.ex:379
-#: lib/idejo_web/live/topic_live.ex:4695
+#: lib/idejo_web/live/topic_live.ex:4701
 #, elixir-autogen, elixir-format
 msgid "image:"
 msgstr ""
@@ -6064,8 +6064,8 @@ msgstr ""
 msgid "second"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4642
-#: lib/idejo_web/live/topic_live.ex:4645
+#: lib/idejo_web/live/topic_live.ex:4648
+#: lib/idejo_web/live/topic_live.ex:4651
 #, elixir-autogen, elixir-format
 msgid "sent"
 msgstr ""
@@ -6075,7 +6075,7 @@ msgstr ""
 msgid "sent & committed"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4643
+#: lib/idejo_web/live/topic_live.ex:4649
 #, elixir-autogen, elixir-format
 msgid "sent, appends unsent"
 msgstr ""
@@ -6121,7 +6121,7 @@ msgstr ""
 msgid "two"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4641
+#: lib/idejo_web/live/topic_live.ex:4647
 #, elixir-autogen, elixir-format
 msgid "unsent"
 msgstr ""
@@ -6521,7 +6521,7 @@ msgid "Administrators have not added any topic icons yet."
 msgstr ""
 
 #: lib/idejo_web/live/new_topic_live.ex:326
-#: lib/idejo_web/live/topic_live.ex:4022
+#: lib/idejo_web/live/topic_live.ex:4028
 #, elixir-autogen, elixir-format
 msgid "Change icon"
 msgstr ""
@@ -6632,7 +6632,7 @@ msgid "Made a topic topical"
 msgstr ""
 
 #: lib/idejo_web/live/topic_live.ex:2843
-#: lib/idejo_web/live/topic_live.ex:4031
+#: lib/idejo_web/live/topic_live.ex:4037
 #, elixir-autogen, elixir-format
 msgid "Make topical"
 msgstr ""
@@ -7083,7 +7083,7 @@ msgstr ""
 msgid "Warn %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4054
+#: lib/idejo_web/live/topic_live.ex:4060
 #, elixir-autogen, elixir-format
 msgid "Warn user"
 msgstr ""
@@ -7128,12 +7128,12 @@ msgstr ""
 msgid "Message sent. You can start a new one when the line is full."
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4402
+#: lib/idejo_web/live/topic_live.ex:4408
 #, elixir-autogen, elixir-format
 msgid "Send & finish (the next message waits for the line)"
 msgstr ""
 
-#: lib/idejo_web/live/topic_live.ex:4005
+#: lib/idejo_web/live/topic_live.ex:4011
 #, elixir-autogen, elixir-format
 msgid "New Topic"
 msgstr ""

@@ -7,6 +7,13 @@
 // A group's button opens its menu (`data-open`, `aria-expanded`); a click outside, Escape or
 // choosing an action closes it. Measured again when the row's width changes or the
 // LiveView patches it. Without scripts nothing collapses: the row wraps as before.
+//
+// The pill of a touch screen (assets/js/message_actions.js, "Show message controls on mobile"
+// off) must hold on one line, whatever the width (steward request, 2026-11-09): when it still
+// overflows once collapsed, `data-compact="actions"` shows React, Edit, Delete and Report as
+// their icons (their words stay for screen readers), then `data-compact="all"` the group
+// buttons too. A group's menu opens under the pill, kept inside the screen (`data-align`).
+// The row in place (that setting on, or a screen that points) is left as it was.
 
 const rows = new Set()
 let pending = false
@@ -23,12 +30,35 @@ const wraps = row => {
   return items.some(el => Math.abs(el.offsetTop - top) > 2)
 }
 
+// The touch screens' pill: the only place the row is taken out of the flow.
+const isPill = row => getComputedStyle(row).position === "absolute"
+
+const overflows = row => row.scrollWidth > row.clientWidth + 1
+
 const measure = row => {
   if (!row.isConnected) return
   // A group left open keeps the row as it is until it closes.
   if (row.querySelector(".message-action-group[data-open]")) return
   row.removeAttribute("data-collapsed")
-  if (row.offsetParent !== null && wraps(row)) row.setAttribute("data-collapsed", "")
+  row.removeAttribute("data-compact")
+  if (row.offsetParent === null || !wraps(row)) return
+  row.setAttribute("data-collapsed", "")
+  if (!isPill(row)) return
+  for (const stage of ["actions", "all"]) {
+    if (!overflows(row)) return
+    row.setAttribute("data-compact", stage)
+  }
+}
+
+// In the pill, a menu that would leave the screen on the right opens leftwards from its
+// button's right edge instead.
+const align = group => {
+  group.removeAttribute("data-align")
+  const row = group.closest(".message-actions")
+  if (!row || !isPill(row)) return
+  const items = group.querySelector(".message-action-group-items")
+  if (items && items.getBoundingClientRect().right > document.documentElement.clientWidth - 8)
+    group.setAttribute("data-align", "end")
 }
 
 const measureAll = () => {
@@ -47,6 +77,7 @@ const resizes = typeof ResizeObserver === "function" ? new ResizeObserver(schedu
 const closeGroup = (group, focus = false) => {
   if (!group?.hasAttribute("data-open")) return
   group.removeAttribute("data-open")
+  group.removeAttribute("data-align")
   const toggle = group.querySelector(".message-action-group-toggle")
   toggle.setAttribute("aria-expanded", "false")
   if (focus) toggle.focus()
@@ -62,6 +93,7 @@ document.addEventListener("click", e => {
     openGroups().forEach(g => closeGroup(g))
     if (opening) {
       group.setAttribute("data-open", "")
+      align(group)
       toggle.setAttribute("aria-expanded", "true")
       group.querySelector(".message-action-group-items")?.querySelector("a, button")?.focus()
     }
