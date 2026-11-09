@@ -58,12 +58,10 @@ defmodule IdejoWeb.HelpTest do
     assert text.("h1") == "Help"
     sending = text.("#help-send dt")
     for key <- ["Enter", "Shift", "Ctrl"], do: assert(sending =~ key)
-    assert text.("#help-send") =~ "Enter three times"
-    # The window is this server's (15 s by default).
-    assert text.("#help-send") =~ "Before 15 seconds after you started typing it"
-    # And the unanswered message time (10 minutes by default).
+    assert sending =~ "×3"
+    # Steward request, 2026-11-09: Ctrl+Enter explained in words, without the timers.
     assert text.("#help-send") =~
-             "the next one waits until 10 minutes after you started typing it"
+             "Finishes your current message and starts a new one. If nobody has replied to your message yet, there will be a longer delay before you are allowed to create a new message."
 
     signs = text.("#help-signs dt")
     for sign <- ["@", "+", "#", "/", "$", "!"], do: assert(signs =~ sign)
