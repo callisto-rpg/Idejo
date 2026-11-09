@@ -92,6 +92,27 @@ defmodule Idejo.Reading do
     |> Repo.one()
   end
 
+  @doc """
+  Acts on the topic `id` as `user` may: `:follow` (`follow/2`), `:unfollow`, `:mute` or
+  `:mark_unread`, for a topic id from a client (the topic page's forms, the topic menu, a
+  topic's card). Only a topic they may view (`Idejo.Forum.get_viewable_topic/2`; never a
+  private conversation); any other is `{:error, :not_found}`, the same answer whether it
+  exists or not (AC-05).
+  """
+  @spec act_on_topic(User.t(), :follow | :unfollow | :mute | :mark_unread, term()) ::
+          {:ok, Topic.t()} | {:error, :not_found}
+  def act_on_topic(%User{} = user, action, id)
+      when action in [:follow, :unfollow, :mute, :mark_unread] do
+    case is_binary(id) && Idejo.Forum.get_viewable_topic(user, id) do
+      %Topic{} = topic ->
+        :ok = apply(__MODULE__, action, [user, topic])
+        {:ok, topic}
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
   @doc "Follows the topic (TP-13), also after an earlier unfollow; it is no longer muted."
   @spec follow(User.t(), Topic.t()) :: :ok
   def follow(%User{} = user, %Topic{} = topic) do
