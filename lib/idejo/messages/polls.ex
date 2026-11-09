@@ -82,13 +82,28 @@ defmodule Idejo.Messages.Polls do
   @doc """
   Adds a poll under the user's message. `attrs` as for `validate/1`.
 
+  `message` may be its id, from a client: an unknown one is `:forbidden` too.
+
   Refused with `:forbidden` for someone else's or a deleted message, or without the post
   right; `:taken` when the message has a poll; `:question`, `:options` (fewer than two, or
   more than #{@max_options}) or `:hours` for what is missing or wrong.
   """
-  @spec create(User.t(), Message.t(), map()) ::
+  @spec create(User.t(), Message.t() | Ecto.UUID.t(), map()) ::
           {:ok, summary()}
           | {:error, :forbidden | :taken | :question | :options | :hours | :rate_limited}
+  def create(%User{} = user, message_id, attrs) when is_binary(message_id) do
+    case Ecto.UUID.cast(message_id) do
+      {:ok, id} ->
+        case Repo.get(Message, id) do
+          %Message{} = message -> create(user, message, attrs)
+          nil -> {:error, :forbidden}
+        end
+
+      :error ->
+        {:error, :forbidden}
+    end
+  end
+
   def create(%User{} = user, %Message{} = message, attrs) do
     with :ok <- may_add?(user, message),
          {:ok, valid} <- validate(attrs),

@@ -167,7 +167,7 @@ defmodule IdejoWeb.TopicLive do
       topic ->
         # First subscribe, then load: a message posted in between arrives as an event.
         if connected?(socket), do: subscribe(topic, user)
-        topic = with_icon(topic)
+        topic = Forum.with_icon(topic)
 
         can_post? = Forum.can_post?(user, topic)
 
@@ -190,10 +190,10 @@ defmodule IdejoWeb.TopicLive do
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_seconds, Messages.unanswered_seconds())
          # The timers start when the author starts typing (steward request, 2026-11-09).
-         |> assign(:window_seconds, window_seconds(topic))
+         |> assign(:window_seconds, Messages.window_seconds(topic))
          |> assign(:typing_at, nil)
          |> put_quoted(can_post?, session)
-         |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
+         |> assign(early_reply?: Messages.early_reply_allowed?(), too_soon?: false)
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
          |> assign(:graphical?, user != nil and user.graphical_composer)
          |> assign(composing_edit: nil, edit_versioned?: false)
@@ -313,9 +313,9 @@ defmodule IdejoWeb.TopicLive do
          %Messages.Message{held: true, deleted_at: nil} = message <-
            assigns.messages |> Enum.filter(&(&1.author_id == viewer.id)) |> List.last(),
          ready_at =
-           start_new_at(
+           Messages.start_new_at(
              message,
-             answered?(assigns.messages, message),
+             Messages.answered_among?(assigns.messages, message),
              assigns.unanswered_seconds
            ),
          true <- DateTime.after?(ready_at, DateTime.utc_now()) do
@@ -1028,22 +1028,9 @@ defmodule IdejoWeb.TopicLive do
 
     assign(socket,
       reply_to: Forum.get_topic_message(topic, session["reply_to_id"]),
-      forward: forward_source(user(socket), session["forward_id"])
+      # A message the user may forward into this topic's composer (`?forward=`).
+      forward: Forum.Forwards.source(user(socket), session["forward_id"])
     )
-  end
-
-  # A message the user may forward into this topic's composer (`?forward=`): one they may
-  # read, not deleted.
-  defp forward_source(_user, id) when not is_binary(id), do: nil
-
-  defp forward_source(user, id) do
-    case Forum.get_readable_message(user, id) do
-      %Messages.Message{deleted_at: nil} = message ->
-        Repo.preload(message, [:author, :topic])
-
-      _ ->
-        nil
-    end
   end
 
   defp foreign_replies(socket, messages) do
@@ -1173,7 +1160,7 @@ defmodule IdejoWeb.TopicLive do
 
   defp info({:message, message}, socket) do
     # Loaded once by the broadcast (NF-01); this costs nothing then.
-    message = Repo.preload(message, Messages.shown())
+    message = Messages.with_shown(message)
     old = Enum.find(socket.assigns.messages, &(&1.id == message.id))
 
     cond do
@@ -1400,10 +1387,6 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  # Topic Type: a topical topic's icon, shown on its opening message.
-  defp with_icon(%Forum.Topic{topical: true} = topic), do: Repo.preload(topic, icon: :upload)
-  defp with_icon(topic), do: topic
-
   defp opened_text(socket, message) do
     if mine?(socket, message),
       do: gettext("You started a message."),
@@ -1557,10 +1540,8 @@ defmodule IdejoWeb.TopicLive do
     Polls.post(user(socket), topic, params, reply_to && reply_to.id)
   end
 
-  defp add_poll(socket, message_id, params) do
-    message = Repo.get(Messages.Message, message_id)
-    message && Polls.create(user(socket), message, params)
-  end
+  defp add_poll(socket, message_id, params),
+    do: Polls.create(user(socket), message_id, params)
 
   defp poll_error(:question), do: gettext("Write the question.")
   defp poll_error(:options), do: gettext("Give at least two answers.")
@@ -1605,7 +1586,7 @@ defmodule IdejoWeb.TopicLive do
       %{} = mine ->
         if connected?(socket) and
              DateTime.after?(
-               start_new_at(mine, answered?(messages, mine), seconds),
+               Messages.start_new_at(mine, Messages.answered_among?(messages, mine), seconds),
                DateTime.utc_now()
              ),
            do: assign(socket, :tick, Process.send_after(self(), :tick, 1000)),
@@ -1617,24 +1598,6 @@ defmodule IdejoWeb.TopicLive do
   end
 
   defp schedule_tick(socket), do: socket
-
-  # When Ctrl+Enter may start a new message (GM-05, `Idejo.Messages.may_start_new?/2`): once
-  # the window has ended and, while nobody wrote below it, once it is old enough (steward
-  # decision, 2026-10-23). Worked out from the messages shown, with no query (NF-01).
-  defp start_new_at(mine, true, _seconds), do: mine.closes_at
-
-  defp start_new_at(mine, false, seconds),
-    do: Enum.max([mine.closes_at, DateTime.add(Messages.timer_start(mine), seconds)], DateTime)
-
-  defp window_seconds(%{private: true}), do: 0
-  defp window_seconds(_topic), do: Idejo.Settings.get(:gm_window_seconds)
-
-  defp answered?(messages, mine) do
-    messages
-    |> Enum.drop_while(&(&1.id != mine.id))
-    |> Enum.drop(1)
-    |> Enum.any?(&is_nil(&1.deleted_at))
-  end
 
   # Messages keep their place; a new one goes in its own, the end but for events that came
   # out of order (GM-08: ordered by first commit).
@@ -1734,9 +1697,9 @@ defmodule IdejoWeb.TopicLive do
       break: params["break"] == true,
       reply_to_id: reply_to && reply_to.id,
       forwarded_from_id: socket.assigns.forward && socket.assigns.forward.id,
-      new: draft_over(socket.assigns) != nil,
-      # The patience timers start at the first keystroke (steward request, 2026-11-09).
-      started_at: socket.assigns.typing_at
+      # The patience timers start at the first keystroke (steward request, 2026-11-09):
+      # `Messages.typing/2` kept it in this process.
+      new: draft_over(socket.assigns) != nil
     ]
 
     then = params["then"]
@@ -1826,11 +1789,15 @@ defmodule IdejoWeb.TopicLive do
 
   # A new message's first keystroke, or its box emptied before sending (steward request,
   # 2026-11-09): the time is the server's, so it cannot be set back.
-  defp event("composer_typing", %{"typing" => true}, %{assigns: %{typing_at: nil}} = socket),
-    do: {:noreply, assign(socket, :typing_at, DateTime.utc_now())}
+  defp event(
+         "composer_typing",
+         %{"typing" => true},
+         %{assigns: %{typing_at: nil, can_post?: true}} = socket
+       ),
+       do: {:noreply, assign(socket, :typing_at, Messages.typing(socket.assigns.topic, true))}
 
-  defp event("composer_typing", %{"typing" => false}, socket),
-    do: {:noreply, assign(socket, :typing_at, nil)}
+  defp event("composer_typing", %{"typing" => false}, %{assigns: %{topic: %{} = topic}} = socket),
+    do: {:noreply, assign(socket, :typing_at, Messages.typing(topic, false))}
 
   defp event("composer_typing", _params, socket), do: {:noreply, socket}
 
@@ -2610,10 +2577,7 @@ defmodule IdejoWeb.TopicLive do
     user = user(socket)
 
     # The author edits (GM-10); a moderator edits someone else's message (MO-02), logged.
-    result =
-      if message.author_id == user.id,
-        do: Messages.edit(user, message, body),
-        else: Messages.edit_as_moderator(user, message, body, params["reason"])
+    result = Messages.save_edit(user, message, body, params["reason"])
 
     case result do
       # The edited message arrives like everyone else's view of it, as an event.
@@ -3623,7 +3587,7 @@ defmodule IdejoWeb.TopicLive do
   defp ready_at(_timer, _answered?, %{private?: true}), do: nil
 
   defp ready_at(timer, answered?, assigns),
-    do: start_new_at(timer, answered?, assigns.unanswered_seconds)
+    do: Messages.start_new_at(timer, answered?, assigns.unanswered_seconds)
 
   # Where the composer goes: in the author's open message, or after Reply a new message at
   # the end, the open one reading like the others (steward decision, 2026-10-24). `locked`:
@@ -3632,7 +3596,12 @@ defmodule IdejoWeb.TopicLive do
   defp composer_layout(assigns) do
     {mine, locked} = composer_place(assigns)
     timed = locked || mine
-    [mine: mine, locked: locked, answered?: timed != nil and answered?(assigns.messages, timed)]
+
+    [
+      mine: mine,
+      locked: locked,
+      answered?: timed != nil and Messages.answered_among?(assigns.messages, timed)
+    ]
   end
 
   # A new message replying to or forwarding another.
@@ -4635,7 +4604,7 @@ defmodule IdejoWeb.TopicLive do
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
           mine && !answered? &&
-            DateTime.diff(start_new_at(mine, false, assigns.unanswered_seconds), now),
+            DateTime.diff(Messages.start_new_at(mine, false, assigns.unanswered_seconds), now),
         # The line under the composer (steward decision, 2026-10-23) runs to this moment.
         timer: timer,
         ready_at: ready_at(timer, mine != nil and answered?, assigns)

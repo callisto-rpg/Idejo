@@ -99,8 +99,10 @@ decisions, 2026-10-23 and 2026-11-09), `Messages.unanswered_seconds/0`) holds Ct
 one, it closes only that long after `Messages.timer_start/1` (`timer_from`, else `opened_at`) (`Messages.may_start_new?/2`,
 `unanswered_until/1`; skipped only in private conversations, not for a 0 s window; read
 at each Ctrl+Enter, so a change applies to open messages too);
-until then Ctrl+Enter appends like Enter. `TopicLive` works it out from the messages shown
-for the composer's description (AX-03), with no query. Tests
+until then Ctrl+Enter appends like Enter. One formula, `Messages.start_new_at/3` (the open
+message, whether someone wrote below it, the unanswered seconds), used by `may_start_new?/2`
+and `held_until/3`, and by `TopicLive` with what it shows (`Messages.answered_among?/2`) for
+the composer's description (AX-03), with no query; never a copy of it in the web layer. Tests
 set `recover_open_messages: false` and call `Idejo.Messages.Recovery.run/0` themselves.
 
 ### Permissions
@@ -534,8 +536,8 @@ The contract (M6; mark each item done here when its PR merges):
 - **Ctrl+Enter at any time** (steward request, 2026-11-09): `Messages.append` closes a
   message on `break` before `may_start_new?/2` with `held: true` (`messages.held`). In
   `TopicLive`, `list_layout/1` finds the viewer's last message, held, whose timers still run
-  (`held/1`, from the messages shown, no query; not while editing, nor while quoting with
-  `early_reply?`): no composer, but `#composer-held` right after that message (the same
+  (`held/1`, from the messages shown with `Messages.start_new_at/3`, no query; not while
+  editing, nor while quoting with `Messages.early_reply_allowed?/0`): no composer, but `#composer-held` right after that message (the same
   `timer_line/1` as the composer's, `held?`: its hint says "...until the line is full", and
   "Message sent. You can start a new one when the line is full.") with the messages after it
   below; `schedule_held/2` wakes the view at `ready_at` (`:held_over`), when the composer
@@ -545,11 +547,13 @@ The contract (M6; mark each item done here when its PR merges):
 - **Timers from the first keystroke** (steward request, 2026-11-09): the `Composer` hook's
   `typingCheck()` pushes `"composer_typing"` (`typing` true when text appears in a box with
   nothing sent, not an edit; false when it is emptied; again after a reconnect), and
-  `TopicLive` keeps `typing_at` (the server's `DateTime.utc_now/0`, so a client cannot set it
-  back) until the commit, which passes it as `started_at:` to `Messages.commit/4` (used only
-  when a message opens). Before the first send the timer line runs for the draft
+  `TopicLive` calls `Messages.typing/2`, which keeps the first keystroke's time (the
+  server's clock, so a client cannot set it back) in the view's process until a commit
+  succeeds; `Messages.commit/4` reads it when a message opens there. `started_at:` is for
+  server-side callers only (tests), never a client's value. `TopicLive`'s `typing_at` is
+  that time, for display: before the first send the timer line runs for the draft
   (`draft_timer/1`: a `%Message{}` with `timer_from` and `closes_at` from `typing_at` and
-  `window_seconds`), `data-start` is `Messages.timer_start/1`.
+  `Messages.window_seconds/1`), `data-start` is `Messages.timer_start/1`.
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or
