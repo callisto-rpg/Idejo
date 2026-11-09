@@ -29,14 +29,12 @@ defmodule IdejoWeb.NewTopicLive do
   def mount(%{"id" => id} = params, _session, %{assigns: %{live_action: :fork}} = socket) do
     user = socket.assigns.current_scope.user
 
-    case Forum.get_viewable_message(user, id) do
-      # MO-02: a deleted message starts no topic.
-      result when is_nil(result) or result.deleted_at != nil ->
+    # MO-02: a deleted message starts no topic.
+    case Forum.get_fork_source(user, id) do
+      nil ->
         raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
 
       source ->
-        source = Idejo.Repo.preload(source, :author)
-
         case Forum.list_startable_categories(user) do
           [] ->
             {:ok,
@@ -211,8 +209,7 @@ defmodule IdejoWeb.NewTopicLive do
     user = socket.assigns.current_scope.user
     category = socket.assigns.category
 
-    can_topical? =
-      category.topic_type == "user" and Idejo.Access.can?(user, :moderate, category)
+    can_topical? = Forum.may_post_topical?(user, category)
 
     topical? = can_topical? and params["topical"] in ["true", true]
     assign(socket, can_topical?: can_topical?, icons: Forum.icons_for(category, topical?))

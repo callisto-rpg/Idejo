@@ -1235,37 +1235,37 @@ msgstr ""
 msgid "Your password, to confirm"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:343
+#: lib/idejo_web/live/new_topic_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "First message (Markdown)"
 msgstr ""
 
 #: lib/idejo_web/components/card_components.ex:103
 #: lib/idejo_web/controllers/category_html/show.html.heex:30
-#: lib/idejo_web/live/new_topic_live.ex:250
+#: lib/idejo_web/live/new_topic_live.ex:247
 #, elixir-autogen, elixir-format
 msgid "New topic"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:76
+#: lib/idejo_web/live/new_topic_live.ex:74
 #, elixir-autogen, elixir-format
 msgid "New topic in %{category}"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:349
+#: lib/idejo_web/live/new_topic_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "Post topic"
 msgstr ""
 
 #: lib/idejo_web/controllers/topic_html/show.html.heex:78
 #: lib/idejo_web/live/admin/info_boxes_live.ex:201
-#: lib/idejo_web/live/new_topic_live.ex:276
+#: lib/idejo_web/live/new_topic_live.ex:273
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:87
-#: lib/idejo_web/live/new_topic_live.ex:180
+#: lib/idejo_web/live/new_topic_live.ex:85
+#: lib/idejo_web/live/new_topic_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "You cannot start topics in this category."
 msgstr ""
@@ -1569,7 +1569,7 @@ msgstr ""
 
 #: lib/idejo_web/components/message_moderation_components.ex:238
 #: lib/idejo_web/controllers/search_html/index.html.heex:20
-#: lib/idejo_web/live/new_topic_live.ex:272
+#: lib/idejo_web/live/new_topic_live.ex:269
 #, elixir-autogen, elixir-format
 msgid "Category"
 msgstr ""
@@ -1579,12 +1579,12 @@ msgstr ""
 msgid "Continued from %{name} in “%{topic}”"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:258
+#: lib/idejo_web/live/new_topic_live.ex:255
 #, elixir-autogen, elixir-format
 msgid "From %{name} in “%{topic}”"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:53
+#: lib/idejo_web/live/new_topic_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "New topic from a message"
 msgstr ""
@@ -1594,7 +1594,7 @@ msgstr ""
 msgid "New topic from this"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:44
+#: lib/idejo_web/live/new_topic_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "You cannot start topics."
 msgstr ""
@@ -1936,8 +1936,8 @@ msgstr ""
 msgid "Report"
 msgstr ""
 
-#: lib/idejo_web/controllers/report_controller.ex:23
-#: lib/idejo_web/controllers/report_controller.ex:40
+#: lib/idejo_web/controllers/report_controller.ex:22
+#: lib/idejo_web/controllers/report_controller.ex:39
 #: lib/idejo_web/controllers/report_html/new.html.heex:7
 #, elixir-autogen, elixir-format
 msgid "Report a message"
@@ -1968,7 +1968,7 @@ msgstr ""
 msgid "Send report"
 msgstr ""
 
-#: lib/idejo_web/controllers/report_controller.ex:33
+#: lib/idejo_web/controllers/report_controller.ex:32
 #, elixir-autogen, elixir-format
 msgid "Thank you. The moderators will look at it."
 msgstr ""
@@ -2052,7 +2052,7 @@ msgstr ""
 msgid "7 days"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:25
+#: lib/idejo_web/controllers/ban_controller.ex:28
 #, elixir-autogen, elixir-format
 msgid "Account banned."
 msgstr ""
@@ -2062,7 +2062,7 @@ msgstr ""
 msgid "Ban account"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:39
+#: lib/idejo_web/controllers/ban_controller.ex:42
 #, elixir-autogen, elixir-format
 msgid "Ban lifted."
 msgstr ""
@@ -2108,7 +2108,7 @@ msgstr ""
 msgid "Lifted a ban"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:29
+#: lib/idejo_web/controllers/ban_controller.ex:32
 #, elixir-autogen, elixir-format
 msgid "This account cannot be banned."
 msgstr ""
@@ -2123,7 +2123,7 @@ msgstr ""
 msgid "This account is banned."
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:43
+#: lib/idejo_web/controllers/ban_controller.ex:46
 #, elixir-autogen, elixir-format
 msgid "This ban could not be lifted."
 msgstr ""
@@ -2143,7 +2143,7 @@ msgstr ""
 msgid "You are sending very fast. Wait a moment, then press Enter again."
 msgstr ""
 
-#: lib/idejo_web/controllers/report_controller.ex:45
+#: lib/idejo_web/controllers/report_controller.ex:44
 #, elixir-autogen, elixir-format
 msgid "You cannot report this message now."
 msgstr ""
@@ -2153,7 +2153,7 @@ msgstr ""
 msgid "You have added many images lately. Please try again later."
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:188
+#: lib/idejo_web/live/new_topic_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "You have started many topics lately. Please try again later."
 msgstr ""
@@ -2405,14 +2405,14 @@ msgstr ""
 msgid "%{server} will receive from %{provider}:"
 msgstr ""
 
-#: lib/idejo/forum.ex:2279
-#: lib/idejo/forum.ex:2327
+#: lib/idejo/forum.ex:2355
+#: lib/idejo/forum.ex:2403
 #: lib/idejo_web/live/topic_live.ex:4246
 #, elixir-autogen, elixir-format
 msgid "(spoiler)"
 msgstr ""
 
-#: lib/idejo/forum.ex:2276
+#: lib/idejo/forum.ex:2352
 #, elixir-autogen, elixir-format
 msgid "(spoiler: %{label})"
 msgstr ""
@@ -3704,7 +3704,7 @@ msgid "Ice hockey"
 msgstr ""
 
 #: lib/idejo_web/live/admin.ex:119
-#: lib/idejo_web/live/new_topic_live.ex:309
+#: lib/idejo_web/live/new_topic_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "Icon"
 msgstr ""
@@ -5220,7 +5220,7 @@ msgstr ""
 msgid "Tags (at least one)"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:278
+#: lib/idejo_web/live/new_topic_live.ex:275
 #, elixir-autogen, elixir-format
 msgid "Tags (choose at least one)"
 msgstr ""
@@ -6493,7 +6493,7 @@ msgstr ""
 msgid "You no longer ignore %{name}."
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:173
+#: lib/idejo_web/live/new_topic_live.ex:171
 #, elixir-autogen, elixir-format
 msgid "Your topic was sent. It will appear once a moderator approves it."
 msgstr ""
@@ -6518,7 +6518,7 @@ msgstr ""
 msgid "Administrators have not added any topic icons yet."
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:329
+#: lib/idejo_web/live/new_topic_live.ex:326
 #: lib/idejo_web/live/topic_live.ex:4010
 #, elixir-autogen, elixir-format
 msgid "Change icon"
@@ -6530,7 +6530,7 @@ msgid "Changed the icon of a topic"
 msgstr ""
 
 #: lib/idejo_web/components/topic_components.ex:74
-#: lib/idejo_web/live/new_topic_live.ex:330
+#: lib/idejo_web/live/new_topic_live.ex:327
 #: lib/idejo_web/live/topic_live.ex:2843
 #, elixir-autogen, elixir-format
 msgid "Choose an icon"
@@ -6604,7 +6604,7 @@ msgstr ""
 msgid "Topical: shown with an icon, without its author"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:311
+#: lib/idejo_web/live/new_topic_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Topics here show an icon instead of who started them."
 msgstr ""
@@ -6635,7 +6635,7 @@ msgstr ""
 msgid "Make topical"
 msgstr ""
 
-#: lib/idejo_web/live/new_topic_live.ex:305
+#: lib/idejo_web/live/new_topic_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Post as a topical topic (an icon, without your name)"
 msgstr ""

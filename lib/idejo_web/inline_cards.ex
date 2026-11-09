@@ -62,7 +62,7 @@ defmodule IdejoWeb.InlineCards do
 
   def load("topic", id, viewer, _opts) do
     with %{} = topic <- Forum.get_viewable_topic(viewer, id) do
-      topic = Idejo.Repo.preload(topic, :author)
+      topic = Forum.with_author(topic)
       opening = Forum.opening_message(topic)
 
       %{

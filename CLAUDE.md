@@ -976,7 +976,8 @@ The contract (M6; mark each item done here when its PR merges):
   **Inactive topics** (steward decisions, 2026-11-01): a topic no active user follows (no
   `follows` row with `following`, and not `autofollow`), with no message for
   `inactive_after_days` ("Inactive after (days)", default 70, at least 7), or marked by an
-  moderator of its category (`Forum.mark_inactive/2`, `topics.marked_inactive_at`, logged
+  moderator of its category (`Forum.mark_inactive/2`, refused `:disabled` while the setting
+  below is off; `topics.marked_inactive_at`, logged
   `topic.inactive`) with no message since (`marked_inactive_at > last_activity_at`, so any
   message sent clears it) gets `topic.inactive` (virtual) from `Reading.put_inactive/1`, one
   query per list, called by every controller that renders `topic_row/1` (none while the
@@ -1258,7 +1259,8 @@ The contract (M6; mark each item done here when its PR merges):
   decisions, 2026-11-01: owners and administrators, and anyone with `:moderate` in a
   category) also get `#topic-menu-admin`, rendered when `Forum.list_moderated_categories/1`
   (the "Move to" list) is not empty, filled in when it opens from `GET /topic-menu/{id}`
-  (`TopicMenuController`, JSON, 404 without `:moderate` in the topic's category, so the
+  (`TopicMenuController` over `Forum.topic_menu/2`, JSON, 404 without `:moderate` in the
+  topic's category, so the
   items stay hidden there: `Reading.follower_count/1`, inactive, category, archived): "N following", which a click turns red as "Mark as inactive" and a
   second click posts; Archive; "Move to…" (every category but the Archive and its own);
   Delete (a second click confirms); on an archived topic, "Unarchive to {category}"
@@ -1593,7 +1595,8 @@ The contract (M6; mark each item done here when its PR merges):
   moderator's own) with `delete_banner/1`; `Messages.delete_many_as_moderator/4` deletes them
   in one transaction, each logged.
 - **Reports** (MO-01, `Idejo.Moderation`): signed-in users report others' messages they may
-  view, with a reason (`/m/{id}/report`, `ReportController`, no JavaScript; one open report
+  view, with a reason (`/m/{id}/report`, `ReportController`; what may be reported is
+  `Moderation.get_reportable_message/2`, also asked by `report_message/3`; one open report
   per reporter and message). `/moderation` (`ModerationController.index`) shows the open
   reports of the categories the viewer moderates (owners and administrators: all), grouped by
   message, oldest first; Resolve or Dismiss closes all of a message's open reports
@@ -1679,7 +1682,9 @@ The contract (M6; mark each item done here when its PR merges):
   `:moderate` server-wide) ban, for 1/7/30/365 days or for good, from the "User actions"
   button of the user card, on `/u/{id}` and in a topic's dialog
   (`UserComponents.card_data/3` gives them `actions`; a `<details>`, no JavaScript needed;
-  `BanController`, POST / DELETE `/u/{id}/ban`, back to the topic through a checked
+  `BanController`, POST / DELETE `/u/{id}/ban`, through `Accounts.ban_for/4`, which takes
+  only the lengths of `Accounts.ban_days/0` or `:forever`; `Accounts.may_ban?/2` is who may
+  ban whom, also for the card's menu; back to the topic through a checked
   `return_to`). New moderation actions on an account join that menu. Owners, administrators
   and oneself are never banned. A ban deletes the account's session tokens (and the controller disconnects its
   LiveViews); `Accounts.get_user_by_session_token/1` returns nothing for a banned account and

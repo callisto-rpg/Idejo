@@ -9,7 +9,6 @@ defmodule IdejoWeb.ReportController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Forum
   alias Idejo.Moderation
 
   import Phoenix.Component, only: [to_form: 2]
@@ -47,16 +46,11 @@ defmodule IdejoWeb.ReportController do
     end
   end
 
+  # `Moderation.get_reportable_message/2`: readable, not deleted, not the reporter's own.
   defp reportable!(conn, id) do
-    user = conn.assigns.current_scope.user
-
-    # A private conversation's too, for its participants (steward decision, 2026-10-27).
-    case Forum.get_readable_message(user, id) do
-      %{author_id: author_id, deleted_at: nil} = message when author_id != user.id ->
-        Idejo.Repo.preload(message, :author)
-
-      _ ->
-        raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
+    case Idejo.Moderation.get_reportable_message(conn.assigns.current_scope.user, id) do
+      nil -> raise Ecto.NoResultsError, queryable: Idejo.Messages.Message
+      message -> message
     end
   end
 end

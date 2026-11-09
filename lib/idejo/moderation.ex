@@ -96,6 +96,24 @@ defmodule Idejo.Moderation do
   def change_report(attrs \\ %{}), do: Report.changeset(%Report{}, attrs)
 
   @doc """
+  The message `id` if `user` may report it, with its author: one they may read (a private
+  conversation's too, for its participants; steward decision, 2026-10-27), not deleted, and
+  not their own. Else nil.
+  """
+  @spec get_reportable_message(User.t(), term()) :: Message.t() | nil
+  def get_reportable_message(%User{id: user_id} = user, id) when is_binary(id) do
+    case Idejo.Forum.get_readable_message(user, id) do
+      %Message{deleted_at: nil, author_id: author_id} = message when author_id != user_id ->
+        Repo.preload(message, :author)
+
+      _ ->
+        nil
+    end
+  end
+
+  def get_reportable_message(_user, _id), do: nil
+
+  @doc """
   Reports a message, as `user`, with a reason: a message they may view and did not write
   (`{:error, :forbidden}` otherwise). Once per open report: a second gets an error on the
   changeset.
@@ -104,12 +122,7 @@ defmodule Idejo.Moderation do
           {:ok, Report.t()} | {:error, :forbidden | :rate_limited | Ecto.Changeset.t()}
   def report_message(%User{} = user, %Message{} = message, attrs) do
     cond do
-      message.author_id == user.id or message.deleted_at != nil ->
-        {:error, :forbidden}
-
-      # A participant reports a private conversation's message too (steward decision,
-      # 2026-10-27).
-      is_nil(Idejo.Forum.get_readable_message(user, message.id)) ->
+      is_nil(get_reportable_message(user, message.id)) ->
         {:error, :forbidden}
 
       RateLimit.check(:report, user.id) != :ok ->
