@@ -40,15 +40,23 @@
           </dt>
           <dd>
             {ngettext(
-              "Sends on a new line of the same message. Once your message is more than %{count} second old, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
-              "Sends on a new line of the same message. Once your message is more than %{count} seconds old, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
+              "Sends on a new line of the same message. %{count} second after you started typing it, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
+              "Sends on a new line of the same message. %{count} seconds after you started typing it, it completes it instead: what you type next starts a new message. Enter three times in a row does the same, on phones too.",
               @window
             )}
-            {ngettext(
-              "While nobody has written below your message, that waits until it is %{count} minute old: someone writing alone keeps one message.",
-              "While nobody has written below your message, that waits until it is %{count} minutes old: someone writing alone keeps one message.",
-              @unanswered
-            )}
+            <%= if rem(@unanswered, 60) == 0 do %>
+              {ngettext(
+                "While nobody has written below your message, that waits until %{count} minute after you started typing it: someone writing alone keeps one message.",
+                "While nobody has written below your message, that waits until %{count} minutes after you started typing it: someone writing alone keeps one message.",
+                div(@unanswered, 60)
+              )}
+            <% else %>
+              {ngettext(
+                "While nobody has written below your message, that waits until %{count} second after you started typing it: someone writing alone keeps one message.",
+                "While nobody has written below your message, that waits until %{count} seconds after you started typing it: someone writing alone keeps one message.",
+                @unanswered
+              )}
+            <% end %>
             {gettext(
               "Ctrl+Enter works from anywhere on a topic's page, outside other text boxes: it starts a new message when it may, or puts the cursor back at the end of yours."
             )}

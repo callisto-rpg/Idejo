@@ -73,12 +73,12 @@ The keys keep working as well.
    What others add to their messages glows the same way. While you type, a bubble over your
    message counts the messages above it that grew ("2 messages above have been appended");
    it fades when you scroll up to read them.
-3. For a short while after your message starts (15 seconds, unless your server changed it),
-   you can only add to it. Nothing shows this to others; it only means that one quick
-   thought stays one message. While nobody has written below it, that lasts longer: until
-   your message is 10 minutes old (unless your server changed it), Ctrl+Enter only adds a
+3. For a short while after you start typing a message (15 seconds, unless your server changed
+   it), you can only add to it. Nothing shows this to others; it only means that one quick
+   thought stays one message. While nobody has written below it, that lasts longer: until 10
+   minutes after you started typing it (unless your server changed it), Ctrl+Enter only adds a
    line, so when you write alone your thoughts stay one message. A thin orange line under
-   the box fills up meanwhile, a **slow mode** bubble in front of it, and under it "You
+   the box fills up meanwhile, from your first keystroke, a **slow mode** bubble in front of it, and under it "You
    cannot start a new message...", "...but you can continue the one above." and "[Enter] to
    send always works." take turns; when it reaches the
    end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start

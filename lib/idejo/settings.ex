@@ -64,7 +64,14 @@ defmodule Idejo.Settings do
     gm_window_seconds: %{type: :integer, default: 15, required: true, range: 0..600},
     # GM-05 (steward decision, 2026-10-23): while nobody has written below a message, its
     # author may start a new one only once it is this many minutes old. Admin → Settings.
-    gm_unanswered_minutes: %{type: :integer, default: 10, required: true, range: 1..1440},
+    # Decimals allowed, from 0.1 (six seconds; steward request, 2026-11-09).
+    gm_unanswered_minutes: %{
+      type: :float,
+      default: 10,
+      required: true,
+      min: 0.1,
+      max_value: 1440
+    },
     # Reply starts a new message at any time (steward decision, 2026-10-24): sending it
     # completes the author's open message even while its timer runs. Admin → Settings.
     gm_early_reply: %{type: :boolean, default: true},
@@ -332,6 +339,8 @@ defmodule Idejo.Settings do
     |> validate_rule(key, :max, definition[:max])
     |> validate_rule(key, :in, definition[:in])
     |> validate_rule(key, :range, definition[:range])
+    |> validate_rule(key, :min, definition[:min])
+    |> validate_rule(key, :max_value, definition[:max_value])
     |> validate_format_of(key, definition[:format])
   end
 
@@ -353,6 +362,12 @@ defmodule Idejo.Settings do
   defp validate_rule(changeset, _key, _rule, nil), do: changeset
   defp validate_rule(changeset, key, :max, max), do: validate_length(changeset, key, max: max)
   defp validate_rule(changeset, key, :in, values), do: validate_inclusion(changeset, key, values)
+
+  defp validate_rule(changeset, key, :min, min),
+    do: validate_number(changeset, key, greater_than_or_equal_to: min)
+
+  defp validate_rule(changeset, key, :max_value, max),
+    do: validate_number(changeset, key, less_than_or_equal_to: max)
 
   defp validate_rule(changeset, key, :range, first..last//_) do
     validate_number(changeset, key, greater_than_or_equal_to: first, less_than_or_equal_to: last)
@@ -412,20 +427,34 @@ defmodule Idejo.Settings do
     case @definitions[key] do
       %{secret: true} -> Secret.decrypt(value) || ""
       %{type: :integer} -> String.to_integer(value)
+      %{type: :float} -> to_number(value)
       %{type: :boolean} -> value == "true"
       %{type: :string} -> value
+    end
+  end
+
+  # A whole number reads as one ("10", stored before decimals), else a float ("0.5").
+  defp to_number(value) do
+    case Integer.parse(value) do
+      {n, ""} ->
+        n
+
+      _ ->
+        {f, _} = Float.parse(value)
+        f
     end
   end
 
   defp encode(key, value) do
     case @definitions[key] do
       %{secret: true} -> Secret.encrypt(value)
+      %{type: :float} when is_float(value) and value == trunc(value) -> to_string(trunc(value))
       _ -> to_string(value)
     end
   end
 
   @doc "A setting's default value: what it is until an administrator changes it."
-  @spec default(key()) :: String.t() | integer() | boolean()
+  @spec default(key()) :: String.t() | number() | boolean()
   def default(key) when is_map_key(@definitions, key) do
     case @definitions[key].default do
       :noreply ->

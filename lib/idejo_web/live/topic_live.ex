@@ -121,6 +121,7 @@ defmodule IdejoWeb.TopicLive do
            plugin_form: nil,
            plugin_card: nil,
            warn_form: nil,
+           typing_at: nil,
            card: nil,
            image_error: nil,
            reactions: %{},
@@ -187,7 +188,10 @@ defmodule IdejoWeb.TopicLive do
          |> assign(plugin_form: nil, plugin_card: nil, warn_form: nil)
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
-         |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
+         |> assign(:unanswered_seconds, Messages.unanswered_seconds())
+         # The timers start when the author starts typing (steward request, 2026-11-09).
+         |> assign(:window_seconds, window_seconds(topic))
+         |> assign(:typing_at, nil)
          |> put_quoted(can_post?, session)
          |> assign(early_reply?: Idejo.Settings.get(:gm_early_reply), too_soon?: false)
          |> assign(:punctuate?, user == nil or user.auto_punctuation)
@@ -1525,13 +1529,13 @@ defmodule IdejoWeb.TopicLive do
 
   # One timer at a time, only while the viewer's own open message is inside its window.
   defp schedule_tick(%{assigns: %{tick: nil}} = socket) do
-    %{messages: messages, unanswered_minutes: minutes} = socket.assigns
+    %{messages: messages, unanswered_seconds: seconds} = socket.assigns
 
     case open_message(messages, user(socket)) do
       %{} = mine ->
         if connected?(socket) and
              DateTime.after?(
-               start_new_at(mine, answered?(messages, mine), minutes),
+               start_new_at(mine, answered?(messages, mine), seconds),
                DateTime.utc_now()
              ),
            do: assign(socket, :tick, Process.send_after(self(), :tick, 1000)),
@@ -1547,10 +1551,13 @@ defmodule IdejoWeb.TopicLive do
   # When Ctrl+Enter may start a new message (GM-05, `Idejo.Messages.may_start_new?/2`): once
   # the window has ended and, while nobody wrote below it, once it is old enough (steward
   # decision, 2026-10-23). Worked out from the messages shown, with no query (NF-01).
-  defp start_new_at(mine, true, _minutes), do: mine.closes_at
+  defp start_new_at(mine, true, _seconds), do: mine.closes_at
 
-  defp start_new_at(mine, false, minutes),
-    do: Enum.max([mine.closes_at, DateTime.add(mine.opened_at, minutes * 60)], DateTime)
+  defp start_new_at(mine, false, seconds),
+    do: Enum.max([mine.closes_at, DateTime.add(Messages.timer_start(mine), seconds)], DateTime)
+
+  defp window_seconds(%{private: true}), do: 0
+  defp window_seconds(_topic), do: Idejo.Settings.get(:gm_window_seconds)
 
   defp answered?(messages, mine) do
     messages
@@ -1657,7 +1664,9 @@ defmodule IdejoWeb.TopicLive do
       break: params["break"] == true,
       reply_to_id: reply_to && reply_to.id,
       forwarded_from_id: socket.assigns.forward && socket.assigns.forward.id,
-      new: draft_over(socket.assigns) != nil
+      new: draft_over(socket.assigns) != nil,
+      # The patience timers start at the first keystroke (steward request, 2026-11-09).
+      started_at: socket.assigns.typing_at
     ]
 
     then = params["then"]
@@ -1670,6 +1679,7 @@ defmodule IdejoWeb.TopicLive do
       {:ok, message} ->
         {:reply, %{closed: message.state == "closed", body: message.body_md},
          socket
+         |> assign(:typing_at, nil)
          |> put_committed(completed(socket, message, opts))
          |> after_send(then, message, params)}
 
@@ -1743,6 +1753,16 @@ defmodule IdejoWeb.TopicLive do
         {:noreply, new_topic_from(socket, message)}
     end
   end
+
+  # A new message's first keystroke, or its box emptied before sending (steward request,
+  # 2026-11-09): the time is the server's, so it cannot be set back.
+  defp event("composer_typing", %{"typing" => true}, %{assigns: %{typing_at: nil}} = socket),
+    do: {:noreply, assign(socket, :typing_at, DateTime.utc_now())}
+
+  defp event("composer_typing", %{"typing" => false}, socket),
+    do: {:noreply, assign(socket, :typing_at, nil)}
+
+  defp event("composer_typing", _params, socket), do: {:noreply, socket}
 
   # A plugin's command with nothing new to send: for the open message, else on its own.
   defp event("open_plugin", %{"name" => name} = params, socket) when is_binary(name) do
@@ -2930,7 +2950,9 @@ defmodule IdejoWeb.TopicLive do
               poll={@mine && @polls[@mine.id]}
               embeds={if @mine, do: Plugins.shown(@mine.embeds, @active_plugins), else: []}
               answered?={@answered?}
-              unanswered_minutes={@unanswered_minutes}
+              unanswered_seconds={@unanswered_seconds}
+              typing_at={@typing_at}
+              window_seconds={@window_seconds}
               private?={@topic.private}
             />
           </li>
@@ -3445,6 +3467,25 @@ defmodule IdejoWeb.TopicLive do
     </dialog>
     """
   end
+
+  # A new message being typed, not sent yet (steward request, 2026-11-09): its timers as they
+  # will be once sent, from the first keystroke (`typing_at`).
+  defp draft_timer(%{typing_at: %DateTime{} = at, editing?: false, private?: false} = assigns),
+    do: %Messages.Message{
+      opened_at: at,
+      timer_from: at,
+      closes_at: DateTime.add(at, assigns.window_seconds, :second)
+    }
+
+  defp draft_timer(_assigns), do: nil
+
+  # The line under the composer (steward decision, 2026-10-23) runs to this moment; none in a
+  # private conversation or with nothing to time.
+  defp ready_at(nil, _answered?, _assigns), do: nil
+  defp ready_at(_timer, _answered?, %{private?: true}), do: nil
+
+  defp ready_at(timer, answered?, assigns),
+    do: start_new_at(timer, answered?, assigns.unanswered_seconds)
 
   # Where the composer goes: in the author's open message, or after Reply a new message at
   # the end, the open one reading like the others (steward decision, 2026-10-24). `locked`:
@@ -4358,7 +4399,13 @@ defmodule IdejoWeb.TopicLive do
   attr :poll, :map, default: nil, doc: "the open message's poll (`!poll`)"
   attr :embeds, :list, default: [], doc: "what plugins added under the open message"
   attr :answered?, :boolean, default: true, doc: "someone wrote below the open message"
-  attr :unanswered_minutes, :integer, default: 10
+  attr :unanswered_seconds, :integer, default: 600
+
+  attr :typing_at, :any,
+    default: nil,
+    doc: "when the author started typing a new message, before its first line is sent"
+
+  attr :window_seconds, :integer, default: 15
   attr :private?, :boolean, default: false, doc: "a private conversation: no slow mode"
 
   # No countdown, button or status around it (GM-07): only the text box, and the graphical
@@ -4372,6 +4419,9 @@ defmodule IdejoWeb.TopicLive do
     mine = if assigns.editing?, do: nil, else: assigns.mine || assigns.locked
     # No slow mode in a private conversation (steward decision, 2026-10-27): no timer line.
     answered? = assigns.answered? or assigns.private?
+    # The line runs from the first keystroke of a new message (steward request, 2026-11-09):
+    # before its first line is sent, for the message it will be.
+    timer = mine || draft_timer(assigns)
 
     assigns =
       assign(assigns,
@@ -4384,11 +4434,10 @@ defmodule IdejoWeb.TopicLive do
         # GM-05: alone below the last message, Ctrl+Enter waits for an answer or the time.
         lone_left:
           mine && !answered? &&
-            DateTime.diff(start_new_at(mine, false, assigns.unanswered_minutes), now),
+            DateTime.diff(start_new_at(mine, false, assigns.unanswered_seconds), now),
         # The line under the composer (steward decision, 2026-10-23) runs to this moment.
-        ready_at:
-          mine && !assigns.private? &&
-            start_new_at(mine, answered?, assigns.unanswered_minutes)
+        timer: timer,
+        ready_at: ready_at(timer, mine != nil and answered?, assigns)
       )
 
     ~H"""
@@ -4515,7 +4564,7 @@ defmodule IdejoWeb.TopicLive do
           id="composer-timer"
           class="composer-timer"
           phx-hook="ComposerTimer"
-          data-start={DateTime.to_unix(@timed.opened_at, :millisecond)}
+          data-start={DateTime.to_unix(Messages.timer_start(@timer), :millisecond)}
           data-end={DateTime.to_unix(@ready_at, :millisecond)}
           data-now={DateTime.to_unix(@now, :millisecond)}
           aria-hidden="true"

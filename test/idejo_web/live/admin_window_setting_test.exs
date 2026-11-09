@@ -100,7 +100,7 @@ defmodule IdejoWeb.AdminWindowSettingTest do
 
   # Steward decision, 2026-10-23: the unanswered message time (GM-05).
   @tag req: "AD-04"
-  test "AD-04 the unanswered message time: 1 to 1440 minutes, 10 by default, audited", %{
+  test "AD-04 the unanswered message time: 0.1 to 1440 minutes, 10 by default, audited", %{
     conn: conn,
     admin: admin
   } do
@@ -113,7 +113,8 @@ defmodule IdejoWeb.AdminWindowSettingTest do
            )
 
     for {value, error} <- [
-          {"0", "must be greater than or equal to 1"},
+          # Steward request, 2026-11-09: down to 0.1 minutes (six seconds).
+          {"0.05", "must be greater than or equal to 0.1"},
           {"1441", "must be less than or equal to 1440"}
         ] do
       lv |> form("#settings-form", settings: %{gm_unanswered_minutes: value}) |> render_submit()
@@ -121,11 +122,12 @@ defmodule IdejoWeb.AdminWindowSettingTest do
     end
 
     assert lv
-           |> form("#settings-form", settings: %{gm_unanswered_minutes: "30"})
+           |> form("#settings-form", settings: %{gm_unanswered_minutes: "0.1"})
            |> render_submit() =~ "Settings saved."
 
-    assert Settings.get(:gm_unanswered_minutes) == 30
-    assert [%{admin_id: admin_id, after: %{"gm_unanswered_minutes" => 30}}] = settings_entries()
+    assert Settings.get(:gm_unanswered_minutes) == 0.1
+    assert Idejo.Messages.unanswered_seconds() == 6
+    assert [%{admin_id: admin_id, after: %{"gm_unanswered_minutes" => 0.1}}] = settings_entries()
     assert admin_id == admin.id
   end
 
