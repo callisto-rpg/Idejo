@@ -42,7 +42,7 @@ Every row is required for v0.1. “As v1” means the v1 requirement applies unc
 
 | ID | v0.1 form |
 | --- | --- |
-| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 15 s window not reset by appends that only limits when a new message can start, Ctrl+Enter new line or new message, Shift+Enter line break, `. ` added after unpunctuated text, no size limit, no visible open-state chrome, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
+| GM-01 to GM-14 | As v1: open, append in the same composer on the same line, 15 s window not reset by appends that only limits when a new message can start, Ctrl+Enter completes the message (within the window, the author’s next message waits for its end), Shift+Enter line break, `. ` added after unpunctuated text, no size limit, no visible open-state chrome, composer in place with replies below it, one open message per topic, sent text in higher contrast and edited in place with “view earlier version”, close on lock or disconnect, first message never live |
 | GM-15 | Window length set server-wide only (default 15 s) |
 | GM-16 | As v1: moderators can close an open message |
 | TP-01, TP-02 | As v1: title, first message (tags come later) |
@@ -108,10 +108,10 @@ Three flows cover everything the pilot must do; each becomes an end-to-end test.
 
 **Live conversation**
 
-1. A member opens the topic and presses Enter after a first line: the message appears for everyone. The sent text stays in the composer, in higher contrast, with `. ` added; the 15 s window starts, unseen.
-2. They keep typing as in any chat and pressing Enter; each part joins the same message on the same line. Ctrl+Enter continues on a new line of the same message. Another member replies meanwhile; the reply appears below the author’s composer, which moves up and keeps growing.
+1. A member opens the topic and presses Enter after a first line: the message appears for everyone. The sent text stays in the composer, in higher contrast, with `. ` added; the 15 s window, started at their first keystroke, runs, unseen.
+2. They keep typing as in any chat and pressing Enter; each part joins the same message on the same line. Shift+Enter continues on a new line of the same message. Another member replies meanwhile; the reply appears below the author’s composer, which moves up and keeps growing.
 3. The author fixes a typo in an earlier line, right in the composer; the changed text shows as unsent until Enter, then a discreet “view earlier version” tag appears.
-4. The window ends: the author is still typing in the same message and Enter still adds to it. Only now does Ctrl+Enter close it and start a new message on a new line.
+4. The window ends: the author is still typing in the same message and Enter still adds to it. Ctrl+Enter closes it, and what they type next starts a new message. (Ctrl+Enter within the window closes it too, but their next message then waits until the window has ended.)
 5. A side question comes up: someone selects that message and chooses “New topic from this”; the new topic links back to it.
 
 ## 5. Screens
@@ -133,7 +133,7 @@ Ten screens make up v0.1; public ones are server-rendered and work without JavaS
 
 ## 6. Data model
 
-PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` whose full text each Enter overwrites, plus one row in `message_versions` each time an Enter changes text already sent; the end of the window is fixed at the first commit (`closes_at = opened_at + window`) and marks when the author may start a new message, not when the message closes, so a restart simply reloads open messages.
+PostgreSQL tables for v0.1. A growing message is stored as a row in `messages` whose full text each Enter overwrites, plus one row in `message_versions` each time an Enter changes text already sent; the end of the window is fixed at the first commit (`closes_at = timer_from + window`, `timer_from` being when the author started typing it) and marks when the author may start a new message, not when the message closes, so a restart simply reloads open messages.
 
 | Table | Key fields | Notes |
 | --- | --- | --- |
