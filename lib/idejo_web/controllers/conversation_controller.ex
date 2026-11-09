@@ -11,7 +11,6 @@ defmodule IdejoWeb.ConversationController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Accounts
   alias Idejo.Conversations
   alias Idejo.Reading
 
@@ -49,11 +48,11 @@ defmodule IdejoWeb.ConversationController do
   def create(conn, %{"id" => id}) do
     user = conn.assigns.current_scope.user
 
-    with {:ok, id} <- Ecto.UUID.cast(id),
-         %{} = recipient <- Accounts.get_user(id),
-         {:ok, topic} <- Conversations.start(user, recipient) do
-      redirect(conn, to: ~p"/p/#{topic.id}")
-    else
+    # `Conversations.start/2` loads the recipient and checks `may_message?/2`.
+    case Conversations.start(user, id) do
+      {:ok, topic} ->
+        redirect(conn, to: ~p"/p/#{topic.id}")
+
       {:error, :rate_limited} ->
         conn
         |> put_flash(
@@ -62,7 +61,7 @@ defmodule IdejoWeb.ConversationController do
         )
         |> redirect(to: ~p"/u/#{id}")
 
-      _ ->
+      {:error, :forbidden} ->
         conn
         |> put_flash(:error, gettext("You cannot send this user a private message."))
         |> redirect(to: ~p"/p")

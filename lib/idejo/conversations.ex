@@ -52,8 +52,20 @@ defmodule Idejo.Conversations do
   The private conversation between `sender` and `recipient`, started when there is none
   yet: `{:ok, topic}`. Both follow it, so each hears of the other's messages (NO-01).
   `{:error, :forbidden}` unless `may_message?/2`; a new one counts as a new topic (SP-05).
+  `recipient` may be their id, from a client: an unknown one is `:forbidden` too, the same
+  answer as for someone who takes no private messages.
   """
-  @spec start(User.t(), User.t()) :: {:ok, Topic.t()} | {:error, :forbidden | :rate_limited}
+  @spec start(User.t(), User.t() | Ecto.UUID.t()) ::
+          {:ok, Topic.t()} | {:error, :forbidden | :rate_limited}
+  def start(%User{} = sender, recipient_id) when is_binary(recipient_id) do
+    with {:ok, id} <- Ecto.UUID.cast(recipient_id),
+         %User{} = recipient <- Accounts.get_user(id) do
+      start(sender, recipient)
+    else
+      _ -> {:error, :forbidden}
+    end
+  end
+
   def start(%User{} = sender, %User{} = recipient) do
     if may_message?(sender, recipient),
       do: Repo.transact(fn -> find_or_create(sender, recipient) end),

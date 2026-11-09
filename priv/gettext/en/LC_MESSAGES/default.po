@@ -2052,7 +2052,7 @@ msgstr ""
 msgid "7 days"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:28
+#: lib/idejo_web/controllers/ban_controller.ex:25
 #, elixir-autogen, elixir-format
 msgid "Account banned."
 msgstr ""
@@ -2062,7 +2062,7 @@ msgstr ""
 msgid "Ban account"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:42
+#: lib/idejo_web/controllers/ban_controller.ex:39
 #, elixir-autogen, elixir-format
 msgid "Ban lifted."
 msgstr ""
@@ -2108,7 +2108,7 @@ msgstr ""
 msgid "Lifted a ban"
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:32
+#: lib/idejo_web/controllers/ban_controller.ex:29
 #, elixir-autogen, elixir-format
 msgid "This account cannot be banned."
 msgstr ""
@@ -2123,7 +2123,7 @@ msgstr ""
 msgid "This account is banned."
 msgstr ""
 
-#: lib/idejo_web/controllers/ban_controller.ex:46
+#: lib/idejo_web/controllers/ban_controller.ex:43
 #, elixir-autogen, elixir-format
 msgid "This ban could not be lifted."
 msgstr ""
@@ -4562,7 +4562,7 @@ msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:296
 #: lib/idejo_web/components/layouts.ex:819
-#: lib/idejo_web/controllers/conversation_controller.ex:20
+#: lib/idejo_web/controllers/conversation_controller.ex:19
 #: lib/idejo_web/controllers/conversation_html/index.html.heex:7
 #: lib/idejo_web/controllers/conversation_html/show.html.heex:17
 #, elixir-autogen, elixir-format
@@ -4574,7 +4574,7 @@ msgstr ""
 msgid "Private Message"
 msgstr ""
 
-#: lib/idejo_web/controllers/conversation_controller.ex:73
+#: lib/idejo_web/controllers/conversation_controller.ex:72
 #: lib/idejo_web/live/topic_live.ex:4314
 #, elixir-autogen, elixir-format
 msgid "Private conversation"
@@ -5809,7 +5809,7 @@ msgstr ""
 msgid "You are sending very fast. Wait a moment, then try again."
 msgstr ""
 
-#: lib/idejo_web/controllers/conversation_controller.ex:61
+#: lib/idejo_web/controllers/conversation_controller.ex:60
 #, elixir-autogen, elixir-format
 msgid "You are starting conversations too quickly. Try again later."
 msgstr ""
@@ -5834,7 +5834,7 @@ msgstr ""
 msgid "You cannot post a new message yet. Append your old message."
 msgstr ""
 
-#: lib/idejo_web/controllers/conversation_controller.ex:67
+#: lib/idejo_web/controllers/conversation_controller.ex:66
 #, elixir-autogen, elixir-format
 msgid "You cannot send this user a private message."
 msgstr ""
