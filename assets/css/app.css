@@ -2194,6 +2194,37 @@
 .schedule-card { max-width: 24rem; display: grid; gap: 0.75rem; }
 .schedule-excerpt { color: var(--ink-soft); font-size: 0.875rem; }
 
+/* MO-02 "warn" (steward request, 2026-11-09; IdejoWeb.WarningComponents): the moderator's
+   card with earlier warnings, and the warned member's card. */
+.warn-previous {
+  margin-top: 0.75rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  & ol { display: grid; gap: 0.5rem; margin-top: 0.25rem; }
+  & li { border-left: 3px solid var(--color-warning); padding-left: 0.5rem; }
+}
+.warn-previous-meta, .warning-card-meta {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.warn-previous-reason, .warning-card-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
+.warn-actions { align-items: center; flex-wrap: wrap; }
+.warning-card {
+  border-top: 4px solid var(--color-warning);
+  & .inline-card-title { display: flex; align-items: center; gap: 0.5rem; }
+}
+.warning-card-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  & li { border-left: 3px solid var(--color-warning); padding-left: 0.625rem; }
+}
+
 /* Plugins (steward request, 2026-11-08; IdejoWeb.PluginComponents): their blocks under a
    message. Frames keep a fixed shape (no style attributes: SP-05), as wide as the message
    allows. */
@@ -3374,6 +3405,7 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
   &.is-reply { --bubble: oklch(72% 0.18 55); }
   &.is-mention { --bubble: var(--color-error); }
   &.is-reaction { --bubble: oklch(62% 0.2 305); }
+  &.is-warning { --bubble: var(--color-warning); }
   &.is-leaving { animation: bubble-out 200ms ease-in forwards; }
 }
 .bubble-link {

@@ -43,6 +43,7 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Forum.TopicWindow
   alias Idejo.Messages
   alias Idejo.Messages.{Automessages, Polls, Scheduling}
+  alias Idejo.Moderation.Warnings
   alias Idejo.Plugins
   alias Idejo.Reading
   alias Idejo.Repo
@@ -53,6 +54,7 @@ defmodule IdejoWeb.TopicLive do
   alias IdejoWeb.PollComponents
   alias IdejoWeb.ReactionComponents
   alias IdejoWeb.UserComponents
+  alias IdejoWeb.WarningComponents
 
   on_mount {IdejoWeb.UserAuth, :mount_current_scope}
 
@@ -118,6 +120,7 @@ defmodule IdejoWeb.TopicLive do
            active_plugins: %{},
            plugin_form: nil,
            plugin_card: nil,
+           warn_form: nil,
            card: nil,
            image_error: nil,
            reactions: %{},
@@ -181,7 +184,7 @@ defmodule IdejoWeb.TopicLive do
          # Plugins (steward request, 2026-11-08): read at mount, like the automessages.
          |> assign(:active_plugins, Plugins.active())
          |> then(&assign(&1, :plugins, Plugins.usable(user, topic, &1.assigns.active_plugins)))
-         |> assign(plugin_form: nil, plugin_card: nil)
+         |> assign(plugin_form: nil, plugin_card: nil, warn_form: nil)
          |> assign(editing: nil, refocus: nil, editor_mode: :write, preview_html: "")
          |> assign(announcement: nil, now: DateTime.utc_now(), tick: nil, card: nil)
          |> assign(:unanswered_minutes, Idejo.Settings.get(:gm_unanswered_minutes))
@@ -2238,6 +2241,85 @@ defmodule IdejoWeb.TopicLive do
   defp event("close_moderate", _params, socket),
     do: {:noreply, assign(socket, :moderating, nil)}
 
+  # MO-02 "warn" (steward request, 2026-11-09): the card, for a message's author.
+  defp event("open_warn", %{"id" => id}, %{assigns: %{can_moderate?: true}} = socket)
+       when is_binary(id) do
+    with %Messages.Message{} = message <- Enum.find(socket.assigns.messages, &(&1.id == id)),
+         {:ok, author} <- Warnings.warnable(user(socket), message) do
+      form = %{
+        message_id: id,
+        user: author,
+        count: Warnings.count_visible(user(socket), author),
+        previous: nil,
+        reason: "",
+        error: nil
+      }
+
+      {:noreply, assign(socket, :warn_form, form)}
+    else
+      {:error, :not_warnable} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Owners, administrators, yourself and closed accounts cannot be warned.")
+         )}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  defp event(
+         "warn_change",
+         %{"warning" => %{"reason" => reason}},
+         %{assigns: %{warn_form: %{} = form}} = socket
+       )
+       when is_binary(reason),
+       do: {:noreply, assign(socket, :warn_form, %{form | reason: reason})}
+
+  defp event("warn_history", _params, %{assigns: %{warn_form: %{} = form}} = socket),
+    do:
+      {:noreply,
+       assign(socket, :warn_form, %{form | previous: Warnings.visible(user(socket), form.user)})}
+
+  defp event(
+         "warn",
+         %{"warning" => %{"reason" => reason}},
+         %{assigns: %{warn_form: %{} = form}} = socket
+       )
+       when is_binary(reason) do
+    message = Enum.find(socket.assigns.messages, &(&1.id == form.message_id))
+
+    case message && Warnings.warn(user(socket), message, reason) do
+      {:ok, _warning} ->
+        {:noreply,
+         socket
+         |> assign(:warn_form, nil)
+         |> put_flash(:info, gettext("%{name} is warned.", name: form.user.display_name))}
+
+      {:error, :reason} ->
+        {:noreply,
+         assign(socket, :warn_form, %{
+           form
+           | reason: reason,
+             error:
+               gettext("Write the reason, at most %{max} characters.", max: Warnings.max_reason())
+         })}
+
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:warn_form, nil)
+         |> put_flash(:error, gettext("This member cannot be warned here."))}
+    end
+  end
+
+  defp event(name, _params, socket) when name in ["warn_change", "warn_history", "warn"],
+    do: {:noreply, socket}
+
+  defp event("close_warn", _params, socket), do: {:noreply, assign(socket, :warn_form, nil)}
+
   # Choose messages to move (TP-15; the opening message never moves) or to delete (MO-02;
   # steward decision, 2026-10-23: not the moderator's own messages, nor deleted ones).
   defp event(
@@ -2704,6 +2786,7 @@ defmodule IdejoWeb.TopicLive do
       <PollComponents.poll_dialog :if={@poll_form} form={@poll_form} />
       <PluginComponents.plugin_dialog :if={@plugin_form} form={@plugin_form} />
       <PluginComponents.plugin_card :if={@plugin_card} card={@plugin_card} />
+      <WarningComponents.warn_card :if={@warn_form} form={@warn_form} />
       <.forward_dialog :if={@forward_card} card={@forward_card} />
       <.too_soon_dialog :if={@too_soon?} />
       <TopicComponents.icon_dialog
@@ -3186,9 +3269,16 @@ defmodule IdejoWeb.TopicLive do
       ignored?:
         is_nil(message.deleted_at) and not message.anonymous and
           MapSet.member?(assigns.ignored, message.author_id),
-      mod_edit?: mod_edit?
+      mod_edit?: mod_edit?,
+      warn?: warn?(assigns, message, viewer)
     }
   end
+
+  # MO-02: "Warn user", on others' messages not deleted (the card checks the rest).
+  defp warn?(%{can_moderate?: true}, %{deleted_at: nil, author_id: author_id}, %{id: id}),
+    do: author_id != id
+
+  defp warn?(_assigns, _message, _viewer), do: false
 
   defp unread_count(%{id: id, count: count}, id), do: count
   defp unread_count(_unread, _id), do: nil
@@ -3778,6 +3868,18 @@ defmodule IdejoWeb.TopicLive do
           phx-value-id={@message.id}
         >
           <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
+        </button>
+        <%!-- MO-02 "warn" (steward request, 2026-11-09). --%>
+        <button
+          :if={@entry.warn? and @live?}
+          type="button"
+          id={"message-#{@message.id}-warn"}
+          class="message-action"
+          phx-click="open_warn"
+          phx-value-id={@message.id}
+          aria-haspopup="dialog"
+        >
+          <.icon name="hero-exclamation-triangle-micro" class="size-4" />{gettext("Warn user")}
         </button>
       </div>
     </article>
