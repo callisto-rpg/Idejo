@@ -12,40 +12,8 @@
     </div>
   </header>
   <div class="help-page">
-    <section id="help-send" aria-labelledby="help-send-title">
-      <h2 id="help-send-title">{gettext("Sending")}</h2>
-      <p>
-        {gettext(
-          "What you send with Enter joins one growing message, live for everyone, until you start a new one."
-        )}
-      </p>
-      <dl class="help-list">
-        <div>
-          <dt><kbd>Enter</kbd></dt>
-          <dd>
-            {gettext(
-              "Sends what you wrote. Keep typing and press Enter again: it joins the same message."
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt><kbd>Shift</kbd>+<kbd>Enter</kbd></dt>
-          <dd>{gettext("A new line in the box. Nothing is sent.")}</dd>
-        </div>
-        <div>
-          <dt>
-            <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
-            {gettext("or")}
-            <kbd>Enter</kbd> ×3
-          </dt>
-          <dd>
-            {gettext(
-              "Finishes your current message and starts a new one. If nobody has replied to your message yet, there will be a longer delay before you are allowed to create a new message."
-            )}
-          </dd>
-        </div>
-      </dl>
-    </section>
+    <%!-- Also in the getting-started card (steward request, 2026-11-09). --%>
+    <IdejoWeb.HelpComponents.sending id="help-send" />
 
     <section id="help-signs" aria-labelledby="help-signs-title">
       <h2 id="help-signs-title">{gettext("Links and suggestions")}</h2>
