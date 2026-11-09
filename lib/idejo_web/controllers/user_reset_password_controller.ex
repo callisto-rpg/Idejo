@@ -11,7 +11,6 @@ defmodule IdejoWeb.UserResetPasswordController do
   # SP-05: reset emails and attempts are limited per IP address.
   plug IdejoWeb.Plugs.RateLimit, :reset_password when action in [:create, :update]
 
-  alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Accounts.OIDC
   alias IdejoWeb.UserAuth
@@ -59,6 +58,9 @@ defmodule IdejoWeb.UserResetPasswordController do
         |> put_flash(:info, gettext("Password changed. Sign in with your new password."))
         |> redirect(to: ~p"/users/sign-in")
 
+      {:error, :passwords_off} ->
+        conn |> put_flash(:error, no_passwords_message()) |> redirect(to: ~p"/users/sign-in")
+
       {:error, changeset} ->
         render_edit(conn, changeset)
     end
@@ -89,7 +91,8 @@ defmodule IdejoWeb.UserResetPasswordController do
   defp get_user_by_reset_password_token(conn, _opts) do
     user = Accounts.get_user_by_reset_password_token(conn.params["token"])
 
-    if user != nil and not OIDC.local_accounts?() and not Access.administrator?(user) do
+    # AC-09: `Accounts.password_allowed?/1`; `reset_user_password/2` asks it too.
+    if user != nil and not Accounts.password_allowed?(user) do
       conn
       |> put_flash(:error, no_passwords_message())
       |> redirect(to: ~p"/users/sign-in")

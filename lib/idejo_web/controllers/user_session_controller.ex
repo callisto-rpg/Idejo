@@ -7,7 +7,6 @@ defmodule IdejoWeb.UserSessionController do
   # SP-05: password guessing is slowed per IP address.
   plug IdejoWeb.Plugs.RateLimit, :sign_in when action == :create
 
-  alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Accounts.OIDC
   alias IdejoWeb.UserAuth
@@ -28,27 +27,23 @@ defmodule IdejoWeb.UserSessionController do
     )
   end
 
+  # `Accounts.authenticate/2`: the password, whether the account may use one (AC-09), and a
+  # ban, told only once the password is right (MO-02).
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
-    user =
-      email
-      |> Accounts.get_user_by_email_and_password(password)
-      |> password_allowed()
-
-    cond do
-      # MO-02: told only once the password is right, so nobody learns of a ban by guessing.
-      user && Accounts.banned?(user) ->
+    case Accounts.authenticate(email, password) do
+      {:error, {:banned, user}} ->
         form = Phoenix.Component.to_form(Map.delete(user_params, "password"), as: "user")
 
         conn
         |> put_flash(:error, banned_message(user))
         |> render_new(form)
 
-      user ->
+      {:ok, user} ->
         conn
         |> put_flash(:info, gettext("Welcome back!"))
         |> UserAuth.log_in_user(user, user_params)
 
-      true ->
+      {:error, :invalid} ->
         form = Phoenix.Component.to_form(Map.delete(user_params, "password"), as: "user")
 
         # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
@@ -56,14 +51,6 @@ defmodule IdejoWeb.UserSessionController do
         |> put_flash(:error, gettext("Invalid email or password"))
         |> render_new(form)
     end
-  end
-
-  # AC-09: local accounts off, a password still signs in owners and administrators, whom the
-  # command line can always let in (AD-09); nobody else.
-  defp password_allowed(nil), do: nil
-
-  defp password_allowed(user) do
-    if OIDC.local_accounts?() or Access.administrator?(user), do: user
   end
 
   @doc false
