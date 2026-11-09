@@ -14,6 +14,7 @@ defmodule IdejoWeb.Admin.PluginsLive do
   alias Idejo.Plugins
   alias Idejo.Plugins.Definition
   alias IdejoWeb.Admin
+  alias IdejoWeb.PluginComponents
 
   @impl true
   def mount(_params, _session, socket) do
@@ -123,7 +124,7 @@ defmodule IdejoWeb.Admin.PluginsLive do
          |> load()}
 
       [{:error, reason}] ->
-        {:noreply, assign(socket, :upload_error, reason)}
+        {:noreply, assign(socket, :upload_error, PluginComponents.problem(reason))}
 
       [] ->
         {:noreply, assign(socket, :upload_error, gettext("Choose a plugin file first."))}
@@ -192,11 +193,15 @@ defmodule IdejoWeb.Admin.PluginsLive do
               {gettext("owners and administrators")}<span :for={role <- chosen(@roles, row.setting)}>,
               <Admin.role_label role={role} /></span>
             </p>
-            <p :if={row.error} class="text-sm text-error mt-1">{row.error}</p>
+            <p :if={row.error} class="text-sm text-error mt-1">
+              {PluginComponents.problem(row.error)}
+            </p>
           <% else %>
             <p class="font-semibold">{row.file}</p>
             <p class="text-sm text-error">
-              {gettext("Not a plugin Idejo can use: %{reason}", reason: row.error)}
+              {gettext("Not a plugin Idejo can use: %{reason}",
+                reason: PluginComponents.problem(row.error)
+              )}
             </p>
           <% end %>
         </li>

@@ -18,7 +18,6 @@ defmodule Idejo.Plugins do
   checked data (`Idejo.Plugins.Embed`): a video from an https embed address, a sandboxed
   frame from an https address, a link button, a card of Markdown.
   """
-  use Gettext, backend: IdejoWeb.Gettext
 
   import Ecto.Query
 
@@ -54,6 +53,22 @@ defmodule Idejo.Plugins do
       Path.join(Application.fetch_env!(:idejo, :uploads_dir), "plugins")
   end
 
+  @typedoc """
+  Why a plugin file cannot be used or installed: what `Idejo.Plugins.Definition.parse/1`
+  finds, or `{:reserved, command}` (a command of Idejo's or an automessage's),
+  `{:duplicate, command}` (another file defines it), `{:installed, command}`, `:unreadable`,
+  `:not_a_file`, `:not_writable`. The admin page words it
+  (`IdejoWeb.PluginComponents.problem/1`).
+  """
+  @type problem ::
+          Definition.problem()
+          | {:reserved, String.t()}
+          | {:duplicate, String.t()}
+          | {:installed, String.t()}
+          | :unreadable
+          | :not_a_file
+          | :not_writable
+
   @doc """
   Every `*.json` file in the folder, by file name, for the admin page: its definition or why
   it cannot be used (`error`), and its settings. Read from the disk at each call.
@@ -62,7 +77,7 @@ defmodule Idejo.Plugins do
           %{
             file: String.t(),
             definition: Definition.t() | nil,
-            error: String.t() | nil,
+            error: problem() | nil,
             setting: Setting.t()
           }
         ]
@@ -99,10 +114,10 @@ defmodule Idejo.Plugins do
   defp conflict(command, reserved, seen) do
     cond do
       command in reserved ->
-        gettext("!%{command} is already a command of Idejo or an automessage.", command: command)
+        {:reserved, command}
 
       MapSet.member?(seen, command) ->
-        gettext("Another file already defines !%{command}.", command: command)
+        {:duplicate, command}
 
       true ->
         nil
@@ -129,15 +144,14 @@ defmodule Idejo.Plugins do
       {:ok, %{type: :regular, size: size}} when size <= 32_768 ->
         case File.read(path) do
           {:ok, text} -> Definition.parse(text)
-          {:error, _} -> {:error, gettext("The file cannot be read.")}
+          {:error, _} -> {:error, :unreadable}
         end
 
       {:ok, %{type: :regular}} ->
-        {:error,
-         gettext("The file is larger than %{kb} KB.", kb: div(Definition.max_bytes(), 1024))}
+        {:error, {:too_large, div(Definition.max_bytes(), 1024)}}
 
       _ ->
-        {:error, gettext("Not a file.")}
+        {:error, :not_a_file}
     end
   end
 
@@ -362,8 +376,7 @@ defmodule Idejo.Plugins do
   Installs an uploaded plugin, as `admin`: checked (`Definition.parse/1`), its command free,
   then written to the folder as `<command>.json`, off. Audited `plugin.install`.
   """
-  @spec install(User.t(), binary()) ::
-          {:ok, Definition.t()} | {:error, String.t()}
+  @spec install(User.t(), binary()) :: {:ok, Definition.t()} | {:error, problem()}
   def install(%User{} = admin, text) when is_binary(text) do
     path = fn d -> Path.join(dir(), d.command <> ".json") end
 
@@ -388,17 +401,11 @@ defmodule Idejo.Plugins do
   defp free(definition, path) do
     cond do
       definition.command in reserved() ->
-        {:error,
-         gettext("!%{command} is already a command of Idejo or an automessage.",
-           command: definition.command
-         )}
+        {:error, {:reserved, definition.command}}
 
       File.exists?(path) or
           Enum.any?(list(), &(&1.definition && &1.definition.command == definition.command)) ->
-        {:error,
-         gettext("A plugin for !%{command} is installed already. Delete its file first.",
-           command: definition.command
-         )}
+        {:error, {:installed, definition.command}}
 
       true ->
         :ok
@@ -417,7 +424,7 @@ defmodule Idejo.Plugins do
     else
       {:error, reason} ->
         Logger.warning("Plugin not written: #{inspect(reason)}")
-        {:error, gettext("The plugins folder cannot be written to.")}
+        {:error, :not_writable}
     end
   end
 
@@ -663,12 +670,22 @@ defmodule Idejo.Plugins do
   @doc """
   Adds what a plugin made under the author's own `message` (open or closed, not deleted),
   where they may post and may use the plugin; at most #{@max_embeds} per message. Broadcast
-  as the message, after its transaction.
+  as the message, after its transaction. `message` may be its id, from a client: an unknown
+  one is `:forbidden` too.
   """
-  @spec attach(User.t(), Message.t(), String.t(), map()) ::
+  @spec attach(User.t(), Message.t() | Ecto.UUID.t(), String.t(), map()) ::
           {:ok, Message.t()}
           | {:error,
              :forbidden | :too_many | :rate_limited | :link | :code | :label | :url | :body}
+  def attach(%User{} = user, message_id, command, params) when is_binary(message_id) do
+    with {:ok, id} <- Ecto.UUID.cast(message_id),
+         %Message{} = message <- Repo.get(Message, id) do
+      attach(user, message, command, params)
+    else
+      _ -> {:error, :forbidden}
+    end
+  end
+
   def attach(%User{} = user, %Message{} = message, command, params) do
     topic = Repo.get!(Topic, message.topic_id)
 

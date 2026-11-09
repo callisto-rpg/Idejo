@@ -46,7 +46,6 @@ defmodule IdejoWeb.TopicLive do
   alias Idejo.Moderation.Warnings
   alias Idejo.Plugins
   alias Idejo.Reading
-  alias Idejo.Repo
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.MessageModerationComponents
@@ -177,7 +176,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(forward_access: %{}, forward_card: nil)
          |> assign(committed: nil, read_timer: nil)
          |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
-         |> assign(:can_fork?, can_fork?(user, topic))
+         |> assign(:can_fork?, Forum.can_fork?(user, topic))
          # AC-06: whose messages are collapsed for this reader.
          |> assign(:ignored, Idejo.Accounts.ignored_ids(user))
          |> assign(:icon_picker, nil)
@@ -480,9 +479,6 @@ defmodule IdejoWeb.TopicLive do
   # would leave it.
   # The automessages the viewer may send there (steward decisions, 2026-11-01).
   defp automessages(user, topic), do: Automessages.commands_for(user, topic)
-
-  defp can_fork?(_user, %{private: true}), do: false
-  defp can_fork?(user, _topic), do: Forum.list_startable_categories(user) != []
 
   # Reply starts a new message (steward decision, 2026-10-24): with the author's message
   # still open, the composer leaves it for a new one at the end; `draft_over` is the open
@@ -1352,7 +1348,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(
            can_post?: Forum.can_post?(user, topic),
            can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
-           can_fork?: can_fork?(user, topic),
+           can_fork?: Forum.can_fork?(user, topic),
            automessages: automessages(user, topic),
            plugins: Plugins.usable(user, topic)
          )
@@ -1484,9 +1480,9 @@ defmodule IdejoWeb.TopicLive do
     command = form.definition.command
 
     result =
-      case form.message_id && Repo.get(Messages.Message, form.message_id) do
+      case form.message_id do
         nil -> Plugins.post(user(socket), topic, command, params, reply_to && reply_to.id)
-        message -> Plugins.attach(user(socket), message, command, params)
+        id -> Plugins.attach(user(socket), id, command, params)
       end
 
     case result do

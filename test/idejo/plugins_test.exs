@@ -13,6 +13,7 @@ defmodule Idejo.PluginsTest do
   alias Idejo.Messages
   alias Idejo.Plugins
   alias Idejo.Plugins.{Definition, Embed}
+  alias IdejoWeb.PluginComponents
 
   setup do
     File.rm_rf!(Plugins.dir())
@@ -50,7 +51,8 @@ defmodule Idejo.PluginsTest do
   end
 
   test "a plugin file is checked: bad files are listed with the reason, never used" do
-    assert {:error, "The file is not valid JSON."} = Definition.parse("{")
+    assert {:error, :not_json} = Definition.parse("{")
+    assert PluginComponents.problem(:not_json) == "The file is not valid JSON."
     assert {:error, _} = Definition.parse(~s({"idejo_plugin": 1, "command": "Bad Name"}))
 
     assert {:error, reason} =
@@ -65,7 +67,8 @@ defmodule Idejo.PluginsTest do
                })
              )
 
-    assert reason =~ ~s(group named "id")
+    assert reason == :pattern_no_id
+    assert PluginComponents.problem(reason) =~ ~s(group named "id")
 
     assert {:error, reason} =
              Definition.parse(
@@ -81,7 +84,8 @@ defmodule Idejo.PluginsTest do
                })
              )
 
-    assert reason =~ "https"
+    assert reason == :embed
+    assert PluginComponents.problem(reason) =~ "https"
 
     File.write!(Path.join(Plugins.dir(), "broken.json"), "not json")
     # Another file for a command already taken, and one for a command of Idejo's own.
@@ -97,8 +101,10 @@ defmodule Idejo.PluginsTest do
 
     rows = Map.new(Plugins.list(), &{&1.file, &1})
     assert rows["broken.json"].definition == nil
-    assert rows["zz-again.json"].error =~ "Another file"
-    assert rows["poll.json"].error =~ "already a command"
+    assert {:duplicate, _command} = rows["zz-again.json"].error
+    assert PluginComponents.problem(rows["zz-again.json"].error) =~ "Another file"
+    assert rows["poll.json"].error == {:reserved, "poll"}
+    assert PluginComponents.problem(rows["poll.json"].error) =~ "already a command"
   end
 
   test "turned on, a plugin is for owners, administrators and the roles chosen, where they may post",
@@ -273,8 +279,9 @@ defmodule Idejo.PluginsTest do
     assert File.exists?(Path.join(Plugins.dir(), "vimeo.json"))
     assert %{setting: %{enabled: false}} = Enum.find(Plugins.list(), &(&1.file == "vimeo.json"))
     assert {:error, reason} = Plugins.install(admin, text)
-    assert reason =~ "installed already"
-    assert {:error, "The file is not valid JSON."} = Plugins.install(admin, "{")
+    assert reason == {:installed, "vimeo"}
+    assert PluginComponents.problem(reason) =~ "installed already"
+    assert {:error, :not_json} = Plugins.install(admin, "{")
 
     assert Repo.exists?(from e in Entry, where: e.change == "plugin.install")
   end

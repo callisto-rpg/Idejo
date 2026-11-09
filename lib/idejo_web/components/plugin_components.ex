@@ -425,4 +425,71 @@ defmodule IdejoWeb.PluginComponents do
     do: gettext("You are sending very fast. Wait a moment, then try again.")
 
   def error(_), do: gettext("You cannot use this command here.")
+
+  @doc """
+  The admin page's words for why a plugin file cannot be used or installed
+  (`Idejo.Plugins.problem/0`).
+  """
+  @spec problem(Idejo.Plugins.problem()) :: String.t()
+  def problem({:too_large, kb}), do: gettext("The file is larger than %{kb} KB.", kb: kb)
+  def problem(:not_object), do: gettext("The file is not a JSON object.")
+  def problem(:not_json), do: gettext("The file is not valid JSON.")
+  def problem(:version), do: gettext("\"idejo_plugin\" must be 1.")
+
+  def problem(:command_format),
+    do: gettext("\"command\" may only hold lower-case letters, digits and dashes, at most 30.")
+
+  def problem({:missing, field}), do: gettext("\"%{field}\" is missing.", field: field)
+
+  def problem({:too_long, field, max}),
+    do: gettext("\"%{field}\" is longer than %{max} characters.", field: field, max: max)
+
+  def problem({:not_text, field}), do: gettext("\"%{field}\" must be text.", field: field)
+
+  def problem({:not_one_of, field, allowed}),
+    do:
+      gettext("\"%{field}\" must be one of %{values}.",
+        field: field,
+        values: Enum.join(allowed, ", ")
+      )
+
+  def problem({:argument, block, argument}),
+    do:
+      gettext(~s|A "%{block}" plugin cannot take a "%{argument}" argument.|,
+        block: block,
+        argument: argument
+      )
+
+  def problem(:video),
+    do: gettext(~s|A "video" plugin needs "video" with "match" (1 to 10 patterns) and "embed".|)
+
+  def problem(:directory_https), do: gettext(~s|"directory" must be an https address.|)
+
+  def problem(:directory_missing),
+    do: gettext(~s|A "forum" plugin needs "directory", its forums directory's address.|)
+
+  def problem(:pattern_invalid),
+    do: gettext(~s|A "match" pattern is not a valid regular expression.|)
+
+  def problem(:pattern_too_long),
+    do: gettext(~s|Each "match" pattern must be text, at most 300 characters.|)
+
+  def problem(:pattern_no_id), do: gettext(~s|Each "match" pattern needs a group named "id".|)
+  def problem(:embed), do: gettext("\"embed\" must be an https address holding {id}.")
+
+  def problem({:reserved, command}),
+    do: gettext("!%{command} is already a command of Idejo or an automessage.", command: command)
+
+  def problem({:duplicate, command}),
+    do: gettext("Another file already defines !%{command}.", command: command)
+
+  def problem({:installed, command}),
+    do:
+      gettext("A plugin for !%{command} is installed already. Delete its file first.",
+        command: command
+      )
+
+  def problem(:unreadable), do: gettext("The file cannot be read.")
+  def problem(:not_a_file), do: gettext("Not a file.")
+  def problem(:not_writable), do: gettext("The plugins folder cannot be written to.")
 end

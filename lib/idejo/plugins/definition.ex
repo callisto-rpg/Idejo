@@ -35,8 +35,6 @@ defmodule Idejo.Plugins.Definition do
   draws the chosen forum as a small card: logo, name, Join.
   """
 
-  use Gettext, backend: IdejoWeb.Gettext
-
   @blocks ~w(video iframe button card collapse forum)
   @arguments ~w(link text none)
   @max_bytes 32_768
@@ -72,19 +70,41 @@ defmodule Idejo.Plugins.Definition do
   @spec blocks() :: [String.t()]
   def blocks, do: @blocks
 
-  @doc """
-  Reads a plugin file's text. `{:error, reason}`, a sentence for the admin page, when it is
-  not a plugin Idejo can use.
+  @typedoc """
+  Why a file is not a plugin Idejo can use (`parse/1`); the admin page words it
+  (`IdejoWeb.PluginComponents.problem/1`).
   """
-  @spec parse(binary()) :: {:ok, t()} | {:error, String.t()}
+  @type problem ::
+          {:too_large, kb :: pos_integer()}
+          | :not_object
+          | :not_json
+          | :version
+          | :command_format
+          | {:missing, field :: String.t()}
+          | {:too_long, field :: String.t(), max :: pos_integer()}
+          | {:not_text, field :: String.t()}
+          | {:not_one_of, field :: String.t(), [String.t()]}
+          | {:argument, block :: String.t(), argument :: String.t()}
+          | :video
+          | :directory_https
+          | :directory_missing
+          | :pattern_invalid
+          | :pattern_too_long
+          | :pattern_no_id
+          | :embed
+
+  @doc """
+  Reads a plugin file's text. `{:error, problem}` when it is not a plugin Idejo can use.
+  """
+  @spec parse(binary()) :: {:ok, t()} | {:error, problem()}
   def parse(text) when is_binary(text) and byte_size(text) > @max_bytes,
-    do: {:error, gettext("The file is larger than %{kb} KB.", kb: div(@max_bytes, 1024))}
+    do: {:error, {:too_large, div(@max_bytes, 1024)}}
 
   def parse(text) when is_binary(text) do
     case Jason.decode(text) do
       {:ok, %{} = json} -> from_json(json)
-      {:ok, _other} -> {:error, gettext("The file is not a JSON object.")}
-      {:error, _} -> {:error, gettext("The file is not valid JSON.")}
+      {:ok, _other} -> {:error, :not_object}
+      {:error, _} -> {:error, :not_json}
     end
   end
 
@@ -114,14 +134,12 @@ defmodule Idejo.Plugins.Definition do
   end
 
   defp version(1), do: :ok
-  defp version(_), do: {:error, gettext("\"idejo_plugin\" must be 1.")}
+  defp version(_), do: {:error, :version}
 
   defp command(command) when is_binary(command) do
     if command =~ ~r/^[a-z0-9]+(-[a-z0-9]+)*$/ and String.length(command) <= 30,
       do: {:ok, command},
-      else:
-        {:error,
-         gettext("\"command\" may only hold lower-case letters, digits and dashes, at most 30.")}
+      else: {:error, :command_format}
   end
 
   defp command(_), do: missing("command")
@@ -137,8 +155,7 @@ defmodule Idejo.Plugins.Definition do
         missing(field)
 
       String.length(value) > max ->
-        {:error,
-         gettext("\"%{field}\" is longer than %{max} characters.", field: field, max: max)}
+        {:error, {:too_long, field, max}}
 
       true ->
         {:ok, value}
@@ -146,19 +163,14 @@ defmodule Idejo.Plugins.Definition do
   end
 
   defp text(_value, field, _max, _required?),
-    do: {:error, gettext("\"%{field}\" must be text.", field: field)}
+    do: {:error, {:not_text, field}}
 
-  defp missing(field), do: {:error, gettext("\"%{field}\" is missing.", field: field)}
+  defp missing(field), do: {:error, {:missing, field}}
 
   defp one_of(value, allowed, field) do
     if value in allowed,
       do: {:ok, value},
-      else:
-        {:error,
-         gettext("\"%{field}\" must be one of %{values}.",
-           field: field,
-           values: Enum.join(allowed, ", ")
-         )}
+      else: {:error, {:not_one_of, field, allowed}}
   end
 
   defp argument_fits("video", argument) when argument in ~w(link none), do: :ok
@@ -168,13 +180,7 @@ defmodule Idejo.Plugins.Definition do
   defp argument_fits(block, argument) when block in ~w(button card) and argument in ~w(text none),
     do: :ok
 
-  defp argument_fits(block, argument),
-    do:
-      {:error,
-       gettext(~s|A "%{block}" plugin cannot take a "%{argument}" argument.|,
-         block: block,
-         argument: argument
-       )}
+  defp argument_fits(block, argument), do: {:error, {:argument, block, argument}}
 
   defp video("video", %{"match" => [_ | _] = patterns, "embed" => embed})
        when length(patterns) <= 10 and is_binary(embed) do
@@ -184,10 +190,7 @@ defmodule Idejo.Plugins.Definition do
     end
   end
 
-  defp video("video", _),
-    do:
-      {:error,
-       gettext(~s|A "video" plugin needs "video" with "match" (1 to 10 patterns) and "embed".|)}
+  defp video("video", _), do: {:error, :video}
 
   defp video(_block, _), do: {:ok, nil}
 
@@ -198,11 +201,10 @@ defmodule Idejo.Plugins.Definition do
     if uri.scheme == "https" and is_binary(uri.host) and uri.host != "" and is_nil(uri.userinfo) and
          is_nil(uri.query) and is_nil(uri.fragment),
        do: {:ok, String.trim_trailing(directory, "/")},
-       else: {:error, gettext(~s|"directory" must be an https address.|)}
+       else: {:error, :directory_https}
   end
 
-  defp directory("forum", _),
-    do: {:error, gettext(~s|A "forum" plugin needs "directory", its forums directory's address.|)}
+  defp directory("forum", _), do: {:error, :directory_missing}
 
   defp directory(_block, _), do: {:ok, nil}
 
@@ -218,17 +220,16 @@ defmodule Idejo.Plugins.Definition do
   defp pattern(pattern) when is_binary(pattern) and byte_size(pattern) <= 300 do
     case Regex.compile(pattern) do
       {:ok, regex} -> with_id(regex)
-      {:error, _} -> {:error, gettext(~s|A "match" pattern is not a valid regular expression.|)}
+      {:error, _} -> {:error, :pattern_invalid}
     end
   end
 
-  defp pattern(_pattern),
-    do: {:error, gettext(~s|Each "match" pattern must be text, at most 300 characters.|)}
+  defp pattern(_pattern), do: {:error, :pattern_too_long}
 
   defp with_id(regex) do
     if "id" in Regex.names(regex),
       do: {:ok, regex},
-      else: {:error, gettext(~s|Each "match" pattern needs a group named "id".|)}
+      else: {:error, :pattern_no_id}
   end
 
   # The embed address: https, a host, `{id}` in its path or query, nothing else to fill.
@@ -240,7 +241,7 @@ defmodule Idejo.Plugins.Definition do
          is_nil(uri.fragment) do
       {:ok, origin(uri)}
     else
-      {:error, gettext("\"embed\" must be an https address holding {id}.")}
+      {:error, :embed}
     end
   end
 
