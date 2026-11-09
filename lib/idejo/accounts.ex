@@ -276,7 +276,10 @@ defmodule Idejo.Accounts do
   entry. The invite link is built by the web layer from `invite.code`.
   """
   @spec create_invite(User.t()) :: {:ok, Invite.t()}
-  def create_invite(%User{} = admin) do
+  def create_invite(%User{} = admin),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_invite(admin) end)
+
+  defp as_admin_insert_invite(%User{} = admin) do
     now = DateTime.utc_now(:second)
 
     invite = %Invite{

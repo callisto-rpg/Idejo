@@ -24,7 +24,10 @@ defmodule Idejo.Settings.InfoBoxes do
 
   @doc "Creates an info box at the end of the order, as `admin`."
   @spec create(User.t(), map()) :: {:ok, InfoBox.t()} | {:error, Ecto.Changeset.t()}
-  def create(%User{} = admin, attrs) do
+  def create(%User{} = admin, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_box(admin, attrs) end)
+
+  defp as_admin_insert_box(%User{} = admin, attrs) do
     Repo.transact(fn ->
       lock()
       position = Repo.aggregate(InfoBox, :count)
@@ -42,7 +45,10 @@ defmodule Idejo.Settings.InfoBoxes do
 
   @doc "Changes an info box's title, look or text, as `admin`."
   @spec update(User.t(), InfoBox.t(), map()) :: {:ok, InfoBox.t()} | {:error, Ecto.Changeset.t()}
-  def update(%User{} = admin, %InfoBox{} = box, attrs) do
+  def update(%User{} = admin, %InfoBox{} = box, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_update_box(admin, box, attrs) end)
+
+  defp as_admin_update_box(%User{} = admin, %InfoBox{} = box, attrs) do
     Repo.transact(fn ->
       lock()
 
@@ -55,7 +61,11 @@ defmodule Idejo.Settings.InfoBoxes do
 
   @doc "Moves an info box one place up or down, as `admin`; `{:error, :at_edge}` at the ends."
   @spec move(User.t(), InfoBox.t(), :up | :down) :: {:ok, [InfoBox.t()]} | {:error, :at_edge}
-  def move(%User{} = admin, %InfoBox{} = box, direction) when direction in [:up, :down] do
+  def move(%User{} = admin, %InfoBox{} = box, direction) when direction in [:up, :down],
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_move_box(admin, box, direction) end)
+
+  defp as_admin_move_box(%User{} = admin, %InfoBox{} = box, direction)
+       when direction in [:up, :down] do
     Repo.transact(fn ->
       lock()
       boxes = list()
@@ -99,7 +109,10 @@ defmodule Idejo.Settings.InfoBoxes do
 
   @doc "Deletes an info box, as `admin`."
   @spec delete(User.t(), InfoBox.t()) :: {:ok, InfoBox.t()} | {:error, term()}
-  def delete(%User{} = admin, %InfoBox{} = box) do
+  def delete(%User{} = admin, %InfoBox{} = box),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_delete_box(admin, box) end)
+
+  defp as_admin_delete_box(%User{} = admin, %InfoBox{} = box) do
     Repo.transact(fn ->
       lock()
 

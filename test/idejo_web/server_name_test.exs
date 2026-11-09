@@ -25,7 +25,10 @@ defmodule IdejoWeb.ServerNameTest do
 
   @tag req: "AD-02"
   test "AD-02 the header and title show the server name", %{conn: conn} do
-    {:ok, _} = Settings.update_settings(user_fixture(), %{"server_name" => "Lumière"})
+    {:ok, _} =
+      Settings.update_settings(user_with_role_fixture(:administrator), %{
+        "server_name" => "Lumière"
+      })
 
     html = conn |> get(~p"/users/sign-in") |> html_response(200)
     assert LazyHTML.text(header(html)) =~ "Lumière"
@@ -40,7 +43,10 @@ defmodule IdejoWeb.ServerNameTest do
 
   @tag req: "AD-02"
   test "AD-02 a page without its own title shows the server name alone", %{conn: conn} do
-    {:ok, _} = Settings.update_settings(user_fixture(), %{"server_name" => "Lumière"})
+    {:ok, _} =
+      Settings.update_settings(user_with_role_fixture(:administrator), %{
+        "server_name" => "Lumière"
+      })
 
     html = conn |> get(~p"/") |> html_response(200)
     assert LazyHTML.text(title(html)) == "Lumière"

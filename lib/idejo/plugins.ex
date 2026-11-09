@@ -313,7 +313,13 @@ defmodule Idejo.Plugins do
 
   @doc "Turns a plugin on or off, as `admin`; audited `plugin.enable` / `plugin.disable`."
   @spec set_enabled(User.t(), String.t(), boolean()) :: {:ok, Setting.t()} | {:error, term()}
-  def set_enabled(%User{} = admin, command, enabled?) when is_boolean(enabled?) do
+  def set_enabled(%User{} = admin, command, enabled?) when is_boolean(enabled?),
+    do:
+      Idejo.Access.as_administrator(admin, fn ->
+        as_admin_do_set_enabled(admin, command, enabled?)
+      end)
+
+  defp as_admin_do_set_enabled(%User{} = admin, command, enabled?) when is_boolean(enabled?) do
     change(admin, command, if(enabled?, do: "plugin.enable", else: "plugin.disable"), fn s ->
       %{enabled: enabled?, role_ids: s.role_ids}
     end)
@@ -324,7 +330,13 @@ defmodule Idejo.Plugins do
   ids of roles that do not exist are dropped. Audited `plugin.roles`.
   """
   @spec set_roles(User.t(), String.t(), [String.t()]) :: {:ok, Setting.t()} | {:error, term()}
-  def set_roles(%User{} = admin, command, role_ids) when is_list(role_ids) do
+  def set_roles(%User{} = admin, command, role_ids) when is_list(role_ids),
+    do:
+      Idejo.Access.as_administrator(admin, fn ->
+        as_admin_do_set_roles(admin, command, role_ids)
+      end)
+
+  defp as_admin_do_set_roles(%User{} = admin, command, role_ids) when is_list(role_ids) do
     ids = for id <- role_ids, {:ok, id} <- [Ecto.UUID.cast(id)], do: id
     known = Repo.all(from r in Access.Role, where: r.id in ^ids, select: r.id)
 
@@ -377,7 +389,10 @@ defmodule Idejo.Plugins do
   then written to the folder as `<command>.json`, off. Audited `plugin.install`.
   """
   @spec install(User.t(), binary()) :: {:ok, Definition.t()} | {:error, problem()}
-  def install(%User{} = admin, text) when is_binary(text) do
+  def install(%User{} = admin, text) when is_binary(text),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_do_install(admin, text) end)
+
+  defp as_admin_do_install(%User{} = admin, text) when is_binary(text) do
     path = fn d -> Path.join(dir(), d.command <> ".json") end
 
     with {:ok, definition} <- Definition.parse(text),

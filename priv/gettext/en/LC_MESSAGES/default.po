@@ -2405,14 +2405,14 @@ msgstr ""
 msgid "%{server} will receive from %{provider}:"
 msgstr ""
 
-#: lib/idejo/forum.ex:2355
-#: lib/idejo/forum.ex:2403
+#: lib/idejo/forum.ex:2394
+#: lib/idejo/forum.ex:2442
 #: lib/idejo_web/live/topic_live.ex:4246
 #, elixir-autogen, elixir-format
 msgid "(spoiler)"
 msgstr ""
 
-#: lib/idejo/forum.ex:2352
+#: lib/idejo/forum.ex:2391
 #, elixir-autogen, elixir-format
 msgid "(spoiler: %{label})"
 msgstr ""

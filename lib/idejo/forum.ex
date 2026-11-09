@@ -109,7 +109,10 @@ defmodule Idejo.Forum do
 
   @doc "Creates a group at the end of the order, as `admin`. Audited as `category_group.create`."
   @spec create_group(User.t(), map()) :: {:ok, CategoryGroup.t()} | {:error, Ecto.Changeset.t()}
-  def create_group(%User{} = admin, attrs) do
+  def create_group(%User{} = admin, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_group(admin, attrs) end)
+
+  defp as_admin_insert_group(%User{} = admin, attrs) do
     Repo.transact(fn ->
       lock_groups()
       position = Repo.aggregate(CategoryGroup, :count)
@@ -125,7 +128,10 @@ defmodule Idejo.Forum do
   @doc "Renames a group, as `admin`. Audited as `category_group.update`."
   @spec update_group(User.t(), CategoryGroup.t(), map()) ::
           {:ok, CategoryGroup.t()} | {:error, Ecto.Changeset.t()}
-  def update_group(%User{} = admin, %CategoryGroup{} = group, attrs) do
+  def update_group(%User{} = admin, %CategoryGroup{} = group, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_save_group(admin, group, attrs) end)
+
+  defp as_admin_save_group(%User{} = admin, %CategoryGroup{} = group, attrs) do
     Repo.transact(fn ->
       lock_groups()
 
@@ -149,7 +155,14 @@ defmodule Idejo.Forum do
   @spec move_group(User.t(), CategoryGroup.t(), :up | :down) ::
           {:ok, [CategoryGroup.t()]} | {:error, :at_edge}
   def move_group(%User{} = admin, %CategoryGroup{} = group, direction)
-      when direction in [:up, :down] do
+      when direction in [:up, :down],
+      do:
+        Idejo.Access.as_administrator(admin, fn ->
+          as_admin_do_move_group(admin, group, direction)
+        end)
+
+  defp as_admin_do_move_group(%User{} = admin, %CategoryGroup{} = group, direction)
+       when direction in [:up, :down] do
     Repo.transact(fn ->
       lock_groups()
       groups = list_groups()
@@ -191,7 +204,10 @@ defmodule Idejo.Forum do
   `category_group.delete`.
   """
   @spec delete_group(User.t(), CategoryGroup.t()) :: {:ok, CategoryGroup.t()} | {:error, term()}
-  def delete_group(%User{} = admin, %CategoryGroup{} = group) do
+  def delete_group(%User{} = admin, %CategoryGroup{} = group),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_remove_group(admin, group) end)
+
+  defp as_admin_remove_group(%User{} = admin, %CategoryGroup{} = group) do
     Repo.transact(fn ->
       lock_groups()
 
@@ -248,7 +264,10 @@ defmodule Idejo.Forum do
   `-2`, `-3`… added when taken). Audited as `category.create`, with a `create` activity.
   """
   @spec create_category(User.t(), map()) :: {:ok, Category.t()} | {:error, Ecto.Changeset.t()}
-  def create_category(%User{} = admin, attrs) do
+  def create_category(%User{} = admin, attrs),
+    do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_category(admin, attrs) end)
+
+  defp as_admin_insert_category(%User{} = admin, attrs) do
     id = Federation.generate_id()
 
     Repo.transact(fn ->
@@ -274,7 +293,13 @@ defmodule Idejo.Forum do
   """
   @spec update_category(User.t(), Category.t(), map()) ::
           {:ok, Category.t()} | {:error, Ecto.Changeset.t()}
-  def update_category(%User{} = admin, %Category{} = category, attrs) do
+  def update_category(%User{} = admin, %Category{} = category, attrs),
+    do:
+      Idejo.Access.as_administrator(admin, fn ->
+        as_admin_save_category(admin, category, attrs)
+      end)
+
+  defp as_admin_save_category(%User{} = admin, %Category{} = category, attrs) do
     case Category.update_changeset(category, attrs) do
       %Ecto.Changeset{changes: changes} when changes == %{} -> {:ok, category}
       changeset -> Repo.transact(fn -> save_category(admin, category, changeset) end)
@@ -295,7 +320,14 @@ defmodule Idejo.Forum do
   @spec move_category(User.t(), Category.t(), :up | :down) ::
           {:ok, [Category.t()]} | {:error, :at_edge}
   def move_category(%User{} = admin, %Category{} = category, direction)
-      when direction in [:up, :down] do
+      when direction in [:up, :down],
+      do:
+        Idejo.Access.as_administrator(admin, fn ->
+          as_admin_do_move_category(admin, category, direction)
+        end)
+
+  defp as_admin_do_move_category(%User{} = admin, %Category{} = category, direction)
+       when direction in [:up, :down] do
     Repo.transact(fn ->
       lock_categories()
       categories = list_categories()
@@ -349,7 +381,13 @@ defmodule Idejo.Forum do
   """
   @spec delete_category(User.t(), Category.t(), keyword()) ::
           {:ok, Category.t()} | {:error, :archive | :has_topics | :invalid_target | term()}
-  def delete_category(%User{} = admin, %Category{} = category, opts \\ []) do
+  def delete_category(%User{} = admin, %Category{} = category, opts \\ []),
+    do:
+      Idejo.Access.as_administrator(admin, fn ->
+        as_admin_remove_category(admin, category, opts)
+      end)
+
+  defp as_admin_remove_category(%User{} = admin, %Category{} = category, opts) do
     result =
       Repo.transact(fn ->
         lock_categories()
@@ -472,7 +510,8 @@ defmodule Idejo.Forum do
     Access.list_roles()
     |> Enum.reject(&(&1.built_in and &1.name in ~w(owner administrator)))
     |> Enum.reduce_while(:ok, fn role, :ok ->
-      case Access.set_permission(admin, role, archive, :view, :deny) do
+      # A moderator archiving the first topic makes it: no administrator needed here.
+      case Access.put_permission(admin, role, archive, :view, :deny) do
         {:ok, _} -> {:cont, :ok}
         error -> {:halt, error}
       end
