@@ -634,12 +634,11 @@ defmodule IdejoWeb.TopicLive do
   end
 
   # TP-17: any signed-in, verified reader reacts, while the topic takes changes.
-  defp can_react?(nil, _topic), do: false
-  defp can_react?(user, topic), do: Idejo.Accounts.confirmed?(user) and topic.state == "open"
+  defp can_react?(user, topic), do: Idejo.Reactions.may_react_in?(user, topic)
 
   # Who reacted to a message, for the list or its card; nothing left closes it.
   defp put_reaction_who(socket, who) do
-    case Idejo.Reactions.reactors(who.message_id) do
+    case Idejo.Reactions.reactors(user(socket), who.message_id) do
       [] -> assign(socket, :reaction_who, nil)
       people -> assign(socket, :reaction_who, Map.put(who, :people, people))
     end
@@ -2127,12 +2126,7 @@ defmodule IdejoWeb.TopicLive do
     user = user(socket)
 
     with %{} <- user,
-         %{} = topic <- Forum.get_viewable_topic(user, id) do
-      :ok =
-        if action == "follow",
-          do: Reading.follow(user, topic),
-          else: Reading.unfollow(user, topic)
-
+         {:ok, _topic} <- Reading.act_on_topic(user, String.to_existing_atom(action), id) do
       {:noreply, assign(socket, :card, IdejoWeb.InlineCards.load("topic", id, user))}
     else
       _ -> {:noreply, socket}

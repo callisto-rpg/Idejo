@@ -21,6 +21,7 @@ defmodule Idejo.Reactions do
   alias Idejo.Accounts.User
   alias Idejo.Emoji
   alias Idejo.Forum
+  alias Idejo.Forum.Topic
   alias Idejo.Messages
   alias Idejo.Messages.{Message, Reaction}
   alias Idejo.Notifications
@@ -76,12 +77,23 @@ defmodule Idejo.Reactions do
   def may_react?(nil, _message), do: false
 
   def may_react?(%User{} = user, %Message{} = message) do
-    Accounts.confirmed?(user) and is_nil(message.deleted_at) and
+    is_nil(message.deleted_at) and
       case Forum.get_readable_topic(user, message.topic_id) do
-        %{state: "open"} -> true
-        _ -> false
+        %Topic{} = topic -> may_react_in?(user, topic)
+        nil -> false
       end
   end
+
+  @doc """
+  Whether `user` may react in `topic`, one they may read: signed in and verified, and the
+  topic neither locked nor archived. What a topic view asks once (no query per message);
+  `may_react?/2` and `toggle/3` ask it too, with the message.
+  """
+  @spec may_react_in?(User.t() | nil, Topic.t()) :: boolean()
+  def may_react_in?(nil, _topic), do: false
+
+  def may_react_in?(%User{} = user, %Topic{state: state}),
+    do: Accounts.confirmed?(user) and state == "open"
 
   @doc "The summaries of the given messages' reactions, as `%{message_id => summary}`."
   @spec summaries([Ecto.UUID.t()]) :: %{Ecto.UUID.t() => summary()}
@@ -104,7 +116,7 @@ defmodule Idejo.Reactions do
   Asked only when a reader opens the list, so the summaries stay free of names (NF-01).
   """
   @spec reactors(Ecto.UUID.t()) :: [%{user: User.t(), emoji: [String.t()]}]
-  def reactors(message_id) do
+  def reactors(message_id) when is_binary(message_id) do
     from(r in Reaction,
       join: u in assoc(r, :user),
       where: r.message_id == ^message_id,
@@ -120,6 +132,20 @@ defmodule Idejo.Reactions do
       for user <- Enum.reverse(order), do: %{user: user, emoji: emoji_by[user.id]}
     end)
   end
+
+  @doc """
+  `reactors/1` for `viewer`, with a message id from a client: nothing unless they may read
+  the message (`Idejo.Forum.get_readable_message/2`, private conversations of theirs too).
+  """
+  @spec reactors(User.t() | nil, term()) :: [%{user: User.t(), emoji: [String.t()]}]
+  def reactors(viewer, message_id) when is_binary(message_id) do
+    case Forum.get_readable_message(viewer, message_id) do
+      %Message{id: id} -> reactors(id)
+      nil -> []
+    end
+  end
+
+  def reactors(_viewer, _message_id), do: []
 
   @doc "The summary of one message's reactions."
   @spec summary(Ecto.UUID.t()) :: summary()

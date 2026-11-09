@@ -1288,7 +1288,9 @@ The contract (M6; mark each item done here when its PR merges):
   writes the message); an explicit unfollow stays as `following: false`, so posting again does
   not undo it (steward decision: followers get notified of new messages, with NO-01). The
   topic page has Follow / Unfollow forms posting to `/t/{id}/follow` (`FollowController`,
-  POST / DELETE, no JavaScript needed). Topics followed by everyone (steward decision,
+  POST / DELETE, no JavaScript needed), through `Reading.act_on_topic/3`, which takes the
+  topic id and checks it is viewable (also for mute, mark unread and the topic card's Follow).
+  Topics followed by everyone (steward decision,
   2026-10-23): owners and administrators mark them on the topic page
   (`Forum.set_autofollow/3`, audited `topic.autofollow`; `TopicAutofollowController`, POST
   `/t/{id}/autofollow`); a user without a `follows` row for one follows it (members who
@@ -1337,7 +1339,8 @@ The contract (M6; mark each item done here when its PR merges):
   files stay, so old addresses keep working).
 - **Reactions** (TP-17, `Idejo.Reactions`): `reactions` rows (message, user, emoji name),
   several emoji per user. `toggle/3` adds or takes back; any signed-in, verified reader who
-  may view the topic reacts (not to deleted messages, not in locked or archived topics);
+  may view the topic reacts (not to deleted messages, not in locked or archived topics;
+  `Reactions.may_react?/2`, and `may_react_in?/2` for a whole topic, which `TopicLive` asks);
   rate-limited (`:react`). Reactions store no notification (steward decision, 2026-10-23:
   the Notifications page is gone; older `"reaction"` rows stay unused); the author gets a
   live bubble. After each change
@@ -1360,7 +1363,7 @@ The contract (M6; mark each item done here when its PR merges):
   idle (not under Save-Data).
   Who reacted (steward decision, 2026-10-28): a right click, the menu key or a long press on
   the bar (`assets/js/reaction_who.js` runs its `data-who`, a push of `"reaction_who"`)
-  loads `Reactions.reactors/1` (each user once, with their emoji; asked only then, so the
+  loads `Reactions.reactors/2` (for a reader of the message only; each user once, with their emoji; asked only then, so the
   summaries carry no names, NF-01) into `reaction_who`, read again on `{:reactions, …}` for
   that message: `ReactionComponents.reaction_who/1` (`#reaction-who`, a `.popup-menu` the
   `ReactionWho` hook places at the point) shows five people, then "Show more"

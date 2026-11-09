@@ -14,50 +14,30 @@ defmodule IdejoWeb.FollowController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Forum
   alias Idejo.Reading
 
-  def create(conn, %{"id" => id} = params) do
-    with_topic(conn, id, params, fn user, topic ->
-      :ok = Reading.follow(user, topic)
-      {topic, gettext("You follow this topic.")}
-    end)
-  end
+  def create(conn, %{"id" => id} = params),
+    do: act(conn, :follow, id, params, gettext("You follow this topic."))
 
-  def delete(conn, %{"id" => id} = params) do
-    with_topic(conn, id, params, fn user, topic ->
-      :ok = Reading.unfollow(user, topic)
-      {topic, gettext("You no longer follow this topic.")}
-    end)
-  end
+  def delete(conn, %{"id" => id} = params),
+    do: act(conn, :unfollow, id, params, gettext("You no longer follow this topic."))
 
-  def mute(conn, %{"id" => id} = params) do
-    with_topic(conn, id, params, fn user, topic ->
-      :ok = Reading.mute(user, topic)
-      {topic, gettext("You no longer follow this topic, and it is muted.")}
-    end)
-  end
+  def mute(conn, %{"id" => id} = params),
+    do: act(conn, :mute, id, params, gettext("You no longer follow this topic, and it is muted."))
 
-  def unread(conn, %{"id" => id} = params) do
-    with_topic(conn, id, params, fn user, topic ->
-      :ok = Reading.mark_unread(user, topic)
-      {topic, gettext("Marked unread.")}
-    end)
-  end
+  def unread(conn, %{"id" => id} = params),
+    do: act(conn, :mark_unread, id, params, gettext("Marked unread."))
 
-  defp with_topic(conn, id, params, fun) do
-    user = conn.assigns.current_scope.user
-
-    case Forum.get_viewable_topic(user, id) do
-      nil ->
-        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
-
-      topic ->
-        {topic, message} = fun.(user, topic)
-
+  # `Reading.act_on_topic/3` checks the topic is one the user may view.
+  defp act(conn, action, id, params, message) do
+    case Reading.act_on_topic(conn.assigns.current_scope.user, action, id) do
+      {:ok, topic} ->
         conn
         |> put_flash(:info, message)
         |> redirect(to: back(conn, params) || ~p"/t/#{topic.id}/#{topic.slug}")
+
+      {:error, :not_found} ->
+        raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
     end
   end
 
