@@ -9,7 +9,9 @@ defmodule Idejo.Messages do
   stores it, in the database first (NF-02), and only then acknowledges and broadcasts it.
 
     * With no open message in the topic, Enter opens one (GM-01). Its window is fixed now:
-      `closes_at = opened_at + window` (GM-03).
+      `closes_at = timer_from + window` (GM-03), `timer_from` when the author started typing
+      (`started_at:`, steward request 2026-11-09; else the first commit), never before
+      `opened_at`.
     * With one open, Enter commits to it in place (GM-02), whatever the time: the window only
       limits when a new message may start (GM-03, GM-04).
     * Ctrl+Enter (`break: true`) commits too; after the window it then closes the message, so
@@ -232,6 +234,7 @@ defmodule Idejo.Messages do
     id = Federation.generate_id()
     # No slow mode in a private conversation (steward decision, 2026-10-27): no window.
     window = if topic.private, do: 0, else: Settings.get(:gm_window_seconds)
+    timer_from = timer_from(opts[:started_at], now)
 
     message = %Message{
       id: id,
@@ -242,7 +245,8 @@ defmodule Idejo.Messages do
       forwarded_from_id: forwarded_from(author, opts[:forwarded_from_id]),
       state: "open",
       opened_at: now,
-      closes_at: DateTime.add(now, window, :second),
+      timer_from: timer_from,
+      closes_at: Enum.max([DateTime.add(timer_from, window, :second), now], DateTime),
       body_md: text,
       body_html: Body.to_html(text, author: author, category_id: topic.category_id)
     }
@@ -256,6 +260,14 @@ defmodule Idejo.Messages do
       {:ok, message}
     end
   end
+
+  # When the author started typing (steward request, 2026-11-09), as the caller saw it on the
+  # server's clock; never later than now. Without one, from the first commit.
+  defp timer_from(%DateTime{} = started_at, now) do
+    if DateTime.compare(started_at, now) == :gt, do: now, else: started_at
+  end
+
+  defp timer_from(_started_at, now), do: now
 
   # Forward: a message the author may read (a topic they may view, or a private conversation
   # of theirs), not deleted.
@@ -357,8 +369,20 @@ defmodule Idejo.Messages do
 
   @doc "When a message nobody wrote below may be completed by Ctrl+Enter (GM-05)."
   @spec unanswered_until(Message.t()) :: DateTime.t()
-  def unanswered_until(%Message{opened_at: opened_at}),
-    do: DateTime.add(opened_at, Settings.get(:gm_unanswered_minutes) * 60, :second)
+  def unanswered_until(%Message{} = message),
+    do: DateTime.add(timer_start(message), unanswered_seconds(), :second)
+
+  @doc """
+  When a message's patience timers started: when its author started typing it (steward
+  request, 2026-11-09), or for older messages its first commit.
+  """
+  @spec timer_start(Message.t()) :: DateTime.t()
+  def timer_start(%Message{timer_from: %DateTime{} = from}), do: from
+  def timer_start(%Message{opened_at: opened_at}), do: opened_at
+
+  @doc "The unanswered message time (`gm_unanswered_minutes`, decimals allowed) in seconds."
+  @spec unanswered_seconds() :: non_neg_integer()
+  def unanswered_seconds, do: round(Settings.get(:gm_unanswered_minutes) * 60)
 
   # Someone wrote below it: a message opened after it, not deleted.
   defp answered?(message) do

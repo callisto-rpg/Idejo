@@ -23,6 +23,9 @@ defmodule Idejo.Messages.Message do
     field :state, :string
     field :opened_at, :utc_datetime_usec
     field :closes_at, :utc_datetime_usec
+    # When the author started typing it (steward request, 2026-11-09): the window and the
+    # unanswered message time count from here; nil for older messages (from opened_at).
+    field :timer_from, :utc_datetime_usec
     field :closed_at, :utc_datetime_usec
     field :body_md, :string
     field :body_html, :string

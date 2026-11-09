@@ -297,6 +297,7 @@ export const Composer = {
       this.enters = 0
       this.justSent = false
       this.typed = [this.input.value, this.input.selectionStart]
+      this.typingCheck()
       if (e.inputType?.startsWith("insert") && (this.labelledSpoiler() || this.pluginArgument())) return
       this.paint()
     })
@@ -471,6 +472,23 @@ export const Composer = {
     return true
   },
 
+  // The patience timers start at a new message's first keystroke (steward request,
+  // 2026-11-09): with nothing sent yet (not an edit), the server is told when text appears
+  // in the box and when it is emptied again; it keeps the time on its own clock.
+  typingCheck() {
+    if (this.el.hasAttribute("data-editing") || this.sent !== "") return
+    const typing = this.input.value.trim() !== ""
+    if (typing === Boolean(this.typing)) return
+    this.typing = typing
+    this.pushEvent("composer_typing", {typing})
+  },
+
+  // A new connection is a new view: it knows nothing typed yet.
+  reconnected() {
+    this.typing = false
+    this.typingCheck()
+  },
+
   // `!command:argument:` of a plugin typed up to its closing colon: it leaves the text and
   // runs with the argument. Only for a plugin taking one, and a link only for a link.
   pluginArgument() {
@@ -622,6 +640,8 @@ export const Composer = {
     if (!isBreak && body === this.sent.replace(/\s+$/, "")) return false
 
     const before = this.sent
+    // The new message's time went with this send; the next one starts again.
+    this.typing = false
     // Seen when sent (steward decision, 2026-10-25): it stays in sight, unless the author had
     // scrolled away from it.
     const shown = this.inView()

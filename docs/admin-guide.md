@@ -58,11 +58,13 @@ corner. It has ten tabs.
   members, the Sign up links disappear, and invite links stop working too. Existing members
   are not affected.
 - **Patience timer (active thread) (seconds)**: from 0 to 600, 15 by default: how long after
-  a message's first line its author must wait before starting a new one. 0 means no wait
-  once someone has written below. It applies to messages started after you change it.
-- **Patience timer (unanswered message) (minutes)**: from 1 to 1440 (a day), 10 by default. While nobody
-  has written below a message, its author can start a new one (Ctrl+Enter, or Enter three
-  times) only once the message is this old; until then it adds a line to the same message,
+  starting to type a message its author must wait before starting a new one (both timers
+  count from the first keystroke, not the first send). 0 means no wait once someone has
+  written below. It applies to messages started after you change it.
+- **Patience timer (unanswered message) (minutes)**: from 0.1 (six seconds) to 1440 (a day),
+  decimals allowed, 10 by default. While nobody has written below a message, its author can
+  start a new one (Ctrl+Enter, or Enter three times) only this long after starting to type
+  it; until then it adds a line to the same message,
   so someone writing alone keeps one message. It applies at once, to open messages too.
 - **Allow replies even if the timer is still running**: on by default. **Reply** always
   starts a new message; with this on, sending it completes the author's open message at

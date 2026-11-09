@@ -137,7 +137,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
         />
         <p id="gm-window-help" class="text-sm opacity-70 -mt-1 mb-4">
           {gettext(
-            "How long after a message's first line its author must wait before Ctrl+Enter starts a new message. From 0 (no wait) to 600; messages already open keep their window."
+            "How long after starting to type a message its author must wait before Ctrl+Enter starts a new one. From 0 (no wait) to 600; messages already open keep their window."
           )}
         </p>
         <%!-- GM-05 (steward decision, 2026-10-23). --%>
@@ -145,15 +145,15 @@ defmodule IdejoWeb.Admin.SettingsLive do
           field={@form[:gm_unanswered_minutes]}
           type="number"
           label={gettext("Patience timer (unanswered message) (minutes)")}
-          min="1"
+          min="0.1"
           max="1440"
-          step="1"
+          step="0.1"
           aria-describedby="gm-unanswered-help"
           required
         />
         <p id="gm-unanswered-help" class="text-sm opacity-70 -mt-1 mb-4">
           {gettext(
-            "While nobody has written below a message, Ctrl+Enter starts a new one only once the message is this old; until then it adds a line to the same message, so someone writing alone keeps one message. From 1 to 1440 (a day)."
+            "While nobody has written below a message, Ctrl+Enter starts a new one only this long after its author started typing it; until then it adds a line to the same message, so someone writing alone keeps one message. From 0.1 (six seconds) to 1440 (a day); decimals work."
           )}
         </p>
         <%!-- Steward decision, 2026-10-24. --%>

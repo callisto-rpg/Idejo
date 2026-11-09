@@ -61,7 +61,9 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 ### Growing-message invariants (GM, NF-02) — never break these
 
 1. A commit is written to the database **before** the append is acknowledged.
-2. `closes_at = opened_at + window` is fixed at the first commit. Appends never change it.
+2. `closes_at = timer_from + window` is fixed at the first commit (`timer_from`: when the
+   author started typing it, on the server's clock, never after `opened_at`; steward request,
+   2026-11-09; nil for older messages, which count from `opened_at`). Appends never change it.
    It marks when the author may start a new message; it never closes the message (GM-03/04).
 3. One `Idejo.Messages.OpenMessage` process per open message holds the window timer, under
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
@@ -89,8 +91,9 @@ no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, m
 (default 15, 0–600 s; steward decisions, 2026-10-23 and 2026-10-31), set in **Admin → Settings** (GM-15, AD-04; server-wide
 only in v0.1, no per-category override); a change applies to messages opened after it. The
 **unanswered message time** (`gm_unanswered_minutes`, "Patience timer (unanswered message)",
-default 10, 1–1440; steward decision, 2026-10-23) holds Ctrl+Enter back further: while no message (not deleted) is below the open
-one, it closes only once `opened_at` is that old (`Messages.may_start_new?/2`,
+default 10, 0.1–1440 with decimals (`type: :float`, `min:`/`max_value:` in `Settings`; steward
+decisions, 2026-10-23 and 2026-11-09), `Messages.unanswered_seconds/0`) holds Ctrl+Enter back further: while no message (not deleted) is below the open
+one, it closes only that long after `Messages.timer_start/1` (`timer_from`, else `opened_at`) (`Messages.may_start_new?/2`,
 `unanswered_until/1`; skipped only in private conversations, not for a 0 s window; read
 at each Ctrl+Enter, so a change applies to open messages too);
 until then Ctrl+Enter appends like Enter. `TopicLive` works it out from the messages shown
@@ -525,6 +528,14 @@ The contract (M6; mark each item done here when its PR merges):
   `Accounts.update_user_controls/2`; `TopicLive` reads them at mount) put
   `data-controls-mobile` / `-desktop` on `#message-window`: always shown, on touch screens in
   place as without scripts (no pill).
+- **Timers from the first keystroke** (steward request, 2026-11-09): the `Composer` hook's
+  `typingCheck()` pushes `"composer_typing"` (`typing` true when text appears in a box with
+  nothing sent, not an edit; false when it is emptied; again after a reconnect), and
+  `TopicLive` keeps `typing_at` (the server's `DateTime.utc_now/0`, so a client cannot set it
+  back) until the commit, which passes it as `started_at:` to `Messages.commit/4` (used only
+  when a message opens). Before the first send the timer line runs for the draft
+  (`draft_timer/1`: a `%Message{}` with `timer_from` and `closes_at` from `typing_at` and
+  `window_seconds`), `data-start` is `Messages.timer_start/1`.
 - **Composer** (GM-02, GM-07, GM-08): in `TopicLive`, the author's open message in place
   (messages before it, the composer under the author's name, later replies below; at the end
   when nothing is open). Only a text box whose placeholder names the keys: no button or
