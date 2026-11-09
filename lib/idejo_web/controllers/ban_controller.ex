@@ -13,18 +13,18 @@ defmodule IdejoWeb.BanController do
   alias Idejo.Accounts
   alias IdejoWeb.UserAuth
 
-  @days ~w(1 7 30 365)
-
   def create(conn, %{"id" => id} = params) do
     user = user!(id)
 
-    with {:ok, until} <- until(params["days"]),
-         {:ok, {_banned, socket_ids}} <-
-           Accounts.ban_user(conn.assigns.current_scope.user, user, until, params["reason"]) do
-      UserAuth.disconnect_sessions(socket_ids)
-      conn |> put_flash(:info, gettext("Account banned.")) |> redirect(to: back(params, user))
-    else
-      _ ->
+    # `Accounts.ban_for/4` checks the length is one moderators may choose.
+    moderator = conn.assigns.current_scope.user
+
+    case Accounts.ban_for(moderator, user, duration(params["days"]), params["reason"]) do
+      {:ok, {_banned, socket_ids}} ->
+        UserAuth.disconnect_sessions(socket_ids)
+        conn |> put_flash(:info, gettext("Account banned.")) |> redirect(to: back(params, user))
+
+      {:error, _reason} ->
         conn
         |> put_flash(:error, gettext("This account cannot be banned."))
         |> redirect(to: back(params, user))
@@ -63,10 +63,14 @@ defmodule IdejoWeb.BanController do
   end
 
   # Only the offered choices: anything else bans nobody.
-  defp until("forever"), do: {:ok, nil}
+  defp duration("forever"), do: :forever
 
-  defp until(days) when days in @days,
-    do: {:ok, DateTime.add(DateTime.utc_now(), String.to_integer(days) * 86_400, :second)}
+  defp duration(days) when is_binary(days) do
+    case Integer.parse(days) do
+      {n, ""} -> {:days, n}
+      _ -> :none
+    end
+  end
 
-  defp until(_other), do: :error
+  defp duration(_days), do: :none
 end

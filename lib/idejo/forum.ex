@@ -527,9 +527,55 @@ defmodule Idejo.Forum do
   def mark_inactive(%User{} = moderator, %Topic{} = topic) do
     topic = Repo.preload(topic, :category)
 
-    if Access.can?(moderator, :moderate, topic.category),
-      do: Repo.transact(fn -> save_inactive(moderator, topic) end),
-      else: {:error, :forbidden}
+    cond do
+      not Idejo.Settings.get(:inactive_topics) ->
+        {:error, :disabled}
+
+      Access.can?(moderator, :moderate, topic.category) ->
+        Repo.transact(fn -> save_inactive(moderator, topic) end)
+
+      true ->
+        {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  What the moderators' part of the topic menu needs about topic `id` (steward decisions,
+  2026-11-01): how many follow it, whether it is inactive and may be marked so, its
+  category (left out of "Move to"), whether it is archived, and the category it goes back
+  to (`unarchive_target/1`) when `user` moderates that one too. `{:error, :not_found}` for
+  a topic they may not view or do not moderate: the same answer as for a missing one.
+  """
+  @spec topic_menu(User.t() | nil, term()) :: {:ok, map()} | {:error, :not_found}
+  def topic_menu(user, id) when is_binary(id) do
+    with %Topic{} = topic <- get_viewable_topic(user, id),
+         true <- Access.can?(user, :moderate, topic.category) do
+      {:ok,
+       %{
+         following: Idejo.Reading.follower_count(topic),
+         inactive: Idejo.Reading.inactive?(topic),
+         inactive_allowed: Idejo.Settings.get(:inactive_topics),
+         category_id: topic.category_id,
+         archived: topic.state == "archived",
+         unarchive_to: menu_unarchive_to(user, topic)
+       }}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  def topic_menu(_user, _id), do: {:error, :not_found}
+
+  defp menu_unarchive_to(user, topic) do
+    case unarchive_target(topic) do
+      nil ->
+        nil
+
+      category ->
+        if Access.can?(user, :moderate, category),
+          do: %{id: category.id, name: category.name},
+          else: nil
+    end
   end
 
   defp save_inactive(admin, topic) do
@@ -1314,8 +1360,19 @@ defmodule Idejo.Forum do
 
   def topical_topic?(%User{} = user, %Category{} = category, attrs) do
     Map.get(attrs, "topical", Map.get(attrs, :topical)) in [true, "true"] and
-      Access.can?(user, :moderate, category)
+      may_post_topical?(user, category)
   end
+
+  @doc """
+  Whether `user` may post a topical topic in a `user` category ("Post as a topical topic",
+  steward request, 2026-11-07): those who may moderate it. In a topical category every topic
+  is topical anyway.
+  """
+  @spec may_post_topical?(User.t() | nil, Category.t()) :: boolean()
+  def may_post_topical?(%User{} = user, %Category{topic_type: "user"} = category),
+    do: Access.can?(user, :moderate, category)
+
+  def may_post_topical?(_user, _category), do: false
 
   defp validate_tag_choice(changeset, available) do
     chosen = changeset |> Ecto.Changeset.get_field(:tag_ids) |> List.wrap() |> chosen_ids()
@@ -1837,6 +1894,24 @@ defmodule Idejo.Forum do
   end
 
   @doc """
+  The message `id` as a source for a new topic (TP-09) or a "Continued from" link: one
+  `user` may view, not deleted (MO-02), with its author and topic; else nil.
+  """
+  @spec get_fork_source(User.t() | nil, term()) :: Message.t() | nil
+  def get_fork_source(user, id) when is_binary(id) do
+    case get_viewable_message(user, id) do
+      %Message{deleted_at: nil} = message -> Repo.preload(message, :author)
+      _ -> nil
+    end
+  end
+
+  def get_fork_source(_user, _id), do: nil
+
+  @doc "The topic with its starter loaded."
+  @spec with_author(Topic.t()) :: Topic.t()
+  def with_author(%Topic{} = topic), do: Repo.preload(topic, :author)
+
+  @doc """
   Gets a message by id, with its topic, if the visitor (`nil`) or user may view the topic's
   category; otherwise `nil`. For message permalinks (TP-06).
   """
@@ -2033,7 +2108,8 @@ defmodule Idejo.Forum do
   defp reply_target(topic, id, form) do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %Message{} = message <- Repo.get_by(Message, id: id, topic_id: topic.id) do
-      {:ok, message}
+      # A deleted message takes no reply (MO-02), as in `Idejo.Messages.commit/4`.
+      if message.deleted_at, do: {:ok, nil}, else: {:ok, message}
     else
       _ ->
         {:error,

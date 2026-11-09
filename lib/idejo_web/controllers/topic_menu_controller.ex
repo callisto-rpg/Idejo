@@ -11,39 +11,13 @@ defmodule IdejoWeb.TopicMenuController do
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Access
   alias Idejo.Forum
-  alias Idejo.Reading
 
+  # `Forum.topic_menu/2` checks the moderate right.
   def show(conn, %{"id" => id}) do
-    user = conn.assigns.current_scope.user
-
-    with %{} = topic <- Forum.get_viewable_topic(user, id),
-         true <- Access.can?(user, :moderate, topic.category) do
-      json(conn, %{
-        following: Reading.follower_count(topic),
-        inactive: Reading.inactive?(topic),
-        inactive_allowed: Idejo.Settings.get(:inactive_topics),
-        category_id: topic.category_id,
-        archived: topic.state == "archived",
-        unarchive_to: unarchive_to(user, topic)
-      })
-    else
-      _ -> conn |> put_status(:not_found) |> json(%{error: "not_found"})
-    end
-  end
-
-  # Where it goes back to, when the moderator moderates that category too; else they pick
-  # one of theirs.
-  defp unarchive_to(user, topic) do
-    case Forum.unarchive_target(topic) do
-      nil ->
-        nil
-
-      category ->
-        if Access.can?(user, :moderate, category),
-          do: %{id: category.id, name: category.name},
-          else: nil
+    case Forum.topic_menu(conn.assigns.current_scope.user, id) do
+      {:ok, menu} -> json(conn, menu)
+      {:error, :not_found} -> conn |> put_status(:not_found) |> json(%{error: "not_found"})
     end
   end
 end

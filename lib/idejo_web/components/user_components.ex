@@ -57,7 +57,7 @@ defmodule IdejoWeb.UserComponents do
   defp actions(viewer, user, return_to) do
     if viewer.id != user.id and user.status == "active" and Access.server_moderator?(viewer) do
       %{
-        bannable?: not Access.administrator?(user),
+        bannable?: Accounts.may_ban?(viewer, user),
         banned?: Accounts.banned?(user),
         return_to: return_to
       }

@@ -129,10 +129,5 @@ defmodule IdejoWeb.TopicController do
   defp forked_from(_user, %{forked_from_message_id: nil}), do: nil
 
   # A source deleted by a moderator (MO-02) is not shown either.
-  defp forked_from(user, topic) do
-    case Forum.get_viewable_message(user, topic.forked_from_message_id) do
-      %{deleted_at: nil} = message -> Idejo.Repo.preload(message, :author)
-      _ -> nil
-    end
-  end
+  defp forked_from(user, topic), do: Forum.get_fork_source(user, topic.forked_from_message_id)
 end

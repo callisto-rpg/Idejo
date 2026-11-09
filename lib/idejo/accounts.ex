@@ -723,12 +723,48 @@ defmodule Idejo.Accounts do
   def ban_user(%User{} = moderator, %User{} = user, until, reason \\ nil) do
     cond do
       not Access.server_moderator?(moderator) -> {:error, :forbidden}
-      user.id == moderator.id or Access.administrator?(user) -> {:error, :not_bannable}
-      user.status != "active" -> {:error, :not_bannable}
+      not may_ban?(moderator, user) -> {:error, :not_bannable}
       until != nil and not DateTime.after?(until, DateTime.utc_now()) -> {:error, :past}
       true -> Repo.transact(fn -> save_ban(moderator, user, until, reason) end)
     end
   end
+
+  @ban_days [1, 7, 30, 365]
+
+  @doc """
+  Bans `user` for one of the lengths moderators choose from (MO-02): `{:days, n}` with `n`
+  in #{inspect(@ban_days)}, or `:forever`. `{:error, :duration}` for any other; otherwise as
+  `ban_user/4`.
+  """
+  @spec ban_for(User.t(), User.t(), {:days, pos_integer()} | :forever, String.t() | nil) ::
+          {:ok, {User.t(), [String.t()]}}
+          | {:error, :duration | :forbidden | :not_bannable | :past | Ecto.Changeset.t()}
+  def ban_for(moderator, user, duration, reason \\ nil)
+
+  def ban_for(%User{} = moderator, %User{} = user, :forever, reason),
+    do: ban_user(moderator, user, nil, reason)
+
+  def ban_for(%User{} = moderator, %User{} = user, {:days, days}, reason)
+      when days in @ban_days,
+      do: ban_user(moderator, user, DateTime.add(DateTime.utc_now(), days * 86_400), reason)
+
+  def ban_for(%User{}, %User{}, _duration, _reason), do: {:error, :duration}
+
+  @doc "The ban lengths moderators choose from, in days (`ban_for/4`)."
+  @spec ban_days() :: [pos_integer()]
+  def ban_days, do: @ban_days
+
+  @doc """
+  Whether `moderator` may ban `user` (MO-02): a server moderator, never themselves, never an
+  owner or administrator, and only an active account.
+  """
+  @spec may_ban?(User.t() | nil, User.t()) :: boolean()
+  def may_ban?(%User{} = moderator, %User{} = user) do
+    user.id != moderator.id and user.status == "active" and
+      not Access.administrator?(user) and Access.server_moderator?(moderator)
+  end
+
+  def may_ban?(_moderator, _user), do: false
 
   defp save_ban(moderator, user, until, reason) do
     socket_ids = session_socket_ids(user)
