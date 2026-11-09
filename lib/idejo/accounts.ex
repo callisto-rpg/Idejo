@@ -23,6 +23,51 @@ defmodule Idejo.Accounts do
 
   ## Database getters
 
+  ## Signing in (AC-01, AC-09, MO-02)
+
+  @doc """
+  Whether `user` may use a password here (AC-09): always while local accounts are on
+  (`IDEJO_LOCAL_ACCOUNTS`); when they are off, only owners and administrators, whom the
+  command line can always let in (AD-09). For signing in, resetting and changing it.
+  """
+  @spec password_allowed?(User.t() | nil) :: boolean()
+  def password_allowed?(nil), do: OIDC.local_accounts?()
+  def password_allowed?(%User{} = user), do: OIDC.local_accounts?() or Access.administrator?(user)
+
+  @doc """
+  Signs in with an email and a password: `{:ok, user}`; `{:error, :invalid}` when either is
+  wrong or the account may not use a password (`password_allowed?/1`), never saying which;
+  `{:error, {:banned, user}}` for a banned account, told only once the password is right
+  (MO-02), so nobody learns of a ban by guessing.
+  """
+  @spec authenticate(term(), term()) ::
+          {:ok, User.t()} | {:error, :invalid | {:banned, User.t()}}
+  def authenticate(email, password) when is_binary(email) and is_binary(password) do
+    user = get_user_by_email_and_password(email, password)
+
+    cond do
+      user == nil or not password_allowed?(user) -> {:error, :invalid}
+      banned?(user) -> {:error, {:banned, user}}
+      true -> {:ok, user}
+    end
+  end
+
+  def authenticate(_email, _password), do: {:error, :invalid}
+
+  @doc """
+  Whether an account found by another way of signing in (an OpenID Connect provider, AC-09)
+  may sign in: `{:error, :inactive}` for one not active (deleted, a server account),
+  `{:error, :banned}` for a banned one; else `:ok`.
+  """
+  @spec may_sign_in(User.t()) :: :ok | {:error, :inactive | :banned}
+  def may_sign_in(%User{} = user) do
+    cond do
+      user.status != "active" -> {:error, :inactive}
+      banned?(user) -> {:error, :banned}
+      true -> :ok
+    end
+  end
+
   @doc """
   Gets a user by email and password. Returns `nil` if either is wrong.
   """
@@ -69,6 +114,16 @@ defmodule Idejo.Accounts do
   end
 
   ## Sign-up
+
+  @doc """
+  Signs up with an email and a password (AC-01): `register_user/2`, while local accounts are
+  on (AC-09); `{:error, :passwords_off}` when accounts come only from the provider.
+  """
+  @spec register_with_password(map()) ::
+          {:ok, User.t()} | {:error, :passwords_off | Ecto.Changeset.t()}
+  def register_with_password(attrs) do
+    if OIDC.local_accounts?(), do: register_user(attrs), else: {:error, :passwords_off}
+  end
 
   @doc """
   Signs up a user with email, username, display name and password.
@@ -312,15 +367,21 @@ defmodule Idejo.Accounts do
   ## Password reset (AC-02)
 
   @doc """
-  Emails a password reset link, valid for one day, to the user.
+  Emails a password reset link, valid for one day, to the user; `{:error, :passwords_off}`
+  while local accounts are off (AC-09).
 
   `reset_url_fun` receives the encoded token and returns the link.
   """
   def deliver_user_reset_password_instructions(%User{} = user, reset_url_fun)
       when is_function(reset_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
-    Repo.insert!(user_token)
-    UserNotifier.deliver_reset_password_instructions(user, reset_url_fun.(encoded_token))
+    # AC-09: no reset by email while accounts come only from the provider.
+    if OIDC.local_accounts?() do
+      {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+      Repo.insert!(user_token)
+      UserNotifier.deliver_reset_password_instructions(user, reset_url_fun.(encoded_token))
+    else
+      {:error, :passwords_off}
+    end
   end
 
   @doc """
@@ -371,11 +432,18 @@ defmodule Idejo.Accounts do
   `kept_token` stays signed in.
 
   Returns the socket ids of the ended sessions, so the web layer can disconnect their
-  LiveViews.
+  LiveViews. `{:error, :passwords_off}` for an account that may not use a password
+  (`password_allowed?/1`).
   """
   @spec update_user_password(User.t(), map(), binary()) ::
-          {:ok, {User.t(), [String.t()]}} | {:error, Ecto.Changeset.t()}
+          {:ok, {User.t(), [String.t()]}} | {:error, :passwords_off | Ecto.Changeset.t()}
   def update_user_password(%User{} = user, attrs, kept_token) when is_binary(kept_token) do
+    if password_allowed?(user),
+      do: change_password(user, attrs, kept_token),
+      else: {:error, :passwords_off}
+  end
+
+  defp change_password(user, attrs, kept_token) do
     changeset =
       user
       |> Ecto.Changeset.change()
@@ -400,11 +468,18 @@ defmodule Idejo.Accounts do
   and emailed links alike, are deleted in the same transaction.
 
   Returns the socket ids of the ended sessions, so the web layer can disconnect their
-  LiveViews.
+  LiveViews. `{:error, :passwords_off}` for an account that may not use a password
+  (`password_allowed?/1`).
   """
   @spec reset_user_password(User.t(), map()) ::
-          {:ok, {User.t(), [String.t()]}} | {:error, Ecto.Changeset.t()}
+          {:ok, {User.t(), [String.t()]}} | {:error, :passwords_off | Ecto.Changeset.t()}
   def reset_user_password(%User{} = user, attrs) do
+    if password_allowed?(user),
+      do: do_reset_user_password(user, attrs),
+      else: {:error, :passwords_off}
+  end
+
+  defp do_reset_user_password(user, attrs) do
     Repo.transact(fn ->
       with {:ok, user} <- Repo.update(User.password_changeset(user, attrs)) do
         tokens = from(t in UserToken, where: t.user_id == ^user.id)

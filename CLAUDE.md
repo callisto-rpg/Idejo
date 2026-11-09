@@ -375,7 +375,9 @@ The contract (M6; mark each item done here when its PR merges):
   already has (`:email_taken`; the member links from Profile and account, `OIDC.link/2`)
   and reads no other claim: no role ever comes from the provider; bans hold. Local accounts
   off: no password sign-up or reset by email and the sign-in form only at
-  `?with=password`, for owners and administrators only (`Access.administrator?/1`), so the
+  `?with=password`, for owners and administrators only (`Accounts.password_allowed?/1`, which
+  `authenticate/2`, `reset_user_password/2`, `update_user_password/3` and
+  `register_with_password/1` ask themselves), so the
   command line can always let the owner in (AD-09); a reset link works for them too
   (AD-14's owner). Sign-out is local. Only the kind of a failure is logged, never a token,
   claim or the secret. Tests use `Idejo.FakeOIDCProvider` (Bandit, a test key, plain http
@@ -1688,7 +1690,8 @@ The contract (M6; mark each item done here when its PR merges):
   `return_to`). New moderation actions on an account join that menu. Owners, administrators
   and oneself are never banned. A ban deletes the account's session tokens (and the controller disconnects its
   LiveViews); `Accounts.get_user_by_session_token/1` returns nothing for a banned account and
-  sign-in says it is banned only after the right password. `Accounts.banned?/2` ends a ban by
+  sign-in says it is banned only after the right password (`Accounts.authenticate/2`; the
+  provider's sign-in asks `Accounts.may_sign_in/1`). `Accounts.banned?/2` ends a ban by
   itself at `banned_until`. Logged as `user.ban` / `user.unban` with no category: server
   moderators see those entries. `Moderation.moderator?/1` counts server moderators.
 - **Moderation log** (MO-03, `Idejo.Moderation`): every moderator action calls

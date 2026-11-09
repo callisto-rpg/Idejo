@@ -20,13 +20,10 @@ defmodule IdejoWeb.UserRegistrationController do
 
   # AC-09: with IDEJO_LOCAL_ACCOUNTS=off, accounts come only from the OpenID Connect provider.
   def create(conn, %{"user" => user_params}) do
-    if OIDC.local_accounts?(),
-      do: register(conn, user_params),
-      else: redirect(conn, to: ~p"/users/sign-up")
-  end
+    case Accounts.register_with_password(user_params) do
+      {:error, :passwords_off} ->
+        redirect(conn, to: ~p"/users/sign-up")
 
-  defp register(conn, user_params) do
-    case Accounts.register_user(user_params) do
       {:ok, user} ->
         conn
         |> put_flash(:info, confirmation_flash(user))

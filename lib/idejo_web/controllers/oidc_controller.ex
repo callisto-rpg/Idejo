@@ -221,18 +221,18 @@ defmodule IdejoWeb.OIDCController do
 
   # As the password sign-in does: a ban is told only once the person is who they say.
   defp log_in(conn, user, kind) do
-    cond do
-      user.status != "active" ->
+    case Accounts.may_sign_in(user) do
+      {:error, :inactive} ->
         conn
         |> put_flash(:error, refusal(:inactive))
         |> redirect(to: ~p"/users/sign-in")
 
-      Accounts.banned?(user) ->
+      {:error, :banned} ->
         conn
         |> put_flash(:error, IdejoWeb.UserSessionController.banned_message(user))
         |> redirect(to: ~p"/users/sign-in")
 
-      true ->
+      :ok ->
         conn
         |> put_flash(:info, welcome(user, kind))
         |> UserAuth.log_in_user(user)

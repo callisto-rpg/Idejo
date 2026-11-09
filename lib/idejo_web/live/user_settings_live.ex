@@ -13,7 +13,6 @@ defmodule IdejoWeb.UserSettingsLive do
   """
   use IdejoWeb, :live_view
 
-  alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Accounts.OIDC
   alias Idejo.Messages.Body
@@ -59,7 +58,7 @@ defmodule IdejoWeb.UserSettingsLive do
     |> assign(:oidc_label, OIDC.label())
     |> assign(:oidc_sign_up_url, OIDC.sign_up_url())
     |> assign(:identity, OIDC.enabled?() && OIDC.identity(user))
-    |> assign(:password?, OIDC.local_accounts?() or Access.administrator?(user))
+    |> assign(:password?, Accounts.password_allowed?(user))
     |> assign(:reauth_at, if(OIDC.fresh_reauth?(reauth_at), do: reauth_at))
   end
 
@@ -324,6 +323,17 @@ defmodule IdejoWeb.UserSettingsLive do
            gettext("Password changed. You were signed out everywhere else.")
          )
          |> assign(:password_form, password_form(user))}
+
+      # AC-09: the form is not shown then; refused all the same.
+      {:error, :passwords_off} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("Passwords are not used here: sign in with %{provider}.",
+             provider: OIDC.label()
+           )
+         )}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :password_form, password_form(nil, changeset))}
