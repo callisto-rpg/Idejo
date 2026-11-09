@@ -34,8 +34,12 @@ defmodule IdejoWeb.LiveUpdateSizeTest do
           do: DynamicSupervisor.terminate_child(Idejo.Messages.OpenMessageSupervisor, pid)
     end)
 
+    # A moderator: only moderators see earlier versions (steward request, 2026-11-09), and
+    # the NF-01 test below is about their rendering.
     {:ok, view, _html} =
-      live_isolated(log_in_user(build_conn(), user_fixture()), IdejoWeb.TopicLive,
+      live_isolated(
+        log_in_user(build_conn(), user_with_role_fixture(:moderator)),
+        IdejoWeb.TopicLive,
         session: %{"topic_id" => topic.id}
       )
 

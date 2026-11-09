@@ -33,6 +33,9 @@ defmodule Idejo.Messages.Message do
     field :body_md, :string
     field :body_html, :string
     field :edited, :boolean, default: false
+    # Edited by a moderator (MO-02; steward request, 2026-11-09): every reader sees "message
+    # edited by a moderator" under it.
+    field :moderator_edited, :boolean, default: false
     # Posted by `!schedule` at the time its author chose (steward decision, 2026-10-23).
     field :scheduled, :boolean, default: false
     # `!spoiler`: readers see it blurred until they reveal it (steward decision, 2026-10-23).

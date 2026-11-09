@@ -440,7 +440,9 @@ least one, and **Save tags**. Logged like the rest, with the tags before and aft
   selected messages**. Give a reason if you like and press **Delete selected**; each message
   is deleted as above and logged on its own.
 - **Edit**: correct someone's message, for example to remove personal data. Earlier
-  versions are kept, and moderators see every version of any edited message.
+  versions are kept, and moderators see every version of any edited message (**view earlier
+  version** shows to moderators only). Everyone then sees **message edited by a moderator**
+  under the message.
 - **Select to be moved**: every message of the thread gets a checkbox (except its first
   message, which stays), and a banner at the top reads **Move all selected messages to**:
   - **New thread**: give it a title and a category; the earliest selected message opens it.

@@ -86,6 +86,8 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
 
     author = open_topic(author_conn, topic)
     visitor = open_topic(build_conn(), topic)
+    # Earlier versions are for moderators only (steward request, 2026-11-09).
+    moderator = open_topic(log_in_user(build_conn(), user_with_role_fixture(:moderator)), topic)
 
     # 1. Enter after a first line: the message appears for everyone, with ". " added; the
     #    sent text stays in the composer; the window (15 s by default) starts, unseen.
@@ -142,7 +144,7 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
     refute has_element?(visitor, "#message-#{message.id}-versions")
 
     # 3. The author fixes a typo in an earlier line, in the composer: on Enter a discreet
-    #    "view earlier version" tag appears, holding the old text.
+    #    "view earlier version" tag appears for moderators, holding the old text.
     assert %{closed: false} =
              enter(
                author,
@@ -152,12 +154,13 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
     assert text(visitor, message) =~ "Who is coming tonight?"
 
     assert has_element?(
-             visitor,
+             moderator,
              "#message-#{message.id}-versions summary",
              "view earlier version"
            )
 
-    assert has_element?(visitor, "#message-#{message.id}-versions", "Who is comming tonight?")
+    assert has_element?(moderator, "#message-#{message.id}-versions", "Who is comming tonight?")
+    refute has_element?(visitor, "#message-#{message.id}-versions")
 
     # 4. The window ends (as if 15 s had gone by): the author is still in the same message and
     #    Enter still adds to it. Only now does Ctrl+Enter close it and start a new message.

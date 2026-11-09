@@ -70,7 +70,8 @@ screen reader**. The screen-reader part needs a person, with NVDA (Windows) or V
 3. An open message reads "(still being written)" (AX-03).
 4. In the composer, the description gives the open state and the time left, and it
    changes when the window ends (AX-03, GM-07).
-5. "view earlier version" opens and reads each version with its time (AX-03, GM-11).
+5. Signed in as a moderator, "view earlier version" opens and reads each version with its
+   time (AX-03, GM-11); "message edited by a moderator" is read as text.
 6. The @mention card is announced as a dialog with the user's name.
 7. The editor's tabs are announced as tabs, with "selected".
 

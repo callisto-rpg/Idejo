@@ -135,7 +135,10 @@ defmodule IdejoWeb.MessageVersionsLiveTest do
     author: author,
     closed: closed
   } do
-    {:ok, lv, _html} = watch(build_conn(), topic)
+    # To moderators only (steward request, 2026-11-09): readers and the author see none.
+    moderator_conn = log_in_user(build_conn(), user_with_role_fixture(:moderator))
+    {:ok, lv, _html} = watch(moderator_conn, topic)
+    {:ok, reader, _html} = watch(build_conn(), topic)
     refute has_element?(lv, "#message-#{closed.id}-versions")
 
     {:ok, _} = Messages.edit(author, closed, "Meet on Tuesday.")
@@ -149,8 +152,12 @@ defmodule IdejoWeb.MessageVersionsLiveTest do
 
     # Newest first; it opens without JavaScript (a <details> element in the page's HTML).
     assert :binary.match(versions, "Tuesday") < :binary.match(versions, "Monday")
-    html = conn |> get(~p"/t/#{topic.id}/chat") |> html_response(200)
+    html = moderator_conn |> get(~p"/t/#{topic.id}/chat") |> html_response(200)
     assert html =~ ~r/<details[^>]* id="message-#{closed.id}-versions"/
+
+    refute has_element?(reader, "#message-#{closed.id}-versions")
+    author_html = conn |> get(~p"/t/#{topic.id}/chat") |> html_response(200)
+    refute author_html =~ ~s(id="message-#{closed.id}-versions")
   end
 
   @tag req: "GM-11"
@@ -160,5 +167,45 @@ defmodule IdejoWeb.MessageVersionsLiveTest do
 
     {:ok, lv, _html} = watch(build_conn(), topic)
     refute has_element?(lv, "#message-#{open.id}-versions")
+  end
+
+  # Steward request, 2026-11-09: a moderator's edit of someone's message says so to every
+  # reader, small and faint like "view earlier version"; the author's own edits do not.
+  @tag req: "MO-02"
+  test "MO-02 a moderator's edit shows 'message edited by a moderator' to every reader", %{
+    conn: conn,
+    topic: topic,
+    author: author,
+    closed: closed
+  } do
+    {:ok, reader, _html} = watch(build_conn(), topic)
+    {:ok, member, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+
+    {:ok, own} = Messages.edit(author, closed, "Meet on Tuesday.")
+    refute own.moderator_edited
+    refute has_element?(reader, "#message-#{closed.id}-moderator-edited")
+
+    moderator = user_with_role_fixture(:moderator)
+    {:ok, edited} = Messages.edit_as_moderator(moderator, own, "Meet on Wednesday.", "Typo")
+    assert edited.moderator_edited
+    assert Idejo.Repo.reload!(edited).moderator_edited
+
+    for view <- [reader, member] do
+      assert has_element?(
+               view,
+               "#message-#{closed.id}-moderator-edited.message-moderator-edited",
+               "message edited by a moderator"
+             )
+
+      # The earlier versions stay for moderators (MO-06).
+      refute has_element?(view, "#message-#{closed.id}-versions")
+    end
+
+    html = conn |> get(~p"/t/#{topic.id}/chat") |> html_response(200)
+    assert html =~ "message edited by a moderator"
+
+    # It stays once the author edits again.
+    {:ok, again} = Messages.edit(author, Idejo.Repo.reload!(edited), "Meet on Thursday.")
+    assert again.moderator_edited
   end
 end
