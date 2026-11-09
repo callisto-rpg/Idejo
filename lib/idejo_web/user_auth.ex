@@ -44,6 +44,8 @@ defmodule IdejoWeb.UserAuth do
   """
   def log_in_user(conn, user, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
+    # The getting-started card shows after each sign-in, unless hidden for good.
+    {:ok, _user} = Accounts.intro_on_sign_in(user)
 
     conn
     |> create_or_extend_session(user, params)

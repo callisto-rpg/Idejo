@@ -880,6 +880,16 @@ The contract (M6; mark each item done here when its PR merges):
   address public by `Push.Endpoint.public?/1`, connecting to the checked address, no
   redirects, short timeouts, size caps; tests: `:plugins_req_options` with `Req.Test`,
   `Idejo.FakeDNS` hosts `forums.`/`garden.`/`inside.idejo.test`).
+- **Getting started card** (steward request, 2026-11-09): after each sign-in (`UserAuth.log_in_user/3`
+  calls `Accounts.intro_on_sign_in/1`, which sets `users.intro_pending` unless
+  `users.intro_hidden`), `Layouts.app` shows `#intro-card` over the page while
+  `Accounts.intro_due?/1` (due, not hidden, `welcomed_at` set: a new member sees the welcome
+  card first): Help's "Sending" (`IdejoWeb.HelpComponents.sending/1`, the one markup the Help
+  page uses too, ids by its `id`) and "The sidebar" (topics written in are followed and listed
+  there, the × unfollows, a swipe right shows it on phones). A plain form to `POST /intro`
+  (`IntroController`, back through `ReturnBack`): "Close" (`close_intro/2`, until the next
+  sign-in) and "Close and hide this in the future" (`hide: true`, for good: stored with the
+  account, so no update shows it again). A change to Help's "Sending" changes the card.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (Ctrl+Enter
   in plain words, without this server's timers: steward request, 2026-11-09), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`

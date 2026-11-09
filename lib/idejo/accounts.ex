@@ -221,6 +221,36 @@ defmodule Idejo.Accounts do
 
   def mark_welcomed(%User{} = user), do: {:ok, user}
 
+  @doc """
+  The getting-started card (steward request, 2026-11-09) is due again after a sign-in:
+  `intro_pending` set, unless its member hid it for good (`close_intro/2` with `hide: true`).
+  """
+  @spec intro_on_sign_in(User.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def intro_on_sign_in(%User{intro_hidden: true} = user), do: {:ok, user}
+  def intro_on_sign_in(%User{intro_pending: true} = user), do: {:ok, user}
+
+  def intro_on_sign_in(%User{} = user),
+    do: user |> Ecto.Changeset.change(intro_pending: true) |> Repo.update()
+
+  @doc """
+  Closes the getting-started card: until the next sign-in, or with `hide: true` ("Close and
+  hide this in the future") for good, whatever the version of Idejo.
+  """
+  @spec close_intro(User.t(), keyword()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def close_intro(%User{} = user, opts \\ []) do
+    changes =
+      if opts[:hide], do: [intro_pending: false, intro_hidden: true], else: [intro_pending: false]
+
+    user |> Ecto.Changeset.change(changes) |> Repo.update()
+  end
+
+  @doc "Whether the getting-started card shows: due, not hidden, and the welcome card done."
+  @spec intro_due?(User.t() | nil) :: boolean()
+  def intro_due?(%User{intro_pending: true, intro_hidden: false, welcomed_at: %DateTime{}}),
+    do: true
+
+  def intro_due?(_user), do: false
+
   # Locks the invite so two sign-ups cannot use it at once. An invalid invite is added to the
   # changeset's errors, so the form shows it together with any other error. Closed: nobody
   # signs up, invite or not.
