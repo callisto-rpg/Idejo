@@ -74,4 +74,34 @@ defmodule IdejoWeb.MessageActionMenusTest do
     assert css =~ ".message-action-group { display: contents; }"
     assert css =~ ".message-action-group-toggle { display: none; }"
   end
+
+  # Steward request, 2026-11-09: on touch screens the pill holds on one line; when it would
+  # not, React, Edit, Delete and Report, then the group buttons, show as icons. Their words
+  # are in `.message-action-label`, which the stylesheet hides visually only.
+  test "the pill's buttons keep their words for screen readers when shown as icons", %{
+    conn: conn,
+    admin: admin,
+    topic: topic,
+    message: message
+  } do
+    {:ok, lv, _html} = watch(conn, admin, topic)
+    id = message.id
+
+    assert has_element?(lv, "#message-#{id}-react summary .message-action-label", "React")
+    assert has_element?(lv, "#message-#{id}-edit .message-action-label", "Edit")
+    assert has_element?(lv, "#message-#{id}-quote-toggle .message-action-label", "Quote")
+    assert has_element?(lv, "#message-#{id}-moderation-toggle .message-action-label", "Moderate")
+    # The row keeps what the browser measured across patches.
+    assert render(lv) =~ "data-compact"
+
+    js = File.read!("assets/js/message_action_menus.js")
+    assert js =~ ~s|row.setAttribute("data-compact", stage)|
+    assert js =~ ~s|group.setAttribute("data-align", "end")|
+
+    # Only the pill (no "Show message controls on mobile") is compacted.
+    css = File.read!("assets/css/app.css")
+
+    assert css =~
+             ~s|#message-window:not([data-controls-mobile]) .message .message-actions[data-compact]|
+  end
 end

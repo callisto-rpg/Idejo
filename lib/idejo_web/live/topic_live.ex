@@ -3913,7 +3913,7 @@ defmodule IdejoWeb.TopicLive do
         id={"message-#{@message.id}-actions"}
         class="message-actions"
         phx-hook="MessageActions"
-        phx-mounted={JS.ignore_attributes(["data-collapsed"])}
+        phx-mounted={JS.ignore_attributes(["data-collapsed", "data-compact"])}
       >
         <ReactionComponents.add_reaction
           :if={@can_react? and is_nil(@message.deleted_at)}
@@ -3928,7 +3928,9 @@ defmodule IdejoWeb.TopicLive do
           phx-click="edit"
           phx-value-id={@message.id}
         >
-          <.icon name="hero-pencil-square-micro" class="size-4" />{gettext("Edit")}
+          <.icon name="hero-pencil-square-micro" class="size-4" /><span class="message-action-label">{gettext(
+            "Edit"
+          )}</span>
         </button>
         <%!-- The author deletes their own message (steward request, 2026-11-07), asked first. --%>
         <button
@@ -3939,7 +3941,9 @@ defmodule IdejoWeb.TopicLive do
           phx-click="ask_delete_own"
           phx-value-id={@message.id}
         >
-          <.icon name="hero-trash-micro" class="size-4" />{gettext("Delete")}
+          <.icon name="hero-trash-micro" class="size-4" /><span class="message-action-label">{gettext(
+            "Delete"
+          )}</span>
         </button>
         <%!-- MO-01: anyone signed in may report someone else's message. --%>
         <.link
@@ -3948,7 +3952,9 @@ defmodule IdejoWeb.TopicLive do
           class="message-action"
           id={"message-#{@message.id}-report"}
         >
-          <.icon name="hero-flag-micro" class="size-4" />{gettext("Report")}
+          <.icon name="hero-flag-micro" class="size-4" /><span class="message-action-label">{gettext(
+            "Report"
+          )}</span>
         </.link>
         <%!-- Steward request, 2026-11-09: when the actions do not fit on one line, the
              `MessageActions` hook sets `data-collapsed` and these two groups become menus
@@ -4072,7 +4078,7 @@ defmodule IdejoWeb.TopicLive do
     <div
       id={@id}
       class="message-action-group"
-      phx-mounted={JS.ignore_attributes(["data-open"])}
+      phx-mounted={JS.ignore_attributes(["data-open", "data-align"])}
     >
       <button
         type="button"
@@ -4082,7 +4088,7 @@ defmodule IdejoWeb.TopicLive do
         aria-controls={"#{@id}-items"}
         phx-mounted={JS.ignore_attributes(["aria-expanded"])}
       >
-        <.icon name={@icon} class="size-4" />{@label}<.icon
+        <.icon name={@icon} class="size-4" /><span class="message-action-label">{@label}</span><.icon
           name="hero-chevron-down-micro"
           class="size-3"
         />

@@ -201,7 +201,9 @@ defmodule IdejoWeb.ReactionComponents do
     ~H"""
     <details id={"message-#{@message_id}-react"} class="add-reaction">
       <summary class="message-action">
-        <IdejoWeb.CoreComponents.icon name="hero-face-smile-micro" class="size-4" />{gettext("React")}
+        <IdejoWeb.CoreComponents.icon name="hero-face-smile-micro" class="size-4" /><span class="message-action-label">{gettext(
+          "React"
+        )}</span>
       </summary>
       <div class="add-reaction-panel">
         <button

@@ -1958,6 +1958,23 @@
     [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:focus-within,
     [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([open]),
     [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([data-open]) { opacity: 1; pointer-events: auto; }
+    /* The pill holds on one line (steward request, 2026-11-09;
+       assets/js/message_action_menus.js): first React, Edit, Delete and Report, then the
+       group buttons too, as icons only; their words stay for screen readers. A menu that
+       would leave the screen opens leftwards from its button. */
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions[data-compact] > :is(.message-action, details) .message-action-label,
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions[data-compact="all"] .message-action-group-toggle .message-action-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions .message-action-group[data-align="end"] .message-action-group-items {
+      left: auto;
+      right: 0;
+    }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   /* A long press opens who reacted (assets/js/reaction_who.js), not the phone's own menu. */

@@ -1235,6 +1235,13 @@ The contract (M6; mark each item done here when its PR merges):
   `.popup-menu` under it while `data-open` (a disclosure: `aria-expanded`; a click
   elsewhere, an action or Escape closes it, Escape with the focus back). A row with a group
   open is not measured again until it closes. Report, React, Edit and Delete stay in the row.
+  The touch screens' pill ("Show message controls on mobile" off; steward request,
+  2026-11-09) holds on one line: when it still overflows once collapsed, the hook sets
+  `data-compact="actions"` (React, Edit, Delete, Report as icons), then `"all"` (the group
+  buttons too); their words are `.message-action-label`, hidden visually only. A group menu
+  that would leave the screen gets `data-align="end"` (opens leftwards). The pill is told by
+  its `position: absolute`; the row in place (that setting on, or screens that point) is
+  never compacted or realigned.
 - **New topic from this** (TP-09): every message has a "New Topic" link (renamed, steward
   request, 2026-11-09; the composer's `!new-topic` keeps its name) for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
