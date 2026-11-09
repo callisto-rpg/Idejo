@@ -254,6 +254,21 @@ defmodule IdejoWeb.TopicLive do
   # (steward decision, 2026-11-01); it is the author's open message, so that message is loaded
   # with it, which the end always is (`jump_to_end`).
   defp list_layout(assigns) do
+    {composer?, place} = composer_and_place(assigns)
+    held = place[:held]
+    opening_id = assigns.opening_id
+    split_at = if held, do: held.message, else: place[:mine]
+
+    {pinned, window} =
+      if assigns.gap and not match?(%{id: ^opening_id}, split_at),
+        do: parts(assigns),
+        else: {nil, assigns.messages}
+
+    {before, later} = split_list(window, split_at, held)
+    %{composer?: composer?, place: place, pinned: pinned, before: before, later: later}
+  end
+
+  defp composer_and_place(assigns) do
     composer? =
       assigns.can_post? and
         (assigns.composing_edit != nil or (assigns.at_end? and open_loaded?(assigns)))
@@ -263,15 +278,51 @@ defmodule IdejoWeb.TopicLive do
         do: composer_layout(assigns),
         else: [mine: nil, locked: nil, answered?: false]
 
-    opening_id = assigns.opening_id
+    # Ctrl+Enter while the timers ran (steward request, 2026-11-09): no composer until they
+    # run out, the line under the message it closed, the messages below it as they were.
+    held = held_place(composer?, place, assigns)
+    {composer? and is_nil(held), Keyword.put(place, :held, held)}
+  end
 
-    {pinned, window} =
-      if assigns.gap and not match?(%{id: ^opening_id}, place[:mine]),
-        do: parts(assigns),
-        else: {nil, assigns.messages}
+  # Only where the composer would be a new message at the end.
+  defp held_place(true, place, assigns) do
+    if place[:mine] == nil and place[:locked] == nil, do: held(assigns) || nil
+  end
 
-    {before, later} = split(window, place[:mine])
-    %{composer?: composer?, place: place, pinned: pinned, before: before, later: later}
+  defp held_place(_composer?, _place, _assigns), do: nil
+
+  # The held message stays a message like the others, the line right under it.
+  defp split_list(window, nil = _split_at, _held), do: split(window, nil)
+
+  defp split_list(window, split_at, nil), do: split(window, split_at)
+
+  defp split_list(window, split_at, %{message: message}) do
+    {before, later} = split(window, split_at)
+    {before ++ [message], later}
+  end
+
+  # The viewer's last message, closed early with Ctrl+Enter, while its timers still run:
+  # `%{message, ready_at}`, from the messages shown (no query, NF-01). Not while they edit,
+  # nor when a Reply or Forward may start a new message at once (`gm_early_reply`).
+  defp held(assigns) do
+    viewer = assigns.current_scope && assigns.current_scope.user
+
+    with %{} <- viewer,
+         nil <- assigns.composing_edit,
+         false <- quoting?(assigns) and assigns.early_reply?,
+         %Messages.Message{held: true, deleted_at: nil} = message <-
+           assigns.messages |> Enum.filter(&(&1.author_id == viewer.id)) |> List.last(),
+         ready_at =
+           start_new_at(
+             message,
+             answered?(assigns.messages, message),
+             assigns.unanswered_seconds
+           ),
+         true <- DateTime.after?(ready_at, DateTime.utc_now()) do
+      %{message: message, ready_at: ready_at}
+    else
+      _ -> false
+    end
   end
 
   defp sync_entries(socket) do
@@ -293,6 +344,7 @@ defmodule IdejoWeb.TopicLive do
 
     socket
     |> assign(layout.place)
+    |> schedule_held(layout.place[:held])
     |> assign(
       composer?: layout.composer?,
       opening: layout.pinned && [pair.(layout.pinned)],
@@ -300,6 +352,20 @@ defmodule IdejoWeb.TopicLive do
       later: Enum.map(layout.later, pair),
       listed: %{global: inputs.global, inputs: inputs, pairs: pairs}
     )
+  end
+
+  # The composer comes back when the held message's timers run out: one wake-up for that
+  # moment (a new end, when someone writes below, gets its own).
+  defp schedule_held(socket, nil), do: socket
+
+  defp schedule_held(socket, %{ready_at: ready_at}) do
+    if connected?(socket) and socket.assigns[:held_wake] != ready_at do
+      ms = max(DateTime.diff(ready_at, DateTime.utc_now(), :millisecond), 0) + 50
+      Process.send_after(self(), :held_over, ms)
+      assign(socket, :held_wake, ready_at)
+    else
+      socket
+    end
   end
 
   # A pair for every loaded message: the one kept, unless its message changed or its entry
@@ -1158,6 +1224,10 @@ defmodule IdejoWeb.TopicLive do
     do: {:noreply, assign(socket, :committed, nil)}
 
   defp info({:committed_shown, _id}, socket), do: {:noreply, socket}
+
+  # A held message's timers ran out (steward request, 2026-11-09): the composer comes back.
+  defp info(:held_over, socket),
+    do: {:noreply, assign(socket, now: DateTime.utc_now(), held_wake: nil)}
 
   # The time left in the author's window, for the composer's description (AX-03).
   defp info(:tick, socket) do
@@ -2921,6 +2991,21 @@ defmodule IdejoWeb.TopicLive do
             can_react?={@can_react?}
             live?={@live?}
           />
+          <%!-- Ctrl+Enter while the timers ran (steward request, 2026-11-09): the line under
+               the message it committed until the next may start; then the composer. --%>
+          <li :if={@held} id="composer-held" class="composer-held">
+            <div class="composer-timer-slot">
+              <.timer_line
+                timer={@held.message}
+                ready_at={@held.ready_at}
+                now={DateTime.utc_now()}
+                held?
+              />
+            </div>
+            <p id="composer-held-text" class="composer-held-text" role="status">
+              {gettext("Message sent. You can start a new one when the line is full.")}
+            </p>
+          </li>
           <li :if={@composer?} id={if @mine, do: "message-#{@mine.id}", else: "composer-slot"}>
             <.composer
               mine={@mine}
@@ -3465,6 +3550,59 @@ defmodule IdejoWeb.TopicLive do
         </form>
       </div>
     </dialog>
+    """
+  end
+
+  attr :timer, :map, required: true, doc: "the message the line times (`Messages.timer_start/1`)"
+  attr :ready_at, DateTime, required: true
+  attr :now, DateTime, required: true
+  attr :held?, :boolean, default: false, doc: "under a message closed early: nothing to continue"
+
+  # The line that fills up until Ctrl+Enter may start a new message (steward decision,
+  # 2026-10-23): under the composer, or under a message closed early (steward request,
+  # 2026-11-09). One at a time: the composer and a held message never show together.
+  defp timer_line(assigns) do
+    ~H"""
+    <div
+      id="composer-timer"
+      class="composer-timer"
+      phx-hook="ComposerTimer"
+      data-start={DateTime.to_unix(Messages.timer_start(@timer), :millisecond)}
+      data-end={DateTime.to_unix(@ready_at, :millisecond)}
+      data-now={DateTime.to_unix(@now, :millisecond)}
+      aria-hidden="true"
+      hidden
+      phx-mounted={JS.ignore_attributes(["hidden"])}
+    >
+      <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
+      <%!-- In front of the line while it fills, then in the middle (steward decision,
+         2026-10-25). --%>
+      <span
+        id="composer-timer-bubble"
+        class="tutorial-bubble composer-timer-bubble"
+        phx-update="ignore"
+        data-label-done={gettext("Ctrl+Enter to start new message")}
+      >
+        {gettext("slow mode")}
+      </span>
+      <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
+         decision, 2026-10-25). --%>
+      <span
+        id="composer-timer-hint"
+        class="composer-hint composer-timer-hint"
+        phx-update="ignore"
+        data-labels={
+          Jason.encode!([
+            gettext("You cannot start a new message..."),
+            if(@held?,
+              do: gettext("...until the line is full."),
+              else: gettext("...but you can continue the one above.")
+            ),
+            gettext("[Enter] to send always works.")
+          ])
+        }
+      ></span>
+    </div>
     """
   end
 
@@ -4227,7 +4365,7 @@ defmodule IdejoWeb.TopicLive do
       hidden
       data-label-new={gettext("Send & start new message")}
       data-label-end-edit={gettext("Save and end the edit")}
-      data-label-too-soon={gettext("You cannot start a new message yet")}
+      data-label-too-soon={gettext("Send & finish (the next message waits for the line)")}
     >
       <div
         id="composer-format"
@@ -4559,44 +4697,7 @@ defmodule IdejoWeb.TopicLive do
            from the start, before a message opens and after it closes, so the page never grows
            or shrinks with it (steward report, 2026-10-31); a private conversation has none. --%>
       <div :if={!@private?} class="composer-timer-slot">
-        <div
-          :if={@ready_at}
-          id="composer-timer"
-          class="composer-timer"
-          phx-hook="ComposerTimer"
-          data-start={DateTime.to_unix(Messages.timer_start(@timer), :millisecond)}
-          data-end={DateTime.to_unix(@ready_at, :millisecond)}
-          data-now={DateTime.to_unix(@now, :millisecond)}
-          aria-hidden="true"
-          hidden
-          phx-mounted={JS.ignore_attributes(["hidden"])}
-        >
-          <span id="composer-timer-line" class="composer-timer-line" phx-update="ignore"></span>
-          <%!-- In front of the line while it fills, then in the middle (steward decision,
-             2026-10-25). --%>
-          <span
-            id="composer-timer-bubble"
-            class="tutorial-bubble composer-timer-bubble"
-            phx-update="ignore"
-            data-label-done={gettext("Ctrl+Enter to start new message")}
-          >
-            {gettext("slow mode")}
-          </span>
-          <%!-- At the bubble's right while it says "slow mode", three lines in turn (steward
-             decision, 2026-10-25). --%>
-          <span
-            id="composer-timer-hint"
-            class="composer-hint composer-timer-hint"
-            phx-update="ignore"
-            data-labels={
-              Jason.encode!([
-                gettext("You cannot start a new message..."),
-                gettext("...but you can continue the one above."),
-                gettext("[Enter] to send always works.")
-              ])
-            }
-          ></span>
-        </div>
+        <.timer_line :if={@ready_at} timer={@timer} ready_at={@ready_at} now={@now} />
       </div>
       <p id="composer-window" class="sr-only">
         <%= cond do %>

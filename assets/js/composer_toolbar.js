@@ -104,14 +104,13 @@ export function mountToolbar(hook) {
     for (const toggle of bar.querySelectorAll("[data-panel][aria-expanded=true]")) togglePanel(toggle)
   }
 
-  // Ctrl+Enter may start a new message: always while editing (it ends the edit), else once the
-  // timer line has run out, or with nothing open.
-  const mayCommit = () => editing() || hook.sent === "" || mayStartNew()
+  // Ctrl+Enter commits at any time (steward request, 2026-11-09); before the timer line has
+  // run out, it says that the next message waits for it.
+  const ready = () => editing() || hook.sent === "" || mayStartNew()
 
   const openMenu = () => {
-    const allowed = mayCommit()
-    item.textContent = editing() ? bar.dataset.labelEndEdit : allowed ? bar.dataset.labelNew : bar.dataset.labelTooSoon
-    item.setAttribute("aria-disabled", String(!allowed))
+    item.textContent = editing() ? bar.dataset.labelEndEdit : ready() ? bar.dataset.labelNew : bar.dataset.labelTooSoon
+    item.setAttribute("aria-disabled", "false")
     menu.hidden = false
     send.setAttribute("aria-expanded", "true")
     // From the keyboard, the focus goes into the menu; a click or a touch leaves it in the box.

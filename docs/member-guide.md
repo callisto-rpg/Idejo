@@ -14,8 +14,8 @@ What is different is how you write: **your message grows as you go.**
 | --- | --- |
 | **Enter** | Sends what you wrote. Everyone sees it at once. Keep typing and press Enter again: it joins the **same message**, on the same line. |
 | **Shift+Enter** | A line break, as in any text box. Nothing is sent. |
-| **Ctrl+Enter** | Sends too, on a **new line** of the same message. Once the window has passed (below), it **closes** your message instead: what you type next starts a new one. |
-| **Ctrl+Enter** outside the box | Anywhere on the topic's page (not in another text box): starts a new message, sending what you had not sent yet, and puts the cursor in the box. While you cannot start one yet, it only puts the cursor at the end of your message, to go on writing. |
+| **Ctrl+Enter** | **Completes** your message: what you type next starts a new one. Before the wait (below) is over, your next message waits for it: the line under your message fills up, then the box comes back. |
+| **Ctrl+Enter** outside the box | Anywhere on the topic's page (not in another text box): the same, sending what you had not sent yet, and puts the cursor in the box. |
 | **Enter** three times | The same as Ctrl+Enter: press Enter three times in a row, quickly, without typing in between. This is how it works on a phone or tablet, which has no Ctrl. |
 
 The text box below the topic is where you write. Its placeholder repeats the keys, and a
@@ -48,8 +48,8 @@ the change once reloaded) puts a row of small icons under the box:
   hold it on a phone, or press the menu key on it for its menu: **Send**, like **Enter**;
   **Send & new line**, which sends and puts the cursor on a new line; and **Send & start new
   message**, like **Ctrl+Enter** (while you are editing a message: **Save**, **Save & new
-  line** and **Save and end the edit**). While you cannot start a new message yet, the last
-  one says so instead.
+  line** and **Save and end the edit**). While the wait is not over, the last one reads
+  **Send & finish (the next message waits for the line)**.
 
 The graphical composer also shows your message as it will look once sent: as soon as you
 finish writing some Markdown, its signs disappear. `# ` makes a title, `- ` a bullet and `1. `
@@ -76,13 +76,17 @@ The keys keep working as well.
 3. For a short while after you start typing a message (15 seconds, unless your server changed
    it), you can only add to it. Nothing shows this to others; it only means that one quick
    thought stays one message. While nobody has written below it, that lasts longer: until 10
-   minutes after you started typing it (unless your server changed it), Ctrl+Enter only adds a
-   line, so when you write alone your thoughts stay one message. A thin orange line under
+   minutes after you started typing it (unless your server changed it). Ctrl+Enter
+   still completes your message at any time, but your next message waits for the end of
+   that time: the line stays under your message (others' messages keep appearing below it)
+   and the box comes back when it is full. A thin orange line under
    the box fills up meanwhile, from your first keystroke, a **slow mode** bubble in front of it, and under it "You
    cannot start a new message...", "...but you can continue the one above." and "[Enter] to
    send always works." take turns; when it reaches the
    end it flashes and goes, the bubble moves to the middle and says **Ctrl+Enter to start
-   new message**, and Ctrl+Enter starts a new message. If someone writes below you, it jumps to the shorter wait.
+   new message**, and Ctrl+Enter starts a new message. If someone writes below you, it jumps to
+   the shorter wait. A **Reply** may still start a new message at once, unless your server
+   turned that off.
 4. When you are done, press **Ctrl+Enter**, or **Enter three times**: the message is
    complete, and your next line starts a new message.
 

@@ -184,9 +184,11 @@ defmodule Idejo.Messages do
       open != nil and opts[:new] == true ->
         start_over(author, topic, open, text, now, opts)
 
-      # SP-05: and a new message counts towards the new messages a minute.
+      # SP-05: and a new message counts towards the new messages a minute. A message closed
+      # early by Ctrl+Enter holds the next back until its timers run out.
       open == nil ->
-        with :ok <- RateLimit.check(:new_message, author.id),
+        with :ok <- not_held(author, topic, now, opts),
+             :ok <- RateLimit.check(:new_message, author.id),
              do: open_new(author, topic, text, now, opts)
 
       true ->
@@ -198,15 +200,58 @@ defmodule Idejo.Messages do
   defp start_over(_author, _topic, _open, "", _now, _opts), do: {:ok, nil}
 
   defp start_over(author, topic, open, text, now, opts) do
-    quoting? = Enum.any?([opts[:reply_to_id], opts[:forwarded_from_id]], &(&1 not in [nil, ""]))
-    early? = quoting? and Settings.get(:gm_early_reply)
-
-    with :ok <- if(early? or may_start_new?(open, now), do: :ok, else: {:error, :too_soon}),
+    with :ok <-
+           if(early_reply?(opts) or may_start_new?(open, now), do: :ok, else: {:error, :too_soon}),
          :ok <- RateLimit.check(:new_message, author.id),
          {:ok, closed} <- close_locked(open, now),
          {:ok, message} <- open_new(author, topic, text, now, opts) do
       {:ok, {closed, message}}
     end
+  end
+
+  # Reply or Forward starts a new message at any time while `gm_early_reply` is on (steward
+  # decision, 2026-10-24).
+  defp early_reply?(opts) do
+    quoting? = Enum.any?([opts[:reply_to_id], opts[:forwarded_from_id]], &(&1 not in [nil, ""]))
+    quoting? and Settings.get(:gm_early_reply)
+  end
+
+  defp not_held(author, topic, now, opts) do
+    case held_until(author, topic, now) do
+      nil -> :ok
+      _until -> if early_reply?(opts), do: :ok, else: {:error, :too_soon}
+    end
+  end
+
+  @doc """
+  When `author` may start a new message in `topic` after closing their last one early with
+  Ctrl+Enter (steward request, 2026-11-09): the moment its timers run out (the window, and
+  while nobody wrote below it the unanswered message time), or nil when nothing holds them.
+  """
+  @spec held_until(User.t(), Topic.t(), DateTime.t()) :: DateTime.t() | nil
+  def held_until(%User{id: author_id}, %Topic{id: topic_id}, now \\ DateTime.utc_now()) do
+    last =
+      Repo.one(
+        from m in Message,
+          where: m.topic_id == ^topic_id and m.author_id == ^author_id,
+          order_by: [desc: m.opened_at, desc: m.id],
+          limit: 1
+      )
+
+    with %Message{held: true, deleted_at: nil} = held <- last,
+         false <- may_start_new?(held, now) do
+      start_new_time(held)
+    else
+      _ -> nil
+    end
+  end
+
+  # When Ctrl+Enter would have started a new message: the window's end, and while nobody
+  # wrote below, the unanswered message time's.
+  defp start_new_time(message) do
+    if answered?(message),
+      do: message.closes_at,
+      else: Enum.max([message.closes_at, unanswered_until(message)], DateTime)
   end
 
   # The text as sent: line ends trimmed, and a `.` after text that ends without punctuation,
@@ -299,9 +344,13 @@ defmodule Idejo.Messages do
          {:ok, message} <- update_body(open, text, changed?, edit?),
          {:ok, _} <- if(changed?, do: touch_topic(open.topic_id, now, 0), else: {:ok, nil}),
          {:ok, _} <- if(changed?, do: notify_mentions(message), else: {:ok, 0}) do
-      if break? and may_start_new?(message, now),
-        do: close_locked(message, now),
-        else: {:ok, message}
+      cond do
+        not break? -> {:ok, message}
+        may_start_new?(message, now) -> close_locked(message, now)
+        # Ctrl+Enter while the timers run (steward request, 2026-11-09): committed now, the
+        # author's next message waiting for them (`held_until/3`).
+        true -> close_locked(message, now, held: true)
+      end
     end
   end
 
@@ -415,9 +464,11 @@ defmodule Idejo.Messages do
     result
   end
 
-  defp close_locked(message, now) do
+  defp close_locked(message, now, fields \\ []) do
     with {:ok, message} <-
-           message |> Ecto.Changeset.change(state: "closed", closed_at: now) |> Repo.update(),
+           message
+           |> Ecto.Changeset.change([state: "closed", closed_at: now] ++ fields)
+           |> Repo.update(),
          {:ok, _} <- activity_for_close(message) do
       {:ok, message}
     end

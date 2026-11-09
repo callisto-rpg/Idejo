@@ -68,8 +68,11 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 3. One `Idejo.Messages.OpenMessage` process per open message holds the window timer, under
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
 4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
-5. A message closes only on Ctrl+Enter after the window (GM-05; with nothing below it, also
-   after the unanswered message time), its author sending a new message after Reply
+5. A message closes only on Ctrl+Enter (GM-05; before the window ends, or with nothing below
+   it before the unanswered message time, too: steward request, 2026-11-09, departing from MVP
+   §4 steps 2 and 4: it closes `held`, and `Messages.held_until/3` refuses the author's next
+   message in the topic, `{:error, :too_soon}`, until those timers run out, a Reply or Forward
+   excepted while `gm_early_reply` is on), its author sending a new message after Reply
    (`commit/4` with `new: true`; steward decision, 2026-10-24), lock or archive, session
    disconnect (GM-12) or a moderator (GM-16).
 6. At most one open message per author per topic (GM-09). The first message of a topic is
@@ -528,6 +531,17 @@ The contract (M6; mark each item done here when its PR merges):
   `Accounts.update_user_controls/2`; `TopicLive` reads them at mount) put
   `data-controls-mobile` / `-desktop` on `#message-window`: always shown, on touch screens in
   place as without scripts (no pill).
+- **Ctrl+Enter at any time** (steward request, 2026-11-09): `Messages.append` closes a
+  message on `break` before `may_start_new?/2` with `held: true` (`messages.held`). In
+  `TopicLive`, `list_layout/1` finds the viewer's last message, held, whose timers still run
+  (`held/1`, from the messages shown, no query; not while editing, nor while quoting with
+  `early_reply?`): no composer, but `#composer-held` right after that message (the same
+  `timer_line/1` as the composer's, `held?`: its hint says "...until the line is full", and
+  "Message sent. You can start a new one when the line is full.") with the messages after it
+  below; `schedule_held/2` wakes the view at `ready_at` (`:held_over`), when the composer
+  comes back at the end. The `Composer` hook's Ctrl+Enter from the page sends at any time; the
+  graphical composer's menu item is never disabled and reads "Send & finish (the next message
+  waits for the line)" until `mayStartNew()`.
 - **Timers from the first keystroke** (steward request, 2026-11-09): the `Composer` hook's
   `typingCheck()` pushes `"composer_typing"` (`typing` true when text appears in a box with
   nothing sent, not an edit; false when it is emptied; again after a reconnect), and

@@ -153,7 +153,6 @@ export function quoteEdit(value, markdown) {
 
 import {Suggest} from "./suggest"
 import {InlineCard} from "./inline_cards"
-import {mayStartNew} from "./composer_timer"
 import {mountToolbar} from "./composer_toolbar"
 import {formatMarks, formatted} from "./composer_format"
 import {Layout, render as renderView, sourceAt, pointAt} from "./composer_view"
@@ -332,7 +331,9 @@ export const Composer = {
       if (e.target === this.input || e.target.closest?.(OWN_CTRL_ENTER)) return
       if (document.querySelector("dialog[open]")) return
       e.preventDefault()
-      if (this.sent !== "" && (this.el.hasAttribute("data-editing") || mayStartNew())) this.send(true)
+      // Ctrl+Enter commits at any time (steward request, 2026-11-09): before the timer line is
+      // full, the next message waits for it.
+      if (this.sent !== "") this.send(true)
       this.focusEnd()
     }
     document.addEventListener("keydown", this.onPageKey)
