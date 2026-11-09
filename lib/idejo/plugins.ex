@@ -493,8 +493,15 @@ defmodule Idejo.Plugins do
   end
 
   def prepare(%Definition{block: "iframe"}, params) do
-    with {:ok, src} <- frame_src(params["code"] || "") do
-      {:ok, %{"src" => src}, src}
+    code = params["code"] || ""
+
+    with {:ok, src} <- frame_src(code) do
+      # The height the frame's code asks for (steward request, 2026-11-09), when below the
+      # default: a short player is drawn short instead of in a tall empty box.
+      case frame_height(code) do
+        nil -> {:ok, %{"src" => src}, src}
+        height -> {:ok, %{"src" => src, "height" => height}, src}
+      end
     end
   end
 
@@ -644,6 +651,24 @@ defmodule Idejo.Plugins do
       else: {:error, :code}
   end
 
+  @frame_height 416
+
+  @doc "The height in pixels a frame is drawn at when its code asks for none (26rem)."
+  @spec frame_height() :: pos_integer()
+  def frame_height, do: @frame_height
+
+  # `height="152"` (or `152px`) of pasted `<iframe …>` code, when below the default.
+  defp frame_height(code) do
+    with [_, tag] <- Regex.run(~r/(<iframe\b[^>]*>)/i, code),
+         [_, value] <-
+           Regex.run(~r/\sheight\s*=\s*["']?\s*(\d{1,4})\s*(?:px)?\s*["']?[\s>\/]/i, tag),
+         {height, ""} when height >= 40 and height < @frame_height <- Integer.parse(value) do
+      height
+    else
+      _ -> nil
+    end
+  end
+
   defp unescape(text) do
     text
     |> String.replace("&amp;", "&")
@@ -717,17 +742,18 @@ defmodule Idejo.Plugins do
   end
 
   @doc """
-  A plugin's block with no message to go under: posts a closed message (its text the link or
-  the label, so excerpts, search and notifications read something), then adds it. Checked
-  before anything is posted. `reply_to_id` as for `Idejo.Forum.post_message/3`.
+  A plugin's block with nothing written yet (steward request, 2026-11-09): it starts the
+  author's message, open and still empty (`Idejo.Messages.commit/4` with `allow_empty:`), so
+  the block shows in the composer at once and the next ones join it, side by side, as for a
+  message being written. Checked before anything is posted. `reply_to_id` as for `commit/4`.
   """
   @spec post(User.t(), Topic.t(), String.t(), map(), Ecto.UUID.t() | nil) ::
           {:ok, Message.t()} | {:error, term()}
   def post(%User{} = user, %Topic{} = topic, command, params, reply_to_id \\ nil) do
     with {:ok, definition} <- may_use(user, topic, command),
-         {:ok, _data, text} <- prepare(definition, params),
-         {:ok, message} <-
-           Forum.post_message(user, topic, %{"body" => text, "reply_to_id" => reply_to_id}) do
+         {:ok, _data, _text} <- prepare(definition, params),
+         {:ok, %Message{} = message} <-
+           Messages.commit(user, topic, "", reply_to_id: reply_to_id, allow_empty: true) do
       attach(user, message, command, params)
     end
   end

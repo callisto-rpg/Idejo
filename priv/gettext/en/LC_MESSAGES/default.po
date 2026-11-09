@@ -787,8 +787,8 @@ msgstr ""
 #: lib/idejo_web/components/message_moderation_components.ex:146
 #: lib/idejo_web/components/message_moderation_components.ex:189
 #: lib/idejo_web/components/message_moderation_components.ex:292
-#: lib/idejo_web/components/plugin_components.ex:245
-#: lib/idejo_web/components/plugin_components.ex:255
+#: lib/idejo_web/components/plugin_components.ex:246
+#: lib/idejo_web/components/plugin_components.ex:256
 #: lib/idejo_web/components/poll_components.ex:173
 #: lib/idejo_web/components/topic_components.ex:105
 #: lib/idejo_web/components/warning_components.ex:94
@@ -1602,7 +1602,7 @@ msgstr ""
 #: lib/idejo_web/components/gif_components.ex:55
 #: lib/idejo_web/components/layouts.ex:604
 #: lib/idejo_web/components/message_moderation_components.ex:107
-#: lib/idejo_web/components/plugin_components.ex:190
+#: lib/idejo_web/components/plugin_components.ex:191
 #: lib/idejo_web/components/reaction_components.ex:158
 #: lib/idejo_web/components/reaction_components.ex:305
 #: lib/idejo_web/live/topic_live.ex:2816
@@ -3779,7 +3779,7 @@ msgstr ""
 msgid "Italics. One underscore on each side works too."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:156
+#: lib/idejo_web/components/plugin_components.ex:157
 #: lib/idejo_web/controllers/oidc_html/consent.html.heex:31
 #, elixir-autogen, elixir-format
 msgid "Join"
@@ -5803,7 +5803,7 @@ msgstr ""
 msgid "You are not signed in."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:425
+#: lib/idejo_web/components/plugin_components.ex:426
 #: lib/idejo_web/live/topic_live.ex:1548
 #: lib/idejo_web/live/topic_live.ex:1765
 #: lib/idejo_web/live/topic_live.ex:2022
@@ -6621,7 +6621,7 @@ msgstr ""
 msgid "User: shown as started by its author"
 msgstr ""
 
-#: lib/idejo/messages.ex:762
+#: lib/idejo/messages.ex:770
 #, elixir-autogen, elixir-format
 msgid "the topic"
 msgstr ""
@@ -6647,7 +6647,7 @@ msgstr ""
 msgid "Without an icon"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:481
+#: lib/idejo_web/components/plugin_components.ex:482
 #, elixir-autogen, elixir-format
 msgid "!%{command} is already a command of Idejo or an automessage."
 msgstr ""
@@ -6667,57 +6667,57 @@ msgstr ""
 msgid "!%{command} is on."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:445
+#: lib/idejo_web/components/plugin_components.ex:446
 #, elixir-autogen, elixir-format
 msgid "\"%{field}\" is longer than %{max} characters."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:442
+#: lib/idejo_web/components/plugin_components.ex:443
 #, elixir-autogen, elixir-format
 msgid "\"%{field}\" is missing."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:451
+#: lib/idejo_web/components/plugin_components.ex:452
 #, elixir-autogen, elixir-format
 msgid "\"%{field}\" must be one of %{values}."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:447
+#: lib/idejo_web/components/plugin_components.ex:448
 #, elixir-autogen, elixir-format
 msgid "\"%{field}\" must be text."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:440
+#: lib/idejo_web/components/plugin_components.ex:441
 #, elixir-autogen, elixir-format
 msgid "\"command\" may only hold lower-case letters, digits and dashes, at most 30."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:478
+#: lib/idejo_web/components/plugin_components.ex:479
 #, elixir-autogen, elixir-format
 msgid "\"embed\" must be an https address holding {id}."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:437
+#: lib/idejo_web/components/plugin_components.ex:438
 #, elixir-autogen, elixir-format
 msgid "\"idejo_plugin\" must be 1."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:458
+#: lib/idejo_web/components/plugin_components.ex:459
 #, elixir-autogen, elixir-format
 msgid "A \"%{block}\" plugin cannot take a \"%{argument}\" argument."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:472
+#: lib/idejo_web/components/plugin_components.ex:473
 #, elixir-autogen, elixir-format
 msgid "A \"match\" pattern is not a valid regular expression."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:464
+#: lib/idejo_web/components/plugin_components.ex:465
 #, elixir-autogen, elixir-format
 msgid "A \"video\" plugin needs \"video\" with \"match\" (1 to 10 patterns) and \"embed\"."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:488
+#: lib/idejo_web/components/plugin_components.ex:489
 #, elixir-autogen, elixir-format
 msgid "A plugin for !%{command} is installed already. Delete its file first."
 msgstr ""
@@ -6727,7 +6727,7 @@ msgstr ""
 msgid "A plugin is a .json file naming a command and one of the blocks Idejo draws: a video, a page in a frame, a link button or a card. It is installed turned off."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:243
+#: lib/idejo_web/components/plugin_components.ex:244
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr ""
@@ -6748,12 +6748,12 @@ msgstr ""
 msgid "Administrators choose which roles may use each one."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:484
+#: lib/idejo_web/components/plugin_components.ex:485
 #, elixir-autogen, elixir-format
 msgid "Another file already defines !%{command}."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:382
+#: lib/idejo_web/components/plugin_components.ex:383
 #, elixir-autogen, elixir-format
 msgid "Button label"
 msgstr ""
@@ -6768,12 +6768,12 @@ msgstr ""
 msgid "Choose a plugin file first."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:475
+#: lib/idejo_web/components/plugin_components.ex:476
 #, elixir-autogen, elixir-format
 msgid "Each \"match\" pattern must be text, at most 300 characters."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:477
+#: lib/idejo_web/components/plugin_components.ex:478
 #, elixir-autogen, elixir-format
 msgid "Each \"match\" pattern needs a group named \"id\"."
 msgstr ""
@@ -6783,12 +6783,12 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:416
+#: lib/idejo_web/components/plugin_components.ex:417
 #, elixir-autogen, elixir-format
 msgid "Give a link starting with https:// or http://."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:411
+#: lib/idejo_web/components/plugin_components.ex:412
 #, elixir-autogen, elixir-format
 msgid "Give an https address, or the frame's code holding one."
 msgstr ""
@@ -6798,7 +6798,7 @@ msgstr ""
 msgid "Install"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:355
+#: lib/idejo_web/components/plugin_components.ex:356
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
@@ -6808,7 +6808,7 @@ msgstr ""
 msgid "No plugins installed."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:493
+#: lib/idejo_web/components/plugin_components.ex:494
 #, elixir-autogen, elixir-format
 msgid "Not a file."
 msgstr ""
@@ -6818,7 +6818,7 @@ msgstr ""
 msgid "Not a plugin Idejo can use: %{reason}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:88
+#: lib/idejo_web/components/plugin_components.ex:89
 #, elixir-autogen, elixir-format
 msgid "Open %{host}"
 msgstr ""
@@ -6833,7 +6833,7 @@ msgstr ""
 msgid "Page from %{host}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:340
+#: lib/idejo_web/components/plugin_components.ex:341
 #, elixir-autogen, elixir-format
 msgid "Paste the frame's code (<iframe …>) or its https address"
 msgstr ""
@@ -6870,48 +6870,48 @@ msgstr ""
 msgid "Roles that may use !%{command}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:410
+#: lib/idejo_web/components/plugin_components.ex:411
 #, elixir-autogen, elixir-format
 msgid "That link is not one this plugin can show."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:492
+#: lib/idejo_web/components/plugin_components.ex:493
 #, elixir-autogen, elixir-format
 msgid "The file cannot be read."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:434
+#: lib/idejo_web/components/plugin_components.ex:435
 #: lib/idejo_web/live/admin/plugins_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "The file is larger than %{kb} KB."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:435
+#: lib/idejo_web/components/plugin_components.ex:436
 #, elixir-autogen, elixir-format
 msgid "The file is not a JSON object."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:436
+#: lib/idejo_web/components/plugin_components.ex:437
 #, elixir-autogen, elixir-format
 msgid "The file is not valid JSON."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:366
+#: lib/idejo_web/components/plugin_components.ex:367
 #, elixir-autogen, elixir-format
 msgid "The link it opens"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:494
+#: lib/idejo_web/components/plugin_components.ex:495
 #, elixir-autogen, elixir-format
 msgid "The plugins folder cannot be written to."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:324
+#: lib/idejo_web/components/plugin_components.ex:325
 #, elixir-autogen, elixir-format
 msgid "The video's link"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:422
+#: lib/idejo_web/components/plugin_components.ex:423
 #, elixir-autogen, elixir-format
 msgid "This message has as many plugin blocks as it can take."
 msgstr ""
@@ -6932,7 +6932,7 @@ msgstr ""
 msgid "Watch on %{host}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:394
+#: lib/idejo_web/components/plugin_components.ex:395
 #, elixir-autogen, elixir-format
 msgid "What the card shows (formatted like a message)"
 msgstr ""
@@ -6942,17 +6942,17 @@ msgstr ""
 msgid "Who may use it:"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:414
+#: lib/idejo_web/components/plugin_components.ex:415
 #, elixir-autogen, elixir-format
 msgid "Write a label, at most %{max} characters."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:419
+#: lib/idejo_web/components/plugin_components.ex:420
 #, elixir-autogen, elixir-format
 msgid "Write what the card shows, at most %{max} characters."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:427
+#: lib/idejo_web/components/plugin_components.ex:428
 #, elixir-autogen, elixir-format
 msgid "You cannot use this command here."
 msgstr ""
@@ -6962,47 +6962,47 @@ msgstr ""
 msgid "owners and administrators"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:466
+#: lib/idejo_web/components/plugin_components.ex:467
 #, elixir-autogen, elixir-format
 msgid "\"directory\" must be an https address."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:469
+#: lib/idejo_web/components/plugin_components.ex:470
 #, elixir-autogen, elixir-format
 msgid "A \"forum\" plugin needs \"directory\", its forums directory's address."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:310
+#: lib/idejo_web/components/plugin_components.ex:311
 #, elixir-autogen, elixir-format
 msgid "Choose"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:308
+#: lib/idejo_web/components/plugin_components.ex:309
 #, elixir-autogen, elixir-format
 msgid "Choose %{name}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:421
+#: lib/idejo_web/components/plugin_components.ex:422
 #, elixir-autogen, elixir-format
 msgid "Choose one of the forums found."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:154
+#: lib/idejo_web/components/plugin_components.ex:155
 #, elixir-autogen, elixir-format
 msgid "Join %{name}"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:295
+#: lib/idejo_web/components/plugin_components.ex:296
 #, elixir-autogen, elixir-format
 msgid "No forum found."
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:276
+#: lib/idejo_web/components/plugin_components.ex:277
 #, elixir-autogen, elixir-format
 msgid "Search the forums"
 msgstr ""
 
-#: lib/idejo_web/components/plugin_components.ex:288
+#: lib/idejo_web/components/plugin_components.ex:289
 #, elixir-autogen, elixir-format
 msgid "Searching…"
 msgstr ""

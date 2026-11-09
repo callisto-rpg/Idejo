@@ -179,6 +179,27 @@ defmodule Idejo.PluginsTest do
     assert "https:" in Plugins.frame_sources()
   end
 
+  # Steward request, 2026-11-09: a frame as tall as its code asks, when below the default,
+  # so a short player has no empty box above and below it.
+  test "a frame keeps the height its code asks for, when below the default" do
+    definition = Enum.find(Plugins.list(), &(&1.file == "iframe.json")).definition
+    src = "https://player.example.org/embed/1"
+
+    for {code, height} <- [
+          {~s(<iframe src="#{src}" width="100%" height="152" frameBorder="0"></iframe>), 152},
+          {~s(<iframe height='80px' src="#{src}"></iframe>), 80},
+          {~s(<iframe src="#{src}" height="600"></iframe>), nil},
+          {~s(<iframe src="#{src}" height="10"></iframe>), nil},
+          {~s(<iframe src="#{src}"></iframe>), nil},
+          {src, nil}
+        ] do
+      assert {:ok, data, ^src} = Plugins.prepare(definition, %{"code" => code})
+      assert data["height"] == height, code
+    end
+
+    assert Plugins.frame_height() == 416
+  end
+
   test "buttons take an http(s) link; cards keep their Markdown and its sanitised HTML", %{
     admin: admin,
     author: author,
@@ -226,18 +247,31 @@ defmodule Idejo.PluginsTest do
     assert {:error, :too_many} = Plugins.attach(author, message, "button", params)
   end
 
-  test "with nothing to go under, the block is posted as a message of its own", %{
+  # Steward request, 2026-11-09: with nothing written yet, a block starts the author's message,
+  # open and empty, so it shows in the composer at once and the next ones join it.
+  test "with nothing written, the block starts the author's message and the next joins it", %{
     admin: admin,
-    author: author,
     topic: topic
   } do
+    author = user_fixture()
     on(admin, "youtube", [member_role()])
+    on(admin, "button", [member_role()])
     link = "https://youtu.be/dQw4w9WgXcQ"
 
     assert {:error, :link} = Plugins.post(author, topic, "youtube", %{"link" => "nope"})
+    assert Messages.open_message(author, topic) == nil
+
     assert {:ok, message} = Plugins.post(author, topic, "youtube", %{"link" => link})
-    assert message.body_md == link
-    assert message.state == "closed"
+    assert message.body_md == ""
+    assert message.state == "open"
+    assert Messages.open_message(author, topic).id == message.id
+
+    button = %{"label" => "Go", "url" => "https://a.example"}
+    assert {:ok, again} = Plugins.post(author, topic, "button", button)
+    assert again.id == message.id
+
+    blocks = Repo.all(from e in Embed, where: e.message_id == ^message.id, select: e.block)
+    assert Enum.sort(blocks) == ["button", "video"]
   end
 
   test "a plugin whose file is deleted or turned off leaves the messages it was used in", %{

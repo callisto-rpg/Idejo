@@ -142,6 +142,9 @@ defmodule Idejo.Messages do
     * `:forwarded_from_id` - when this Enter opens a message, the message it forwards (steward
       decision, 2026-11-02): any message the author may read, from any topic, not deleted;
       like a reply, it may start a new message early.
+    * `:allow_empty` - with nothing open, an empty `text` opens an empty message instead of
+      changing nothing (a plugin's block added before anything is written, steward request
+      2026-11-09); with a message open, it is returned unchanged.
     * `:started_at` - for callers on the server only (tests, imports), never a client's
       value: when the author started typing the message this Enter opens. Without it, the
       time `typing/2` kept in the calling process, else now.
@@ -187,12 +190,21 @@ defmodule Idejo.Messages do
 
   defp commit_locked(author, topic, text, opts) do
     open = open_message(author, topic)
-    now = DateTime.utc_now()
 
+    case empty_commit(open, text, opts[:allow_empty] == true) do
+      {:done, result} -> result
+      :commit -> commit_text(author, topic, open, text, DateTime.utc_now(), opts)
+    end
+  end
+
+  # An empty Enter with nothing open changes nothing, unless a plugin's block starts the
+  # message (`allow_empty:`); then, with a message already being written, it is left as is.
+  defp empty_commit(nil, "", false), do: {:done, {:ok, nil}}
+  defp empty_commit(%Message{} = open, "", true), do: {:done, {:ok, open}}
+  defp empty_commit(_open, _text, _allow_empty?), do: :commit
+
+  defp commit_text(author, topic, open, text, now, opts) do
     cond do
-      open == nil and text == "" ->
-        {:ok, nil}
-
       open != nil and opts[:new] == true ->
         start_over(author, topic, open, text, now, quotes(author, topic, opts))
 

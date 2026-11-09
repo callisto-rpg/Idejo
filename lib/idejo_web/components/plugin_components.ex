@@ -78,6 +78,7 @@ defmodule IdejoWeb.PluginComponents do
         src={@embed.data["src"]}
         title={gettext("Page from %{host}", host: @host)}
         class="plugin-frame is-page"
+        height={@embed.data["height"]}
         sandbox={@sandbox}
         allow="fullscreen"
         loading="lazy"

@@ -825,7 +825,9 @@ The contract (M6; mark each item done here when its PR merges):
   `argument` (`link`, `text`, `none`) and `block`, one of four Idejo draws itself
   (`IdejoWeb.PluginComponents`): `video` (its `match` regexes' `id` group fills `{id}` in an
   https `embed` address), `iframe` (any https address, never this host's: only `src` is
-  kept from pasted code; `sandbox` without forms or top navigation), `button` (label,
+  kept from pasted code, and its `height` when below the default 416 px, drawn as the
+  frame's `height` attribute: steward request, 2026-11-09; `sandbox` without forms or top
+  navigation), `button` (label,
   http(s) link) and `card` (label, Markdown rendered with `Body.to_html/2` as the author,
   shown in `#plugin-card` once connected, a `<details>` without scripts). Bundled:
   `priv/plugins/{youtube,iframe,button,card}.json` (youtube-nocookie.com), copied into the
@@ -847,8 +849,10 @@ The contract (M6; mark each item done here when its PR merges):
   hook sends what is new with `then: "plugin"` (`plugin`, `arg`) or pushes `"open_plugin"`;
   typed `!command:argument:` (`PLUGIN_ARGUMENT`: an http(s) link for `link`, else words
   without a colon) runs at its closing colon. `TopicLive` opens `#plugin-dialog`
-  (`plugin_form`) for the author's open message (`Plugins.attach/4`) or, with none, a closed
-  message of its own whose text is the link or label (`Plugins.post/5`); a video's typed link
+  (`plugin_form`) for the author's open message (`Plugins.attach/4`) or, with none, starts
+  that message, open and empty (`Plugins.post/5`, `Messages.commit/4` with `allow_empty:`;
+  steward request, 2026-11-09), so the block shows in the composer at once and further
+  ones join it, side by side; a video's typed link
   is added at once. At most 10 embeds per message, rate-limited as `:commit`, an `update`
   activity, then `{:message, m}`. `Messages.shown/0` preloads `:embeds` only while a plugin
   is active (NF-04: no query on servers without one); `entry/3` reads `active_plugins`
