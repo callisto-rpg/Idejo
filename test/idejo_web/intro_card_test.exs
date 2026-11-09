@@ -35,15 +35,25 @@ defmodule IdejoWeb.IntroCardTest do
     assert html =~ ~s(id="intro-card")
     assert text(html, "#intro-title") == "Getting started"
 
-    # The same "Sending" as on the Help page.
+    # Help's "Sending", shortened: Enter and Ctrl+Enter only.
     sending = text(html, "#intro-send")
-    help = build_conn() |> get(~p"/help") |> html_response(200) |> text("#help-send")
-    assert sending == help
+    assert sending =~ "Sending"
+    assert sending =~ "Sends what you wrote."
     assert sending =~ "Finishes your current message and starts a new one."
+    refute sending =~ "growing message"
+    refute sending =~ "Nothing is sent"
+    refute sending =~ "longer delay"
+
+    # The Help page keeps them all.
+    help = build_conn() |> get(~p"/help") |> html_response(200) |> text("#help-send")
+    assert help =~ "growing message"
+    assert help =~ "Nothing is sent"
+    assert help =~ "longer delay"
 
     sidebar = text(html, "#intro-sidebar")
     assert sidebar =~ "Topics you write in are followed automatically and appear in the sidebar"
-    assert sidebar =~ "× button"
+    assert sidebar =~ "To stop following a topic, click the ×."
+    refute sidebar =~ "under their category"
     assert sidebar =~ "swipe right to reveal the sidebar"
 
     assert text(html, "#intro-close") =~ "Close"

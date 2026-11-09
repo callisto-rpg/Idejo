@@ -582,17 +582,20 @@ defmodule IdejoWeb.Layouts do
     >
       <div class="welcome-card intro-card">
         <h2 id="intro-title" class="welcome-title">{gettext("Getting started")}</h2>
-        <IdejoWeb.HelpComponents.sending id="intro-send" heading="h3" class="intro-section" />
+        <IdejoWeb.HelpComponents.sending
+          id="intro-send"
+          heading="h3"
+          class="intro-section"
+          brief
+        />
         <section id="intro-sidebar" aria-labelledby="intro-sidebar-title" class="intro-section">
           <h3 id="intro-sidebar-title">{gettext("The sidebar")}</h3>
           <ul class="intro-list">
             <li>
-              {gettext(
-                "Topics you write in are followed automatically and appear in the sidebar, under their category."
-              )}
+              {gettext("Topics you write in are followed automatically and appear in the sidebar.")}
             </li>
             <li>
-              {gettext("To stop following a topic, use the × button next to its name.")}
+              {gettext("To stop following a topic, click the ×.")}
             </li>
             <li>{gettext("On a phone, swipe right to reveal the sidebar.")}</li>
           </ul>
