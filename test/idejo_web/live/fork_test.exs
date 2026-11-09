@@ -56,7 +56,7 @@ defmodule IdejoWeb.ForkTest do
     assert has_element?(
              source_view,
              ~s(#message-#{source.id}-fork[href="/m/#{source.id}/new-topic"]),
-             "New topic from this"
+             "New Topic"
            )
 
     {:ok, lv, html} = live(conn, ~p"/m/#{source.id}/new-topic")

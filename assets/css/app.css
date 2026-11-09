@@ -1875,6 +1875,46 @@
     &::-webkit-details-marker { display: none; }
     &:hover { color: var(--color-base-content); background: color-mix(in oklab, var(--color-base-content) 6%, transparent); }
   }
+  /* Groups of actions (steward request, 2026-11-09): in the row as single buttons, or, once
+     the row would wrap (`data-collapsed`, assets/js/message_action_menus.js), "Quote" and
+     "Moderate" buttons opening them as menus. */
+  .message-action-group { display: contents; }
+  .message-action-group-toggle { display: none; }
+  .message-action-group-items { display: contents; }
+  .message-actions[data-collapsed] {
+    flex-wrap: nowrap;
+    & .message-action-group { display: block; position: relative; }
+    & .message-action-group-toggle { display: inline-flex; }
+    & .message-action-group-items { display: none; }
+    & .message-action-group[data-open] .message-action-group-items {
+      display: grid;
+      gap: 0.125rem;
+      position: absolute;
+      z-index: 40;
+      top: calc(100% + 0.25rem);
+      left: 0;
+      min-width: 11rem;
+      & .message-action { color: var(--color-base-content); }
+    }
+    & .message-action-group[data-open] .message-action-group-toggle {
+      color: var(--color-base-content);
+      background: color-mix(in oklab, var(--color-base-content) 6%, transparent);
+    }
+  }
+  /* Not a menu while the row is not collapsed: no card around the buttons, and the buttons as
+     the row's others (.popup-menu would stretch them). */
+  .message-actions:not([data-collapsed]) .message-action-group-items.popup-menu {
+    padding: 0; border: 0; background: none; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    & .message-action {
+      display: inline-flex;
+      width: auto;
+      gap: 0.3125rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-field);
+    }
+  }
+  .message-action-group-toggle [class*="hero-chevron"] { opacity: 0.6; }
   /* Message actions (steward decision, 2026-10-25). Screens that point: hidden until the
      message is hovered or has the focus (keyboard). Touch screens, with scripts: a pill
      floating under the message once it is tapped (assets/js/message_actions.js), gone at
@@ -1886,7 +1926,8 @@
     [data-controls-desktop] .message .message-actions { opacity: 1; }
     .message:hover .message-actions,
     .message:focus-within .message-actions,
-    .message-actions:has([open]) { opacity: 1; }
+    .message-actions:has([open]),
+    .message-actions:has([data-open]) { opacity: 1; }
   }
   /* Touch screens: the pill, unless "Show message controls on mobile" is on (steward
      decision, 2026-10-31): then in place, as without scripts. */
@@ -1913,7 +1954,8 @@
     [data-js] #message-window:not([data-controls-mobile]) .message[data-acting] { background: color-mix(in oklab, var(--color-base-content) 4%, transparent); }
     [data-js] #message-window:not([data-controls-mobile]) .message[data-acting] .message-actions,
     [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:focus-within,
-    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([open]) { opacity: 1; pointer-events: auto; }
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([open]),
+    [data-js] #message-window:not([data-controls-mobile]) .message .message-actions:has([data-open]) { opacity: 1; pointer-events: auto; }
   }
   /* TP-17: reactions under a message, and the 🙂 that adds one. */
   /* A long press opens who reacted (assets/js/reaction_who.js), not the phone's own menu. */
