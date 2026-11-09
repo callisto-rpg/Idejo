@@ -20,7 +20,7 @@ The twelve open questions from the feature list are settled as follows; each dec
 | --- | --- |
 | Growing-message window | The window only sets how soon the author may start a new message; it never ends the message they are typing. Appends do not restart it, and it is not shown. No size limit on a growing message. Default window 15 s, adjustable server-wide and per category. |
 | Editing an open message | Allowed, in the same composer: sent text stays in it, shown in higher contrast than unsent text, and the author can go back into it at any time. After Enter, typing simply carries on, like editing a message inline in Discord. If text already sent is changed (not just added to), a discreet “view earlier version” tag appears. |
-| Line break key | Shift+Enter inserts a line break; Enter sends what changed and keeps typing on the same line; Ctrl+Enter sends and continues on a new line, or starts a new message once the window has ended. |
+| Line break key | Shift+Enter inserts a line break; Enter sends what changed and keeps typing on the same line; Ctrl+Enter sends and completes the message: the author’s next words start a new message, at once if the window has ended, else once it has. |
 | When a topic stops being live | Optional auto-archive after 65 days of inactivity by default; period editable in server-wide settings. |
 | First message of a topic | Same editor as any message. Only differences: it has a title, it takes tags, and it is not live while being typed. |
 | Replies inside a topic | Inline replies only. Anyone permitted can select any message, including someone else’s, and create a new topic from it. |
@@ -74,11 +74,11 @@ The composer *is* the author’s open message. Before the first Enter it looks a
 
 When the sent text does not end with punctuation, Enter adds `. ` after it, so the next words start a new sentence on the same line. When it already ends with punctuation, Enter adds a single space.
 
-The composer has no chrome: only the text box, with placeholder text that names the keys (“Type here · Enter send · Shift+Enter line break · Ctrl+Enter new line”). No countdown, button or status is shown around it. Every message, open or closed, shows only the author’s avatar, display name and role above its text.
+The composer has no chrome: only the text box, with placeholder text that names the keys (“Enter: send · Shift+Enter: new line · Ctrl+Enter / Enter×3: New message”). No countdown, button or status is shown around it. Every message, open or closed, shows only the author’s avatar, display name and role above its text.
 
 The composer sits in the topic at the place of the author’s open message. Replies from other members appear below it, so the composer moves up as the conversation continues; with no open message, it sits at the end of the topic.
 
-A fixed window (15 s by default) starts at the first commit. It does not end the message: it only sets how soon the author may start a new one. After the window the author is still typing in the same message until they choose to start a new one. The window is not extended by appends, and a message has no size limit.
+A fixed window (15 s by default) starts when the author starts typing the message, and is fixed at its first commit. It does not end the message: it only sets how soon the author may start a new one. After the window the author is still typing in the same message until they choose to start a new one. Ctrl+Enter completes the message at any time; before the window has ended, the author’s next message waits until it has. The window is not extended by appends, and a message has no size limit.
 
 &#91;embedded content: message states · compose, open, closed\]
 
@@ -86,16 +86,16 @@ A fixed window (15 s by default) starts at the first commit. It does not end the
 | --- | --- |
 | Enter | Sends what changed: starts a new message, or commits to the author’s open message. Adds `. ` (or a space after punctuation); typing continues in the same message, on the same line |
 | Shift+Enter | Line break inside the unsent text, nothing sent |
-| Ctrl+Enter (Cmd+Enter on macOS) | Sends what changed and continues on a new line. Within the window the new line stays in the same message; after the window it starts a new message |
+| Ctrl+Enter (Cmd+Enter on macOS) | Sends what changed and completes the message; what the author types next starts a new message. Within the window, that new message waits until the window has ended |
 | Touch screens | The keyboard’s return key = Enter; how to give Ctrl+Enter without a button is still open |
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | GM-01 | Enter with no open message posts a new message, open and visible to readers at once | Must |
 | GM-02 | Enter while the author has an open message in the topic sends the unsent changes as a new commit; readers see them appear in place. The text stays in the composer, the caret does not move, and typing continues on the same line, with no line break added. If the sent text does not end with punctuation, `. ` is appended to it; otherwise a single space | Must |
-| GM-03 | The window starts at the first commit; appends never restart or extend it. The window only limits when a new message can be started; it never closes the message or moves the author out of it | Must |
+| GM-03 | The window starts when the author starts typing the message and is fixed at the first commit; appends never restart or extend it. The window only limits when a new message can be started; it never closes the message or moves the author out of it | Must |
 | GM-04 | When the window ends the message stays open and the author keeps typing in it; Enter still commits to it. Only Ctrl+Enter (GM-05) starts a new message | Must |
-| GM-05 | Ctrl+Enter sends the unsent changes as a commit and continues on a new line. Within the window that line belongs to the same message; after the window the message closes and the new line starts a new message | Must |
+| GM-05 | Ctrl+Enter sends the unsent changes as a commit and closes the message; what the author types next starts a new message. Within the window the author’s next message waits until the window has ended (a reply excepted where the server lets replies start during the window); in the meantime the message stays in place, with others’ replies below it | Must |
 | GM-06 | No size limit on a message; bodies longer than one screen render collapsed with a “show all” control | Must |
 | GM-07 | No visible open-state chrome: open and closed messages look the same to readers (avatar, display name and role above the text), and the composer shows no countdown. The open state and time left exist only as text for assistive technology (AX-02, AX-03) | Must |
 | GM-08 | Messages are ordered by their first commit; replies by others appear below an open message, which keeps its place and keeps growing. The author’s composer is that open message, in place: new replies appear below it and push it up | Must |

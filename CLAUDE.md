@@ -69,8 +69,8 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
    `OpenMessageSupervisor`. The database is the truth; the process is only a timer.
 4. On boot, `Idejo.Messages.Recovery` reloads open messages with their original `closes_at`.
 5. A message closes only on Ctrl+Enter (GM-05; before the window ends, or with nothing below
-   it before the unanswered message time, too: steward request, 2026-11-09, departing from MVP
-   §4 steps 2 and 4: it closes `held`, and `Messages.held_until/3` refuses the author's next
+   it before the unanswered message time, too: steward request, 2026-11-09, now in GM-05 and
+   MVP §4 steps 2 and 4: it closes `held`, and `Messages.held_until/3` refuses the author's next
    message in the topic, `{:error, :too_soon}`, until those timers run out, a Reply or Forward
    excepted while `gm_early_reply` is on), its author sending a new message after Reply
    (`commit/4` with `new: true`; steward decision, 2026-10-24), lock or archive, session
