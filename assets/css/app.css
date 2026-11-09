@@ -3150,6 +3150,10 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
    report, 2026-10-31: on phones the box jumped when the line came and went). Only with
    scripts, which draw the line. */
 .composer-timer-slot { display: flow-root; }
+/* Ctrl+Enter while the timers ran (steward request, 2026-11-09): the line under the message
+   it committed, until the next may start. */
+.composer-held { padding: 0.25rem 1rem 0.75rem; }
+.composer-held-text { font-size: 0.75rem; color: var(--ink-soft); text-align: center; }
 [data-js] .composer-timer-slot { min-height: calc(0.875rem + 2px + 2rem); }
 [data-js][data-bubbles] .composer-timer-slot { min-height: calc(0.875rem + 2px + 0.625rem); }
 @keyframes composer-timer-bubble { from { left: 0%; } to { left: 100%; } }

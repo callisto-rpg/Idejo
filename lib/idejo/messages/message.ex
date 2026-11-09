@@ -26,6 +26,9 @@ defmodule Idejo.Messages.Message do
     # When the author started typing it (steward request, 2026-11-09): the window and the
     # unanswered message time count from here; nil for older messages (from opened_at).
     field :timer_from, :utc_datetime_usec
+    # Closed by Ctrl+Enter before its timers ran out (steward request, 2026-11-09): its
+    # author's next message in the topic waits for them (`Idejo.Messages.held_until/2`).
+    field :held, :boolean, default: false
     field :closed_at, :utc_datetime_usec
     field :body_md, :string
     field :body_html, :string

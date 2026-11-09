@@ -98,12 +98,11 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
     refute author |> element("#composer") |> render() =~ ~r/\d+\s*s\b/
     assert visitor |> element("#topic-announcer") |> render() =~ "Ada started a message."
 
-    # 2. Enter after each part joins the same message on the same line; Ctrl+Enter in the
-    #    window continues on a new line of the same message.
+    # 2. Enter after each part joins the same message on the same line; a new line
+    #    (Shift+Enter) joins it too. (MVP §4 step 2's "Ctrl+Enter continues on a new line" is
+    #    gone: Ctrl+Enter in the window now commits the message, its next one waiting for the
+    #    timer; steward request, 2026-11-09, tested in composer_test.exs.)
     assert %{closed: false} = enter(author, "Hello everyone. Who is comming tonight?")
-
-    assert %{closed: false} =
-             ctrl_enter(author, "Hello everyone. Who is comming tonight?")
 
     assert %{closed: false} =
              enter(author, "Hello everyone. Who is comming tonight?\nI can bring snacks")

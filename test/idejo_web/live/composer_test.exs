@@ -462,7 +462,7 @@ defmodule IdejoWeb.ComposerTest do
 
   # Steward decision, 2026-10-25.
   @tag req: "GM-05"
-  test "GM-05 Ctrl+Enter outside the box starts a new message when it may, else goes to the box" do
+  test "GM-05 Ctrl+Enter outside the box commits the message at any time, and goes to the box" do
     js = File.read!("assets/js/composer.js")
     assert js =~ ~s|document.addEventListener("keydown", this.onPageKey)|
     assert js =~ ~s|document.removeEventListener("keydown", this.onPageKey)|
@@ -470,21 +470,20 @@ defmodule IdejoWeb.ComposerTest do
     assert js =~
              ~s|const OWN_CTRL_ENTER = "input, textarea, select, [contenteditable], a[href], dialog[open]"|
 
-    # A new message only when the timer line allows it (or in an edit); the caret in any case.
-    assert js =~
-             ~s|if (this.sent !== "" && (this.el.hasAttribute("data-editing") \|\| mayStartNew())) this.send(true)\n      this.focusEnd()|
+    # Committed at any time (steward request, 2026-11-09: before the line is full, the next
+    # message waits for it); the caret in any case.
+    assert js =~ ~s|if (this.sent !== "") this.send(true)\n      this.focusEnd()|
 
     timer = File.read!("assets/js/composer_timer.js")
     assert timer =~ "export const mayStartNew = () => readyAt === null || Date.now() >= readyAt"
     assert timer =~ "readyAt = end + skew"
   end
 
-  # Steward decision, 2026-10-23: the unanswered message time.
+  # Steward decisions, 2026-10-23 (the unanswered message time) and 2026-11-09 (Ctrl+Enter
+  # before it commits, held).
   @tag req: "GM-05"
-  test "GM-05 alone below the last message, Ctrl+Enter after the window keeps it open", %{
-    conn: conn,
-    topic: topic
-  } do
+  test "GM-05 Ctrl+Enter before the time commits the message; the line stays under it, no composer",
+       %{conn: conn, topic: topic} do
     {:ok, lv, _html} = watch(conn, topic)
     enter(lv, "Thinking aloud")
     [_, mine] = Forum.list_messages(topic)
@@ -494,8 +493,51 @@ defmodule IdejoWeb.ComposerTest do
     |> Repo.update!()
 
     enter(lv, "Thinking aloud. More", true)
-    assert_reply(lv, %{closed: false, body: "Thinking aloud. More."})
-    assert Repo.reload!(mine).state == "open"
+    assert_reply(lv, %{closed: true, body: "Thinking aloud. More."})
+    assert %{state: "closed", held: true} = Repo.reload!(mine)
+
+    # The message in place, the line right under it, and no box to write in.
+    html = render(lv)
+    refute has_element?(lv, "#composer textarea")
+    assert has_element?(lv, "#composer-held #composer-timer")
+    assert has_element?(lv, "#composer-held-text", "when the line is full")
+    assert html =~ ~r/id="message-#{mine.id}".*id="composer-held"/s
+
+    # Someone writes below: their message shows under the line; answered, the box is back.
+    {:ok, _} = Forum.post_message(user_fixture(), topic, %{"body" => "An answer"})
+    _ = render(lv)
+    refute has_element?(lv, "#composer-held")
+    assert has_element?(lv, "#composer textarea")
+  end
+
+  # Steward request, 2026-11-09: within the window, messages written meanwhile show below the line.
+  @tag req: "GM-03"
+  test "GM-03 Ctrl+Enter in the window commits; others' messages show under the line until it ends",
+       %{conn: conn, topic: topic} do
+    {:ok, lv, _html} = watch(conn, topic)
+    enter(lv, "Quick thought")
+    enter(lv, "Quick thought", true)
+    assert_reply(lv, %{closed: true})
+    [_, mine] = Forum.list_messages(topic)
+
+    {:ok, other} = Forum.post_message(user_fixture(), topic, %{"body" => "Meanwhile"})
+    html = render(lv)
+    assert has_element?(lv, "#composer-held #composer-timer")
+    refute has_element?(lv, "#composer textarea")
+
+    assert html =~
+             ~r/id="message-#{mine.id}".*id="composer-held".*id="message-#{other.id}"/s
+
+    # The window ends: the box comes back, at the end.
+    mine
+    |> Ecto.Changeset.change(closes_at: DateTime.add(DateTime.utc_now(), -1))
+    |> Repo.update!()
+
+    send(lv.pid, :held_over)
+    send(lv.pid, {:message, Idejo.Repo.preload(Repo.reload!(mine), Idejo.Messages.shown())})
+    _ = render(lv)
+    refute has_element?(lv, "#composer-held")
+    assert has_element?(lv, "#composer textarea")
   end
 
   @tag req: "GM-05"

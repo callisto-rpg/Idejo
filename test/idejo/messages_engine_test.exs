@@ -191,29 +191,35 @@ defmodule Idejo.MessagesEngineTest do
 
   # Steward decision, 2026-10-23: the unanswered message time (`gm_unanswered_minutes`).
   @tag req: "GM-05"
-  test "GM-05 with nobody below it, Ctrl+Enter completes a message only once it is old enough",
+  test "GM-05 with nobody below it, a new message waits until the last is old enough",
        %{topic: topic, author: author} do
     message = topic |> then(&commit!(author, &1, "Alone")) |> end_window!()
 
-    # Ten minutes by default: Ctrl+Enter is a line of the same message until then.
-    still = commit!(author, topic, "Alone. Still", break: true)
-    assert still.id == message.id
-    assert still.state == "open"
-    assert Messages.unanswered_until(still) == DateTime.add(still.opened_at, 600, :second)
+    # Ctrl+Enter before the time (steward request, 2026-11-09): committed now, held.
+    held = commit!(author, topic, "Alone. Still", break: true)
+    assert held.id == message.id
+    assert held.state == "closed"
+    assert held.held
+    assert Messages.unanswered_until(held) == DateTime.add(held.opened_at, 600, :second)
+    assert Messages.held_until(author, topic) == Messages.unanswered_until(held)
+
+    # Ten minutes by default: no new message until then.
+    assert {:error, :too_soon} = Messages.commit(author, topic, "Next")
 
     # A message deleted below it does not count as an answer.
     {:ok, reply} = Messages.commit(user_fixture(), topic, "Spam")
     {:ok, _} = Messages.delete_as_moderator(user_with_role_fixture(:administrator), reply, "x")
-    reply = Repo.reload!(reply)
-    {:ok, _} = Messages.close(reply)
-    assert commit!(author, topic, "Alone. Still. Again", break: true).state == "open"
+    assert {:error, :too_soon} = Messages.commit(author, topic, "Next")
 
-    # Older than the time: it completes, answered or not.
-    still
+    # Older than the time: the next one starts.
+    held
     |> Ecto.Changeset.change(opened_at: DateTime.add(DateTime.utc_now(), -601, :second))
     |> Repo.update!()
 
-    assert commit!(author, topic, "Alone. Still. Again. Done", break: true).state == "closed"
+    assert Messages.held_until(author, topic) == nil
+    next = commit!(author, topic, "Next")
+    refute next.id == held.id
+    assert next.state == "open"
   end
 
   # Steward decision, 2026-10-31: the window may be 0 s; outside a private conversation the
@@ -228,10 +234,27 @@ defmodule Idejo.MessagesEngineTest do
 
     assert Messages.no_window?(message)
     refute Messages.may_start_new?(message)
-    assert commit!(author, topic, "Quick. Still", break: true).state == "open"
+    assert %{state: "closed", held: true} = commit!(author, topic, "Quick. Still", break: true)
+    assert {:error, :too_soon} = Messages.commit(author, topic, "Next")
 
+    # An answer below it: the next one starts at once.
     commit!(user_fixture(), topic, "An answer")
-    assert commit!(author, topic, "Quick. Still. Done", break: true).state == "closed"
+    assert %{state: "open", body_md: "Next."} = commit!(author, topic, "Next")
+  end
+
+  # Steward request, 2026-11-09: a Reply still starts a new message at once while
+  # "Allow replies even if the timer is still running" is on.
+  @tag req: "GM-05"
+  test "GM-05 a Reply is not held back by a message closed early", %{topic: topic, author: author} do
+    [opening] = Forum.list_messages(topic)
+    commit!(author, topic, "Early")
+    assert %{held: true} = commit!(author, topic, "Early", break: true)
+    assert {:error, :too_soon} = Messages.commit(author, topic, "Plain")
+
+    assert {:ok, %{reply_to_id: reply_to, state: "open"}} =
+             Messages.commit(author, topic, "Answer", reply_to_id: opening.id)
+
+    assert reply_to == opening.id
   end
 
   @tag req: "GM-09"
@@ -284,7 +307,7 @@ defmodule Idejo.MessagesEngineTest do
   } do
     commit!(author, topic, "One")
     commit!(author, topic, "One. Two")
-    commit!(author, topic, "One. Two. Three", break: true)
+    commit!(author, topic, "One. Two. Three")
     commit!(author, topic, "One. Two. Three.\nFour")
 
     assert Repo.reload!(topic).message_count == 2
