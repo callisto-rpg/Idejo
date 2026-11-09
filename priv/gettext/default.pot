@@ -1746,7 +1746,7 @@ msgstr ""
 msgid "message"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:93
+#: lib/idejo_web/controllers/help_html/show.html.heex:75
 #: lib/idejo_web/controllers/moderation_html.ex:47
 #, elixir-autogen, elixir-format
 msgid "topic"
@@ -2561,27 +2561,27 @@ msgstr ""
 msgid "@%{username} mentions and replies to my posts"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:79
+#: lib/idejo_web/controllers/help_controller.ex:76
 #, elixir-autogen, elixir-format
 msgid "A \\ before a sign shows the sign itself."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:65
+#: lib/idejo_web/controllers/help_controller.ex:62
 #, elixir-autogen, elixir-format
 msgid "A block of code: ``` on a line before it and after it."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:74
+#: lib/idejo_web/controllers/help_controller.ex:71
 #, elixir-autogen, elixir-format
 msgid "A heading: one to six # at the start of a line, then a space."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:72
+#: lib/idejo_web/controllers/help_controller.ex:69
 #, elixir-autogen, elixir-format
 msgid "A link. An address typed on its own becomes a link too."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:68
+#: lib/idejo_web/controllers/help_controller.ex:65
 #, elixir-autogen, elixir-format
 msgid "A list: - or * at the start of each line."
 msgstr ""
@@ -2596,12 +2596,12 @@ msgstr ""
 msgid "A new line in the box. Nothing is sent."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:70
+#: lib/idejo_web/controllers/help_controller.ex:67
 #, elixir-autogen, elixir-format
 msgid "A numbered list."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:66
+#: lib/idejo_web/controllers/help_controller.ex:63
 #, elixir-autogen, elixir-format
 msgid "A quote, at the start of a line."
 msgstr ""
@@ -2611,12 +2611,12 @@ msgstr ""
 msgid "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the Idejo picture."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:60
+#: lib/idejo_web/controllers/help_controller.ex:57
 #, elixir-autogen, elixir-format
 msgid "A spoiler: hidden in a topic until each reader clicks it. To hide the whole message, use !spoiler."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:76
+#: lib/idejo_web/controllers/help_controller.ex:73
 #, elixir-autogen, elixir-format
 msgid "A table: a line of names, a line of dashes, then the rows."
 msgstr ""
@@ -2749,7 +2749,7 @@ msgstr ""
 msgid "An account here already uses the email address %{provider} gave. Sign in with its password, then link %{provider} in Profile and account."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:77
+#: lib/idejo_web/controllers/help_controller.ex:74
 #, elixir-autogen, elixir-format
 msgid "An emoji, by its name between colons."
 msgstr ""
@@ -2834,7 +2834,7 @@ msgstr ""
 msgid "At most one \"new messages in topics you follow\" notification per member in this time."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:71
+#: lib/idejo_web/controllers/help_html/show.html.heex:53
 #, elixir-autogen, elixir-format
 msgid "At the start of a word, these signs open a list of suggestions while you type: click one, or use the arrow keys and Enter (or Tab); Escape closes the list."
 msgstr ""
@@ -2906,7 +2906,7 @@ msgstr ""
 msgid "Bold"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:50
+#: lib/idejo_web/controllers/help_controller.ex:47
 #, elixir-autogen, elixir-format
 msgid "Bold."
 msgstr ""
@@ -3073,7 +3073,7 @@ msgstr ""
 msgid "Code"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:63
+#: lib/idejo_web/controllers/help_controller.ex:60
 #, elixir-autogen, elixir-format
 msgid "Code, kept exactly as typed."
 msgstr ""
@@ -3088,7 +3088,7 @@ msgstr ""
 msgid "Command (typed as !command)"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:114
+#: lib/idejo_web/controllers/help_html/show.html.heex:96
 #, elixir-autogen, elixir-format
 msgid "Commands"
 msgstr ""
@@ -3503,7 +3503,7 @@ msgstr ""
 msgid "Food & Drink"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:157
+#: lib/idejo_web/controllers/help_html/show.html.heex:139
 #, elixir-autogen, elixir-format
 msgid "Formatting text"
 msgstr ""
@@ -3600,7 +3600,7 @@ msgstr ""
 msgid "Had the server post an automessage"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:73
+#: lib/idejo_web/controllers/help_controller.ex:70
 #, elixir-autogen, elixir-format
 msgid "Heading"
 msgstr ""
@@ -3653,12 +3653,12 @@ msgstr ""
 msgid "Hide your message until readers reveal it"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:146
+#: lib/idejo_web/controllers/help_html/show.html.heex:128
 #, elixir-autogen, elixir-format
 msgid "Hides those words until each reader clicks them (or selects them and presses Enter). Quotes, search results and notifications show (spoiler) instead. To hide the whole message, use !spoiler."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:141
+#: lib/idejo_web/controllers/help_html/show.html.heex:123
 #, elixir-autogen, elixir-format
 msgid "Hiding part of a message"
 msgstr ""
@@ -3673,7 +3673,7 @@ msgstr ""
 msgid "Higher roles come first; a member's name takes the colour of their highest role, and conversations show their highest role visible next to names. Owner and administrator always have every right."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:54
+#: lib/idejo_web/controllers/help_controller.ex:51
 #, elixir-autogen, elixir-format
 msgid "Highlighted."
 msgstr ""
@@ -3773,7 +3773,7 @@ msgstr ""
 msgid "Italic"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:52
+#: lib/idejo_web/controllers/help_controller.ex:49
 #, elixir-autogen, elixir-format
 msgid "Italics. One underscore on each side works too."
 msgstr ""
@@ -3861,22 +3861,22 @@ msgstr ""
 msgid "Link your account to %{provider} to sign in with it. You will be asked to sign in there."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:69
+#: lib/idejo_web/controllers/help_html/show.html.heex:51
 #, elixir-autogen, elixir-format
 msgid "Links and suggestions"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:98
+#: lib/idejo_web/controllers/help_html/show.html.heex:80
 #, elixir-autogen, elixir-format
 msgid "Links to a category."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:94
+#: lib/idejo_web/controllers/help_html/show.html.heex:76
 #, elixir-autogen, elixir-format
 msgid "Links to a topic; once sent, it reads the topic's title."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:102
+#: lib/idejo_web/controllers/help_html/show.html.heex:84
 #, elixir-autogen, elixir-format
 msgid "Links to the topics with that tag."
 msgstr ""
@@ -3971,7 +3971,7 @@ msgstr ""
 msgid "Members who choose it get every right it has in Permissions: give it no moderation rights."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:79
+#: lib/idejo_web/controllers/help_html/show.html.heex:61
 #, elixir-autogen, elixir-format
 msgid "Mentions someone: they are notified and follow the topic, unless they unfollowed it."
 msgstr ""
@@ -4015,7 +4015,7 @@ msgstr ""
 msgid "Message now visible to all!"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:159
+#: lib/idejo_web/controllers/help_html/show.html.heex:141
 #, elixir-autogen, elixir-format
 msgid "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, / and $ links are above."
 msgstr ""
@@ -4316,7 +4316,7 @@ msgstr ""
 msgid "Notifications from this server work on this device."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:87
+#: lib/idejo_web/controllers/help_html/show.html.heex:69
 #, elixir-autogen, elixir-format
 msgid "Notifies everyone with that role who can read the topic. Which roles you may tag is set by the administrators."
 msgstr ""
@@ -4754,7 +4754,7 @@ msgstr ""
 msgid "Running"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:107
+#: lib/idejo_web/controllers/help_html/show.html.heex:89
 #, elixir-autogen, elixir-format
 msgid "Runs a command, listed below. What you typed for it leaves the box."
 msgstr ""
@@ -5076,7 +5076,7 @@ msgstr ""
 msgid "Skiing"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:58
+#: lib/idejo_web/controllers/help_controller.ex:55
 #, elixir-autogen, elixir-format
 msgid "Small text, greyed out: at the start of a line, with a space after the #."
 msgstr ""
@@ -5142,7 +5142,7 @@ msgstr ""
 msgid "Strikethrough"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:53
+#: lib/idejo_web/controllers/help_controller.ex:50
 #, elixir-autogen, elixir-format
 msgid "Struck through."
 msgstr ""
@@ -5169,7 +5169,7 @@ msgstr ""
 msgid "Suggestions"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:56
+#: lib/idejo_web/controllers/help_controller.ex:53
 #, elixir-autogen, elixir-format
 msgid "Superscript: everything between the two ^ is raised, spaces included."
 msgstr ""
@@ -5604,7 +5604,7 @@ msgstr ""
 msgid "Tutorial bubbles"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:116
+#: lib/idejo_web/controllers/help_html/show.html.heex:98
 #, elixir-autogen, elixir-format
 msgid "Type ! at the start of a word in the box under a topic, then pick a command. The list shows the ones you may use there."
 msgstr ""
@@ -5935,7 +5935,7 @@ msgstr ""
 msgid "a private conversation"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:50
+#: lib/idejo_web/controllers/help_controller.ex:47
 #, elixir-autogen, elixir-format
 msgid "bold"
 msgstr ""
@@ -5950,7 +5950,7 @@ msgstr ""
 msgid "can tag roles beneath"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:97
+#: lib/idejo_web/controllers/help_html/show.html.heex:79
 #, elixir-autogen, elixir-format
 msgid "category"
 msgstr ""
@@ -5960,32 +5960,32 @@ msgstr ""
 msgid "close & unfollow thread"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:63
+#: lib/idejo_web/controllers/help_controller.ex:60
 #, elixir-autogen, elixir-format
 msgid "code"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:64
+#: lib/idejo_web/controllers/help_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "code on"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:105
+#: lib/idejo_web/controllers/help_html/show.html.heex:87
 #, elixir-autogen, elixir-format
 msgid "command"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:69
+#: lib/idejo_web/controllers/help_controller.ex:66
 #, elixir-autogen, elixir-format
 msgid "first"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:59
+#: lib/idejo_web/controllers/help_controller.ex:56
 #, elixir-autogen, elixir-format
 msgid "hidden words"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:54
+#: lib/idejo_web/controllers/help_controller.ex:51
 #, elixir-autogen, elixir-format
 msgid "highlighted"
 msgstr ""
@@ -6001,7 +6001,7 @@ msgstr ""
 msgid "inactive"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:51
+#: lib/idejo_web/controllers/help_controller.ex:48
 #, elixir-autogen, elixir-format
 msgid "italics"
 msgstr ""
@@ -6016,7 +6016,7 @@ msgstr ""
 msgid "members can choose it"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:78
+#: lib/idejo_web/controllers/help_controller.ex:75
 #, elixir-autogen, elixir-format
 msgid "not italics"
 msgstr ""
@@ -6031,7 +6031,7 @@ msgstr ""
 msgid "now"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:67
+#: lib/idejo_web/controllers/help_controller.ex:64
 #, elixir-autogen, elixir-format
 msgid "one"
 msgstr ""
@@ -6043,12 +6043,12 @@ msgstr ""
 msgid "or"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:66
+#: lib/idejo_web/controllers/help_controller.ex:63
 #, elixir-autogen, elixir-format
 msgid "quoted text"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:85
+#: lib/idejo_web/controllers/help_html/show.html.heex:67
 #, elixir-autogen, elixir-format
 msgid "role"
 msgstr ""
@@ -6058,7 +6058,7 @@ msgstr ""
 msgid "scheduled message"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:69
+#: lib/idejo_web/controllers/help_controller.ex:66
 #, elixir-autogen, elixir-format
 msgid "second"
 msgstr ""
@@ -6079,7 +6079,7 @@ msgstr ""
 msgid "sent, appends unsent"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:64
+#: lib/idejo_web/controllers/help_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "several lines"
 msgstr ""
@@ -6089,23 +6089,23 @@ msgstr ""
 msgid "slow mode"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:57
+#: lib/idejo_web/controllers/help_controller.ex:54
 #, elixir-autogen, elixir-format
 msgid "small text"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:53
+#: lib/idejo_web/controllers/help_controller.ex:50
 #, elixir-autogen, elixir-format
 msgid "struck through"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:101
+#: lib/idejo_web/controllers/help_html/show.html.heex:83
 #, elixir-autogen, elixir-format
 msgid "tag"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:71
-#: lib/idejo_web/controllers/help_html/show.html.heex:144
+#: lib/idejo_web/controllers/help_controller.ex:68
+#: lib/idejo_web/controllers/help_html/show.html.heex:126
 #, elixir-autogen, elixir-format
 msgid "text"
 msgstr ""
@@ -6115,7 +6115,7 @@ msgstr ""
 msgid "to choose your roles."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_controller.ex:67
+#: lib/idejo_web/controllers/help_controller.ex:64
 #, elixir-autogen, elixir-format
 msgid "two"
 msgstr ""
@@ -6125,7 +6125,7 @@ msgstr ""
 msgid "unsent"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:77
+#: lib/idejo_web/controllers/help_html/show.html.heex:59
 #, elixir-autogen, elixir-format
 msgid "username"
 msgstr ""
@@ -6742,7 +6742,7 @@ msgstr ""
 msgid "Add role"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:129
+#: lib/idejo_web/controllers/help_html/show.html.heex:111
 #, elixir-autogen, elixir-format
 msgid "Administrators choose which roles may use each one."
 msgstr ""
@@ -6854,7 +6854,7 @@ msgstr ""
 msgid "Plugins add ! commands to the composer. Each is one file in the plugins folder; delete a file there to remove its plugin. Owners and administrators may use every plugin that is on; other roles only those you add."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:127
+#: lib/idejo_web/controllers/help_html/show.html.heex:109
 #, elixir-autogen, elixir-format
 msgid "Plugins on this server"
 msgstr ""
@@ -7122,18 +7122,6 @@ msgstr ""
 msgid "...until the line is full."
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:42
-#, elixir-autogen, elixir-format
-msgid "Completes your message: what you type next starts a new one. Before %{count} second after you started typing it, your next message waits until then: a line under your message fills up, and the box comes back when it is full. Enter three times in a row does the same, on phones too."
-msgid_plural "Completes your message: what you type next starts a new one. Before %{count} seconds after you started typing it, your next message waits until then: a line under your message fills up, and the box comes back when it is full. Enter three times in a row does the same, on phones too."
-msgstr[0] ""
-msgstr[1] ""
-
-#: lib/idejo_web/controllers/help_html/show.html.heex:60
-#, elixir-autogen, elixir-format
-msgid "Ctrl+Enter works from anywhere on a topic's page, outside other text boxes: it completes your message and puts the cursor back at the end of the box."
-msgstr ""
-
 #: lib/idejo_web/live/topic_live.ex:2960
 #, elixir-autogen, elixir-format
 msgid "Message sent. You can start a new one when the line is full."
@@ -7144,20 +7132,6 @@ msgstr ""
 msgid "Send & finish (the next message waits for the line)"
 msgstr ""
 
-#: lib/idejo_web/controllers/help_html/show.html.heex:48
-#, elixir-autogen, elixir-format
-msgid "While nobody has written below your message, the next one waits until %{count} minute after you started typing it."
-msgid_plural "While nobody has written below your message, the next one waits until %{count} minutes after you started typing it."
-msgstr[0] ""
-msgstr[1] ""
-
-#: lib/idejo_web/controllers/help_html/show.html.heex:54
-#, elixir-autogen, elixir-format
-msgid "While nobody has written below your message, the next one waits until %{count} second after you started typing it."
-msgid_plural "While nobody has written below your message, the next one waits until %{count} seconds after you started typing it."
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/idejo_web/live/topic_live.ex:4005
 #, elixir-autogen, elixir-format
 msgid "New Topic"
@@ -7166,4 +7140,9 @@ msgstr ""
 #: lib/idejo_web/live/topic_live.ex:3888
 #, elixir-autogen, elixir-format
 msgid "message edited by a moderator"
+msgstr ""
+
+#: lib/idejo_web/controllers/help_html/show.html.heex:42
+#, elixir-autogen, elixir-format
+msgid "Finishes your current message and starts a new one. If nobody has replied to your message yet, there will be a longer delay before you are allowed to create a new message."
 msgstr ""

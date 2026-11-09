@@ -17,9 +17,6 @@ defmodule IdejoWeb.HelpController do
   def show(conn, _params) do
     render(conn, :show,
       page_title: gettext("Help"),
-      window: Idejo.Settings.get(:gm_window_seconds),
-      # In seconds: decimals of a minute allowed (steward request, 2026-11-09).
-      unanswered: Idejo.Messages.unanswered_seconds(),
       commands: IdejoWeb.ComposerCommands.all(),
       plugins: plugins(),
       formatting: formatting()

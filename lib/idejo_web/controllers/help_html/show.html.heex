@@ -39,26 +39,8 @@
             <kbd>Enter</kbd> ×3
           </dt>
           <dd>
-            {ngettext(
-              "Completes your message: what you type next starts a new one. Before %{count} second after you started typing it, your next message waits until then: a line under your message fills up, and the box comes back when it is full. Enter three times in a row does the same, on phones too.",
-              "Completes your message: what you type next starts a new one. Before %{count} seconds after you started typing it, your next message waits until then: a line under your message fills up, and the box comes back when it is full. Enter three times in a row does the same, on phones too.",
-              @window
-            )}
-            <%= if rem(@unanswered, 60) == 0 do %>
-              {ngettext(
-                "While nobody has written below your message, the next one waits until %{count} minute after you started typing it.",
-                "While nobody has written below your message, the next one waits until %{count} minutes after you started typing it.",
-                div(@unanswered, 60)
-              )}
-            <% else %>
-              {ngettext(
-                "While nobody has written below your message, the next one waits until %{count} second after you started typing it.",
-                "While nobody has written below your message, the next one waits until %{count} seconds after you started typing it.",
-                @unanswered
-              )}
-            <% end %>
             {gettext(
-              "Ctrl+Enter works from anywhere on a topic's page, outside other text boxes: it completes your message and puts the cursor back at the end of the box."
+              "Finishes your current message and starts a new one. If nobody has replied to your message yet, there will be a longer delay before you are allowed to create a new message."
             )}
           </dd>
         </div>

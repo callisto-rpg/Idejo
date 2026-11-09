@@ -881,8 +881,8 @@ The contract (M6; mark each item done here when its PR merges):
   redirects, short timeouts, size caps; tests: `:plugins_req_options` with `Req.Test`,
   `Idejo.FakeDNS` hosts `forums.`/`garden.`/`inside.idejo.test`).
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
-  linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (with this
-  server's window), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`
+  linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (Ctrl+Enter
+  in plain words, without this server's timers: steward request, 2026-11-09), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`
   default, `Automessages.Defaults`),
   `||text||` (`#help-spoilers`), and last "Formatting text" (`#help-formatting`, steward
   decision, 2026-10-28): each format from `HelpController.formatting/0`, what to type and
