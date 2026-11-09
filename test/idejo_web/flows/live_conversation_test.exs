@@ -197,7 +197,7 @@ defmodule IdejoWeb.Flows.LiveConversationTest do
 
     # 5. A side question comes up: Bo selects Ada's message and chooses "New topic from
     #    this"; the new topic links back to it.
-    assert has_element?(other, "#message-#{message.id}-fork", "New topic from this")
+    assert has_element?(other, "#message-#{message.id}-fork", "New Topic")
     {:ok, fork_lv, _html} = live(other_conn, ~p"/m/#{message.id}/new-topic")
     assert has_element?(fork_lv, ~s(#forked-from a[href="/m/#{message.id}"]))
 

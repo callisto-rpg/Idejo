@@ -1194,7 +1194,20 @@ The contract (M6; mark each item done here when its PR merges):
   there ("Delete message", `outcome=delete`: `Messages.delete_reported_private/3`, only
   while it has open reports; like `delete_as_moderator/3`, logged, reports resolved). Activities are
   written as for any topic (URIs only): federation must leave private topics out.
-- **New topic from this** (TP-09): every message has a "New topic from this" link for users
+- **Message action menus** (steward request, 2026-11-09): under a message, Reply, Forward
+  and "New Topic" sit in `action_group/1` "Quote" (`#message-{id}-quote`, `quote_actions?/4`)
+  and the moderators' Change icon, Make topical, Moderate and Warn user in "Moderate"
+  (`#message-{id}-moderation`, `@can_moderate?`): `.message-action-group` and its `-items`
+  are `display: contents`, so the buttons stand in the row as before (and always without
+  scripts). The row's `MessageActions` hook (`assets/js/message_action_menus.js`, one
+  `ResizeObserver`, measured again on patches and window resizes) sets `data-collapsed`
+  (kept by `JS.ignore_attributes`) when its buttons would take more than one line: then the
+  groups show their toggles ("Quote", "Moderate", a chevron) and the items are a
+  `.popup-menu` under it while `data-open` (a disclosure: `aria-expanded`; a click
+  elsewhere, an action or Escape closes it, Escape with the focus back). A row with a group
+  open is not measured again until it closes. Report, React, Edit and Delete stay in the row.
+- **New topic from this** (TP-09): every message has a "New Topic" link (renamed, steward
+  request, 2026-11-09; the composer's `!new-topic` keeps its name) for users
   who may start a topic somewhere (`Forum.list_startable_categories/1`). It opens
   `NewTopicLive` at `/m/{id}/new-topic` (`:fork`): the source's excerpt and a category choice.
   `Forum.create_topic/4` with `forked_from: message` sets `topics.forked_from_message_id`

@@ -3938,7 +3938,12 @@ defmodule IdejoWeb.TopicLive do
           <.icon name="hero-arrow-turn-down-right-micro" class="size-4" />{gettext("Continue topic")}
         </.link>
       </p>
-      <div class="message-actions">
+      <div
+        id={"message-#{@message.id}-actions"}
+        class="message-actions"
+        phx-hook="MessageActions"
+        phx-mounted={JS.ignore_attributes(["data-collapsed"])}
+      >
         <ReactionComponents.add_reaction
           :if={@can_react? and is_nil(@message.deleted_at)}
           message_id={@message.id}
@@ -3974,95 +3979,153 @@ defmodule IdejoWeb.TopicLive do
         >
           <.icon name="hero-flag-micro" class="size-4" />{gettext("Report")}
         </.link>
-        <.link
-          :if={@can_fork? and is_nil(@message.deleted_at)}
-          href={~p"/m/#{@message.id}/new-topic"}
-          class="message-action"
-          id={"message-#{@message.id}-fork"}
+        <%!-- Steward request, 2026-11-09: when the actions do not fit on one line, the
+             `MessageActions` hook sets `data-collapsed` and these two groups become menus
+             ("Quote", "Moderate"); otherwise, and without scripts, their buttons stand in the
+             row as before (`display: contents`). --%>
+        <.action_group
+          :if={quote_actions?(@message, @entry, @can_post?, @can_fork?)}
+          id={"message-#{@message.id}-quote"}
+          label={gettext("Quote")}
+          icon="hero-chat-bubble-left-right-micro"
         >
-          <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />{gettext(
-            "New topic from this"
-          )}
-        </.link>
-        <%!-- TP-08: connected, Reply shows the quote over the composer at once; without
-             JavaScript it is a link that loads the page with it. --%>
-        <button
-          :if={@live? and @can_post? and is_nil(@message.deleted_at)}
-          type="button"
-          id={"message-#{@message.id}-reply"}
-          class="message-action"
-          phx-click="reply"
-          phx-value-id={@message.id}
-          aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
-        >
-          <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
-        </button>
-        <.link
-          :if={!@live? and @can_post? and is_nil(@message.deleted_at)}
-          href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
-          class="message-action"
-          aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
-        >
-          <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
-        </.link>
-        <%!-- Forward (steward decision, 2026-11-02): others' messages, and one's own once
-             committed; a card to choose the topic. --%>
-        <button
-          :if={@entry.may_forward?}
-          type="button"
-          id={"message-#{@message.id}-forward-action"}
-          class="message-action"
-          phx-click="forward"
-          phx-value-id={@message.id}
-          aria-label={gettext("Forward the message of %{name}", name: Messages.author_name(@message))}
-        >
-          <.icon name="hero-arrow-uturn-right-micro" class="size-4" />{gettext("Forward")}
-        </button>
-        <%!-- Topic Type: moderators change a topical topic's icon. --%>
-        <button
-          :if={@message.anonymous and @can_moderate? and @live?}
-          type="button"
-          id={"message-#{@message.id}-icon"}
-          class="message-action"
-          phx-click="open_icon_picker"
-        >
-          <.icon name="hero-photo-micro" class="size-4" />{gettext("Change icon")}
-        </button>
-        <button
-          :if={@entry.make_topical? and @live?}
-          type="button"
-          id={"message-#{@message.id}-make-topical"}
-          class="message-action"
-          phx-click="open_icon_picker"
-        >
-          <.icon name="hero-photo-micro" class="size-4" />{gettext("Make topical")}
-        </button>
-        <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
-        <button
+          <%!-- TP-08: connected, Reply shows the quote over the composer at once; without
+                 JavaScript it is a link that loads the page with it. --%>
+          <button
+            :if={@live? and @can_post? and is_nil(@message.deleted_at)}
+            type="button"
+            id={"message-#{@message.id}-reply"}
+            class="message-action"
+            phx-click="reply"
+            phx-value-id={@message.id}
+            aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
+          >
+            <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
+          </button>
+          <.link
+            :if={!@live? and @can_post? and is_nil(@message.deleted_at)}
+            href={~p"/t/#{@topic.id}/#{@topic.slug}?reply_to=#{@message.id}" <> "#composer"}
+            class="message-action"
+            aria-label={gettext("Reply to %{name}", name: Messages.author_name(@message))}
+          >
+            <.icon name="hero-arrow-uturn-left-micro" class="size-4" />{gettext("Reply")}
+          </.link>
+          <%!-- Forward (steward decision, 2026-11-02): others' messages, and one's own once
+                 committed; a card to choose the topic. --%>
+          <button
+            :if={@entry.may_forward?}
+            type="button"
+            id={"message-#{@message.id}-forward-action"}
+            class="message-action"
+            phx-click="forward"
+            phx-value-id={@message.id}
+            aria-label={
+              gettext("Forward the message of %{name}", name: Messages.author_name(@message))
+            }
+          >
+            <.icon name="hero-arrow-uturn-right-micro" class="size-4" />{gettext("Forward")}
+          </button>
+          <.link
+            :if={@can_fork? and is_nil(@message.deleted_at)}
+            href={~p"/m/#{@message.id}/new-topic"}
+            class="message-action"
+            id={"message-#{@message.id}-fork"}
+          >
+            <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />{gettext("New Topic")}
+          </.link>
+        </.action_group>
+        <.action_group
           :if={@can_moderate?}
-          type="button"
-          id={"message-#{@message.id}-moderate"}
-          class="message-action"
-          phx-click="open_moderate"
-          phx-value-id={@message.id}
+          id={"message-#{@message.id}-moderation"}
+          label={gettext("Moderate")}
+          icon="hero-shield-check-micro"
         >
-          <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
-        </button>
-        <%!-- MO-02 "warn" (steward request, 2026-11-09). --%>
-        <button
-          :if={@entry.warn? and @live?}
-          type="button"
-          id={"message-#{@message.id}-warn"}
-          class="message-action"
-          phx-click="open_warn"
-          phx-value-id={@message.id}
-          aria-haspopup="dialog"
-        >
-          <.icon name="hero-exclamation-triangle-micro" class="size-4" />{gettext("Warn user")}
-        </button>
+          <%!-- Topic Type: moderators change a topical topic's icon. --%>
+          <button
+            :if={@message.anonymous and @can_moderate? and @live?}
+            type="button"
+            id={"message-#{@message.id}-icon"}
+            class="message-action"
+            phx-click="open_icon_picker"
+          >
+            <.icon name="hero-photo-micro" class="size-4" />{gettext("Change icon")}
+          </button>
+          <button
+            :if={@entry.make_topical? and @live?}
+            type="button"
+            id={"message-#{@message.id}-make-topical"}
+            class="message-action"
+            phx-click="open_icon_picker"
+          >
+            <.icon name="hero-photo-micro" class="size-4" />{gettext("Make topical")}
+          </button>
+          <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
+          <button
+            :if={@can_moderate?}
+            type="button"
+            id={"message-#{@message.id}-moderate"}
+            class="message-action"
+            phx-click="open_moderate"
+            phx-value-id={@message.id}
+          >
+            <.icon name="hero-shield-check-micro" class="size-4" />{gettext("Moderate")}
+          </button>
+          <%!-- MO-02 "warn" (steward request, 2026-11-09). --%>
+          <button
+            :if={@entry.warn? and @live?}
+            type="button"
+            id={"message-#{@message.id}-warn"}
+            class="message-action"
+            phx-click="open_warn"
+            phx-value-id={@message.id}
+            aria-haspopup="dialog"
+          >
+            <.icon name="hero-exclamation-triangle-micro" class="size-4" />{gettext("Warn user")}
+          </button>
+        </.action_group>
       </div>
     </article>
     """
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :icon, :string, required: true
+  slot :inner_block, required: true
+
+  # A group of a message's actions (steward request, 2026-11-09): in the row as they are, or,
+  # once the row is collapsed (`data-collapsed`, the `MessageActions` hook), behind a button
+  # that shows them as a menu (`data-open`, a disclosure: the button's `aria-expanded`).
+  defp action_group(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="message-action-group"
+      phx-mounted={JS.ignore_attributes(["data-open"])}
+    >
+      <button
+        type="button"
+        id={"#{@id}-toggle"}
+        class="message-action message-action-group-toggle"
+        aria-expanded="false"
+        aria-controls={"#{@id}-items"}
+        phx-mounted={JS.ignore_attributes(["aria-expanded"])}
+      >
+        <.icon name={@icon} class="size-4" />{@label}<.icon
+          name="hero-chevron-down-micro"
+          class="size-3"
+        />
+      </button>
+      <div id={"#{@id}-items"} class="message-action-group-items popup-menu">
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  # Reply, Forward or New Topic: any of them (steward request, 2026-11-09).
+  defp quote_actions?(message, entry, can_post?, can_fork?) do
+    (is_nil(message.deleted_at) and (can_post? or can_fork?)) or entry.may_forward?
   end
 
   attr :message, :map, required: true

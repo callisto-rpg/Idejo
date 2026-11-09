@@ -233,8 +233,12 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   they will look, with their signs (`**`, `*`, `~~`, `||`) still there; the words of a
   spoiler show faded.
   Messages have no length limit; a long one shows a **Show all** button.
-- **New topic from this** turns a side question into its own topic, linked both ways: the
-  new topic says where it continues from, and the message gets a **Continue topic** button.
+- **New Topic**, under a message, turns a side question into its own topic, linked both ways:
+  the new topic says where it continues from, and the message gets a **Continue topic**
+  button.
+- When a message's buttons do not fit on one line, **Reply**, **Forward** and **New Topic**
+  go under a **Quote** button, and moderators' buttons under **Moderate**: click it to see
+  them.
 - **Warnings**: when a moderator warns you about one of your messages, a card shows their
   reason, at once or on your next visit, until you choose **I understand**.
 - **Report** sends a message to the moderators, with a reason. Only they see that you
