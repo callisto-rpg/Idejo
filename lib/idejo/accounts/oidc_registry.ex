@@ -14,7 +14,8 @@ defmodule Idejo.Accounts.OIDCRegistry do
     2. this server serves `proof` at `/.well-known/idejo-id-registration` (`proof/0`, kept
        in a settings row for ten minutes, so any of the server's processes answers it);
     3. `POST registrations/verify` `{registration}`: the registry fetches the proof and
-       answers `{issuer, client_id, client_secret, label, sign_up_url, directory_url}`;
+       answers `{issuer, client_id, client_secret, label, sign_up_url, directory_url, chat_url,
+       topics_url}`;
     4. `GET`/`PUT listing` `{listed, name}` with the client id and secret (HTTP Basic) →
        `{listing}`: `none`, `requested`, `approved`, `refused`.
 
@@ -82,6 +83,8 @@ defmodule Idejo.Accounts.OIDCRegistry do
         label: saved["label"],
         sign_up_url: saved["sign_up_url"],
         directory_url: saved["directory_url"],
+        chat_url: saved["chat_url"],
+        topics_url: saved["topics_url"],
         registry_url: saved["registry_url"]
       )
     else
@@ -152,6 +155,8 @@ defmodule Idejo.Accounts.OIDCRegistry do
        label: text(creds["label"]) || "Idejo ID",
        sign_up_url: link(creds["sign_up_url"]),
        directory_url: link(creds["directory_url"]),
+       chat_url: link(creds["chat_url"]),
+       topics_url: link(creds["topics_url"]),
        registry_url: url
      ]}
   end

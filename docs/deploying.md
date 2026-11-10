@@ -687,6 +687,8 @@ message naming it.
 | `IDEJO_LOCAL_ACCOUNTS` | no | `on` | `off`: no password sign-up, sign-in or reset, except owners' and administrators' sign-in. Needs the provider. |
 | `IDEJO_COMMUNITY_URL` | no | none | For a forum among several sharing one sign-in: where this server asks which other communities a member joined (`GET ?subject=`, HTTP Basic with the OpenID Connect client id and secret; JSON `{"communities": [{"name", "url"}]}`), shown in the forum icon's menu. Needs the provider. |
 | `IDEJO_COMMUNITY_DIRECTORY_URL` | no | none | A public page listing those communities: "Find more forums" in the forum icon's menu. |
+| `IDEJO_TOPICS_URL` | no | none | For such a group: a page listing the topics a member follows across its forums, linked as "All my topics" above the sidebar's "Private Conversations" for members linked to the provider. |
+| `IDEJO_CHAT_URL` | no | none | For such a group: the chat service's page, where members linked to the provider keep their private conversations. The sidebar's "Private Conversations" leads there (with a count from `<IDEJO_COMMUNITY_URL>/chats/unread?subject=`), a user card's "Private Message" to `<IDEJO_CHAT_URL>/new?with=<their subject>` (only between linked members), and the service reads followed topics and copies conversations at `/community/topics`, `/community/conversations` and `/community/conversations/moved`, each with a ticket it vouches for at `<IDEJO_COMMUNITY_URL>/chats/tickets`. Needs `IDEJO_COMMUNITY_URL` and the provider. |
 | `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
 
 `deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which

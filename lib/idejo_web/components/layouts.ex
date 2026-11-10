@@ -8,6 +8,7 @@ defmodule IdejoWeb.Layouts do
   """
   use IdejoWeb, :html
 
+  alias Idejo.Community.Chat
   alias Idejo.Forum.CategoryIcons
   alias Idejo.Push
   alias Idejo.Push.Vapid
@@ -728,7 +729,10 @@ defmodule IdejoWeb.Layouts do
         followed: Enum.group_by(listed, & &1.category_id),
         activity: activity,
         place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil},
-        conversations_unread: Idejo.Conversations.unread_count(assigns.user)
+        conversations_unread: conversations_unread(assigns.user),
+        # The chat service (steward request, 2026-11-10): the same button leads there.
+        conversations_url: (Chat.for?(assigns.user) && Chat.url()) || ~p"/p",
+        topics_url: Chat.topics_url(assigns.user)
       )
 
     ~H"""
@@ -862,7 +866,12 @@ defmodule IdejoWeb.Layouts do
       <%!-- Pinned at the very bottom (steward decision, 2026-10-27), with how many
            conversations have something new. --%>
       <div :if={@user} class="sidebar-pinned">
-        <a href={~p"/p"} class="sidebar-link" id="conversations-sidebar-link">
+        <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
+        <a :if={@topics_url} href={@topics_url} class="sidebar-link" id="all-topics-sidebar-link">
+          <.icon name="hero-rectangle-stack" class="size-4" />
+          {gettext("All my topics")}
+        </a>
+        <a href={@conversations_url} class="sidebar-link" id="conversations-sidebar-link">
           <.icon name="hero-chat-bubble-left-right" class="size-4" />
           {gettext("Private Conversations")}
           <span :if={@conversations_unread > 0} class="sidebar-count">
@@ -877,6 +886,11 @@ defmodule IdejoWeb.Layouts do
     </aside>
     """
   end
+
+  # Conversations with something new: those still here, and those at the chat service
+  # (steward request, 2026-11-10; kept a minute, nothing when it cannot be asked).
+  defp conversations_unread(user),
+    do: Idejo.Conversations.unread_count(user) + Chat.unread(user)
 
   attr :summaries, :list, required: true
   attr :current, :any, required: true

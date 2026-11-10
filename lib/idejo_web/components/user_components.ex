@@ -19,6 +19,7 @@ defmodule IdejoWeb.UserComponents do
 
   alias Idejo.Access
   alias Idejo.Accounts
+  alias Idejo.Community.Chat
   alias Idejo.Uploads
   alias IdejoWeb.Admin
 
@@ -44,6 +45,10 @@ defmodule IdejoWeb.UserComponents do
       actions: actions(viewer, user, opts[:return_to]),
       # Steward decision, 2026-10-27: "Private Message", when the viewer may write to them.
       message?: Idejo.Conversations.may_message?(viewer, user),
+      # The chat service (steward request, 2026-11-10): there instead, and only between
+      # members linked to the provider; others get no button.
+      chat_url: Chat.start_url(viewer, user),
+      chat?: Chat.url() != nil,
       # AC-06: nil when the viewer may not ignore them, else whether they do.
       ignoring?: if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
       return_to: opts[:return_to]
@@ -103,8 +108,17 @@ defmodule IdejoWeb.UserComponents do
         <p :if={@short_bio} id={"#{@id}-bio"} class="user-bio">{@short_bio}</p>
         <%!-- Opens the conversation with them, started on first use (steward decision,
              2026-10-27); a plain form, so no JavaScript is needed. --%>
+        <a
+          :if={@card[:chat_url]}
+          href={@card.chat_url}
+          id="private-message"
+          class="btn btn-sm btn-primary mt-3"
+        >
+          <.icon name="hero-chat-bubble-left-right" class="size-4" />
+          {gettext("Private Message")}
+        </a>
         <.form
-          :if={@card[:message?]}
+          :if={@card[:message?] && !@card[:chat?]}
           for={%{}}
           action={~p"/u/#{@card.user.id}/message"}
           method="post"

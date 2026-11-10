@@ -193,7 +193,13 @@ end
 
 config :idejo, :community,
   url: community_env.("IDEJO_COMMUNITY_URL"),
-  directory_url: community_env.("IDEJO_COMMUNITY_DIRECTORY_URL")
+  directory_url: community_env.("IDEJO_COMMUNITY_DIRECTORY_URL"),
+  # The chat service (steward request, 2026-11-10): where members linked to the provider
+  # hold their private conversations; unset, they stay in this forum.
+  chat_url: community_env.("IDEJO_CHAT_URL"),
+  # Steward request, 2026-11-10: where a member sees the topics they follow across the group
+  # ("All my topics" in the sidebar); unset, no button.
+  topics_url: community_env.("IDEJO_TOPICS_URL")
 
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).

@@ -42,6 +42,16 @@ defmodule IdejoWeb.Router do
     get "/community", CommunityController, :index
   end
 
+  # The chat service's questions about one member (steward request, 2026-11-10): JSON, no
+  # session; a ticket the service vouches for is the authority (ChatServiceController).
+  scope "/community", IdejoWeb do
+    pipe_through :api
+
+    get "/topics", ChatServiceController, :topics
+    get "/conversations", ChatServiceController, :conversations
+    post "/conversations/moved", ChatServiceController, :moved
+  end
+
   # SE-04: for search engines; no session, nothing personal.
   scope "/", IdejoWeb do
     # AD-15: for container health checks and monitoring; no session, nothing personal, and
