@@ -90,7 +90,7 @@ defmodule Idejo.Conversations do
         on: pa.topic_id == t.id and pa.user_id == ^a.id,
         join: pb in Participant,
         on: pb.topic_id == t.id and pb.user_id == ^b.id,
-        where: t.private,
+        where: t.private and is_nil(t.moved_to_chat_at),
         limit: 1
     )
   end
@@ -131,12 +131,34 @@ defmodule Idejo.Conversations do
           from t in Topic,
             join: p in Participant,
             on: p.topic_id == t.id and p.user_id == ^user_id,
-            where: t.id == ^id and t.private,
+            where: t.id == ^id and t.private and is_nil(t.moved_to_chat_at),
             preload: [:category, :tags]
         )
 
       :error ->
         nil
+    end
+  end
+
+  @doc """
+  Whether the private conversation with that id is `user`'s and was copied to the chat
+  service (steward request, 2026-11-10): its links lead there.
+  """
+  @spec moved?(User.t() | nil, String.t()) :: boolean()
+  def moved?(nil, _id), do: false
+
+  def moved?(%User{id: user_id}, id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} ->
+        Repo.exists?(
+          from t in Topic,
+            join: p in Participant,
+            on: p.topic_id == t.id and p.user_id == ^user_id,
+            where: t.id == ^id and t.private and not is_nil(t.moved_to_chat_at)
+        )
+
+      :error ->
+        false
     end
   end
 
@@ -177,6 +199,7 @@ defmodule Idejo.Conversations do
   @spec can_post?(User.t() | nil, Topic.t()) :: boolean()
   def can_post?(nil, _topic), do: false
   def can_post?(_user, %Topic{state: state}) when state != "open", do: false
+  def can_post?(_user, %Topic{moved_to_chat_at: %DateTime{}}), do: false
 
   def can_post?(%User{} = user, %Topic{private: true} = topic) do
     others = others(topic, user)
@@ -197,7 +220,7 @@ defmodule Idejo.Conversations do
         from t in Topic,
           join: p in Participant,
           on: p.topic_id == t.id and p.user_id == ^user_id,
-          where: t.private,
+          where: t.private and is_nil(t.moved_to_chat_at),
           order_by: [desc: t.last_activity_at, desc: t.id],
           preload: [participants: :user]
       )
@@ -267,7 +290,7 @@ defmodule Idejo.Conversations do
       from p in Participant,
         join: t in Topic,
         on: t.id == p.topic_id,
-        where: p.user_id == ^user_id and t.private,
+        where: p.user_id == ^user_id and t.private and is_nil(t.moved_to_chat_at),
         select: p.topic_id
     )
   end

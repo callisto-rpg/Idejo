@@ -11,6 +11,7 @@ defmodule IdejoWeb.ConversationController do
   """
   use IdejoWeb, :controller
 
+  alias Idejo.Community.Chat
   alias Idejo.Conversations
   alias Idejo.Reading
 
@@ -26,7 +27,11 @@ defmodule IdejoWeb.ConversationController do
 
     case Conversations.get(user, id) do
       nil ->
-        IdejoWeb.Unavailable.redirect_away(conn, :topic)
+        # Copied to the chat service (steward request, 2026-11-10): continued there.
+        case Conversations.moved?(user, id) && Chat.url() do
+          url when is_binary(url) -> redirect(conn, external: url)
+          _ -> IdejoWeb.Unavailable.redirect_away(conn, :topic)
+        end
 
       topic ->
         first_unread = Reading.first_unread(user, topic)

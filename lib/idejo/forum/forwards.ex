@@ -81,7 +81,9 @@ defmodule Idejo.Forum.Forwards do
         left_join: r in ReadPosition,
         on: r.topic_id == t.id and r.user_id == ^user_id,
         where: t.state == "open",
-        where: t.category_id in subquery(postable) or (t.private and t.id in subquery(mine)),
+        where:
+          t.category_id in subquery(postable) or
+            (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine)),
         limit: @limit,
         preload: [:category, participants: :user]
 
@@ -148,7 +150,9 @@ defmodule Idejo.Forum.Forwards do
       join: t in Topic,
       on: t.id == m.topic_id,
       where: m.id in ^ids,
-      where: t.category_id in subquery(viewable) or (t.private and t.id in subquery(mine)),
+      where:
+        t.category_id in subquery(viewable) or
+          (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine)),
       select: m.id
     )
     |> Repo.all()

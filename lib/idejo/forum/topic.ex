@@ -31,6 +31,8 @@ defmodule Idejo.Forum.Topic do
     # A private conversation (steward decision, 2026-10-27; Idejo.Conversations): no
     # category, read only by its participants.
     field :private, :boolean, default: false
+    # Steward request, 2026-11-10: a private conversation copied to the chat service.
+    field :moved_to_chat_at, :utc_datetime_usec
     field :last_activity_at, :utc_datetime_usec
     belongs_to :category, Idejo.Forum.Category
     belongs_to :author, Idejo.Accounts.User

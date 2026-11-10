@@ -35,6 +35,7 @@ defmodule Idejo.Application do
       Idejo.Accounts.OIDCRegistry,
       # The community menu's answers, kept a few minutes (Idejo.Community).
       Idejo.Community,
+      Idejo.Community.Chat,
       # Plugins: the bundled ones copied into the plugins folder, each once.
       if(Application.get_env(:idejo, :seed_plugins, true),
         do: Supervisor.child_spec({Task, &Idejo.Plugins.seed/0}, id: :seed_plugins)
