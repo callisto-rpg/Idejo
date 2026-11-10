@@ -36,6 +36,8 @@ defmodule Idejo.Application do
       # The community menu's answers, kept a few minutes (Idejo.Community).
       Idejo.Community,
       Idejo.Community.Chat,
+      # The inbox: when each member's conversations were last copied (Idejo.Inbox).
+      Idejo.Inbox,
       # Plugins: the bundled ones copied into the plugins folder, each once.
       if(Application.get_env(:idejo, :seed_plugins, true),
         do: Supervisor.child_spec({Task, &Idejo.Plugins.seed/0}, id: :seed_plugins)

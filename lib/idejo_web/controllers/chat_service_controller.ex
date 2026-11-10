@@ -19,6 +19,7 @@ defmodule IdejoWeb.ChatServiceController do
 
   alias Idejo.Community.{Chat, ChatExport}
   alias Idejo.{Emoji, Forum, Messages, Uploads}
+  alias Idejo.Forum.TopicIcons
 
   def topics(conn, params) do
     with true <- Chat.url() != nil,
@@ -59,7 +60,8 @@ defmodule IdejoWeb.ChatServiceController do
   end
 
   defp topic_json(%{topic: topic, unread: unread, preview: preview}) do
-    preview = preview || %{first: nil, latest: [], participants: [], participant_count: 0}
+    preview =
+      preview || %{first: nil, latest: [], images: [], participants: [], participant_count: 0}
 
     %{
       id: topic.id,
@@ -78,14 +80,63 @@ defmodule IdejoWeb.ChatServiceController do
           user <- Enum.take(preview.participants, 6),
           do: %{name: user.display_name, avatar: avatar(user)}
         ),
-      people_count: preview.participant_count
+      people_count: preview.participant_count,
+      # The inbox draws Idejo's own topic row from these (steward request, 2026-11-10):
+      # paths stay relative to this forum, the inbox prefixes them.
+      slug: topic.slug,
+      topical: topic.topical,
+      icon_path: topic.topical && icon_path(topic),
+      author: !topic.topical && user_json(topic.author),
+      preview: %{
+        first: message_json(preview.first),
+        images: preview.images,
+        latest: Enum.map(preview.latest, &message_json/1),
+        participants: Enum.map(Enum.take(preview.participants, 6), &user_json/1),
+        participant_count: preview.participant_count
+      }
+    }
+  end
+
+  # Loaded with the topic (`ChatExport.followed_topics/1`).
+  defp icon_path(topic), do: TopicIcons.url(topic.icon)
+
+  defp user_json(%Idejo.Accounts.User{} = user) do
+    %{
+      display_name: user.display_name,
+      username: user.username,
+      avatar_id: user.avatar_id,
+      avatar_dark_id: user.avatar_dark_id,
+      status: user.status
+    }
+  end
+
+  defp user_json(_user), do: nil
+
+  defp message_json(nil), do: nil
+
+  defp message_json(m) do
+    %{
+      id: m.id,
+      body_html: m.body_html,
+      anonymous: m.anonymous,
+      spoiler: m.spoiler,
+      spoiler_label: m.spoiler_label,
+      opened_at: m.opened_at,
+      author: !m.anonymous && user_json(m.author)
     }
   end
 
   defp category_json(nil), do: nil
 
   defp category_json(category),
-    do: %{name: category.name, url: absolute_url("/c/#{category.slug}"), colour: category.colour}
+    do: %{
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      icon: category.icon,
+      url: absolute_url("/c/#{category.slug}"),
+      colour: category.colour
+    }
 
   defp latest_json(m) do
     %{

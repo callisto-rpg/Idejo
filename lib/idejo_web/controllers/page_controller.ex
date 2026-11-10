@@ -14,7 +14,14 @@ defmodule IdejoWeb.PageController do
   2026-10-25), then the most recently active topics. Visitors who are not signed in first
   see a card offering to sign in (steward decision, 2026-10-24).
   """
+  # Inbox mode (steward request, 2026-11-10): the home page is the Forums tab.
   def home(conn, params) do
+    if Idejo.Inbox.on?(),
+      do: IdejoWeb.InboxController.forums(conn, params),
+      else: forum_home(conn, params)
+  end
+
+  defp forum_home(conn, params) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
     categories = Forum.list_category_summaries(user)
     active_topics = user |> Forum.list_active_topics() |> Reading.put_inactive()

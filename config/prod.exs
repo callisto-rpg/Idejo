@@ -24,7 +24,8 @@ config :idejo, :force_ssl,
       "/health",
       "/community/topics",
       "/community/conversations",
-      "/community/conversations/moved"
+      "/community/conversations/moved",
+      "/community/inbox-unread"
     ],
     hosts: ["localhost", "127.0.0.1"]
   ]

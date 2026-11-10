@@ -231,7 +231,8 @@ defmodule Idejo.Accounts.OIDC do
           | {:error, :no_email | :email_taken | :closed | :invite | Ecto.Changeset.t()}
   def sign_in(claims, invite_code \\ nil) do
     case find_user(claims) do
-      %User{} = user -> {:ok, user, :existing}
+      # Inbox mode: an account made before they came (Idejo.Inbox.member/1) takes their email.
+      %User{} = user -> {:ok, Idejo.Inbox.claim(user, claims), :existing}
       nil -> create(claims, invite_code)
     end
   end

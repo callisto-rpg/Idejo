@@ -1,0 +1,29 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<%!-- The topics the member follows across the group's forums, as Idejo's own topic rows
+     (compact or expanded), each naming its forum. --%>
+<Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} inbox={:topics}>
+  <Layouts.inbox_tabs current={:topics} />
+  <div class="section-divider-row">
+    <h1 class="sr-only">{gettext("Topics")}</h1>
+    <TopicComponents.view_toggle view={@view} path={~p"/topics"} />
+  </div>
+
+  <p :if={@entries == []} id="no-topics" class="empty-state">
+    {gettext("No followed topics yet. Topics you write in, or follow, in your forums show here.")}
+  </p>
+
+  <ol :if={@entries != []} id="inbox-topics" class="topic-list">
+    <TopicComponents.topic_row
+      :for={entry <- @entries}
+      topic={entry.topic}
+      category={entry.topic.category != nil}
+      unread={entry.unread}
+      preview={@view == :expanded && entry.preview}
+      base={entry.base}
+      forum={entry.forum}
+    />
+  </ol>
+</Layouts.app>

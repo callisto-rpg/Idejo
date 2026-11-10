@@ -46,6 +46,11 @@ defmodule IdejoWeb.Layouts do
 
   attr :category, :any, default: nil, doc: "the category shown, marked in the sidebar"
 
+  attr :inbox, :atom,
+    default: nil,
+    values: [nil, :forums, :topics],
+    doc: "an inbox page (`Idejo.Inbox`): its breadcrumb, \"Forums\" or \"Topics\""
+
   attr :topic, :any,
     default: nil,
     doc: "the topic shown: highlighted in the sidebar, and listed there even when not followed"
@@ -76,6 +81,8 @@ defmodule IdejoWeb.Layouts do
       # One answer per render, as an assign: LiveView re-renders every place reading it
       # together (the menu may start while a page is open: Admin → Idejo ID).
       |> assign(:community_menu?, Idejo.Community.menu?())
+      # Inbox mode (steward request, 2026-11-10): no sidebar, no categories, no Unread.
+      |> assign(:inbox?, Idejo.Inbox.on?())
 
     ~H"""
     <header class="app-header">
@@ -84,6 +91,7 @@ defmodule IdejoWeb.Layouts do
            and screen-reader users still reach the categories. Never on wide screens, where
            the sidebar always shows. --%>
       <button
+        :if={!@inbox?}
         type="button"
         id="sidebar-toggle"
         class="sidebar-toggle btn btn-ghost btn-sm btn-square"
@@ -112,21 +120,28 @@ defmodule IdejoWeb.Layouts do
         :if={@community_menu?}
         logo={@logo}
         user={@user}
-        chevron={is_nil(@category) and is_nil(@conversation)}
+        inbox?={@inbox?}
+        chevron={is_nil(@category) and is_nil(@conversation) and is_nil(@inbox)}
       />
 
-      <.breadcrumb category={@category} topic={@topic} conversation={@conversation} />
+      <.breadcrumb
+        category={@category}
+        topic={@topic}
+        conversation={@conversation}
+        inbox={@inbox}
+        inbox?={@inbox?}
+      />
 
       <nav aria-label={gettext("Site")} class="header-nav">
-        <.unread_link :if={@user} user={@user} />
+        <.unread_link :if={@user && !@inbox?} user={@user} />
         <.moderation_link :if={@user} user={@user} />
       </nav>
 
       <.account_menu current_scope={@current_scope} />
     </header>
 
-    <div class="app-body">
-      <.sidebar user={@user} current={@category} topic={@topic} />
+    <div class={["app-body", @inbox? && "is-inbox"]}>
+      <.sidebar :if={!@inbox?} user={@user} current={@category} topic={@topic} />
 
       <div class="app-column">
         <%!-- Narrow screens (steward decision, 2026-11-06): a visible button opens the sidebar's
@@ -135,7 +150,7 @@ defmodule IdejoWeb.Layouts do
              is that menu's first item instead (steward decision, 2026-11-06); here only
              without it, as on a standalone install. --%>
         <button
-          :if={!@community_menu?}
+          :if={!@community_menu? && !@inbox?}
           type="button"
           id="sidebar-show"
           class="sidebar-show btn btn-sm btn-ghost"
@@ -188,6 +203,7 @@ defmodule IdejoWeb.Layouts do
   """
   attr :logo, :string, required: true
   attr :user, :any, required: true
+  attr :inbox?, :boolean, default: false
 
   attr :chevron, :boolean,
     default: true,
@@ -220,6 +236,7 @@ defmodule IdejoWeb.Layouts do
       <div class="community-panel popup-menu has-arrow">
         <%!-- First, above the forums (steward decision, 2026-11-06): narrow screens only. --%>
         <button
+          :if={!@inbox?}
           type="button"
           id="sidebar-show"
           class="sidebar-show community-sidebar"
@@ -278,9 +295,38 @@ defmodule IdejoWeb.Layouts do
   attr :category, :any, required: true
   attr :topic, :any, required: true
   attr :conversation, :any, required: true
+  attr :inbox, :atom, default: nil
+  attr :inbox?, :boolean, default: false
+
+  # The inbox's pages (steward request, 2026-11-10): "Idejo › Forums", "Idejo › Topics".
+  defp breadcrumb(%{inbox: section} = assigns) when section in [:forums, :topics] do
+    assigns =
+      assign(assigns,
+        href: if(section == :forums, do: ~p"/", else: ~p"/topics"),
+        name: if(section == :forums, do: gettext("Forums"), else: gettext("Topics"))
+      )
+
+    ~H"""
+    <nav aria-label={gettext("Breadcrumb")} class="header-crumbs" id="breadcrumb">
+      <ol>
+        <li class="header-crumb is-last">
+          <span class="header-crumb-sep" aria-hidden="true">›</span>
+          <a href={@href} aria-current="page" id="breadcrumb-inbox">{@name}</a>
+        </li>
+      </ol>
+    </nav>
+    """
+  end
 
   defp breadcrumb(%{conversation: conversation} = assigns) when conversation != nil do
-    assigns = assign(assigns, :one, if(is_map(conversation), do: conversation))
+    assigns =
+      assign(assigns,
+        one: if(is_map(conversation), do: conversation),
+        # In the inbox they are the Chats tab (steward request, 2026-11-10).
+        list_href: if(assigns.inbox?, do: ~p"/chat", else: ~p"/p"),
+        list_name:
+          if(assigns.inbox?, do: gettext("Chats"), else: gettext("Private Conversations"))
+      )
 
     ~H"""
     <nav aria-label={gettext("Breadcrumb")} class="header-crumbs" id="breadcrumb">
@@ -288,14 +334,14 @@ defmodule IdejoWeb.Layouts do
         <li class={["header-crumb", @one && "is-parent"]}>
           <span class="header-crumb-sep" aria-hidden="true">›</span>
           <a
-            href={~p"/p"}
+            href={@list_href}
             aria-current={if is_nil(@one), do: "page"}
             id="breadcrumb-conversations"
           >
             <span :if={@one} class="header-crumb-icon" aria-hidden="true">
               <.icon name="hero-chat-bubble-left-right" class="size-5" />
             </span>
-            <span class="header-crumb-name">{gettext("Private Conversations")}</span>
+            <span class="header-crumb-name">{@list_name}</span>
           </a>
         </li>
         <li :if={@one} class="header-crumb is-last">
@@ -1660,6 +1706,31 @@ defmodule IdejoWeb.Layouts do
         <.icon name="hero-moon-micro" class="size-4" />
       </button>
     </div>
+    """
+  end
+
+  attr :current, :atom, required: true, values: [:forums, :topics, :chats]
+
+  @doc """
+  The inbox's tabs (steward request, 2026-11-10; `Idejo.Inbox`), at the top of its pages:
+  Forums, Topics, Chats. Links, so they work without JavaScript.
+  """
+  def inbox_tabs(assigns) do
+    ~H"""
+    <nav aria-label={gettext("Inbox")} class="inbox-tabs" id="inbox-tabs">
+      <a href={~p"/"} aria-current={@current == :forums && "page"} id="inbox-tab-forums">
+        <.icon name="hero-squares-2x2" class="size-4" />
+        {gettext("Forums")}
+      </a>
+      <a href={~p"/topics"} aria-current={@current == :topics && "page"} id="inbox-tab-topics">
+        <.icon name="hero-rectangle-stack" class="size-4" />
+        {gettext("Topics")}
+      </a>
+      <a href={~p"/chat"} aria-current={@current == :chats && "page"} id="inbox-tab-chats">
+        <.icon name="hero-chat-bubble-left-right" class="size-4" />
+        {gettext("Chats")}
+      </a>
+    </nav>
     """
   end
 end

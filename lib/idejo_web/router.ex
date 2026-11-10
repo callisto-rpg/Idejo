@@ -49,6 +49,8 @@ defmodule IdejoWeb.Router do
 
     get "/topics", ChatServiceController, :topics
     get "/conversations", ChatServiceController, :conversations
+    # The inbox, asked by the group's service with this server's own client credentials.
+    get "/inbox-unread", InboxController, :unread
     post "/conversations/moved", ChatServiceController, :moved
   end
 
@@ -190,6 +192,10 @@ defmodule IdejoWeb.Router do
     post "/moderation/topics/:id", ModerationController, :handle_pending
     # Private conversations (steward decision, 2026-10-27): the list, one, and starting one
     # from the user card.
+    # The inbox (steward request, 2026-11-10): its tabs, only in inbox mode.
+    get "/topics", InboxController, :topics
+    get "/chat", InboxController, :chats
+    get "/chat/new", InboxController, :new_chat
     get "/p", ConversationController, :index
     get "/p/:id", ConversationController, :show
     post "/u/:id/message", ConversationController, :create

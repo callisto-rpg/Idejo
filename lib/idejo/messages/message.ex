@@ -46,6 +46,8 @@ defmodule Idejo.Messages.Message do
     # The opening message of a topical topic (Topic Type): shown without its author
     # (`Idejo.Messages.author_name/1`).
     field :anonymous, :boolean, default: false
+    # The inbox (steward request, 2026-11-10): copied from "<host>/<message id>", once.
+    field :import_source, :string
     field :deleted_at, :utc_datetime_usec
     belongs_to :deleted_by, Idejo.Accounts.User
     belongs_to :topic, Idejo.Forum.Topic

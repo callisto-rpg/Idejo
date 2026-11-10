@@ -3,9 +3,12 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} conversation={:list}>
-  <header class="page-intro">
+  <%!-- The inbox's Chats tab (steward request, 2026-11-10). --%>
+  <Layouts.inbox_tabs :if={Idejo.Inbox.on?()} current={:chats} />
+  <header :if={!Idejo.Inbox.on?()} class="page-intro">
     <h1>{gettext("Private Conversations")}</h1>
   </header>
+  <h1 :if={Idejo.Inbox.on?()} class="sr-only">{gettext("Chats")}</h1>
 
   <p :if={@conversations == []} id="no-conversations" class="empty-state">
     {gettext("No private conversations yet. Open someone's card and choose “Private Message”.")}
@@ -38,4 +41,17 @@
       </p>
     </li>
   </ul>
+
+  <%!-- Conversations that stayed in a forum: someone there has no Idejo ID. --%>
+  <div :if={assigns[:remaining] not in [nil, []]} id="chats-remaining" class="empty-state">
+    <p>
+      {gettext("Some conversations stayed in their forum, with people who have no Idejo ID:")}
+    </p>
+    <ul>
+      <li :for={r <- @remaining}>
+        <a href={r.url}>{r.name}</a>
+        ({ngettext("1 conversation", "%{count} conversations", r.count)})
+      </li>
+    </ul>
+  </div>
 </Layouts.app>
