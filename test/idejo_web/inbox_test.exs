@@ -174,6 +174,52 @@ defmodule IdejoWeb.InboxTest do
     assert html =~ "Latest messages" and html =~ "And basil" and html =~ "Tomatoes first"
   end
 
+  test "Topics: Show all my topics, or unread only, beside the View, remembered", %{conn: conn} do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+
+    read = %{
+      @topic
+      | "id" => "0192f0c4-0000-7000-8000-000000000002",
+        "title" => "Read already",
+        "unread" => 0
+    }
+
+    service(%{
+      "/inbox/topics" => %{
+        "forums" => [
+          %{
+            "name" => "Garden club",
+            "url" => "https://garden.example.test/",
+            "topics" => [@topic, read]
+          }
+        ]
+      }
+    })
+
+    conn = log_in_user(conn, ada)
+    html = conn |> get(~p"/topics?view=compact") |> html_response(200)
+    assert html =~ "Garden plans" and html =~ "Read already"
+    assert html =~ ~s(id="show-toggle") and html =~ ~s(id="view-toggle")
+    assert html =~ "All my topics" and html =~ "Unread only"
+    # Each toggle keeps the other's choice.
+    assert html =~ ~s(href="/topics?show=unread&amp;view=compact")
+    assert html =~ ~s(href="/topics?show=all&amp;view=expanded")
+
+    conn = get(conn, ~p"/topics?show=unread")
+    html = html_response(conn, 200)
+    assert html =~ "Garden plans"
+    refute html =~ "Read already"
+    assert html =~ ~s(id="show-unread" aria-current="true")
+
+    # Remembered for the next visit.
+    html = conn |> recycle() |> get(~p"/topics") |> html_response(200)
+    refute html =~ "Read already"
+
+    html = conn |> recycle() |> get(~p"/topics?show=all") |> html_response(200)
+    assert html =~ "Read already"
+  end
+
   test "Chats: a forum's Private Message starts the conversation, made for an ID new here", %{
     conn: conn
   } do

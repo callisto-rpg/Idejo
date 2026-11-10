@@ -8,7 +8,8 @@ defmodule IdejoWeb.InboxController do
 
     * `forums/2` (`/`): the communities the member joined, as cards with their logos;
     * `topics/2` (`/topics`): the topics they follow there, Idejo's topic rows (`?view=`
-      compact or expanded, as the home page's, `IdejoWeb.TopicView`);
+      compact or expanded, as the home page's, `IdejoWeb.TopicView`; `?show=` all or
+      unread only, remembered in the session);
     * `chats/2` (`/chat`): their private conversations, after copying those still in the
       forums (`Inbox.import/1`); `ConversationController` shows each;
     * `new_chat/2` (`/chat/new?with=<subject>`): a forum's "Private Message": the
@@ -43,13 +44,26 @@ defmodule IdejoWeb.InboxController do
 
   def topics(conn, params) do
     {conn, view} = IdejoWeb.TopicView.choose(conn, params)
+    {conn, show} = choose_show(conn, params)
+    entries = Inbox.topics(conn.assigns.current_scope.user)
 
     render(conn, :topics,
       page_title: gettext("Topics"),
-      entries: Inbox.topics(conn.assigns.current_scope.user),
-      view: view
+      entries: if(show == :unread, do: Enum.filter(entries, & &1.unread), else: entries),
+      view: view,
+      show: show
     )
   end
+
+  # "Show" (steward request, 2026-11-10): all followed topics, or only those with unread
+  # messages; `?show=`, remembered in the session like the View.
+  @shows %{"all" => :all, "unread" => :unread}
+
+  defp choose_show(conn, %{"show" => show}) when is_map_key(@shows, show),
+    do: {put_session(conn, :inbox_show, show), @shows[show]}
+
+  defp choose_show(conn, _params),
+    do: {conn, Map.get(@shows, get_session(conn, :inbox_show), :all)}
 
   def chats(conn, _params) do
     user = conn.assigns.current_scope.user

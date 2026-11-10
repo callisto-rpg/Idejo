@@ -6,13 +6,17 @@
      (compact or expanded), each naming its forum. --%>
 <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} inbox={:topics}>
   <Layouts.inbox_tabs current={:topics} />
-  <div class="section-divider-row">
+  <div class="section-divider-row inbox-toggles">
     <h1 class="sr-only">{gettext("Topics")}</h1>
-    <TopicComponents.view_toggle view={@view} path={~p"/topics"} />
+    <.show_toggle show={@show} view={@view} />
+    <TopicComponents.view_toggle view={@view} path={~p"/topics?#{[show: @show]}"} />
   </div>
 
-  <p :if={@entries == []} id="no-topics" class="empty-state">
+  <p :if={@entries == [] && @show == :all} id="no-topics" class="empty-state">
     {gettext("No followed topics yet. Topics you write in, or follow, in your forums show here.")}
+  </p>
+  <p :if={@entries == [] && @show == :unread} id="no-unread-topics" class="empty-state">
+    {gettext("Nothing unread in the topics you follow.")}
   </p>
 
   <ol :if={@entries != []} id="inbox-topics" class="topic-list">
