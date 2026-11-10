@@ -16,6 +16,11 @@ defmodule IdejoWeb.ConversationController do
   alias Idejo.Reading
 
   def index(conn, _params) do
+    # In the inbox (steward request, 2026-11-10) the list is the Chats tab.
+    if Idejo.Inbox.on?(), do: redirect(conn, to: ~p"/chat"), else: list(conn)
+  end
+
+  defp list(conn) do
     render(conn, :index,
       page_title: gettext("Private Conversations"),
       conversations: Conversations.list(conn.assigns.current_scope.user)

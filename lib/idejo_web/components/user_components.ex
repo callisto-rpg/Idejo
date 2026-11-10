@@ -279,12 +279,19 @@ defmodule IdejoWeb.UserComponents do
   attr :user, :map, required: true
   attr :size, :atom, values: [:small, :list, :medium, :large], default: :small
 
+  attr :base, :string,
+    default: "",
+    doc: "another forum's address the pictures' paths start with (the inbox)"
+
   def avatar(assigns) do
     {url, dark_url} =
       case {Uploads.avatar_url(assigns.user), Uploads.dark_avatar_url(assigns.user)} do
         {nil, dark} -> {dark, nil}
         pair -> pair
       end
+
+    at = &IdejoWeb.TopicComponents.at(assigns.base, &1)
+    {url, dark_url} = {at.(url), at.(dark_url)}
 
     assigns = assign(assigns, url: url, dark_url: dark_url, box: box(assigns.size))
 

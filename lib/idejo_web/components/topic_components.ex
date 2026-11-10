@@ -22,6 +22,10 @@ defmodule IdejoWeb.TopicComponents do
   attr :size, :atom, values: [:small, :list], default: :list
   attr :class, :any, default: nil
 
+  attr :base, :string,
+    default: "",
+    doc: "another forum's address its picture's path starts with (the inbox)"
+
   @doc """
   Topic Type (steward request, 2026-11-07): a topical topic's icon, where its starter's
   avatar would be; a speech bubble when it has none. Decorative, like avatars.
@@ -34,7 +38,7 @@ defmodule IdejoWeb.TopicComponents do
         %{icon_id: id} -> Map.get(TopicIcons.index(), id)
       end
 
-    assigns = assign(assigns, url: TopicIcons.url(icon))
+    assigns = assign(assigns, url: at(assigns.base, TopicIcons.url(icon)))
 
     ~H"""
     <span class={["avatar topic-icon shrink-0", @class]} aria-hidden="true">
@@ -215,7 +219,21 @@ defmodule IdejoWeb.TopicComponents do
   attr :unread, :integer, default: nil
   attr :preview, :map, default: nil
 
+  attr :forum, :map,
+    default: nil,
+    doc: "the forum the topic is in, `%{name:, url:}`, named first in its meta line (the inbox)"
+
+  attr :base, :string,
+    default: "",
+    doc: """
+    another forum's address (the inbox, steward request 2026-11-10): every link and picture
+    of the row starts with it, and the row has no topic menu (its forms are this server's)
+    """
+
   def topic_row(assigns) do
+    assigns =
+      assign(assigns, :href, at(assigns.base, ~p"/t/#{assigns.topic.id}/#{assigns.topic.slug}"))
+
     ~H"""
     <li
       id={"topic-#{@topic.id}"}
@@ -225,20 +243,21 @@ defmodule IdejoWeb.TopicComponents do
         @preview && "is-expanded",
         @topic.inactive && "is-inactive"
       ]}
-      data-topic-menu={@topic.id}
-      data-topic-path={~p"/t/#{@topic.id}/#{@topic.slug}"}
+      data-topic-menu={@base == "" && @topic.id}
+      data-topic-path={@base == "" && ~p"/t/#{@topic.id}/#{@topic.slug}"}
     >
       <span class="topic-row-avatar">
         <.category_mark :if={@lead == :category} category={@topic.category} />
         <%!-- Topic Type: a topical topic shows its icon, never its starter. --%>
-        <.topic_icon :if={@lead == :author && @topic.topical} topic={@topic} />
+        <.topic_icon :if={@lead == :author && @topic.topical} topic={@topic} base={@base} />
         <UserComponents.avatar
           :if={@lead == :author && !@topic.topical}
           user={@topic.author}
           size={:list}
+          base={@base}
         />
       </span>
-      <a href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="topic-row-title">{@topic.title}</a>
+      <a href={@href} class="topic-row-title">{@topic.title}</a>
       <span class="topic-row-badges">
         <%!-- Nobody follows it (steward decision, 2026-11-01): faded, and said in words. --%>
         <span :if={@topic.inactive} class="sr-only topic-inactive">{gettext("Inactive")}</span>
@@ -257,12 +276,18 @@ defmodule IdejoWeb.TopicComponents do
       </span>
       <.tag_list :if={Ecto.assoc_loaded?(@topic.tags)} tags={@topic.tags} class="topic-row-tags" />
       <p class="topic-row-meta">
-        <a :if={@lead == :category} href={~p"/c/#{@topic.category.slug}"} class="topic-category">
+        <a :if={@forum} href={@forum.url} class="topic-forum">{@forum.name}</a>
+        <span :if={@forum} aria-hidden="true">›</span>
+        <a
+          :if={@lead == :category}
+          href={at(@base, ~p"/c/#{@topic.category.slug}")}
+          class="topic-category"
+        >
           {@topic.category.name}
         </a>
         <a
           :if={@lead == :author && @category}
-          href={~p"/c/#{@topic.category.slug}"}
+          href={at(@base, ~p"/c/#{@topic.category.slug}")}
           class="topic-category"
         >
           <.category_mark category={@topic.category} />
@@ -283,13 +308,14 @@ defmodule IdejoWeb.TopicComponents do
           {ngettext("1 message", "%{count} messages", @topic.message_count)}
         </span>
       </p>
-      <.topic_preview :if={@preview} topic={@topic} preview={@preview} />
+      <.topic_preview :if={@preview} topic={@topic} preview={@preview} base={@base} />
     </li>
     """
   end
 
   attr :topic, :map, required: true
   attr :preview, :map, required: true
+  attr :base, :string, default: ""
 
   @gallery_size 4
 
@@ -315,7 +341,7 @@ defmodule IdejoWeb.TopicComponents do
     <div class="topic-preview">
       <div :if={@preview.first || @gallery != []} class="topic-preview-first">
         <p :if={@preview.first} class="topic-preview-text">
-          <.segments segments={Idejo.Forum.excerpt_segments(@preview.first, 400)} />
+          <.segments segments={Idejo.Forum.excerpt_segments(@preview.first, 400)} base={@base} />
         </p>
         <%!-- The topic's images, at most 30% of the card; past four, "+N images". --%>
         <div
@@ -326,7 +352,7 @@ defmodule IdejoWeb.TopicComponents do
             {ngettext("%{count} image", "%{count} images", length(@preview.images))}
           </span>
           <span :for={src <- @gallery} class="topic-preview-tile">
-            <img src={src} alt="" loading="lazy" />
+            <img src={at(@base, src)} alt="" loading="lazy" />
           </span>
           <span :if={@more_images > 0} class="topic-preview-more-images" aria-hidden="true">
             {ngettext("+%{count} image", "+%{count} images", @more_images)}
@@ -338,12 +364,17 @@ defmodule IdejoWeb.TopicComponents do
         <p class="topic-preview-heading">{gettext("Latest messages")}</p>
         <ol>
           <li :for={message <- @preview.latest} class="topic-preview-message">
-            <.topic_icon :if={message.anonymous} topic={@topic} size={:small} />
-            <UserComponents.avatar :if={!message.anonymous} user={message.author} size={:small} />
-            <a href={~p"/m/#{message.id}"} class="topic-preview-message-link">
+            <.topic_icon :if={message.anonymous} topic={@topic} size={:small} base={@base} />
+            <UserComponents.avatar
+              :if={!message.anonymous}
+              user={message.author}
+              size={:small}
+              base={@base}
+            />
+            <a href={at(@base, ~p"/m/#{message.id}")} class="topic-preview-message-link">
               <span class="font-medium">{Idejo.Messages.author_name(message)}</span>
               <span class="topic-preview-message-text">
-                <.segments segments={Idejo.Forum.excerpt_segments(message, 200)} />
+                <.segments segments={Idejo.Forum.excerpt_segments(message, 200)} base={@base} />
               </span>
             </a>
             <.time_ago at={message.opened_at} />
@@ -353,7 +384,7 @@ defmodule IdejoWeb.TopicComponents do
       <p :if={@shown != []} class="topic-preview-people">
         <span class="sr-only">{gettext("Written by:")}</span>
         <span :for={user <- @shown} class="topic-preview-person" title={user.display_name}>
-          <UserComponents.avatar user={user} size={:small} />
+          <UserComponents.avatar user={user} size={:small} base={@base} />
           <span class="sr-only">{user.display_name}</span>
         </span>
         <span :if={@more > 0} class="topic-preview-more">
@@ -365,6 +396,7 @@ defmodule IdejoWeb.TopicComponents do
   end
 
   attr :segments, :list, required: true
+  attr :base, :string, default: ""
 
   # An excerpt's text, its uploaded images as small pills: "image:" and the picture
   # (steward decision, 2026-10-23).
@@ -376,7 +408,12 @@ defmodule IdejoWeb.TopicComponents do
           {text}
         <% {:image, src} -> %>
           <span class="image-pill">
-            {gettext("image:")}<img src={src} alt="" loading="lazy" class="image-pill-thumb" />
+            {gettext("image:")}<img
+              src={at(@base, src)}
+              alt=""
+              loading="lazy"
+              class="image-pill-thumb"
+            />
           </span>
       <% end %>
     <% end %>
@@ -474,4 +511,14 @@ defmodule IdejoWeb.TopicComponents do
   defp unit(n, :minute, false), do: ngettext("1 min ago", "%{count} min ago", n)
   defp unit(n, :hour, false), do: ngettext("1 hour ago", "%{count} hours ago", n)
   defp unit(n, :day, false), do: ngettext("yesterday", "%{count} days ago", n)
+
+  @doc """
+  A path of this server, or of another forum when `base` is its address (the inbox): only
+  paths are prefixed, never full addresses.
+  """
+  @spec at(String.t(), String.t() | nil) :: String.t() | nil
+  def at(_base, nil), do: nil
+  def at("", path), do: path
+  def at(base, "/" <> _ = path), do: base <> path
+  def at(_base, url), do: url
 end

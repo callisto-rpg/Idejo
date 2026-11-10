@@ -38,7 +38,7 @@ defmodule Idejo.Community.ChatExport do
       |> Reading.list_followed_topics()
       |> Enum.sort_by(& &1.last_activity_at, {:desc, DateTime})
       |> Enum.take(@topics)
-      |> Repo.preload(:category)
+      |> Repo.preload([:category, :author, icon: :upload])
 
     ids = Enum.map(topics, & &1.id)
     unread = Reading.unread_counts(user, ids)

@@ -201,6 +201,17 @@ config :idejo, :community,
   # ("All my topics" in the sidebar); unset, no button.
   topics_url: community_env.("IDEJO_TOPICS_URL")
 
+# Inbox mode (steward request, 2026-11-10; Idejo.Inbox): this install is the inbox of a group
+# of communities sharing one sign-in: no sidebar, the member's forums, followed topics and
+# chats. Off by default.
+config :idejo,
+       :inbox,
+       (case System.get_env("IDEJO_INBOX", "") |> String.trim() do
+          "on" -> true
+          v when v in ["", "off"] -> false
+          _ -> raise "environment variable IDEJO_INBOX must be on or off."
+        end)
+
 if config_env() == :prod do
   # TP-12: uploaded images, on local disk (the Compose volume).
   config :idejo, :uploads_dir, System.get_env("IDEJO_UPLOADS_DIR", "/data/uploads")

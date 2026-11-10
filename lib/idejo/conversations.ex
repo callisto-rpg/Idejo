@@ -72,14 +72,25 @@ defmodule Idejo.Conversations do
       else: {:error, :forbidden}
   end
 
-  defp find_or_create(sender, recipient) do
+  @doc """
+  The private conversation between two members, started when there is none, without
+  `may_message?/2` or the rate limit: for copies of conversations held elsewhere (the inbox,
+  `Idejo.Inbox.copy/2`), which those two already had.
+  """
+  @spec pair(User.t(), User.t()) :: {:ok, Topic.t()} | {:error, term()}
+  def pair(%User{id: id}, %User{id: id}), do: {:error, :forbidden}
+
+  def pair(%User{} = a, %User{} = b),
+    do: Repo.transact(fn -> find_or_create(a, b, false) end)
+
+  defp find_or_create(sender, recipient, limited? \\ true) do
     # One conversation per pair, even when both start one at the same moment.
     pair = Enum.join(Enum.sort([sender.id, recipient.id]), ":")
     Repo.query!("SELECT pg_advisory_xact_lock(hashtext($1))", ["conversation:" <> pair])
 
     case between(sender, recipient) do
       %Topic{} = topic -> {:ok, topic}
-      nil -> create(sender, recipient)
+      nil -> create(sender, recipient, limited?)
     end
   end
 
@@ -95,8 +106,8 @@ defmodule Idejo.Conversations do
     )
   end
 
-  defp create(sender, recipient) do
-    with :ok <- RateLimit.check(:new_topic, sender.id) do
+  defp create(sender, recipient, limited?) do
+    with :ok <- if(limited?, do: RateLimit.check(:new_topic, sender.id), else: :ok) do
       now = DateTime.utc_now()
       id = Federation.generate_id()
 

@@ -1,0 +1,37 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} inbox={:forums}>
+  <Layouts.inbox_tabs current={:forums} />
+  <h1 class="sr-only">{gettext("Forums")}</h1>
+
+  <p :if={@communities == []} id="no-forums" class="empty-state">
+    {gettext("You have not joined a forum yet.")}
+    <a :if={Idejo.Community.directory_url()} href={Idejo.Community.directory_url()}>
+      {gettext("Find more forums")}
+    </a>
+  </p>
+
+  <ul :if={@communities != []} id="inbox-forums" class="category-grid">
+    <li :for={forum <- @communities} class="category-card inbox-forum-card">
+      <div class="category-card-head">
+        <img
+          src={forum.url <> "logo"}
+          alt=""
+          class="inbox-forum-logo"
+          width="48"
+          height="48"
+          loading="lazy"
+        />
+        <h2 class="category-card-name">
+          <a href={forum.url} class="category-card-link">{forum.name}</a>
+        </h2>
+      </div>
+      <p class="category-card-stats">{URI.parse(forum.url).host}</p>
+    </li>
+  </ul>
+  <p :if={@communities != [] && Idejo.Community.directory_url()} class="inbox-more">
+    <a href={Idejo.Community.directory_url()} id="inbox-directory">{gettext("Find more forums")}</a>
+  </p>
+</Layouts.app>
