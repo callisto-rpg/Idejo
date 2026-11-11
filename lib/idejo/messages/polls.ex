@@ -22,6 +22,7 @@ defmodule Idejo.Messages.Polls do
   import Ecto.Query
 
   alias Idejo.Accounts.User
+  alias Idejo.Api.Changes
   alias Idejo.Emoji
   alias Idejo.Federation
   alias Idejo.Forum
@@ -240,7 +241,9 @@ defmodule Idejo.Messages.Polls do
            |> taken(),
          {_count, _} <- Repo.insert_all(PollOption, option_rows(poll_id, valid.options)),
          {:ok, _job} <- Oban.insert(PollWorker.new(%{id: poll_id}, scheduled_at: closes_at)),
-         {:ok, _activity} <- activity(author, message, valid.question) do
+         {:ok, _activity} <- activity(author, message, valid.question),
+         # AP-16: the message is in the app's catch-up with its poll.
+         :ok <- Changes.touch(message.id) do
       {:ok, summary(message.id)}
     end
   end
@@ -314,6 +317,8 @@ defmodule Idejo.Messages.Polls do
           }
 
     Repo.insert_all(PollVote, rows)
+    # AP-16: the message is in the app's catch-up with its poll's new counts.
+    :ok = Changes.touch(poll.message_id)
     {:ok, summary(poll.message_id)}
   end
 
@@ -335,6 +340,24 @@ defmodule Idejo.Messages.Polls do
       true -> {:ok, chosen}
     end
   end
+
+  @doc """
+  The message holding the poll `poll_id`, when `user` may read it (a topic they may view, or
+  a private conversation of theirs; `Forum.get_readable_message/2`), else nil. For a poll
+  id from a client (the app votes by poll, AP-12).
+  """
+  @spec readable_message(User.t() | nil, term()) :: Message.t() | nil
+  def readable_message(user, poll_id) when is_binary(poll_id) do
+    with {:ok, id} <- Ecto.UUID.cast(poll_id),
+         message_id when is_binary(message_id) <-
+           Repo.one(from p in Poll, where: p.id == ^id, select: p.message_id) do
+      Forum.get_readable_message(user, message_id)
+    else
+      _ -> nil
+    end
+  end
+
+  def readable_message(_user, _poll_id), do: nil
 
   @doc "Whether a poll (or its summary) still takes votes."
   @spec open?(Poll.t() | summary(), DateTime.t()) :: boolean()
