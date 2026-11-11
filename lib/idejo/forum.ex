@@ -715,7 +715,14 @@ defmodule Idejo.Forum do
         end
       end)
 
-    with {:ok, topic} <- result, do: Messages.broadcast(topic.id, {:topic_changed, topic.id})
+    with {:ok, moved} <- result do
+      Messages.broadcast(moved.id, {:topic_changed, moved.id})
+      # AP-15: both categories' listeners hear of it.
+      for id <- [topic.category_id, moved.category_id],
+          do:
+            broadcast_category(id, {:topic_moved, moved.id, topic.category_id, moved.category_id})
+    end
+
     result
   end
 
@@ -759,8 +766,28 @@ defmodule Idejo.Forum do
            Repo.transact(fn -> archive_locked(moderator, topic, archive, reason) end) do
       Messages.announce_closed(closed)
       Messages.broadcast(topic.id, {:topic_changed, topic.id})
+      broadcast_category(topic.category_id, {:topic_archived, topic.id})
       {:ok, topic}
     end
+  end
+
+  @doc """
+  Subscribes the caller to a category's topic events (the app's `category:<id>` channel,
+  AP-15): `{:topic_created, topic_id}`, `{:topic_activity, topic_id}` (a new message),
+  `{:topic_moved, topic_id, from, to}` and `{:topic_archived, topic_id}`, sent after their
+  transactions. The caller checks the view right first.
+  """
+  @spec subscribe_category(Ecto.UUID.t()) :: :ok | {:error, term()}
+  def subscribe_category(category_id),
+    do: Phoenix.PubSub.subscribe(Idejo.PubSub, "category:" <> category_id)
+
+  @doc "Sends an event to a category's listeners (`subscribe_category/1`); none for nil."
+  @spec broadcast_category(Ecto.UUID.t() | nil, term()) :: :ok
+  def broadcast_category(nil, _event), do: :ok
+
+  def broadcast_category(category_id, event) do
+    Phoenix.PubSub.broadcast(Idejo.PubSub, "category:" <> category_id, event)
+    :ok
   end
 
   defp archive_locked(moderator, topic, archive, reason) do
@@ -1473,7 +1500,10 @@ defmodule Idejo.Forum do
       end
 
     # Committed: whoever the first message notifies hears of it live.
-    with {:ok, topic} <- result, do: Idejo.Notifications.announce(topic)
+    with {:ok, topic} <- result do
+      Idejo.Notifications.announce(topic)
+      broadcast_category(topic.category_id, {:topic_created, topic.id})
+    end
 
     # The source topic's viewers get its new "continued in" link (TP-04).
     with {:ok, _topic} when source != nil <- result,
@@ -1768,6 +1798,7 @@ defmodule Idejo.Forum do
     case result do
       {:ok, {topic, source}} ->
         Idejo.Notifications.announce(topic)
+        broadcast_category(topic.category_id, {:topic_created, topic.id})
         if source, do: Messages.broadcast(source.topic_id, {:forked, source.id})
         {:ok, topic}
 
@@ -2103,7 +2134,11 @@ defmodule Idejo.Forum do
       end)
 
     # Stored first, then announced to the topic's viewers (TP-04, NF-02).
-    with {:ok, message} <- result, do: Idejo.Messages.broadcast(topic.id, {:message, message})
+    with {:ok, message} <- result do
+      Idejo.Messages.broadcast(topic.id, {:message, message})
+      broadcast_category(topic.category_id, {:topic_activity, topic.id})
+    end
+
     result
   end
 
