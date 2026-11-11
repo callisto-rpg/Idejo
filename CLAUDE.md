@@ -57,6 +57,7 @@ lib/idejo_web/        web layer — controllers (public, no-JS), live/ (signed-i
 | AD | `lib/idejo/settings/`, `lib/idejo/setup/`, `lib/idejo/backup/`, `lib/idejo/release.ex` | Settings, first-run wizard and headless setup (AD-14), backup, CLI recovery; `/health` (AD-15) is a plain controller in `lib/idejo_web/controllers/` |
 | SP | `lib/idejo/audit/`, `lib/idejo_web/plugs/` | Audit log, CSP, rate limits |
 | AX, CL, SE-04 | `lib/idejo_web/` | Accessibility, public rendering |
+| AP | `lib/idejo/api.ex`, `lib/idejo/api/`, `lib/idejo/accounts/api_tokens.ex`, `lib/idejo_web/api/`, `lib/idejo_web/controllers/api/`, `lib/idejo_web/channels/` | API v1 for the official app (see API v1 below; `docs/api-guide.md`) |
 
 ### Growing-message invariants (GM, NF-02) — never break these
 
@@ -1925,11 +1926,65 @@ The contract (M6; mark each item done here when its PR merges):
   Ecto queries and only maps results to words and markup (`gettext` stays there: contexts
   return atoms, e.g. `Plugins.problem/0` worded by `PluginComponents.problem/1`). Actions
   need a signed-in actor (`nil` raises), and actors come only from
-  `Accounts.get_user_by_session_token/1` or a later API token lookup, which never return a
+  `Accounts.get_user_by_session_token/1` or `Accounts.get_user_by_api_token/1`, which never return a
   banned or inactive account (`Accounts.may_sign_in/1`); admin actions also check the role
   (`Access.as_administrator/2`). Guarded by `test/idejo/layering_test.exs` (no `Repo` in
   `lib/idejo_web/`; no web reference in `lib/idejo/` but its listed exceptions, each with its
   reason) and the context-level `*_rules_test.exs` and `refusals_test.exs`.
+- **API v1** (AP-07 to AP-20; steward decision, 2026-11-10; extra review: DV-06), for the
+  official app (`org.idejo.app`) only: one built-in client, no registration, no personal
+  tokens, no CORS. `docs/api-guide.md` is the developer's guide; `docs/api-plan.md` the
+  design record.
+  - **One list of operations**, `IdejoWeb.Api.Operations`: the router makes the `/api/v1`
+    routes from it, `IdejoWeb.Plugs.ApiAuth` reads each route's scope from it
+    (`Phoenix.Router.route_info/4`: pipelines run before the controller is in
+    `conn.private`), `IdejoWeb.Api.OpenApi` documents it (`/api/v1/openapi.json`, OpenAPI
+    3.1 as Elixir data, channel events under `x-idejo-events`), and
+    `test/idejo_web/api/ap_10_scopes_test.exs` walks it (no token, revoked, wrong scope,
+    invisible id → 404). A new endpoint is a line there, a controller action and its schema
+    in `OpenApi` (exact top-level keys: `IdejoWeb.ApiHelpers.api_json/2` checks every
+    response of the tests, and that no other user's email is in it).
+  - **Controllers** (`lib/idejo_web/controllers/api/`, `use IdejoWeb.Api.Controller`) hold
+    no rules: params in, one context call with the token's user first, `Idejo.Api` (the
+    context that builds every resource in batches: Markdown plus structured objects, never
+    HTML) out. Errors: `{:error, atom}` → `IdejoWeb.Api.FallbackController` →
+    `IdejoWeb.Api.Errors` (one shape, the code, the web's text); an undocumented code
+    raises in tests (`:api_strict_errors`). Load the resource before checking the body, so
+    an invisible one is 404 whatever is sent (AP-17).
+  - **Sign-in** (`Idejo.Accounts.ApiTokens`, `api_tokens`, `api_codes`; only SHA-256 hashes
+    stored): `/app/authorize` (`AppAuthorizeController`, browser session, refuses without
+    redirecting), `POST /api/v1/oauth/token` (PKCE S256, single-use 60 s codes, a reused
+    code revokes its token), `POST /api/v1/oauth/revoke`. Tokens `idj_…`, no expiry, 20 live
+    per user. Password reset and change, ban, deletion and `leave_by_identity` call
+    `ApiTokens.revoke_all_in_transaction/1` and announce after commit; a new way of ending
+    sessions must do the same. Revocation deletes the token's UnifiedPush rows and
+    `IdejoWeb.Api.Revocations` (started by the application) disconnects its sockets
+    (`api_token:{id}`). "Apps and devices" in Profile and account
+    (`AppDeviceController`, a plain form).
+  - **Switch** (AP-20): `api_enabled` in Admin → Settings ("API and mobile app"), on by
+    default; off, `IdejoWeb.Plugs.ApiEnabled` answers 404 under `/api` and on
+    `/app/authorize`, the socket refuses with 404, and `Settings` broadcasts
+    `{:settings_changed, keys}` on `"settings"` so live sockets close.
+  - **Composer state between requests** (`Idejo.Api.ClientState`, ETS, an hour): the first
+    keystroke (`Messages.typing/3`, read by `commit/4` after the process's own) and "this
+    edit kept its version" (`Messages.edit_from_client/4`). `Messages.composer/3` is the
+    composer's state from `start_new_at/3`; `commit_from_client/4` starts the GM-12 grace
+    when the author has no live view or topic channel.
+  - **Events** (`IdejoWeb.ApiSocket` at `/api/v1/socket`, token in the connect params, no
+    origin check: no ambient credential; `log: false`, and `token`/`code` are in
+    `:filter_parameters`): `UserChannel` (`user:me`), `TopicChannel` (`topic:<id>`,
+    `conversation:<id>`; calls `Authors.present/2`, so PN-08 and GM-12 treat it as an open
+    page), `CategoryChannel` (`category:<id>`, from `Forum.broadcast_category/2`:
+    `{:topic_created, id}`, `{:topic_activity, id}` on each new message, `{:topic_moved, …}`,
+    `{:topic_archived, id}`). App-only user events go on `"app_user:{id}"`, never on
+    `"user:{id}"`, whose `NotifierLive` handles two shapes only.
+  - **Catch-up** (AP-16, `Idejo.Api.Changes`): `messages.change_seq`, set by a trigger from
+    the `message_change_seq` sequence after `pg_advisory_xact_lock` on the topic (commit
+    order within a topic); reactions, votes, polls and plugin blocks `touch/1` the message.
+  - **UnifiedPush** (AP-19): `push_subscriptions.kind` `"unifiedpush"`, `api_token_id`,
+    `name`; `Push.register_unifiedpush/3`; any host, `Push.Endpoint.check_unifiedpush/1`
+    (https on 443, public addresses only), asked again before each send
+    (`check_subscription/1`).
 - No new dependency without a licence check: MIT, BSD, Apache-2.0 or similar only (LI-06).
 
 ## Workflow
@@ -1960,6 +2015,8 @@ reuse lint                         # SPDX headers (pipx install reuse)
 mix precommit                      # everything above that CI runs, Dialyzer too, but not reuse lint
 load/run.sh [--hot --writers 10]   # load test before a release (NF-01, NF-04; docs/load-testing.md)
 mix test --only req:AC-09          # one M6 requirement (SP-10, AD-13, AD-14, AD-15, AD-16, AC-09)
+mix test --only req:AP-14          # one API requirement (AP-07 to AP-20; docs/api-guide.md)
+mix test --only flow:app-session   # the official app's session, end to end
 deploy/test/m6/run.sh [--skip-flow]   # M6 exit check: two forums, one Caddy, Dex, a browser (Docker)
 git tag vX.Y.Z && git push origin vX.Y.Z   # release: publishes ghcr.io/callisto-rpg/idejo:X.Y.Z (version must match mix.exs)
 # in a release: bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
@@ -1968,7 +2025,8 @@ git tag vX.Y.Z && git push origin vX.Y.Z   # release: publishes ghcr.io/callisto
 
 Production bundle: `deploy/` (see `deploy/docker-compose.yml`). Server setup step by step:
 `docs/deploying.md`. For the people who use it: `docs/admin-guide.md` (admin panel,
-permissions, moderation) and `docs/member-guide.md` (one page: the keys and the composer).
+permissions, moderation), `docs/member-guide.md` (one page: the keys and the composer) and
+`docs/api-guide.md` (the API for the official app).
 They quote the interface's labels: a change to a label, a setting or a workflow updates them
 in the same pull request (DV-01).
 
@@ -1983,7 +2041,8 @@ in the same pull request (DV-01).
 - [x] M6 — Ready for Idejo Hub — SP-10, AD-13, AD-15, AD-14, AD-16, AC-09, NF-12 (see Running under Idejo Hub); exit check `deploy/test/m6/run.sh`
 
 Current milestone: **M5**. M6 was authorised alongside it (steward decision, 2026-11-02) and is
-done. Do not start any other later work.
+done. API v1 for the official app (AP-07 to AP-20) was authorised on 2026-11-10 and is
+built. Do not start any other later work (webhooks, bots, plugins API, the app itself).
 
 M6 exit check (MVP §7), an automated check runnable locally and in CI (Docker required):
 two instances from the same image behind one Caddy on `a.idejo.test` and `b.idejo.test`, own
