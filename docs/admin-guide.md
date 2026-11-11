@@ -93,6 +93,11 @@ corner. It has ten tabs.
   `*.example.org` allows any name under `example.org`. Add your own, for example a
   UnifiedPush server, if members' browsers use one. Addresses on private networks are always
   refused.
+- **API and mobile app**: **Members can use the Idejo app** (on by default). The Idejo app
+  for Android signs members in through this server's own sign-in page and then reads and
+  writes as they would here, with the same rights. Off, the app cannot sign in or connect,
+  and devices already signed in are refused until you turn it on again (they are not
+  signed out). Members see their devices under **Apps and devices** in Profile and account.
 - **GIF provider key**: GIFs in messages (`!gif`, and a GIF button in the graphical
   composer) come from KLIPY. Create an app key in KLIPY's Partner Panel (partner.klipy.com)
   and paste it here; empty, there are no GIFs. Members' browsers then search KLIPY and load

@@ -22,8 +22,9 @@ defmodule Idejo.LayeringTest do
     # Stored text that excerpts, emails and pushes all show: "(spoiler)" and "the topic".
     "lib/idejo/forum.ex" => ~w(IdejoWeb.Gettext gettext),
     "lib/idejo/messages.ex" => ~w(IdejoWeb.Gettext gettext),
-    # The application starts the endpoint and its telemetry.
-    "lib/idejo/application.ex" => ~w(IdejoWeb.Endpoint IdejoWeb.Telemetry),
+    # The application starts the endpoint and its telemetry, and the listener that ends the
+    # official app's sockets with their token (AP-09, AP-20).
+    "lib/idejo/application.ex" => ~w(IdejoWeb.Endpoint IdejoWeb.Telemetry IdejoWeb.Api),
     # The command line disconnects sessions when the endpoint runs (AD-09).
     "lib/idejo/release.ex" => ~w(IdejoWeb.Endpoint IdejoWeb.UserAuth),
     # Secrets are derived from the endpoint's secret_key_base.

@@ -27,6 +27,8 @@ defmodule Idejo.Application do
       {DynamicSupervisor, name: Idejo.Messages.OpenMessageSupervisor, strategy: :one_for_one},
       # Closes an open message once its author has been gone for the grace (GM-12).
       Idejo.Messages.Authors,
+      # AP-14: what the app's composer keeps between requests (first keystroke, edits).
+      Idejo.Api.ClientState,
       # SP-05: rate limit counters, in memory.
       {Idejo.RateLimit, clean_period: :timer.minutes(10)},
       # AC-09: the OpenID Connect provider's settings and keys, kept fresh (when set up).
@@ -48,7 +50,9 @@ defmodule Idejo.Application do
       # Writes the setup link to the log while the server has no owner (AD-01).
       if(Application.get_env(:idejo, :announce_setup, true), do: Idejo.Setup.Announcer),
       # Start to serve requests, typically the last entry
-      IdejoWeb.Endpoint
+      IdejoWeb.Endpoint,
+      # AP-09, AP-20: the app's sockets end with their token, or when the API is turned off.
+      IdejoWeb.Api.Revocations
     ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
