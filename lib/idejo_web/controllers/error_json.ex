@@ -18,6 +18,27 @@ defmodule IdejoWeb.ErrorJSON do
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.json" becomes
   # "Not Found".
+  # AP-17: under /api, the API's one error shape, whatever went wrong (a body that is not
+  # JSON, a crash).
+  def render(template, %{conn: %Plug.Conn{path_info: ["api" | _]}}) do
+    code =
+      case template do
+        "400.json" -> "bad_request"
+        "404.json" -> "not_found"
+        "413.json" -> "too_large"
+        "415.json" -> "bad_request"
+        _ -> "internal"
+      end
+
+    %{
+      "error" => %{
+        "code" => code,
+        "message" => Phoenix.Controller.status_message_from_template(template),
+        "details" => %{}
+      }
+    }
+  end
+
   def render(template, _assigns) do
     %{errors: %{detail: Phoenix.Controller.status_message_from_template(template)}}
   end

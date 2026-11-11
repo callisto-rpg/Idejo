@@ -289,7 +289,16 @@ defmodule Idejo.Uploads do
     # wrong format: `:not_saved`, so the user is not told it is.
     with {:ok, _} <- Image.write(upright, dest, strip_metadata: true),
          {:ok, %{size: size}} <- File.stat(dest) do
-      Repo.insert(%Upload{id: id, user_id: user.id, path: name, mime: mime, size: size})
+      # AP-11: its size in pixels, for clients that lay it out before it loads.
+      Repo.insert(%Upload{
+        id: id,
+        user_id: user.id,
+        path: name,
+        mime: mime,
+        size: size,
+        width: Image.width(upright),
+        height: Image.height(upright)
+      })
     else
       _ ->
         File.rm(dest)
