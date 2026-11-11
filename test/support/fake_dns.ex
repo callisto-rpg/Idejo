@@ -25,10 +25,37 @@ defmodule Idejo.FakeDNS do
     # Plugins' requests (Idejo.Plugins.Remote): a forums directory and forums, and one inside.
     "forums.idejo.test" => [{93, 184, 215, 20}],
     "garden.idejo.test" => [{93, 184, 215, 21}],
-    "inside.idejo.test" => [{10, 0, 0, 9}]
+    "inside.idejo.test" => [{10, 0, 0, 9}],
+    # The app's UnifiedPush distributors (AP-19): any host, public addresses only.
+    "up.example.net" => [{93, 184, 215, 30}],
+    "private.example.net" => [{192, 168, 1, 10}],
+    "loopback.example.net" => [{127, 0, 0, 1}],
+    "linklocal.example.net" => [{169, 254, 1, 1}],
+    "cgnat.example.net" => [{100, 64, 0, 7}],
+    "mapped.example.net" => [{0, 0, 0, 0, 0, 0xFFFF, 0x0A00, 0x0001}],
+    "ula.example.net" => [{0xFD00, 0, 0, 0, 0, 0, 0, 1}],
+    "multicast.example.net" => [{224, 0, 0, 1}],
+    # Public until a test says otherwise (`answer/2`): DNS changing after registration.
+    "changing.example.net" => [{93, 184, 215, 31}]
   }
 
   @doc "The addresses of `host`, as `Idejo.Push.Endpoint.getaddrs/1` would give them."
   @spec getaddrs(charlist()) :: [:inet.ip_address()]
-  def getaddrs(host), do: Map.get(@answers, to_string(host), [])
+  def getaddrs(host) do
+    host = to_string(host)
+
+    Map.get(Application.get_env(:idejo, :fake_dns_overrides, %{}), host) ||
+      Map.get(@answers, host, [])
+  end
+
+  @doc "Makes `host` resolve to `addresses` from now on (tests that are not async)."
+  @spec answer(String.t(), [:inet.ip_address()]) :: :ok
+  def answer(host, addresses) do
+    overrides = Application.get_env(:idejo, :fake_dns_overrides, %{})
+    Application.put_env(:idejo, :fake_dns_overrides, Map.put(overrides, host, addresses))
+  end
+
+  @doc "Forgets every `answer/2`."
+  @spec reset() :: :ok
+  def reset, do: Application.delete_env(:idejo, :fake_dns_overrides)
 end

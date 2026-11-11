@@ -41,6 +41,33 @@ defmodule Idejo.Push.Endpoint do
 
   def check(_url), do: {:error, :invalid}
 
+  @doc """
+  Checks the endpoint of an app's UnifiedPush distributor (AP-19; steward decision,
+  2026-11-10): any host, since distributors run anywhere, so no allowlist, but everything
+  else as `check/1` and stricter: `https` on port 443 only, no user name or password, and
+  every address it resolves to public. Asked when it is registered and again before every
+  send, as DNS can change.
+  """
+  @spec check_unifiedpush(String.t()) :: {:ok, URI.t(), [:inet.ip_address()]} | {:error, reason()}
+  def check_unifiedpush(url) when is_binary(url) do
+    with {:ok, uri} <- parse(url),
+         :ok <- if(uri.port == 443, do: :ok, else: {:error, :not_https}),
+         {:ok, addresses} <- resolve(uri.host),
+         :ok <- public_addresses(addresses) do
+      {:ok, uri, addresses}
+    end
+  end
+
+  def check_unifiedpush(_url), do: {:error, :invalid}
+
+  @doc "The check a subscription's endpoint needs: by its kind (PN-16, AP-19)."
+  @spec check_subscription(Idejo.Push.Subscription.t()) ::
+          {:ok, URI.t(), [:inet.ip_address()]} | {:error, reason()}
+  def check_subscription(%Idejo.Push.Subscription{kind: "unifiedpush", endpoint: endpoint}),
+    do: check_unifiedpush(endpoint)
+
+  def check_subscription(%Idejo.Push.Subscription{endpoint: endpoint}), do: check(endpoint)
+
   defp parse(url) do
     case URI.new(url) do
       {:ok, %URI{scheme: "https", host: host, userinfo: nil} = uri}
