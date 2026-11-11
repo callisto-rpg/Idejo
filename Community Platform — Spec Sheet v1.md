@@ -325,12 +325,26 @@ The official web client uses the same public API as everyone else. Federation is
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| AP-01 | Public REST API documented with OpenAPI | Must |
-| AP-02 | Real-time event stream over WebSocket: message opened, appended, edited, closed; topic created, moved, archived | Must |
-| AP-03 | Personal and application tokens with scopes | Must |
+| AP-01 | Public REST API documented with OpenAPI (refined by AP-07 to AP-20) | Must |
+| AP-02 | Real-time event stream over WebSocket: message opened, appended, edited, closed; topic created, moved, archived (refined by AP-07 to AP-20) | Must |
+| AP-03 | Personal and application tokens with scopes (refined by AP-07 to AP-20) | Must |
 | AP-04 | Outgoing webhooks fire on closed messages and topic events; incoming webhooks post a closed message into a topic | Should |
 | AP-05 | Bot accounts that post through the API, shown with a bot badge | Should |
 | AP-06 | Plugin system with declared permissions, server hooks and interface slots | Could |
+| AP-07 | Discovery: `GET /.well-known/idejo` without sign-in, giving the API base, OAuth endpoints, Idejo version, API versions, features and limits (steward decision, 2026-11-10) | Must |
+| AP-08 | One built-in client, the official app; authorization code flow with PKCE (S256) through the forum's own sign-in page, a confirmation page, and the fixed redirect `org.idejo.app:/oauth/callback` (steward decision, 2026-11-10) | Must |
+| AP-09 | Device tokens: long-lived, opaque, stored hashed, scoped, listed and removable in Profile and account; revoked on sign-out from the app, password reset, ban and account deletion (steward decision, 2026-11-10) | Must |
+| AP-10 | Scopes `read`, `write`, `private`, `moderate`, `push`; the app asks for all; an action outside a token's scopes is refused (steward decision, 2026-11-10) | Must |
+| AP-11 | Resource format: Markdown source plus structured objects for mentions, links, images, polls, plugins, spoilers, replies, forwards and reactions; no HTML (steward decision, 2026-11-10) | Must |
+| AP-12 | Member parity: every action in the member guide is available through the API, through the same context functions as the web app (steward decision, 2026-11-10) | Must |
+| AP-13 | Moderator parity: every moderation action available in the web app is available through the API to moderators of that category (steward decision, 2026-11-10) | Must |
+| AP-14 | The growing message through the API: typing start, commit with Enter and Ctrl+Enter semantics, the author's composer state, and the same invariants and timers as the web composer (steward decision, 2026-11-10) | Must |
+| AP-15 | Event stream: Phoenix Channels for the user, topics and categories; events for messages opened, appended, edited, closed and deleted, reactions, polls and topic changes; joins checked against view rights, and members removed when they lose them (steward decision, 2026-11-10) | Must |
+| AP-16 | Catch-up after a disconnect: every topic has a change cursor; a client fetches every change since its last cursor (steward decision, 2026-11-10) | Must |
+| AP-17 | Errors: one JSON shape with a stable code; status codes as documented; a resource the user can't see answers 404, never 403 (steward decision, 2026-11-10) | Must |
+| AP-18 | Limits: the same per-action rate limits as the web app, an overall per-token limit, and cursor pagination with a maximum page size (steward decision, 2026-11-10) | Must |
+| AP-19 | UnifiedPush: the app registers an endpoint with Web Push keys; same payloads and rules as web push (PN-01 to PN-16), any public https host, SSRF checks at registration and at sending (steward decision, 2026-11-10) | Should |
+| AP-20 | Admin setting "API and mobile app", on by default; off means `/api`, the authorize page and the API socket answer 404 and existing tokens are refused, but kept (steward decision, 2026-11-10) | Must |
 | FD-01 | Every user, category, topic and message has a globally unique, stable URI | Must |
 | FD-02 | Internal events are recorded as activities (create, update, delete, announce) with actor, object and target, in an outbox | Must |
 | FD-03 | Content stored as Markdown source plus sanitised HTML | Must |
@@ -348,7 +362,7 @@ The web app is the only client required for v1; native apps come later on the sa
 | CL-02 | Lightweight server-rendered read view for public pages, working without JavaScript | Must |
 | CL-03 | Keyboard shortcuts and a quick switcher for categories, topics and people | Should |
 | CL-04 | Offline reading of recently opened topics | Should |
-| CL-05 | Native iOS and Android apps that connect to any server by address | Could |
+| CL-05 | Native iOS and Android apps that connect to any server by address (refined by AP-07 to AP-20) | Could |
 
 ## 17. Non-functional requirements
 
