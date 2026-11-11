@@ -17,7 +17,17 @@ defmodule Idejo.Accounts do
   alias Idejo.Repo
   alias Idejo.Uploads
 
-  alias Idejo.Accounts.{Invite, OIDC, User, UserIdentity, UserIgnore, UserNotifier, UserToken}
+  alias Idejo.Accounts.{
+    ApiTokens,
+    Invite,
+    OIDC,
+    User,
+    UserIdentity,
+    UserIgnore,
+    UserNotifier,
+    UserToken
+  }
+
   alias Idejo.Audit
   alias Idejo.Settings
 
@@ -472,9 +482,17 @@ defmodule Idejo.Accounts do
           {:ok, {User.t(), [String.t()]}} | {:error, :passwords_off | Ecto.Changeset.t()}
   def update_user_password(%User{} = user, attrs, kept_token) when is_binary(kept_token) do
     if password_allowed?(user),
-      do: change_password(user, attrs, kept_token),
+      do: user |> change_password(attrs, kept_token) |> revoked_tokens(user),
       else: {:error, :passwords_off}
   end
+
+  # AP-09: once the transaction has committed, the revoked tokens' sockets end.
+  defp revoked_tokens({:ok, {result, socket_ids, revoked}}, user) do
+    :ok = ApiTokens.announce_revoked(user.id, revoked)
+    {:ok, {result, socket_ids}}
+  end
+
+  defp revoked_tokens(error, _user), do: error
 
   defp change_password(user, attrs, kept_token) do
     changeset =
@@ -491,7 +509,9 @@ defmodule Idejo.Accounts do
         socket_ids = Enum.reject(session_socket_ids(user), &(&1 == kept_socket_id))
         Repo.delete_all(others)
         :ok = Push.delete_for_sessions(socket_ids)
-        {:ok, {user, socket_ids}}
+        # AP-09: the app's devices sign in again too.
+        revoked = ApiTokens.revoke_all_in_transaction(user)
+        {:ok, {user, socket_ids, revoked}}
       end
     end)
   end
@@ -520,9 +540,10 @@ defmodule Idejo.Accounts do
         socket_ids = session_socket_ids(user)
         Repo.delete_all(tokens)
         :ok = Push.delete_for_user(user)
-        {:ok, {user, socket_ids}}
+        {:ok, {user, socket_ids, ApiTokens.revoke_all_in_transaction(user)}}
       end
     end)
+    |> revoked_tokens(user)
   end
 
   @doc """
@@ -830,10 +851,17 @@ defmodule Idejo.Accounts do
           | {:error, :forbidden | :not_bannable | :past | Ecto.Changeset.t()}
   def ban_user(%User{} = moderator, %User{} = user, until, reason \\ nil) do
     cond do
-      not Access.server_moderator?(moderator) -> {:error, :forbidden}
-      not may_ban?(moderator, user) -> {:error, :not_bannable}
-      until != nil and not DateTime.after?(until, DateTime.utc_now()) -> {:error, :past}
-      true -> Repo.transact(fn -> save_ban(moderator, user, until, reason) end)
+      not Access.server_moderator?(moderator) ->
+        {:error, :forbidden}
+
+      not may_ban?(moderator, user) ->
+        {:error, :not_bannable}
+
+      until != nil and not DateTime.after?(until, DateTime.utc_now()) ->
+        {:error, :past}
+
+      true ->
+        Repo.transact(fn -> save_ban(moderator, user, until, reason) end) |> revoked_tokens(user)
     end
   end
 
@@ -891,7 +919,7 @@ defmodule Idejo.Accounts do
              reason: reason,
              details: %{"until" => until && DateTime.to_iso8601(until)}
            ) do
-      {:ok, {banned, socket_ids}}
+      {:ok, {banned, socket_ids, ApiTokens.revoke_all_in_transaction(user)}}
     end
   end
 
@@ -935,13 +963,13 @@ defmodule Idejo.Accounts do
           | {:error, :invalid_password | :reauthentication | :last_owner}
   def delete_user(%User{} = user, {:oidc, at}) do
     if OIDC.fresh_reauth?(at) and OIDC.identity(user),
-      do: Repo.transact(fn -> anonymise(user) end),
+      do: Repo.transact(fn -> anonymise(user) end) |> revoked_tokens(user),
       else: {:error, :reauthentication}
   end
 
   def delete_user(%User{} = user, password) do
     if User.valid_password?(user, password || "") do
-      Repo.transact(fn -> anonymise(user) end)
+      Repo.transact(fn -> anonymise(user) end) |> revoked_tokens(user)
     else
       {:error, :invalid_password}
     end
@@ -958,7 +986,7 @@ defmodule Idejo.Accounts do
           {:ok, {User.t(), [String.t()]}} | {:error, :not_found | :last_owner | :no_provider}
   def delete_user_by_identity(subject) do
     with {:ok, user} <- user_by_identity(subject) do
-      Repo.transact(fn -> anonymise_audited(user) end)
+      Repo.transact(fn -> anonymise_audited(user) end) |> revoked_tokens(user)
     end
   end
 
@@ -989,8 +1017,9 @@ defmodule Idejo.Accounts do
           Digest.update_preferences(user, Map.new(EmailPreference.options(), &{&1, false}))
 
         {:ok, _} = Audit.record(nil, "user.leave", %{"uri" => user.uri}, nil)
-        {:ok, {user, socket_ids}}
+        {:ok, {user, socket_ids, ApiTokens.revoke_all_in_transaction(user)}}
       end)
+      |> revoked_tokens(user)
     end
   end
 
@@ -1021,6 +1050,8 @@ defmodule Idejo.Accounts do
       )
 
       :ok = Push.delete_for_user(user)
+      # AP-09: the app's devices too.
+      revoked = ApiTokens.revoke_all_in_transaction(user)
 
       # Neither placeholder can be signed up with: usernames have no hyphen, emails need an @.
       deleted =
@@ -1053,7 +1084,7 @@ defmodule Idejo.Accounts do
         })
       )
 
-      {:ok, {deleted, socket_ids}}
+      {:ok, {deleted, socket_ids, revoked}}
     end
   end
 
@@ -1102,6 +1133,16 @@ defmodule Idejo.Accounts do
       nil -> nil
     end
   end
+
+  @doc """
+  The user of the official app's device token (AP-09): the token live, the API on, the
+  account active and not banned, as `get_user_by_session_token/1` answers for a browser.
+  See `Idejo.Accounts.ApiTokens.authenticate/1`.
+  """
+  @spec get_user_by_api_token(String.t() | nil) ::
+          {:ok, User.t(), Idejo.Accounts.ApiToken.t()}
+          | {:error, :invalid | :disabled | :banned | :suspended}
+  defdelegate get_user_by_api_token(token), to: ApiTokens, as: :authenticate
 
   @doc """
   Deletes the signed token with the given context (sign-out), and the browser push

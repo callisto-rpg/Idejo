@@ -378,6 +378,12 @@ second message in the same week if I don't log in** (on at first) you get at mos
 week while you stay away; without it, one a day. Nothing new, no email. Each email has a
 link that stops them all in one click.
 
+**Apps and devices**, on the same page, lists the phones signed in to the **Idejo app**,
+with when each signed in and was last used. To sign the app in, add this forum in the app:
+it opens this forum's sign-in page, then asks "Sign in to the Idejo app on this device as
+…?"; **Allow** signs it in, until you sign out in the app or press **Remove** here. Changing
+or resetting your password signs every device out.
+
 **Push notifications** show on your computer or phone even when the server is not open.
 A bar on category and topic pages says when they are not enabled, once you have posted or
 follow a topic: **Enable** asks your browser, **Dismiss** hides it for two weeks. Under **Push

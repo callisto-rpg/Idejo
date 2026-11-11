@@ -130,6 +130,9 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Never in the logs (SP-02, AP-08, AP-09): passwords, the app's codes and tokens.
+config :phoenix, :filter_parameters, ~w(password token code code_verifier access_token)
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 # AC-09 (steward decisions, 2026-11-06): the Idejo ID registry an administrator may connect

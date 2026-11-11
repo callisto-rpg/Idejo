@@ -1,0 +1,10 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>{gettext("The Idejo app cannot sign in")}</h1>
+  </header>
+  <p id="app-authorize-error">{refusal(@reason)}</p>
+</Layouts.app>

@@ -229,8 +229,17 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/users/settings",
       ~p"/c/#{general.slug}/new",
       ~p"/m/#{reply.id}/new-topic",
-      ~p"/m/#{first.id}/report"
+      ~p"/m/#{first.id}/report",
+      # AP-08: the official app's sign-in confirmation.
+      "/app/authorize?" <>
+        URI.encode_query(
+          IdejoWeb.ApiHelpers.authorize_params(elem(IdejoWeb.ApiHelpers.pkce(), 1))
+        )
     ])
+
+    # AP-08: and its error page.
+    page = conn |> get("/app/authorize?client_id=other") |> html_response(400)
+    assert Accessibility.audit(page) == []
   end
 
   @tag req: "AX-01"

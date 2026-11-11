@@ -14,6 +14,7 @@ defmodule IdejoWeb.UserSettingsLive do
   use IdejoWeb, :live_view
 
   alias Idejo.Accounts
+  alias Idejo.Accounts.ApiTokens
   alias Idejo.Accounts.OIDC
   alias Idejo.Messages.Body
   alias Idejo.Notifications.Digest
@@ -38,6 +39,8 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:controls_form, to_form(Accounts.change_user_controls(user), as: :controls))
      |> assign(:private_form, private_form(user))
      |> assign(:ignored, Accounts.list_ignored(user))
+     # AP-09: the official app's signed-in devices.
+     |> assign(:app_devices, ApiTokens.list(user))
      |> assign(:bio_form, bio_form(user))
      |> assign(bio_mode: :write, bio_preview: "")
      |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))
@@ -641,6 +644,52 @@ defmodule IdejoWeb.UserSettingsLive do
                 aria-label={gettext("Stop ignoring %{name}", name: user.display_name)}
               >
                 {gettext("Stop ignoring")}
+              </button>
+            </.form>
+          </li>
+        </ul>
+      </section>
+
+      <%!-- AP-09 (steward decision, 2026-11-10): plain forms, so Remove works without
+           JavaScript like the rest of the page. --%>
+      <section class="mt-10" id="apps-section" aria-labelledby="apps-heading">
+        <h2 id="apps-heading" class="font-semibold mb-2">{gettext("Apps and devices")}</h2>
+        <p class="text-sm opacity-70 mb-3">
+          {gettext(
+            "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
+          )}
+        </p>
+        <p :if={@app_devices == []} id="apps-none" class="text-sm">
+          {gettext("No device is signed in to the Idejo app.")}
+        </p>
+        <ul :if={@app_devices != []} id="apps-list" class="space-y-2">
+          <li
+            :for={device <- @app_devices}
+            id={"app-device-#{device.id}"}
+            class="flex flex-wrap items-center gap-3"
+          >
+            <span class="font-medium">{device.name}</span>
+            <span class="text-sm opacity-70">
+              {gettext("signed in on %{date}",
+                date: Calendar.strftime(device.inserted_at, "%Y-%m-%d")
+              )}
+              <span :if={device.last_used_at}>
+                · {gettext("last used %{date}",
+                  date: Calendar.strftime(device.last_used_at, "%Y-%m-%d")
+                )}
+              </span>
+            </span>
+            <.form
+              for={%{}}
+              action={~p"/users/settings/apps/#{device.id}"}
+              method="delete"
+              id={"remove-app-device-#{device.id}"}
+            >
+              <button
+                class="btn btn-xs"
+                aria-label={gettext("Remove %{name}", name: device.name)}
+              >
+                {gettext("Remove")}
               </button>
             </.form>
           </li>
