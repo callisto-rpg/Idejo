@@ -33,7 +33,7 @@ defmodule Idejo.Push.Sender do
   """
   @spec deliver(Subscription.t(), map(), keyword()) :: result()
   def deliver(%Subscription{} = subscription, payload, opts) do
-    with {:ok, uri, addresses} <- check(subscription.endpoint),
+    with {:ok, uri, addresses} <- check(subscription),
          {:ok, keys} <- vapid_keys() do
       {ua_public, auth} = Subscription.keys(subscription)
       body = payload |> Jason.encode!() |> Crypto.encrypt(ua_public, auth)
@@ -51,8 +51,9 @@ defmodule Idejo.Push.Sender do
     end
   end
 
-  defp check(endpoint) do
-    case Endpoint.check(endpoint) do
+  # PN-16 for browsers, AP-19 for the app's UnifiedPush endpoints.
+  defp check(subscription) do
+    case Endpoint.check_subscription(subscription) do
       {:ok, uri, addresses} -> {:ok, uri, addresses}
       {:error, reason} -> {:error, {:endpoint, reason}}
     end

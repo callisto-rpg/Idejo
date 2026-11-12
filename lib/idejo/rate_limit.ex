@@ -9,6 +9,8 @@ defmodule Idejo.RateLimit do
   or `{:error, :rate_limited}` past the limit. Limits per action:
 
     * per IP: `:request` (every request), `:sign_in`, `:sign_up`, `:reset_password`;
+    * per device token of the official app (AP-18): `:api_token`, every request, 600 a
+      minute (`config :idejo, :api_token_requests_per_minute`); per IP, `:api_oauth`;
     * per user: `:commit` (every Enter), `:new_message`, `:new_topic`, `:report`, `:upload`, `:react`, `:vote` (polls),
       `:push_subscribe` (PN-16), `:push_test` (PN-24).
 
@@ -35,7 +37,12 @@ defmodule Idejo.RateLimit do
     # PN-16: every signed-in page load syncs the browser's subscription (PN-18).
     push_subscribe: {60, @minute},
     # PN-24: "Send test notification".
-    push_test: {5, @minute}
+    push_test: {5, @minute},
+    # AP-18: every request of one of the app's device tokens, overall (`config :idejo,
+    # :api_token_requests_per_minute` changes it); each action keeps its own limit too.
+    api_token: {600, @minute},
+    # AP-08: the token endpoint, per IP address.
+    api_oauth: {10, @minute}
   }
 
   @type action ::
@@ -52,9 +59,14 @@ defmodule Idejo.RateLimit do
           | :vote
           | :push_subscribe
           | :push_test
+          | :api_token
+          | :api_oauth
 
   @doc "The limit of an action: `{count, window in milliseconds}`."
   @spec limit(action()) :: {pos_integer(), pos_integer()}
+  def limit(:api_token),
+    do: {Application.get_env(:idejo, :api_token_requests_per_minute, 600), @minute}
+
   def limit(action), do: Map.fetch!(@limits, action)
 
   @doc """

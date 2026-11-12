@@ -96,7 +96,7 @@ defmodule IdejoWeb.ImageUploads do
 
       case result do
         {:ok, upload} ->
-          markdown = "![#{alt(entry.client_name)}](#{Uploads.url(upload)})"
+          markdown = markdown(entry.client_name, upload)
 
           {:noreply,
            socket
@@ -114,8 +114,14 @@ defmodule IdejoWeb.ImageUploads do
     end
   end
 
-  # The file's name, without its extension or Markdown brackets, is the first alt text; the
-  # author can change it before sending.
+  @doc """
+  The Markdown the composer inserts for an uploaded image (the app gets the same, AP-12):
+  the file's name, without its extension or Markdown brackets, is the first alt text; the
+  author can change it before sending.
+  """
+  @spec markdown(String.t() | nil, Uploads.Upload.t()) :: String.t()
+  def markdown(client_name, upload), do: "![#{alt(client_name || "")}](#{Uploads.url(upload)})"
+
   defp alt(client_name) do
     client_name
     |> Path.rootname()

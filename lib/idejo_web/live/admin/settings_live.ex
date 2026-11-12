@@ -322,6 +322,23 @@ defmodule IdejoWeb.Admin.SettingsLive do
             label={label}
           />
         </fieldset>
+        <%!-- AP-20 (steward decision, 2026-11-10): the official app's API. --%>
+        <fieldset class="theme-settings" aria-describedby="api-help">
+          <legend id="api-heading" class="theme-settings-title">
+            {gettext("API and mobile app")}
+          </legend>
+          <.input
+            field={@form[:api_enabled]}
+            type="checkbox"
+            label={gettext("Members can use the Idejo app")}
+            aria-describedby="api-help"
+          />
+          <p id="api-help" class="text-sm opacity-70 -mt-1 mb-4">
+            {gettext(
+              "The Idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
+            )}
+          </p>
+        </fieldset>
         <%!-- AD-02: the privacy notice at /privacy. --%>
         <.input
           field={@form[:privacy_notice]}

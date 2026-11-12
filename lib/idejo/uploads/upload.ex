@@ -15,6 +15,9 @@ defmodule Idejo.Uploads.Upload do
     field :path, :string
     field :mime, :string
     field :size, :integer
+    # AP-11: pixels, for images stored from 0.3.6 on; nil before.
+    field :width, :integer
+    field :height, :integer
     belongs_to :user, Idejo.Accounts.User
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at, updated_at: false)

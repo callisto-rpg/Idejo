@@ -6,6 +6,8 @@ defmodule IdejoWeb.Router do
 
   import IdejoWeb.UserAuth
 
+  alias IdejoWeb.Api.Operations
+
   # The policy is set by IdejoWeb.Plugs.ContentSecurityPolicy below, with
   # per-request nonces, so Sobelow cannot see it (SP-05).
   # sobelow_skip ["Config.CSP"]
@@ -23,6 +25,18 @@ defmodule IdejoWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  # API v1 for the official app (AP-01 to AP-20; steward decision, 2026-11-10): no session,
+  # no cookie, no CSRF (no ambient credential: a Bearer token is the only one), JSON only.
+  pipeline :api_v1 do
+    plug :accepts, ["json"]
+    plug IdejoWeb.Plugs.ApiEnabled
+    plug IdejoWeb.Plugs.ApiAuth
+  end
+
+  pipeline :app_authorize do
+    plug IdejoWeb.Plugs.ApiEnabled, html: true
   end
 
   # JSON about the signed-in member, asked by the page's own scripts (GET only): the session,
@@ -121,10 +135,35 @@ defmodule IdejoWeb.Router do
     post "/setup", SetupController, :create
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", IdejoWeb do
-  #   pipe_through :api
-  # end
+  # AP-01: every route of API v1 comes from IdejoWeb.Api.Operations, the same list the
+  # OpenAPI document and the scope checks read.
+  scope "/api/v1" do
+    pipe_through :api_v1
+
+    for op <- Operations.all() do
+      match op.method, Operations.router_path(op.path), op.controller, op.action
+    end
+  end
+
+  # Anything else under /api: the API's own 404 (AP-17).
+  scope "/api", IdejoWeb.Api do
+    pipe_through :api_v1
+
+    match :*, "/*path", FallbackController, :not_found
+  end
+
+  # AP-07: discovery, before sign-in, no session; AP-20 answers `api: null` while off.
+  scope "/", IdejoWeb.Api do
+    get "/.well-known/idejo", DiscoveryController, :show
+  end
+
+  # AP-08: the official app's sign-in, in the browser with the normal session (HTML).
+  scope "/app", IdejoWeb do
+    pipe_through [:browser, :app_authorize]
+
+    get "/authorize", AppAuthorizeController, :new
+    post "/authorize", AppAuthorizeController, :create
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:idejo, :dev_routes) do
@@ -168,6 +207,8 @@ defmodule IdejoWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     post "/confirm", UserConfirmationController, :create
+    # AP-09: Remove under "Apps and devices", a plain form.
+    delete "/settings/apps/:id", AppDeviceController, :delete
 
     # Profile and account (AC-04), for the signed-in user.
     live_session :signed_in, on_mount: [{IdejoWeb.UserAuth, :require_authenticated}] do

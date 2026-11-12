@@ -87,3 +87,6 @@ config :idejo,
   id_registry_url: "https://login.idejo.test",
   id_registry_req_options: [plug: {Req.Test, Idejo.Accounts.OIDCRegistry}],
   id_registry_start_worker: false
+
+# AP-17: an API error code not in IdejoWeb.Api.Errors raises in tests, so it gets documented.
+config :idejo, :api_strict_errors, true

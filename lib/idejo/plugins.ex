@@ -25,6 +25,7 @@ defmodule Idejo.Plugins do
 
   alias Idejo.Access
   alias Idejo.Accounts.User
+  alias Idejo.Api.Changes
   alias Idejo.Audit
   alias Idejo.Federation
   alias Idejo.Forum
@@ -803,7 +804,9 @@ defmodule Idejo.Plugins do
                target_uri: topic.uri,
                payload: %{"type" => "Note", "plugin" => definition.command}
              })
-           ) do
+           ),
+         # AP-16: the message is in the app's catch-up with its new block.
+         :ok <- Changes.touch(message.id) do
       {:ok, embed}
     end
   end

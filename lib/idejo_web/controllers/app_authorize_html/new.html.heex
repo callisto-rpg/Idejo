@@ -1,0 +1,41 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <header class="page-intro">
+    <h1>
+      {gettext("Sign in to the Idejo app on this device as %{name}?", name: @user.display_name)}
+    </h1>
+  </header>
+  <section id="app-authorize" aria-labelledby="app-authorize-device">
+    <p id="app-authorize-device">
+      {gettext("Device: %{device}", device: @request.device_name)}
+    </p>
+    <p>{gettext("The app will be able to:")}</p>
+    <ul id="app-authorize-scopes" class="list-disc pl-6">
+      <li :for={scope <- @request.scopes}>{scope_text(scope)}</li>
+    </ul>
+    <p>
+      {gettext(
+        "It never sees your password. It stays signed in until you sign out in the app or remove it under Apps and devices in Profile and account."
+      )}
+    </p>
+    <form action={~p"/app/authorize"} method="post" class="flex gap-2 mt-4">
+      <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+      <input :for={{name, value} <- @hidden} type="hidden" name={name} value={value} />
+      <button
+        type="submit"
+        name="choice"
+        value="allow"
+        id="app-authorize-allow"
+        class="btn btn-primary"
+      >
+        {gettext("Allow")}
+      </button>
+      <button type="submit" name="choice" value="cancel" id="app-authorize-cancel" class="btn">
+        {gettext("Cancel")}
+      </button>
+    </form>
+  </section>
+</Layouts.app>

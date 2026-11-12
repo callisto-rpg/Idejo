@@ -23,6 +23,7 @@ Idejo runs on a small VPS (2 vCPU, 2 GB RAM is enough to start) with only Docker
 * [Deploying Idejo to a server](docs/deploying.md), step by step ([on Infomaniak](docs/deploying-infomaniak.md))
 * [Admin guide](docs/admin-guide.md): the admin panel, permissions and moderation
 * [Member guide](docs/member-guide.md): the keys and the composer, on one page
+* [API guide](docs/api-guide.md): the API for the official Idejo app (sign-in, events, push)
 
 ## Develop
 

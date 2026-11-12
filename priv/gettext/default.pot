@@ -219,6 +219,7 @@ msgstr ""
 msgid "Welcome! We sent a link to %{email}; open it to verify your email address."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:160
 #: lib/idejo_web/unavailable.ex:32
 #: lib/idejo_web/user_auth.ex:240
 #: lib/idejo_web/user_auth.ex:285
@@ -368,20 +369,20 @@ msgstr ""
 #: lib/idejo_web/live/admin/info_boxes_live.ex:221
 #: lib/idejo_web/live/admin/plugins_live.ex:307
 #: lib/idejo_web/live/admin/roles_live.ex:220
-#: lib/idejo_web/live/admin/settings_live.ex:337
+#: lib/idejo_web/live/admin/settings_live.ex:354
 #: lib/idejo_web/live/admin/stylesheet_live.ex:84
 #: lib/idejo_web/live/admin/tags_live.ex:132
 #: lib/idejo_web/live/topic_live.ex:3802
 #: lib/idejo_web/live/topic_live.ex:4510
 #: lib/idejo_web/live/topic_live.ex:4514
 #: lib/idejo_web/live/topic_live.ex:4530
-#: lib/idejo_web/live/user_settings_live.ex:452
+#: lib/idejo_web/live/user_settings_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
 #: lib/idejo_web/live/admin/email_live.ex:163
-#: lib/idejo_web/live/admin/settings_live.ex:336
+#: lib/idejo_web/live/admin/settings_live.ex:353
 #: lib/idejo_web/live/admin/stylesheet_live.ex:83
 #, elixir-autogen, elixir-format
 msgid "Saving…"
@@ -700,8 +701,8 @@ msgid "Back to sign in"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:38
-#: lib/idejo_web/live/user_settings_live.ex:850
-#: lib/idejo_web/live/user_settings_live.ex:878
+#: lib/idejo_web/live/user_settings_live.ex:899
+#: lib/idejo_web/live/user_settings_live.ex:927
 #, elixir-autogen, elixir-format
 msgid "Change password"
 msgstr ""
@@ -733,7 +734,7 @@ msgid "If that email has an account, a link to reset its password is on its way.
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_html/edit.html.heex:24
-#: lib/idejo_web/live/user_settings_live.ex:867
+#: lib/idejo_web/live/user_settings_live.ex:916
 #, elixir-autogen, elixir-format
 msgid "New password (at least 12 characters)"
 msgstr ""
@@ -792,6 +793,7 @@ msgstr ""
 #: lib/idejo_web/components/poll_components.ex:173
 #: lib/idejo_web/components/topic_components.ex:109
 #: lib/idejo_web/components/warning_components.ex:94
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:37
 #: lib/idejo_web/controllers/oidc_html/consent.html.heex:34
 #: lib/idejo_web/controllers/report_html/new.html.heex:30
 #: lib/idejo_web/controllers/topic_html/show.html.heex:90
@@ -968,6 +970,7 @@ msgstr ""
 msgid "%{role}: %{right}"
 msgstr ""
 
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:34
 #: lib/idejo_web/live/admin/permissions_live.ex:91
 #: lib/idejo_web/live/admin/permissions_live.ex:99
 #, elixir-autogen, elixir-format
@@ -1107,7 +1110,8 @@ msgid "Only an owner can give or remove the owner role."
 msgstr ""
 
 #: lib/idejo_web/live/admin/user_live.ex:156
-#: lib/idejo_web/live/user_settings_live.ex:798
+#: lib/idejo_web/live/user_settings_live.ex:692
+#: lib/idejo_web/live/user_settings_live.ex:847
 #, elixir-autogen, elixir-format
 msgid "Remove"
 msgstr ""
@@ -1161,76 +1165,76 @@ msgstr ""
 msgid "Nothing to read here yet."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:442
+#: lib/idejo_web/live/user_settings_live.ex:445
 #, elixir-autogen, elixir-format
 msgid "Display name (shown above your messages)"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:690
-#: lib/idejo_web/live/user_settings_live.ex:32
-#: lib/idejo_web/live/user_settings_live.ex:434
+#: lib/idejo_web/live/user_settings_live.ex:33
+#: lib/idejo_web/live/user_settings_live.ex:437
 #, elixir-autogen, elixir-format
 msgid "Profile and account"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:125
+#: lib/idejo_web/live/user_settings_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Profile saved."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:860
+#: lib/idejo_web/live/user_settings_live.ex:909
 #, elixir-autogen, elixir-format
 msgid "Current password"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:323
+#: lib/idejo_web/live/user_settings_live.ex:326
 #, elixir-autogen, elixir-format
 msgid "Password changed. You were signed out everywhere else."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:874
+#: lib/idejo_web/live/user_settings_live.ex:923
 #, elixir-autogen, elixir-format
 msgid "Repeat the new password"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:883
+#: lib/idejo_web/live/user_settings_live.ex:932
 #, elixir-autogen, elixir-format
 msgid "Delete account"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:906
-#: lib/idejo_web/live/user_settings_live.ex:928
+#: lib/idejo_web/live/user_settings_live.ex:955
+#: lib/idejo_web/live/user_settings_live.ex:977
 #, elixir-autogen, elixir-format
 msgid "Delete my account"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:904
-#: lib/idejo_web/live/user_settings_live.ex:926
+#: lib/idejo_web/live/user_settings_live.ex:953
+#: lib/idejo_web/live/user_settings_live.ex:975
 #, elixir-autogen, elixir-format
 msgid "Delete your account for good?"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:372
+#: lib/idejo_web/live/user_settings_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "That is not your current password."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:382
+#: lib/idejo_web/live/user_settings_live.ex:385
 #, elixir-autogen, elixir-format
 msgid "You are the only owner of this server. Make someone else owner before deleting your account."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:361
+#: lib/idejo_web/live/user_settings_live.ex:364
 #, elixir-autogen, elixir-format
 msgid "Your account has been deleted."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:885
+#: lib/idejo_web/live/user_settings_live.ex:934
 #, elixir-autogen, elixir-format
 msgid "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:920
+#: lib/idejo_web/live/user_settings_live.ex:969
 #, elixir-autogen, elixir-format
 msgid "Your password, to confirm"
 msgstr ""
@@ -1656,7 +1660,7 @@ msgstr ""
 msgid "Add image"
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:158
+#: lib/idejo_web/image_uploads.ex:164
 #, elixir-autogen, elixir-format
 msgid "Add one image at a time."
 msgstr ""
@@ -1666,49 +1670,50 @@ msgstr ""
 msgid "Largest image upload (MB)"
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:155
-#: lib/idejo_web/image_uploads.ex:156
+#: lib/idejo_web/image_uploads.ex:161
+#: lib/idejo_web/image_uploads.ex:162
 #, elixir-autogen, elixir-format
 msgid "Only JPEG, PNG, GIF and WebP images can be added."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:164
+#: lib/idejo_web/image_uploads.ex:170
 #, elixir-autogen, elixir-format
 msgid "This image could not be added."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:157
+#: lib/idejo_web/api/errors.ex:204
+#: lib/idejo_web/image_uploads.ex:163
 #, elixir-autogen, elixir-format
 msgid "This image has too many pixels."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:126
+#: lib/idejo_web/image_uploads.ex:132
 #, elixir-autogen, elixir-format
 msgid "image"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:481
+#: lib/idejo_web/live/user_settings_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "Avatar"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:152
+#: lib/idejo_web/live/user_settings_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Avatar removed."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:103
+#: lib/idejo_web/live/user_settings_live.ex:106
 #, elixir-autogen, elixir-format
 msgid "Avatar saved."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:486
-#: lib/idejo_web/live/user_settings_live.ex:526
+#: lib/idejo_web/live/user_settings_live.ex:489
+#: lib/idejo_web/live/user_settings_live.ex:529
 #, elixir-autogen, elixir-format
 msgid "Choose a picture (JPEG, PNG, GIF or WebP)"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:497
+#: lib/idejo_web/live/user_settings_live.ex:500
 #, elixir-autogen, elixir-format
 msgid "Remove avatar"
 msgstr ""
@@ -2109,6 +2114,7 @@ msgstr ""
 msgid "Lifted a ban"
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:208
 #: lib/idejo_web/controllers/ban_controller.ex:29
 #, elixir-autogen, elixir-format
 msgid "This account cannot be banned."
@@ -2149,7 +2155,7 @@ msgstr ""
 msgid "You cannot report this message now."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:162
+#: lib/idejo_web/image_uploads.ex:168
 #, elixir-autogen, elixir-format
 msgid "You have added many images lately. Please try again later."
 msgstr ""
@@ -2248,7 +2254,7 @@ msgid_plural "!%{command} was posted here lately. It can be used again in %{coun
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/user_settings_live.ex:425
+#: lib/idejo_web/live/user_settings_live.ex:428
 #, elixir-autogen, elixir-format
 msgid "%{browser} on %{system}"
 msgstr ""
@@ -2406,14 +2412,14 @@ msgstr ""
 msgid "%{server} will receive from %{provider}:"
 msgstr ""
 
-#: lib/idejo/forum.ex:2394
-#: lib/idejo/forum.ex:2442
+#: lib/idejo/forum.ex:2429
+#: lib/idejo/forum.ex:2477
 #: lib/idejo_web/live/topic_live.ex:4264
 #, elixir-autogen, elixir-format
 msgid "(spoiler)"
 msgstr ""
 
-#: lib/idejo/forum.ex:2391
+#: lib/idejo/forum.ex:2426
 #, elixir-autogen, elixir-format
 msgid "(spoiler: %{label})"
 msgstr ""
@@ -2432,8 +2438,8 @@ msgid_plural "+%{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/user_settings_live.ex:673
-#: lib/idejo_web/live/user_settings_live.ex:756
+#: lib/idejo_web/live/user_settings_live.ex:722
+#: lib/idejo_web/live/user_settings_live.ex:805
 #, elixir-autogen, elixir-format
 msgid "+role mentions"
 msgstr ""
@@ -2552,12 +2558,12 @@ msgid_plural "%{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/user_settings_live.ex:751
+#: lib/idejo_web/live/user_settings_live.ex:800
 #, elixir-autogen, elixir-format
 msgid "@%{username} mentions"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:665
+#: lib/idejo_web/live/user_settings_live.ex:714
 #, elixir-autogen, elixir-format
 msgid "@%{username} mentions and replies to my posts"
 msgstr ""
@@ -2700,17 +2706,17 @@ msgstr ""
 msgid "Add roles"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:788
+#: lib/idejo_web/live/user_settings_live.ex:837
 #, elixir-autogen, elixir-format
 msgid "Added %{date}"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:553
+#: lib/idejo_web/live/user_settings_live.ex:556
 #, elixir-autogen, elixir-format
 msgid "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, your messages keep the text exactly as typed."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:565
+#: lib/idejo_web/live/user_settings_live.ex:568
 #, elixir-autogen, elixir-format
 msgid "Adds buttons under the box you write in: emoji, images, text formatting, more commands, and Send. Open topics show them once reloaded."
 msgstr ""
@@ -2795,7 +2801,7 @@ msgstr ""
 msgid "Answers"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:693
+#: lib/idejo_web/live/user_settings_live.ex:742
 #, elixir-autogen, elixir-format
 msgid "Any activity in the forum"
 msgstr ""
@@ -2840,7 +2846,7 @@ msgstr ""
 msgid "At the start of a word, these signs open a list of suggestions while you type: click one, or use the arrow keys and Enter (or Tab); Escape closes the list."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:549
+#: lib/idejo_web/live/user_settings_live.ex:552
 #, elixir-autogen, elixir-format
 msgid "Automatic punctuation"
 msgstr ""
@@ -2882,17 +2888,17 @@ msgstr ""
 msgid "Basketball"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:457
+#: lib/idejo_web/live/user_settings_live.ex:460
 #, elixir-autogen, elixir-format
 msgid "Bio"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:472
+#: lib/idejo_web/live/user_settings_live.ex:475
 #, elixir-autogen, elixir-format
 msgid "Bio (Markdown)"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:161
+#: lib/idejo_web/live/user_settings_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "Bio saved."
 msgstr ""
@@ -3020,7 +3026,7 @@ msgstr ""
 msgid "Choose an emoji for answer %{number}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:360
+#: lib/idejo_web/live/admin/settings_live.ex:377
 #, elixir-autogen, elixir-format
 msgid "Choose an image (JPEG, PNG, GIF or WebP)"
 msgstr ""
@@ -3030,6 +3036,7 @@ msgstr ""
 msgid "Choose any number of answers."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:218
 #: lib/idejo_web/controllers/topic_tags_controller.ex:33
 #, elixir-autogen, elixir-format
 msgid "Choose at least one tag."
@@ -3110,12 +3117,12 @@ msgstr ""
 msgid "Composer"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:896
+#: lib/idejo_web/live/user_settings_live.ex:945
 #, elixir-autogen, elixir-format
 msgid "Confirm with %{provider}"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:376
+#: lib/idejo_web/live/user_settings_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "Confirm with %{provider} again: the confirmation lasts five minutes."
 msgstr ""
@@ -3204,7 +3211,7 @@ msgstr[1] ""
 msgid "Ctrl+Enter, or Enter three times, starts a new message."
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:353
+#: lib/idejo_web/live/admin/settings_live.ex:370
 #, elixir-autogen, elixir-format
 msgid "Current logo"
 msgstr ""
@@ -3214,22 +3221,22 @@ msgstr ""
 msgid "Cycling"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:390
+#: lib/idejo_web/live/admin/settings_live.ex:407
 #, elixir-autogen, elixir-format
 msgid "Dark background"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:508
+#: lib/idejo_web/live/user_settings_live.ex:511
 #, elixir-autogen, elixir-format
 msgid "Dark mode picture"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:144
+#: lib/idejo_web/live/user_settings_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Dark mode picture removed."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:104
+#: lib/idejo_web/live/user_settings_live.ex:107
 #, elixir-autogen, elixir-format
 msgid "Dark mode picture saved."
 msgstr ""
@@ -3304,17 +3311,17 @@ msgstr ""
 msgid "Deleted by user"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:284
+#: lib/idejo_web/live/user_settings_live.ex:287
 #, elixir-autogen, elixir-format
 msgid "Device removed."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:773
+#: lib/idejo_web/live/user_settings_live.ex:822
 #, elixir-autogen, elixir-format
 msgid "Devices"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:699
+#: lib/idejo_web/live/user_settings_live.ex:748
 #, elixir-autogen, elixir-format
 msgid "Don't send me a second message in the same week if I don't log in."
 msgstr ""
@@ -3354,12 +3361,12 @@ msgstr ""
 
 #: lib/idejo_web/controllers/email_unsubscribe_controller.ex:18
 #: lib/idejo_web/controllers/email_unsubscribe_html/show.html.heex:6
-#: lib/idejo_web/live/user_settings_live.ex:652
+#: lib/idejo_web/live/user_settings_live.ex:701
 #, elixir-autogen, elixir-format
 msgid "Email notifications"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:241
+#: lib/idejo_web/live/user_settings_live.ex:244
 #, elixir-autogen, elixir-format
 msgid "Email notifications saved."
 msgstr ""
@@ -3716,7 +3723,7 @@ msgstr ""
 msgid "Icons only"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:657
+#: lib/idejo_web/live/user_settings_live.ex:706
 #, elixir-autogen, elixir-format
 msgid "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
 msgstr ""
@@ -3843,12 +3850,12 @@ msgstr ""
 msgid "Light (for smaller servers)"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:389
+#: lib/idejo_web/live/admin/settings_live.ex:406
 #, elixir-autogen, elixir-format
 msgid "Light background"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:825
+#: lib/idejo_web/live/user_settings_live.ex:874
 #, elixir-autogen, elixir-format
 msgid "Link %{provider}"
 msgstr ""
@@ -3858,7 +3865,7 @@ msgstr ""
 msgid "Link copied"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:818
+#: lib/idejo_web/live/user_settings_live.ex:867
 #, elixir-autogen, elixir-format
 msgid "Link your account to %{provider} to sign in with it. You will be asked to sign in there."
 msgstr ""
@@ -3898,7 +3905,7 @@ msgstr ""
 msgid "Loading emoji…"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:343
+#: lib/idejo_web/live/admin/settings_live.ex:360
 #, elixir-autogen, elixir-format
 msgid "Logo"
 msgstr ""
@@ -3963,7 +3970,7 @@ msgstr ""
 msgid "Members can choose it"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:605
+#: lib/idejo_web/live/user_settings_live.ex:608
 #, elixir-autogen, elixir-format
 msgid "Members can send me private messages"
 msgstr ""
@@ -3983,12 +3990,12 @@ msgstr ""
 msgid "Message (Markdown)"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:575
+#: lib/idejo_web/live/user_settings_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Message controls"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:207
+#: lib/idejo_web/live/user_settings_live.ex:210
 #, elixir-autogen, elixir-format
 msgid "Message controls saved."
 msgstr ""
@@ -4135,17 +4142,17 @@ msgstr ""
 msgid "New line"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:678
+#: lib/idejo_web/live/user_settings_live.ex:727
 #, elixir-autogen, elixir-format
 msgid "New messages in a thread I created"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:683
+#: lib/idejo_web/live/user_settings_live.ex:732
 #, elixir-autogen, elixir-format
 msgid "New messages in a thread I follow"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:761
+#: lib/idejo_web/live/user_settings_live.ex:810
 #, elixir-autogen, elixir-format
 msgid "New messages in topics I follow"
 msgstr ""
@@ -4160,7 +4167,7 @@ msgstr ""
 msgid "New thread"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:688
+#: lib/idejo_web/live/user_settings_live.ex:737
 #, elixir-autogen, elixir-format
 msgid "New topics created"
 msgstr ""
@@ -4198,12 +4205,12 @@ msgstr ""
 msgid "No categories yet."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:775
+#: lib/idejo_web/live/user_settings_live.ex:824
 #, elixir-autogen, elixir-format
 msgid "No device takes notifications yet."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:294
+#: lib/idejo_web/live/user_settings_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "No device takes notifications yet. Turn them on first."
 msgstr ""
@@ -4293,12 +4300,12 @@ msgstr ""
 msgid "Nothing here yet."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:730
+#: lib/idejo_web/live/user_settings_live.ex:779
 #, elixir-autogen, elixir-format
 msgid "Notifications are blocked in this browser. To allow them, open the site settings (the icon at the left of the address), set Notifications to Allow, then reload this page."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:724
+#: lib/idejo_web/live/user_settings_live.ex:773
 #, elixir-autogen, elixir-format
 msgid "Notifications are off in this browser."
 msgstr ""
@@ -4308,7 +4315,7 @@ msgstr ""
 msgid "Notifications are on"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:722
+#: lib/idejo_web/live/user_settings_live.ex:771
 #, elixir-autogen, elixir-format
 msgid "Notifications are on in this browser."
 msgstr ""
@@ -4416,7 +4423,7 @@ msgstr ""
 msgid "Or"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:908
+#: lib/idejo_web/live/user_settings_live.ex:957
 #, elixir-autogen, elixir-format
 msgid "Or with your password:"
 msgstr ""
@@ -4443,7 +4450,7 @@ msgid "Parenting"
 msgstr ""
 
 #: lib/idejo_web/controllers/user_reset_password_controller.ex:89
-#: lib/idejo_web/live/user_settings_live.ex:333
+#: lib/idejo_web/live/user_settings_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "Passwords are not used here: sign in with %{provider}."
 msgstr ""
@@ -4489,7 +4496,7 @@ msgstr ""
 msgid "Pick a colour"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:415
+#: lib/idejo_web/live/admin/settings_live.ex:432
 #, elixir-autogen, elixir-format
 msgid "Pick the %{colour}"
 msgstr ""
@@ -4546,7 +4553,7 @@ msgstr ""
 msgid "Powered by %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:386
+#: lib/idejo_web/live/admin/settings_live.ex:403
 #, elixir-autogen, elixir-format
 msgid "Primary colour"
 msgstr ""
@@ -4558,7 +4565,7 @@ msgstr ""
 msgid "Privacy"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:329
+#: lib/idejo_web/live/admin/settings_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "Privacy notice (Markdown)"
 msgstr ""
@@ -4584,19 +4591,19 @@ msgstr ""
 msgid "Private conversation"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:600
-#: lib/idejo_web/live/user_settings_live.ex:766
+#: lib/idejo_web/live/user_settings_live.ex:603
+#: lib/idejo_web/live/user_settings_live.ex:815
 #, elixir-autogen, elixir-format
 msgid "Private messages"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:191
+#: lib/idejo_web/live/user_settings_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Private messages preference saved."
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:227
-#: lib/idejo_web/live/user_settings_live.ex:708
+#: lib/idejo_web/live/user_settings_live.ex:757
 #, elixir-autogen, elixir-format
 msgid "Push notifications"
 msgstr ""
@@ -4606,7 +4613,7 @@ msgstr ""
 msgid "Push notifications not enabled. You will not be notified of new messages."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:258
+#: lib/idejo_web/live/user_settings_live.ex:261
 #, elixir-autogen, elixir-format
 msgid "Push notifications saved."
 msgstr ""
@@ -4637,7 +4644,7 @@ msgstr ""
 msgid "React"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:578
+#: lib/idejo_web/live/user_settings_live.ex:581
 #, elixir-autogen, elixir-format
 msgid "React, Edit, Reply and the other actions under each message. Off, they show when you tap a message (mobile) or point at it (desktop)."
 msgstr ""
@@ -4657,12 +4664,12 @@ msgstr ""
 msgid "Relationships"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:796
+#: lib/idejo_web/live/user_settings_live.ex:845
 #, elixir-autogen, elixir-format
 msgid "Remove %{device}"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:537
+#: lib/idejo_web/live/user_settings_live.ex:540
 #, elixir-autogen, elixir-format
 msgid "Remove dark mode picture"
 msgstr ""
@@ -4694,7 +4701,7 @@ msgstr ""
 msgid "Replace the stylesheet with the default? Your changes are lost."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:747
+#: lib/idejo_web/live/user_settings_live.ex:796
 #, elixir-autogen, elixir-format
 msgid "Replies to me"
 msgstr ""
@@ -4773,17 +4780,17 @@ msgstr ""
 msgid "Save and end the edit"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:476
+#: lib/idejo_web/live/user_settings_live.ex:479
 #, elixir-autogen, elixir-format
 msgid "Save bio"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:701
+#: lib/idejo_web/live/user_settings_live.ex:750
 #, elixir-autogen, elixir-format
 msgid "Save email notifications"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:594
+#: lib/idejo_web/live/user_settings_live.ex:597
 #, elixir-autogen, elixir-format
 msgid "Save message controls"
 msgstr ""
@@ -4793,12 +4800,12 @@ msgstr ""
 msgid "Save my roles"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:613
+#: lib/idejo_web/live/user_settings_live.ex:616
 #, elixir-autogen, elixir-format
 msgid "Save private messages preference"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:770
+#: lib/idejo_web/live/user_settings_live.ex:819
 #, elixir-autogen, elixir-format
 msgid "Save push notifications"
 msgstr ""
@@ -4808,7 +4815,7 @@ msgstr ""
 msgid "Save tags"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:569
+#: lib/idejo_web/live/user_settings_live.ex:572
 #, elixir-autogen, elixir-format
 msgid "Save writing preferences"
 msgstr ""
@@ -4850,7 +4857,7 @@ msgstr ""
 msgid "Search for a GIF and add it to your message"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:387
+#: lib/idejo_web/live/admin/settings_live.ex:404
 #, elixir-autogen, elixir-format
 msgid "Secondary colour"
 msgstr ""
@@ -4893,7 +4900,7 @@ msgstr ""
 msgid "Send & start new message"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:746
+#: lib/idejo_web/live/user_settings_live.ex:795
 #, elixir-autogen, elixir-format
 msgid "Send me a notification for:"
 msgstr ""
@@ -4903,7 +4910,7 @@ msgstr ""
 msgid "Send options"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:803
+#: lib/idejo_web/live/user_settings_live.ex:852
 #, elixir-autogen, elixir-format
 msgid "Send test notification"
 msgstr ""
@@ -4968,12 +4975,12 @@ msgstr ""
 msgid "Show full message"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:591
+#: lib/idejo_web/live/user_settings_live.ex:594
 #, elixir-autogen, elixir-format
 msgid "Show message controls on desktop"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:585
+#: lib/idejo_web/live/user_settings_live.ex:588
 #, elixir-autogen, elixir-format
 msgid "Show message controls on mobile"
 msgstr ""
@@ -5018,22 +5025,22 @@ msgstr ""
 msgid "Showcase"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:345
+#: lib/idejo_web/live/admin/settings_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "Shown in the header before the server name, in a small square: wide or tall images are fitted whole, transparency is kept. The image is saved at once."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:510
+#: lib/idejo_web/live/user_settings_live.ex:513
 #, elixir-autogen, elixir-format
 msgid "Shown instead of your avatar to people using the dark theme. Without one, your avatar shows in both themes."
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:334
+#: lib/idejo_web/live/admin/settings_live.ex:351
 #, elixir-autogen, elixir-format
 msgid "Shown on the Privacy page, linked from the foot of every page."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:466
+#: lib/idejo_web/live/user_settings_live.ex:469
 #, elixir-autogen, elixir-format
 msgid "Shown on your user page, under your roles. Markdown, like a message; leave it empty for none."
 msgstr ""
@@ -5049,7 +5056,7 @@ msgid "Sign in first."
 msgstr ""
 
 #: lib/idejo_web/components/oidc_components.ex:30
-#: lib/idejo_web/live/user_settings_live.ex:809
+#: lib/idejo_web/live/user_settings_live.ex:858
 #, elixir-autogen, elixir-format
 msgid "Sign in with %{provider}"
 msgstr ""
@@ -5249,7 +5256,7 @@ msgstr ""
 msgid "Tennis"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:388
+#: lib/idejo_web/live/admin/settings_live.ex:405
 #, elixir-autogen, elixir-format
 msgid "Tertiary colour"
 msgstr ""
@@ -5259,7 +5266,7 @@ msgstr ""
 msgid "Test notification"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:295
+#: lib/idejo_web/live/user_settings_live.ex:298
 #, elixir-autogen, elixir-format
 msgid "Test notification sent."
 msgstr ""
@@ -5356,7 +5363,7 @@ msgstr ""
 msgid "The tag could not be deleted."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:297
+#: lib/idejo_web/live/user_settings_live.ex:300
 #, elixir-autogen, elixir-format
 msgid "The test notification could not be sent."
 msgstr ""
@@ -5383,11 +5390,13 @@ msgid_plural "There are new messages in %{count} topics you follow"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/idejo_web/live/user_settings_live.ex:769
+#: lib/idejo_web/live/user_settings_live.ex:818
 #, elixir-autogen, elixir-format
 msgid "These apply to all your devices."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:224
+#: lib/idejo_web/controllers/app_authorize_html.ex:12
 #: lib/idejo_web/controllers/oidc_controller.ex:281
 #, elixir-autogen, elixir-format
 msgid "This account cannot sign in."
@@ -5398,12 +5407,12 @@ msgstr ""
 msgid "This automessage cannot be posted here."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:785
+#: lib/idejo_web/live/user_settings_live.ex:834
 #, elixir-autogen, elixir-format
 msgid "This browser"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:740
+#: lib/idejo_web/live/user_settings_live.ex:789
 #, elixir-autogen, elixir-format
 msgid "This browser cannot show notifications."
 msgstr ""
@@ -5413,7 +5422,7 @@ msgstr ""
 msgid "This can always be\nturned off and on\nin user settings"
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:159
+#: lib/idejo_web/image_uploads.ex:165
 #, elixir-autogen, elixir-format
 msgid "This image could not be added. Try a smaller one."
 msgstr ""
@@ -5438,6 +5447,8 @@ msgstr ""
 msgid "This message could not be deleted."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:187
+#: lib/idejo_web/api/errors.ex:188
 #: lib/idejo_web/live/topic_live.ex:1527
 #: lib/idejo_web/live/topic_live.ex:1932
 #, elixir-autogen, elixir-format
@@ -5475,6 +5486,7 @@ msgstr ""
 msgid "This topic is no longer followed by everyone."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:223
 #: lib/idejo_web/controllers/topic_moderation_controller.ex:170
 #, elixir-autogen, elixir-format
 msgid "This topic is not archived."
@@ -5501,12 +5513,12 @@ msgid "Title saved."
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:1393
-#: lib/idejo_web/live/user_settings_live.ex:735
+#: lib/idejo_web/live/user_settings_live.ex:784
 #, elixir-autogen, elixir-format
 msgid "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:296
+#: lib/idejo_web/live/user_settings_live.ex:299
 #, elixir-autogen, elixir-format
 msgid "Too many tests. Try again in a minute."
 msgstr ""
@@ -5590,7 +5602,7 @@ msgstr ""
 msgid "Travel & Places"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:726
+#: lib/idejo_web/live/user_settings_live.ex:775
 #, elixir-autogen, elixir-format
 msgid "Turn on"
 msgstr ""
@@ -5600,7 +5612,7 @@ msgstr ""
 msgid "Turn tutorial bubbles off"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:720
+#: lib/idejo_web/live/user_settings_live.ex:769
 #, elixir-autogen, elixir-format
 msgid "Turning notifications on needs JavaScript."
 msgstr ""
@@ -5658,22 +5670,22 @@ msgstr ""
 msgid "Unfollow & mute"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:422
+#: lib/idejo_web/live/user_settings_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "Unknown browser"
 msgstr ""
 
-#: lib/idejo_web/live/admin/settings_live.ex:375
+#: lib/idejo_web/live/admin/settings_live.ex:392
 #, elixir-autogen, elixir-format
 msgid "Use the Idejo logo"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:561
+#: lib/idejo_web/live/user_settings_live.ex:564
 #, elixir-autogen, elixir-format
 msgid "Use the graphical composer"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:449
+#: lib/idejo_web/live/user_settings_live.ex:452
 #, elixir-autogen, elixir-format
 msgid "User tag or nickname (shown after your name, optional)"
 msgstr ""
@@ -5740,7 +5752,7 @@ msgstr ""
 msgid "When off, members are not offered browser notifications and none are sent."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:609
+#: lib/idejo_web/live/user_settings_live.ex:612
 #, elixir-autogen, elixir-format
 msgid "When off, nobody can start a private conversation with you or write to you in one."
 msgstr ""
@@ -5771,12 +5783,12 @@ msgid "Write your message first, then choose !spoiler."
 msgstr ""
 
 #: lib/idejo_web/category_icon_names.ex:68
-#: lib/idejo_web/live/user_settings_live.ex:544
+#: lib/idejo_web/live/user_settings_live.ex:547
 #, elixir-autogen, elixir-format
 msgid "Writing"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:224
+#: lib/idejo_web/live/user_settings_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Writing preferences saved."
 msgstr ""
@@ -5809,6 +5821,7 @@ msgstr ""
 msgid "You are not signed in."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:169
 #: lib/idejo_web/components/plugin_components.ex:426
 #: lib/idejo_web/live/topic_live.ex:1548
 #: lib/idejo_web/live/topic_live.ex:1765
@@ -5838,6 +5851,7 @@ msgstr ""
 msgid "You cannot change the title of this topic."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex:180
 #: lib/idejo_web/live/topic_live.ex:3241
 #, elixir-autogen, elixir-format
 msgid "You cannot post a new message yet. Append your old message."
@@ -5899,7 +5913,7 @@ msgstr ""
 msgid "Your account is already linked to another %{provider} account."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:812
+#: lib/idejo_web/live/user_settings_live.ex:861
 #, elixir-autogen, elixir-format
 msgid "Your account is linked to %{provider}: you can sign in with it."
 msgstr ""
@@ -5909,12 +5923,12 @@ msgstr ""
 msgid "Your account is now linked to %{provider}."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:141
+#: lib/idejo_web/image_uploads.ex:147
 #, elixir-autogen, elixir-format
 msgid "Your image is %{size} MB, which is above the server limit of %{max} MB."
 msgstr ""
 
-#: lib/idejo_web/image_uploads.ex:149
+#: lib/idejo_web/image_uploads.ex:155
 #, elixir-autogen, elixir-format
 msgid "Your image is above the server limit of %{max} MB."
 msgstr ""
@@ -6213,7 +6227,7 @@ msgstr ""
 msgid "Connecting…"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:837
+#: lib/idejo_web/live/user_settings_live.ex:886
 #, elixir-autogen, elixir-format
 msgid "Create %{provider} and link"
 msgstr ""
@@ -6292,7 +6306,7 @@ msgstr ""
 msgid "No %{provider} yet?"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:841
+#: lib/idejo_web/live/user_settings_live.ex:890
 #, elixir-autogen, elixir-format
 msgid "No %{provider} yet? Create one in the new tab, confirm it from the email, then come back here and choose Link."
 msgstr ""
@@ -6378,7 +6392,7 @@ msgstr ""
 msgid "Ignore"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:620
+#: lib/idejo_web/live/user_settings_live.ex:623
 #, elixir-autogen, elixir-format
 msgid "Ignored users"
 msgstr ""
@@ -6440,17 +6454,17 @@ msgid "Started from a message in “%{topic}”"
 msgstr ""
 
 #: lib/idejo_web/components/user_components.ex:149
-#: lib/idejo_web/live/user_settings_live.ex:643
+#: lib/idejo_web/live/user_settings_live.ex:646
 #, elixir-autogen, elixir-format
 msgid "Stop ignoring"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:641
+#: lib/idejo_web/live/user_settings_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Stop ignoring %{name}"
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:622
+#: lib/idejo_web/live/user_settings_live.ex:625
 #, elixir-autogen, elixir-format
 msgid "Their messages are collapsed for you. To ignore someone, choose Ignore on their card."
 msgstr ""
@@ -6495,7 +6509,7 @@ msgstr ""
 msgid "You ignore %{name}: their messages are collapsed for you."
 msgstr ""
 
-#: lib/idejo_web/live/user_settings_live.ex:627
+#: lib/idejo_web/live/user_settings_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "You ignore nobody."
 msgstr ""
@@ -6631,7 +6645,7 @@ msgstr ""
 msgid "User: shown as started by its author"
 msgstr ""
 
-#: lib/idejo/messages.ex:774
+#: lib/idejo/messages.ex:901
 #, elixir-autogen, elixir-format
 msgid "the topic"
 msgstr ""
@@ -7255,4 +7269,429 @@ msgstr ""
 #: lib/idejo_web/controllers/inbox_html.ex:26
 #, elixir-autogen, elixir-format
 msgid "Unread only"
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:328
+#, elixir-autogen, elixir-format
+msgid "API and mobile app"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:656
+#, elixir-autogen, elixir-format
+msgid "Apps and devices"
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:231
+#, elixir-autogen, elixir-format
+msgid "Choose a forum."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:215
+#, elixir-autogen, elixir-format
+msgid "Choose another place for it."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:233
+#, elixir-autogen, elixir-format
+msgid "Choose at least one message."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:210
+#: lib/idejo_web/api/errors.ex:211
+#, elixir-autogen, elixir-format
+msgid "Choose how long the ban lasts."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:13
+#, elixir-autogen, elixir-format
+msgid "Device: %{device}"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:658
+#, elixir-autogen, elixir-format
+msgid "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:229
+#, elixir-autogen, elixir-format
+msgid "Give a number of hours, at most 168."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:220
+#, elixir-autogen, elixir-format
+msgid "Give a reason."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:197
+#, elixir-autogen, elixir-format
+msgid "Give an http or https link."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:228
+#, elixir-autogen, elixir-format
+msgid "Give between 2 and 10 answers."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:196
+#, elixir-autogen, elixir-format
+msgid "Give it a label."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:20
+#, elixir-autogen, elixir-format
+msgid "It never sees your password. It stays signed in until you sign out in the app or remove it under Apps and devices in Profile and account."
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:333
+#, elixir-autogen, elixir-format
+msgid "Members can use the Idejo app"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:663
+#, elixir-autogen, elixir-format
+msgid "No device is signed in to the Idejo app."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:234
+#, elixir-autogen, elixir-format
+msgid "Nothing to mark unread."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:206
+#, elixir-autogen, elixir-format
+msgid "Passwords are not used on this server."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:194
+#: lib/idejo_web/api/errors.ex:226
+#, elixir-autogen, elixir-format
+msgid "Paste a link to a video of this site."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:195
+#, elixir-autogen, elixir-format
+msgid "Paste the code the site gives to embed it, or its address."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:242
+#, elixir-autogen, elixir-format
+msgid "Push notifications are off on this server."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:690
+#, elixir-autogen, elixir-format
+msgid "Remove %{name}"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_controller.ex:37
+#, elixir-autogen, elixir-format
+msgid "Sign in to connect the Idejo app."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_controller.ex:75
+#: lib/idejo_web/controllers/app_authorize_controller.ex:85
+#, elixir-autogen, elixir-format
+msgid "Sign in to the Idejo app"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Sign in to the Idejo app on this device as %{name}?"
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:176
+#, elixir-autogen, elixir-format
+msgid "Signing in did not work. Please try again."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:172
+#, elixir-autogen, elixir-format
+msgid "Some fields need a change."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:171
+#, elixir-autogen, elixir-format
+msgid "Something went wrong on the server."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:225
+#, elixir-autogen, elixir-format
+msgid "The Archive takes no new topics."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html/error.html.heex:7
+#, elixir-autogen, elixir-format
+msgid "The Idejo app cannot sign in"
+msgstr ""
+
+#: lib/idejo_web/live/admin/settings_live.ex:337
+#, elixir-autogen, elixir-format
+msgid "The Idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:13
+#, elixir-autogen, elixir-format
+msgid "The Idejo app is turned off on this server."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:162
+#, elixir-autogen, elixir-format
+msgid "The app was not allowed to do this."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html/new.html.heex:15
+#, elixir-autogen, elixir-format
+msgid "The app will be able to:"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_device_controller.ex:18
+#, elixir-autogen, elixir-format
+msgid "The device was signed out of the Idejo app."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:185
+#, elixir-autogen, elixir-format
+msgid "The first message of a topic cannot be deleted."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:199
+#, elixir-autogen, elixir-format
+msgid "The image is above the server limit."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:212
+#, elixir-autogen, elixir-format
+msgid "The last owner cannot do this."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:240
+#, elixir-autogen, elixir-format
+msgid "The push endpoint is on a private network."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:235
+#, elixir-autogen, elixir-format
+msgid "The push endpoint must use https."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:237
+#, elixir-autogen, elixir-format
+msgid "The push endpoint's host cannot be found."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:236
+#, elixir-autogen, elixir-format
+msgid "The push endpoint's host is not allowed."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:159
+#, elixir-autogen, elixir-format
+msgid "The request is not one the server understands."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:174
+#: lib/idejo_web/api/errors.ex:177
+#, elixir-autogen, elixir-format
+msgid "The sign-in request is not complete."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:173
+#, elixir-autogen, elixir-format
+msgid "The topic changed too much. Load it again."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:219
+#, elixir-autogen, elixir-format
+msgid "These tags are not offered here."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:209
+#, elixir-autogen, elixir-format
+msgid "This account is not banned."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:232
+#, elixir-autogen, elixir-format
+msgid "This answer cannot be used."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:175
+#, elixir-autogen, elixir-format
+msgid "This app is not the official Idejo app."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:230
+#, elixir-autogen, elixir-format
+msgid "This block cannot be added."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:214
+#, elixir-autogen, elixir-format
+msgid "This category has no moderators who could see it."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:192
+#, elixir-autogen, elixir-format
+msgid "This choice is not one of the poll's answers."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:190
+#, elixir-autogen, elixir-format
+msgid "This command was posted here lately. Try again later."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_device_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "This device was already signed out."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:193
+#, elixir-autogen, elixir-format
+msgid "This emoji is unknown."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:202
+#, elixir-autogen, elixir-format
+msgid "This file is not an image the server takes (JPEG, PNG, GIF or WebP)."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:205
+#, elixir-autogen, elixir-format
+msgid "This image could not be saved."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:213
+#, elixir-autogen, elixir-format
+msgid "This is turned off on this server."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:222
+#, elixir-autogen, elixir-format
+msgid "This member cannot be warned for this message."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:189
+#, elixir-autogen, elixir-format
+msgid "This message cannot take more blocks."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:184
+#, elixir-autogen, elixir-format
+msgid "This message is not open any more."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:221
+#, elixir-autogen, elixir-format
+msgid "This message is still being written."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:217
+#, elixir-autogen, elixir-format
+msgid "This message was deleted."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:166
+#: lib/idejo_web/api/errors.ex:216
+#, elixir-autogen, elixir-format
+msgid "This page does not exist or you cannot view it."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:191
+#, elixir-autogen, elixir-format
+msgid "This poll is closed."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:17
+#, elixir-autogen, elixir-format
+msgid "This sign-in request does not come from the official Idejo app, or it is incomplete. Nothing was shared. Close this page and try again from the app."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:183
+#, elixir-autogen, elixir-format
+msgid "This topic is archived."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:182
+#, elixir-autogen, elixir-format
+msgid "This topic is locked."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:198
+#, elixir-autogen, elixir-format
+msgid "Write the card's text."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:227
+#, elixir-autogen, elixir-format
+msgid "Write the poll's question."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:165
+#, elixir-autogen, elixir-format
+msgid "You cannot do this here."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:161
+#, elixir-autogen, elixir-format
+msgid "You were signed out. Please sign in again."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:164
+#, elixir-autogen, elixir-format
+msgid "Your account is banned for now."
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:11
+#, elixir-autogen, elixir-format
+msgid "Your account is banned, so the app cannot sign in."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:163
+#, elixir-autogen, elixir-format
+msgid "Your account is banned."
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:186
+#, elixir-autogen, elixir-format
+msgid "can't be blank"
+msgstr ""
+
+#: lib/idejo_web/api/errors.ex:207
+#, elixir-autogen, elixir-format
+msgid "is not valid"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:677
+#, elixir-autogen, elixir-format
+msgid "last used %{date}"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:30
+#, elixir-autogen, elixir-format
+msgid "moderate, where you are a moderator, as you would here"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:25
+#, elixir-autogen, elixir-format
+msgid "post, edit, react, vote, follow topics and change your profile as you"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:27
+#, elixir-autogen, elixir-format
+msgid "read and write your private conversations"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:22
+#, elixir-autogen, elixir-format
+msgid "read the categories, topics and messages you can read"
+msgstr ""
+
+#: lib/idejo_web/controllers/app_authorize_html.ex:32
+#, elixir-autogen, elixir-format
+msgid "send notifications to this device"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex:673
+#, elixir-autogen, elixir-format
+msgid "signed in on %{date}"
 msgstr ""

@@ -48,6 +48,9 @@ defmodule Idejo.Messages.Message do
     field :anonymous, :boolean, default: false
     # The inbox (steward request, 2026-11-10): copied from "<host>/<message id>", once.
     field :import_source, :string
+    # AP-16: this row's place among its topic's changes, set by a database trigger at every
+    # write (read back with it); nil for rows older than the API.
+    field :change_seq, :integer, read_after_writes: true
     field :deleted_at, :utc_datetime_usec
     belongs_to :deleted_by, Idejo.Accounts.User
     belongs_to :topic, Idejo.Forum.Topic

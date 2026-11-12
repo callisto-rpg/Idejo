@@ -144,6 +144,15 @@ defmodule Idejo.Messages.Scheduling do
         do: Forum.post_message(author, topic, attrs, scheduled: true),
         else: {:error, :forbidden}
 
+    # AP-15: the author's app hears that it went out.
+    with {:ok, message} <- result,
+         do:
+           Phoenix.PubSub.broadcast(
+             Idejo.PubSub,
+             "app_user:" <> author.id,
+             {:scheduled_posted, message}
+           )
+
     case result do
       {:error, :rate_limited} ->
         {:snooze, 60}

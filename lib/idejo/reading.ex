@@ -68,6 +68,56 @@ defmodule Idejo.Reading do
   end
 
   @doc """
+  Moves the user's read position in the topic forward to `message_id`, a message of that
+  topic (TP-07, for the app, AP-12, which reports how far its reader scrolled): never back,
+  so answers arriving out of order lose nothing (`mark_unread/2` moves it back on purpose).
+  `{:error, :not_found}` for a message of another topic.
+  """
+  @spec mark_read_to(User.t(), Topic.t(), term()) :: :ok | {:error, :not_found}
+  def mark_read_to(%User{id: user_id}, %Topic{id: topic_id}, message_id)
+      when is_binary(message_id) do
+    with {:ok, id} <- Ecto.UUID.cast(message_id),
+         %Message{} = target <-
+           Repo.one(from m in Message, where: m.id == ^id and m.topic_id == ^topic_id) do
+      current =
+        Repo.one(
+          from rp in ReadPosition,
+            join: m in Message,
+            on: m.id == rp.last_read_message_id,
+            where: rp.user_id == ^user_id and rp.topic_id == ^topic_id,
+            select: m
+        )
+
+      if current == nil or later?(target, current) do
+        Repo.insert_all(
+          ReadPosition,
+          [
+            %{
+              user_id: user_id,
+              topic_id: topic_id,
+              last_read_message_id: target.id,
+              updated_at: DateTime.utc_now()
+            }
+          ],
+          on_conflict: {:replace, [:last_read_message_id, :updated_at]},
+          conflict_target: [:user_id, :topic_id]
+        )
+      end
+
+      :ok
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  def mark_read_to(_user, _topic, _message_id), do: {:error, :not_found}
+
+  defp later?(a, b),
+    do:
+      DateTime.compare(a.opened_at, b.opened_at) == :gt or
+        (a.opened_at == b.opened_at and a.id > b.id)
+
+  @doc """
   Where the user left off in a topic they opened before: the oldest unread message and how
   many there are, as `%{id: message_id, count: n}`, for the topic page to open there with an
   "N unread messages" line (steward decision, 2026-10-23). Nil for visitors, for a topic the

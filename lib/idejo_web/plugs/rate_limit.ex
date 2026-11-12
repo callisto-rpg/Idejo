@@ -17,8 +17,21 @@ defmodule IdejoWeb.Plugs.RateLimit do
   @impl true
   def init(action) when is_atom(action), do: action
 
+  # AP-18: a request of the app with its device token is counted per token instead
+  # (`IdejoWeb.Plugs.ApiAuth`); one whose token is not valid counts here after all.
   @impl true
-  def call(conn, action) do
+  def call(%Plug.Conn{path_info: ["api", "v1" | _]} = conn, :request) do
+    case get_req_header(conn, "authorization") do
+      ["Bearer idj_" <> _] -> conn
+      _ -> count(conn, :request)
+    end
+  end
+
+  def call(conn, action), do: count(conn, action)
+
+  @doc "Counts one `action` for the request's address; past the limit, 429."
+  @spec count(Plug.Conn.t(), atom()) :: Plug.Conn.t()
+  def count(conn, action) do
     case RateLimit.check(action, conn.remote_ip) do
       :ok ->
         conn

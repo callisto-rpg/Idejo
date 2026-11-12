@@ -19,6 +19,7 @@ defmodule Idejo.Reactions do
 
   alias Idejo.Accounts
   alias Idejo.Accounts.User
+  alias Idejo.Api.Changes
   alias Idejo.Emoji
   alias Idejo.Forum
   alias Idejo.Forum.Topic
@@ -59,6 +60,8 @@ defmodule Idejo.Reactions do
           )
         end
 
+        # AP-16: the message is in the app's catch-up with its new reactions.
+        :ok = Changes.touch(message.id)
         {:ok, {summary(message.id), is_nil(existing)}}
       end)
 
@@ -66,6 +69,28 @@ defmodule Idejo.Reactions do
     # A bubble for the author, live only (steward decision, 2026-10-23).
     if added?, do: Notifications.announce_reaction(user, message, Emoji.lookup(emoji))
     {:ok, summary}
+  end
+
+  @doc """
+  Sets whether `user` reacted to `message` with `emoji` (a name, `:name:` or the character):
+  adds it when `wanted?` and it is not theirs yet, takes it back when not `wanted?` and it
+  is; otherwise changes nothing (the app's PUT and DELETE, AP-12). Refused as `toggle/3`.
+  """
+  @spec set(User.t(), Message.t(), String.t(), boolean()) ::
+          {:ok, summary()} | {:error, :forbidden | :unknown_emoji | :rate_limited}
+  def set(%User{} = user, %Message{} = message, emoji, wanted?) when is_binary(emoji) do
+    name =
+      emoji
+      |> String.trim(":")
+      |> then(&(Emoji.lookup(&1) || Emoji.by_char(&1) || %{name: &1}).name)
+
+    mine? = Enum.any?(summary(message.id), &(&1.emoji == name and user.id in &1.user_ids))
+
+    cond do
+      mine? != wanted? -> toggle(user, message, name)
+      may_react?(user, message) -> {:ok, summary(message.id)}
+      true -> {:error, :forbidden}
+    end
   end
 
   @doc """

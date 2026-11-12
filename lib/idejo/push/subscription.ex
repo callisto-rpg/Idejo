@@ -26,6 +26,11 @@ defmodule Idejo.Push.Subscription do
     field :session_id, :string
     field :last_success_at, :utc_datetime_usec
     field :failure_count, :integer, default: 0
+    # AP-19: "web" (a browser, tied to `session_id`) or "unifiedpush" (the app, tied to
+    # its device token, `api_token_id`, and named by the app).
+    field :kind, :string, default: "web"
+    field :name, :string
+    field :api_token_id, :binary_id
 
     timestamps(type: :utc_datetime_usec, inserted_at: :created_at)
   end

@@ -30,10 +30,11 @@ defmodule Idejo.Messages do
   use Gettext, backend: IdejoWeb.Gettext
 
   alias Idejo.Accounts.User
+  alias Idejo.Api.ClientState
   alias Idejo.Federation
   alias Idejo.Forum
   alias Idejo.Forum.Topic
-  alias Idejo.Messages.{Body, Message, OpenMessage, Version}
+  alias Idejo.Messages.{Authors, Body, Message, OpenMessage, Version}
   alias Idejo.Moderation
   alias Idejo.Notifications
   alias Idejo.RateLimit
@@ -171,15 +172,22 @@ defmodule Idejo.Messages do
       end)
 
     case result do
+      {:ok, {:opened, message}} ->
+        typing_done(author, topic)
+        after_commit(message)
+        opened(topic)
+        {:ok, message}
+
       # The open message closed for the new one: announced first, so viewers see it end.
       {:ok, {closed, message}} ->
-        typing_done(topic)
+        typing_done(author, topic)
         after_commit(closed)
         after_commit(message)
+        opened(topic)
         {:ok, message}
 
       {:ok, %Message{} = message} ->
-        typing_done(topic)
+        typing_done(author, topic)
         after_commit(message)
         result
 
@@ -187,6 +195,10 @@ defmodule Idejo.Messages do
         result
     end
   end
+
+  # AP-15: a new message is activity in the topic's category (the app's category channel).
+  defp opened(%Topic{category_id: category_id, id: id}),
+    do: Forum.broadcast_category(category_id, {:topic_activity, id})
 
   defp commit_locked(author, topic, text, opts) do
     open = open_message(author, topic)
@@ -215,7 +227,8 @@ defmodule Idejo.Messages do
 
         with :ok <- not_held(author, topic, now, opts),
              :ok <- RateLimit.check(:new_message, author.id),
-             do: open_new(author, topic, text, now, opts)
+             {:ok, message} <- open_new(author, topic, text, now, opts),
+             do: {:ok, {:opened, message}}
 
       true ->
         append(open, text, now, Keyword.get(opts, :break, false))
@@ -355,16 +368,130 @@ defmodule Idejo.Messages do
     end
   end
 
-  def typing(%Topic{} = topic, false) do
-    typing_done(topic)
+  def typing(%Topic{id: topic_id}, false) do
+    Process.delete({__MODULE__, :typing, topic_id})
     nil
   end
 
-  defp typing_started(%Topic{id: topic_id}), do: Process.get({__MODULE__, :typing, topic_id})
+  @doc """
+  `typing/2` for a client whose requests each run in their own process (the app, AP-14;
+  steward decision, 2026-11-10): the first keystroke's time is kept for `author` and `topic`
+  in `Idejo.Api.ClientState`, on the server's clock, and `commit/4` reads it when a message
+  opens. Refused like a commit for someone who may not post there (`{:error, :forbidden}`),
+  and rate-limited as an Enter (`:commit`). Returns the time kept, or nil after `false`.
+  """
+  @spec typing(User.t(), Topic.t(), boolean()) ::
+          {:ok, DateTime.t() | nil} | {:error, :forbidden | :rate_limited}
+  def typing(%User{} = author, %Topic{} = topic, typing?) when is_boolean(typing?) do
+    cond do
+      not Forum.can_post?(author, topic) ->
+        {:error, :forbidden}
 
-  defp typing_done(%Topic{id: topic_id}) do
+      RateLimit.check(:commit, author.id) != :ok ->
+        {:error, :rate_limited}
+
+      typing? ->
+        {:ok, ClientState.put_new({:typing, author.id, topic.id}, DateTime.utc_now())}
+
+      true ->
+        :ok = ClientState.delete({:typing, author.id, topic.id})
+        {:ok, nil}
+    end
+  end
+
+  # The first keystroke: this process's (a topic view), else a client's (the app).
+  defp typing_started(%User{id: author_id}, %Topic{id: topic_id}),
+    do:
+      Process.get({__MODULE__, :typing, topic_id}) ||
+        ClientState.get({:typing, author_id, topic_id})
+
+  defp typing_done(%User{id: author_id}, %Topic{id: topic_id}) do
     Process.delete({__MODULE__, :typing, topic_id})
-    :ok
+    ClientState.delete({:typing, author_id, topic_id})
+  end
+
+  @doc """
+  What the composer of `author` in `topic` shows (AP-14), from the one formula
+  (`start_new_at/3`), so a client never works the rules out itself:
+
+    * `open_message_id`: their open message, or nil;
+    * `may_start_new_at`: when Ctrl+Enter may complete it and start a new one (nil with
+      nothing open);
+    * `held_until`: when the next message may start after one closed early (`held_until/3`);
+    * `typing_since`: the first keystroke kept for the next message, or nil;
+    * `window_seconds`, `unanswered_seconds` (none in a private conversation) and
+      `reply_allowed_early` (`gm_early_reply`).
+  """
+  @spec composer(User.t(), Topic.t(), DateTime.t()) :: map()
+  def composer(%User{} = author, %Topic{} = topic, now \\ DateTime.utc_now()) do
+    open = open_message(author, topic)
+
+    %{
+      open_message_id: open && open.id,
+      may_start_new_at: open && start_new_time(open, topic),
+      held_until: held_until(author, topic, now),
+      typing_since: typing_started(author, topic),
+      window_seconds: window_seconds(topic),
+      unanswered_seconds: if(topic.private, do: 0, else: unanswered_seconds()),
+      reply_allowed_early: early_reply_allowed?(),
+      may_post: Forum.can_post?(author, topic)
+    }
+  end
+
+  defp start_new_time(message, %Topic{private: true}), do: start_new_at(message, true, 0)
+  defp start_new_time(message, _topic), do: start_new_time(message)
+
+  @doc """
+  `commit/4` from a client whose requests are not a live view of the topic (the app,
+  AP-14). Same rules and answers. While the author has no live view of the topic (neither
+  a page nor the app's topic channel, `Idejo.Messages.Authors`), the disconnect grace
+  starts (GM-12), as when a topic page closes: their open message closes once they have
+  been away for it, unless they come back.
+  """
+  @spec commit_from_client(User.t(), Topic.t(), String.t(), keyword()) ::
+          {:ok, Message.t() | nil}
+          | {:error, :forbidden | :rate_limited | :too_soon | Ecto.Changeset.t()}
+  def commit_from_client(%User{} = author, %Topic{} = topic, text, opts \\ [])
+      when is_binary(text) do
+    result = commit(author, topic, text, opts)
+
+    with {:ok, %Message{state: "open"}} <- result,
+         false <- Authors.present?(topic.id, author.id) do
+      Authors.absent(topic.id, author.id)
+    end
+
+    result
+  end
+
+  @doc """
+  An edit of the author's closed message from a client (the app, AP-14): `edit/4` with one
+  version per edit (GM-11, TP-05), as the web composer's Edit keeps: the text from before
+  the edit is kept at its first change; later Enters of the same edit keep none. `finish:
+  true` (Ctrl+Enter) saves and ends the edit, so the next one keeps a version again. The
+  edit in progress is kept in `Idejo.Api.ClientState` for an hour.
+  """
+  @spec edit_from_client(User.t(), Message.t(), String.t(), boolean()) ::
+          {:ok, Message.t()} | {:error, :forbidden | :blank | Ecto.Changeset.t()}
+  def edit_from_client(%User{} = author, %Message{} = message, text, finish?)
+      when is_binary(text) do
+    key = {:edit, author.id, message.id}
+    version = if ClientState.get(key), do: :never, else: :always
+
+    result = edit(author, message, text, version: version)
+
+    case result do
+      {:ok, edited} ->
+        cond do
+          finish? -> ClientState.delete(key)
+          edited.body_md != message.body_md -> ClientState.put_new(key, true)
+          true -> :ok
+        end
+
+      _error ->
+        :ok
+    end
+
+    result
   end
 
   # The text as sent: line ends trimmed, and a `.` after text that ends without punctuation,
@@ -391,7 +518,7 @@ defmodule Idejo.Messages do
   defp open_new(author, topic, text, now, opts) do
     id = Federation.generate_id()
     window = window_seconds(topic)
-    timer_from = timer_from(opts[:started_at] || typing_started(topic), now)
+    timer_from = timer_from(opts[:started_at] || typing_started(author, topic), now)
 
     message = %Message{
       id: id,

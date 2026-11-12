@@ -30,7 +30,7 @@ defmodule Idejo.Push do
   import Ecto.Query
 
   alias Idejo.Access.{Role, UserRole}
-  alias Idejo.Accounts.User
+  alias Idejo.Accounts.{ApiTokens, User}
   alias Idejo.Forum.Topic
   alias Idejo.Push.{Dispatch, Endpoint, FollowedWorker, Payload, Preference, Subscription, Worker}
   alias Idejo.RateLimit
@@ -100,7 +100,18 @@ defmodule Idejo.Push do
       Repo.insert!(subscription,
         on_conflict:
           {:replace,
-           [:user_id, :p256dh, :auth, :user_agent, :session_id, :failure_count, :updated_at]},
+           [
+             :user_id,
+             :p256dh,
+             :auth,
+             :user_agent,
+             :session_id,
+             :kind,
+             :name,
+             :api_token_id,
+             :failure_count,
+             :updated_at
+           ]},
         conflict_target: :endpoint,
         returning: true
       )
@@ -117,6 +128,34 @@ defmodule Idejo.Push do
     )
 
     {:ok, saved}
+  end
+
+  @doc """
+  Registers the official app's UnifiedPush endpoint for `user` (AP-19; steward decision,
+  2026-11-10): `attrs` has `"endpoint"`, `"p256dh"` and `"auth"` (Web Push keys, checked as
+  a browser's) and `"device_name"`. Saved as a subscription of kind `"unifiedpush"`, tied
+  to the device token `token_id` instead of a session, so it ends with the token (PN-13).
+  The endpoint may be on any host (`Endpoint.check_unifiedpush/1`: https on 443, public
+  addresses only); the #{@max_per_user} per user count both kinds. Refused like
+  `subscribe/4`.
+  """
+  @spec register_unifiedpush(User.t(), Ecto.UUID.t(), map()) ::
+          {:ok, Subscription.t()}
+          | {:error, :disabled | :rate_limited | Endpoint.reason() | Ecto.Changeset.t()}
+  def register_unifiedpush(%User{} = user, token_id, attrs) when is_map(attrs) do
+    fields = Map.take(attrs, ["endpoint", "p256dh", "auth"])
+    changeset = Subscription.changeset(%Subscription{}, fields)
+
+    with :ok <- if(enabled?(), do: :ok, else: {:error, :disabled}),
+         :ok <- RateLimit.check(:push_subscribe, user.id),
+         {:ok, valid} <- Ecto.Changeset.apply_action(changeset, :insert),
+         {:ok, _uri, _addresses} <- Endpoint.check_unifiedpush(valid.endpoint) do
+      name = ApiTokens.device_name(attrs["device_name"])
+
+      Repo.transact(fn ->
+        save(user, nil, %{valid | kind: "unifiedpush", api_token_id: token_id, name: name}, nil)
+      end)
+    end
   end
 
   @doc """
@@ -141,7 +180,7 @@ defmodule Idejo.Push do
            Repo.get_by(Subscription, endpoint: old_endpoint) || {:error, :not_found},
          changeset = Subscription.changeset(old, fields),
          {:ok, valid} <- Ecto.Changeset.apply_action(changeset, :update),
-         {:ok, _uri, _addresses} <- Endpoint.check(valid.endpoint) do
+         {:ok, _uri, _addresses} <- Endpoint.check_subscription(valid) do
       Repo.transact(fn ->
         Repo.delete_all(
           from s in Subscription, where: s.endpoint == ^valid.endpoint and s.id != ^old.id

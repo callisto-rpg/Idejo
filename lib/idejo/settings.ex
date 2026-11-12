@@ -22,6 +22,7 @@ defmodule Idejo.Settings do
   import Ecto.Changeset
   import Ecto.Query, warn: false
 
+  alias Idejo.Accounts.ApiTokens
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Repo
@@ -94,6 +95,9 @@ defmodule Idejo.Settings do
     # PN-19: web push notifications, on by default; "off" means no banner, no subscribing
     # and no sending.
     push_enabled: %{type: :string, default: "on", required: true, in: ~w(on off)},
+    # AP-20 (steward decision, 2026-11-10): the official app's API, its sign-in page and its
+    # socket. Off, they answer 404 and device tokens are refused, but kept.
+    api_enabled: %{type: :boolean, default: true},
     # PN-04: at most one "new messages in topics you follow" push per user in this time.
     push_followed_interval_minutes: %{
       type: :integer,
@@ -165,6 +169,7 @@ defmodule Idejo.Settings do
           | :server_rules
           | :privacy_notice
           | :push_enabled
+          | :api_enabled
           | :push_followed_interval_minutes
           | :push_services
           | :gif_api_key
@@ -284,8 +289,25 @@ defmodule Idejo.Settings do
   defp save(_admin, _old, new, []), do: {:ok, new}
 
   defp save(admin, old, new, changed) do
-    Repo.transact(fn -> save_changed(admin, old, new, changed) end)
+    with {:ok, new} <- Repo.transact(fn -> save_changed(admin, old, new, changed) end) do
+      announce(changed)
+      # AP-20: the app's sockets end at once.
+      if :api_enabled in changed and new[:api_enabled] == false,
+        do: ApiTokens.announce_disabled()
+
+      {:ok, new}
+    end
   end
+
+  @doc """
+  Subscribes the caller to setting changes: `{:settings_changed, keys}` after each save,
+  with the keys that changed (the app's `settings.changed`, AP-15; the API's switch, AP-20).
+  """
+  @spec subscribe() :: :ok | {:error, term()}
+  def subscribe, do: Phoenix.PubSub.subscribe(Idejo.PubSub, "settings")
+
+  defp announce(changed),
+    do: Phoenix.PubSub.broadcast(Idejo.PubSub, "settings", {:settings_changed, changed})
 
   defp save_changed(admin, old, new, changed) do
     now = DateTime.utc_now(:second)
