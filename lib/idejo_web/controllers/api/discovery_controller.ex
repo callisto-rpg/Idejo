@@ -50,7 +50,8 @@ defmodule IdejoWeb.Api.DiscoveryController do
       },
       "community" => %{"directory_url" => Community.directory_url()},
       "account" => %{
-        "deletion_url" => Api.base() <> "/users/settings#delete-heading",
+        "deletion_url" =>
+          Api.base() <> IdejoWeb.UserSettingsLive.path("account", "delete-heading"),
         "sign_up_url" => if(Accounts.sign_ups_open?(), do: Api.base() <> "/users/sign-up")
       },
       "features" => features(),

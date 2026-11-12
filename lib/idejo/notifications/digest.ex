@@ -265,7 +265,7 @@ defmodule Idejo.Notifications.Digest do
       lines: Enum.join(lines, "\n"),
       unread: base <> "/unread",
       week: week,
-      settings: base <> "/users/settings",
+      settings: base <> "/users/settings?tab=messages",
       unsubscribe: unsubscribe
     )
   end

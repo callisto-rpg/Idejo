@@ -6,6 +6,11 @@ defmodule IdejoWeb.UserSettingsLive do
   Profile and account: the signed-in user changes their display name and avatar (AC-04),
   automatic punctuation, and password (AC-01), and can delete their account (AC-07).
 
+  Four tabs (steward request, 2026-11-13), `?tab=`: Profile (name, bio, avatar), Interface
+  (writing, message controls), Messages and notifications (private messages, ignored users,
+  email and push notifications) and Account (sign-in provider, apps, password, deletion).
+  Links into the page name their tab (`path/1`).
+
   The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/3`: a 256 px
   WebP square without metadata), and can be removed. So can a second picture for the dark
   theme, under "Dark mode picture", folded away until one is set (steward decision,
@@ -31,6 +36,7 @@ defmodule IdejoWeb.UserSettingsLive do
     {:ok,
      socket
      |> assign(:page_title, gettext("Profile and account"))
+     |> assign(:tab, "profile")
      |> assign(:session_token, session["user_token"])
      |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
      |> assign(:password_form, password_form(user))
@@ -52,6 +58,31 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign_oidc(user, session["oidc_reauth_at"])
      |> allow_avatar(:avatar)
      |> allow_avatar(:dark_avatar)}
+  end
+
+  @tabs ~w(profile interface messages account)
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    tab = if params["tab"] in @tabs, do: params["tab"], else: "profile"
+    {:noreply, assign(socket, :tab, tab)}
+  end
+
+  @doc """
+  The address of a tab of Profile and account, with an optional `#anchor`: every link or
+  redirect into the page names its tab, so the section it points at is shown.
+  """
+  @spec path(String.t(), String.t() | nil) :: String.t()
+  def path(tab, anchor \\ nil) when tab in @tabs,
+    do: "/users/settings?tab=#{tab}" <> if(anchor, do: "#" <> anchor, else: "")
+
+  defp tabs do
+    [
+      {"profile", gettext("Profile")},
+      {"interface", gettext("Interface")},
+      {"messages", gettext("Messages and notifications")},
+      {"account", gettext("Account")}
+    ]
   end
 
   # AC-09: the OpenID Connect link, whether a password is used here, and a fresh sign-in
@@ -438,546 +469,623 @@ defmodule IdejoWeb.UserSettingsLive do
         <:subtitle>@{@current_scope.user.username} · {@current_scope.user.email}</:subtitle>
       </.header>
 
-      <.form for={@form} id="profile-form" phx-change="validate" phx-submit="save">
-        <.input
-          field={@form[:display_name]}
-          type="text"
-          label={gettext("Display name (shown above your messages)")}
-          required
-          maxlength="60"
-        />
-        <.input
-          field={@form[:user_tag]}
-          type="text"
-          label={gettext("User tag or nickname (shown after your name, optional)")}
-          maxlength="32"
-        />
-        <.button class="btn btn-primary">{gettext("Save")}</.button>
-      </.form>
-
-      <%!-- AC-04: shown on your user page, under your roles. --%>
-      <section class="mt-10" aria-labelledby="bio-heading">
-        <h2 id="bio-heading" class="font-semibold mb-2">{gettext("Bio")}</h2>
-        <.form
-          for={@bio_form}
-          id="bio-form"
-          phx-change="bio_change"
-          phx-submit="save_bio"
-          aria-describedby="bio-help"
+      <%!-- Tabs (steward request, 2026-11-13): links that patch `?tab=`, so each tab has its
+           address and Back works; every panel stays in the page, the others `hidden`. --%>
+      <nav id="settings-tabs" class="settings-tabs" aria-label={gettext("Settings sections")}>
+        <.link
+          :for={{tab, label} <- tabs()}
+          id={"settings-tab-#{tab}"}
+          patch={~p"/users/settings?#{[tab: tab]}"}
+          aria-current={@tab == tab && "page"}
         >
-          <p id="bio-help" class="text-sm opacity-70 mb-2 max-w-prose">
-            {gettext(
-              "Shown on your user page, under your roles. Markdown, like a message; leave it empty for none."
-            )}
-          </p>
-          <IdejoWeb.MessageComponents.editor
-            field={@bio_form[:bio_md]}
-            label={gettext("Bio (Markdown)")}
-            mode={@bio_mode}
-            preview_html={@bio_preview}
-          />
-          <.button class="btn btn-primary">{gettext("Save bio")}</.button>
-        </.form>
-      </section>
+          {label}
+        </.link>
+      </nav>
 
-      <section class="mt-10" aria-labelledby="avatar-heading">
-        <h2 id="avatar-heading" class="font-semibold mb-2">{gettext("Avatar")}</h2>
-        <div class="flex items-center gap-4">
-          <UserComponents.avatar user={@current_scope.user} size={:medium} />
-          <form id="avatar-form" phx-change="validate_avatar" phx-submit="validate_avatar">
-            <label class="flex flex-col gap-1 text-sm">
-              <span>{gettext("Choose a picture (JPEG, PNG, GIF or WebP)")}</span>
-              <.live_file_input upload={@uploads.avatar} class="file-input file-input-sm" />
-            </label>
-          </form>
-          <button
-            :if={@current_scope.user.avatar_id}
-            type="button"
-            id="remove-avatar"
-            class="btn btn-sm"
-            phx-click="remove_avatar"
+      <div
+        id="settings-profile"
+        class="settings-panel"
+        role="region"
+        aria-labelledby="settings-tab-profile"
+        hidden={@tab != "profile"}
+      >
+        <section class="settings-section" aria-labelledby="name-heading">
+          <h2 id="name-heading" class="font-semibold mb-2">{gettext("Name")}</h2>
+          <.form for={@form} id="profile-form" phx-change="validate" phx-submit="save">
+            <.input
+              field={@form[:display_name]}
+              type="text"
+              label={gettext("Display name (shown above your messages)")}
+              required
+              maxlength="60"
+            />
+            <.input
+              field={@form[:user_tag]}
+              type="text"
+              label={gettext("User tag or nickname (shown after your name, optional)")}
+              maxlength="32"
+            />
+            <.button class="btn btn-primary">{gettext("Save")}</.button>
+          </.form>
+        </section>
+
+        <%!-- AC-04: shown on your user page, under your roles. --%>
+        <section class="settings-section" aria-labelledby="bio-heading">
+          <h2 id="bio-heading" class="font-semibold mb-2">{gettext("Bio")}</h2>
+          <.form
+            for={@bio_form}
+            id="bio-form"
+            phx-change="bio_change"
+            phx-submit="save_bio"
+            aria-describedby="bio-help"
           >
-            {gettext("Remove avatar")}
-          </button>
-        </div>
-        <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
+            <p id="bio-help" class="text-sm opacity-70 mb-2 max-w-prose">
+              {gettext(
+                "Shown on your user page, under your roles. Markdown, like a message; leave it empty for none."
+              )}
+            </p>
+            <IdejoWeb.MessageComponents.editor
+              field={@bio_form[:bio_md]}
+              label={gettext("Bio (Markdown)")}
+              mode={@bio_mode}
+              preview_html={@bio_preview}
+            />
+            <.button class="btn btn-primary">{gettext("Save bio")}</.button>
+          </.form>
+        </section>
 
-        <%!-- Steward decision, 2026-10-23: folded away until there is one. --%>
-        <details
-          id="dark-avatar"
-          class="mt-4"
-          open={@current_scope.user.avatar_dark_id != nil}
-        >
-          <summary class="cursor-pointer text-sm font-medium">{gettext("Dark mode picture")}</summary>
-          <p class="text-sm opacity-70 mt-2 max-w-prose">
-            {gettext(
-              "Shown instead of your avatar to people using the dark theme. Without one, your avatar shows in both themes."
-            )}
-          </p>
-          <div class="flex items-center gap-4 mt-2">
-            <span :if={@current_scope.user.avatar_dark_id} class="avatar shrink-0" aria-hidden="true">
-              <span class="w-12 rounded-full">
-                <img src={Uploads.dark_avatar_url(@current_scope.user)} alt="" />
-              </span>
-            </span>
-            <form
-              id="dark-avatar-form"
-              phx-change="validate_dark_avatar"
-              phx-submit="validate_dark_avatar"
-            >
+        <section class="settings-section" aria-labelledby="avatar-heading">
+          <h2 id="avatar-heading" class="font-semibold mb-2">{gettext("Avatar")}</h2>
+          <div class="flex items-center gap-4">
+            <UserComponents.avatar user={@current_scope.user} size={:medium} />
+            <form id="avatar-form" phx-change="validate_avatar" phx-submit="validate_avatar">
               <label class="flex flex-col gap-1 text-sm">
                 <span>{gettext("Choose a picture (JPEG, PNG, GIF or WebP)")}</span>
-                <.live_file_input upload={@uploads.dark_avatar} class="file-input file-input-sm" />
+                <.live_file_input upload={@uploads.avatar} class="file-input file-input-sm" />
               </label>
             </form>
             <button
-              :if={@current_scope.user.avatar_dark_id}
+              :if={@current_scope.user.avatar_id}
               type="button"
-              id="remove-dark-avatar"
+              id="remove-avatar"
               class="btn btn-sm"
-              phx-click="remove_dark_avatar"
+              phx-click="remove_avatar"
             >
-              {gettext("Remove dark mode picture")}
+              {gettext("Remove avatar")}
             </button>
           </div>
-        </details>
-      </section>
+          <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
 
-      <section class="mt-10" aria-labelledby="writing-heading">
-        <h2 id="writing-heading" class="font-semibold mb-2">{gettext("Writing")}</h2>
-        <.form for={@writing_form} id="writing-form" phx-submit="save_writing">
-          <.input
-            field={@writing_form[:auto_punctuation]}
-            type="checkbox"
-            label={gettext("Automatic punctuation")}
-            aria-describedby="auto-punctuation-help"
-          />
-          <p id="auto-punctuation-help" class="text-sm opacity-70 -mt-1 mb-4">
-            {gettext(
-              "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, your messages keep the text exactly as typed."
-            )}
-          </p>
-          <%!-- TP-11 (steward decision, 2026-11-02). --%>
-          <.input
-            field={@writing_form[:graphical_composer]}
-            type="checkbox"
-            label={gettext("Use the graphical composer")}
-            aria-describedby="graphical-composer-help"
-          />
-          <p id="graphical-composer-help" class="text-sm opacity-70 -mt-1 mb-4">
-            {gettext(
-              "Adds buttons under the box you write in: emoji, images, text formatting, more commands, and Send. Open topics show them once reloaded."
-            )}
-          </p>
-          <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>
-        </.form>
-      </section>
-
-      <%!-- Steward decision, 2026-10-31. --%>
-      <section class="mt-10" aria-labelledby="controls-heading">
-        <h2 id="controls-heading" class="font-semibold mb-2">{gettext("Message controls")}</h2>
-        <.form for={@controls_form} id="controls-form" phx-submit="save_controls">
-          <p id="controls-help" class="text-sm opacity-70 mb-4">
-            {gettext(
-              "React, Edit, Reply and the other actions under each message. Off, they show when you tap a message (mobile) or point at it (desktop)."
-            )}
-          </p>
-          <.input
-            field={@controls_form[:controls_on_mobile]}
-            type="checkbox"
-            label={gettext("Show message controls on mobile")}
-            aria-describedby="controls-help"
-          />
-          <.input
-            field={@controls_form[:controls_on_desktop]}
-            type="checkbox"
-            label={gettext("Show message controls on desktop")}
-            aria-describedby="controls-help"
-          />
-          <.button class="btn btn-primary">{gettext("Save message controls")}</.button>
-        </.form>
-      </section>
-
-      <%!-- Steward decision, 2026-10-27. --%>
-      <section class="mt-10" aria-labelledby="private-heading">
-        <h2 id="private-heading" class="font-semibold mb-2">{gettext("Private messages")}</h2>
-        <.form for={@private_form} id="private-form" phx-submit="save_private">
-          <.input
-            field={@private_form[:accepts_private_messages]}
-            type="checkbox"
-            label={gettext("Members can send me private messages")}
-            aria-describedby="private-help"
-          />
-          <p id="private-help" class="text-sm opacity-70 -mt-1 mb-4">
-            {gettext(
-              "When off, nobody can start a private conversation with you or write to you in one."
-            )}
-          </p>
-          <.button class="btn btn-primary">{gettext("Save private messages preference")}</.button>
-        </.form>
-      </section>
-
-      <%!-- AC-06: the people this user ignores, each with "Stop ignoring" (a plain form to
-           IgnoreController, back here). One ignores someone from their card. --%>
-      <section class="mt-10" id="ignored-section" aria-labelledby="ignored-heading">
-        <h2 id="ignored-heading" class="font-semibold mb-2">{gettext("Ignored users")}</h2>
-        <p class="text-sm opacity-70 mb-3">
-          {gettext(
-            "Their messages are collapsed for you. To ignore someone, choose Ignore on their card."
-          )}
-        </p>
-        <p :if={@ignored == []} id="ignored-none" class="text-sm">
-          {gettext("You ignore nobody.")}
-        </p>
-        <ul :if={@ignored != []} id="ignored-list" class="space-y-2">
-          <li :for={user <- @ignored} id={"ignored-#{user.id}"} class="flex items-center gap-3">
-            <.link href={~p"/u/#{user.id}"} class="font-medium">{user.display_name}</.link>
-            <.form
-              for={%{}}
-              action={~p"/u/#{user.id}/ignore"}
-              method="delete"
-              id={"unignore-#{user.id}"}
-            >
-              <input type="hidden" name="return_to" value="/users/settings" />
-              <button
-                class="btn btn-xs"
-                aria-label={gettext("Stop ignoring %{name}", name: user.display_name)}
-              >
-                {gettext("Stop ignoring")}
-              </button>
-            </.form>
-          </li>
-        </ul>
-      </section>
-
-      <%!-- AP-09 (steward decision, 2026-11-10): plain forms, so Remove works without
-           JavaScript like the rest of the page. --%>
-      <section class="mt-10" id="apps-section" aria-labelledby="apps-heading">
-        <h2 id="apps-heading" class="font-semibold mb-2">{gettext("Apps and devices")}</h2>
-        <p class="text-sm opacity-70 mb-3">
-          {gettext(
-            "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
-          )}
-        </p>
-        <p :if={@app_devices == []} id="apps-none" class="text-sm">
-          {gettext("No device is signed in to the Idejo app.")}
-        </p>
-        <ul :if={@app_devices != []} id="apps-list" class="space-y-2">
-          <li
-            :for={device <- @app_devices}
-            id={"app-device-#{device.id}"}
-            class="flex flex-wrap items-center gap-3"
+          <%!-- Steward decision, 2026-10-23: folded away until there is one. --%>
+          <details
+            id="dark-avatar"
+            class="mt-4"
+            open={@current_scope.user.avatar_dark_id != nil}
           >
-            <span class="font-medium">{device.name}</span>
-            <span class="text-sm opacity-70">
-              {gettext("signed in on %{date}",
-                date: Calendar.strftime(device.inserted_at, "%Y-%m-%d")
+            <summary class="cursor-pointer text-sm font-medium">
+              {gettext("Dark mode picture")}
+            </summary>
+            <p class="text-sm opacity-70 mt-2 max-w-prose">
+              {gettext(
+                "Shown instead of your avatar to people using the dark theme. Without one, your avatar shows in both themes."
               )}
-              <span :if={device.last_used_at}>
-                · {gettext("last used %{date}",
-                  date: Calendar.strftime(device.last_used_at, "%Y-%m-%d")
-                )}
+            </p>
+            <div class="flex items-center gap-4 mt-2">
+              <span
+                :if={@current_scope.user.avatar_dark_id}
+                class="avatar shrink-0"
+                aria-hidden="true"
+              >
+                <span class="w-12 rounded-full">
+                  <img src={Uploads.dark_avatar_url(@current_scope.user)} alt="" />
+                </span>
               </span>
-            </span>
-            <.form
-              for={%{}}
-              action={~p"/users/settings/apps/#{device.id}"}
-              method="delete"
-              id={"remove-app-device-#{device.id}"}
-            >
+              <form
+                id="dark-avatar-form"
+                phx-change="validate_dark_avatar"
+                phx-submit="validate_dark_avatar"
+              >
+                <label class="flex flex-col gap-1 text-sm">
+                  <span>{gettext("Choose a picture (JPEG, PNG, GIF or WebP)")}</span>
+                  <.live_file_input
+                    upload={@uploads.dark_avatar}
+                    class="file-input file-input-sm"
+                  />
+                </label>
+              </form>
               <button
+                :if={@current_scope.user.avatar_dark_id}
+                type="button"
+                id="remove-dark-avatar"
+                class="btn btn-sm"
+                phx-click="remove_dark_avatar"
+              >
+                {gettext("Remove dark mode picture")}
+              </button>
+            </div>
+          </details>
+        </section>
+      </div>
+
+      <div
+        id="settings-interface"
+        class="settings-panel"
+        role="region"
+        aria-labelledby="settings-tab-interface"
+        hidden={@tab != "interface"}
+      >
+        <section class="settings-section" aria-labelledby="writing-heading">
+          <h2 id="writing-heading" class="font-semibold mb-2">{gettext("Writing")}</h2>
+          <.form for={@writing_form} id="writing-form" phx-submit="save_writing">
+            <.input
+              field={@writing_form[:auto_punctuation]}
+              type="checkbox"
+              label={gettext("Automatic punctuation")}
+              aria-describedby="auto-punctuation-help"
+            />
+            <p id="auto-punctuation-help" class="text-sm opacity-70 -mt-1 mb-4">
+              {gettext(
+                "Adds a full stop when a line is sent without punctuation at its end (never after code). When off, your messages keep the text exactly as typed."
+              )}
+            </p>
+            <%!-- TP-11 (steward decision, 2026-11-02). --%>
+            <.input
+              field={@writing_form[:graphical_composer]}
+              type="checkbox"
+              label={gettext("Use the graphical composer")}
+              aria-describedby="graphical-composer-help"
+            />
+            <p id="graphical-composer-help" class="text-sm opacity-70 -mt-1 mb-4">
+              {gettext(
+                "Adds buttons under the box you write in: emoji, images, text formatting, more commands, and Send. Open topics show them once reloaded."
+              )}
+            </p>
+            <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>
+          </.form>
+        </section>
+
+        <%!-- Steward decision, 2026-10-31. --%>
+        <section class="settings-section" aria-labelledby="controls-heading">
+          <h2 id="controls-heading" class="font-semibold mb-2">{gettext("Message controls")}</h2>
+          <.form for={@controls_form} id="controls-form" phx-submit="save_controls">
+            <p id="controls-help" class="text-sm opacity-70 mb-4">
+              {gettext(
+                "React, Edit, Reply and the other actions under each message. Off, they show when you tap a message (mobile) or point at it (desktop)."
+              )}
+            </p>
+            <.input
+              field={@controls_form[:controls_on_mobile]}
+              type="checkbox"
+              label={gettext("Show message controls on mobile")}
+              aria-describedby="controls-help"
+            />
+            <.input
+              field={@controls_form[:controls_on_desktop]}
+              type="checkbox"
+              label={gettext("Show message controls on desktop")}
+              aria-describedby="controls-help"
+            />
+            <.button class="btn btn-primary">{gettext("Save message controls")}</.button>
+          </.form>
+        </section>
+      </div>
+
+      <div
+        id="settings-messages"
+        class="settings-panel"
+        role="region"
+        aria-labelledby="settings-tab-messages"
+        hidden={@tab != "messages"}
+      >
+        <%!-- Steward decision, 2026-10-27. --%>
+        <section class="settings-section" aria-labelledby="private-heading">
+          <h2 id="private-heading" class="font-semibold mb-2">{gettext("Private messages")}</h2>
+          <.form for={@private_form} id="private-form" phx-submit="save_private">
+            <.input
+              field={@private_form[:accepts_private_messages]}
+              type="checkbox"
+              label={gettext("Members can send me private messages")}
+              aria-describedby="private-help"
+            />
+            <p id="private-help" class="text-sm opacity-70 -mt-1 mb-4">
+              {gettext(
+                "When off, nobody can start a private conversation with you or write to you in one."
+              )}
+            </p>
+            <.button class="btn btn-primary">
+              {gettext("Save private messages preference")}
+            </.button>
+          </.form>
+        </section>
+
+        <%!-- AC-06: the people this user ignores, each with "Stop ignoring" (a plain form to
+             IgnoreController, back here). One ignores someone from their card. --%>
+        <section class="settings-section" id="ignored-section" aria-labelledby="ignored-heading">
+          <h2 id="ignored-heading" class="font-semibold mb-2">{gettext("Ignored users")}</h2>
+          <p class="text-sm opacity-70 mb-3">
+            {gettext(
+              "Their messages are collapsed for you. To ignore someone, choose Ignore on their card."
+            )}
+          </p>
+          <p :if={@ignored == []} id="ignored-none" class="text-sm">
+            {gettext("You ignore nobody.")}
+          </p>
+          <ul :if={@ignored != []} id="ignored-list" class="space-y-2">
+            <li :for={user <- @ignored} id={"ignored-#{user.id}"} class="flex items-center gap-3">
+              <.link href={~p"/u/#{user.id}"} class="font-medium">{user.display_name}</.link>
+              <.form
+                for={%{}}
+                action={~p"/u/#{user.id}/ignore"}
+                method="delete"
+                id={"unignore-#{user.id}"}
+              >
+                <input type="hidden" name="return_to" value="/users/settings" />
+                <button
+                  class="btn btn-xs"
+                  aria-label={gettext("Stop ignoring %{name}", name: user.display_name)}
+                >
+                  {gettext("Stop ignoring")}
+                </button>
+              </.form>
+            </li>
+          </ul>
+        </section>
+
+        <section class="settings-section" aria-labelledby="email-notifications-heading">
+          <h2 id="email-notifications-heading" class="font-semibold mb-2">
+            {gettext("Email notifications")}
+          </h2>
+          <.form for={@email_form} id="email-notifications-form" phx-submit="save_email">
+            <fieldset class="mb-2">
+              <legend class="mb-2">
+                {gettext(
+                  "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
+                )}
+              </legend>
+              <.input
+                field={@email_form[:mentions]}
+                type="checkbox"
+                label={
+                  gettext("@%{username} mentions and replies to my posts",
+                    username: @current_scope.user.username
+                  )
+                }
+              />
+              <.input
+                field={@email_form[:role_mentions]}
+                type="checkbox"
+                label={gettext("+role mentions")}
+              />
+              <.input
+                field={@email_form[:own_topics]}
+                type="checkbox"
+                label={gettext("New messages in a thread I created")}
+              />
+              <.input
+                field={@email_form[:followed_topics]}
+                type="checkbox"
+                label={gettext("New messages in a thread I follow")}
+              />
+              <.input
+                field={@email_form[:new_topics]}
+                type="checkbox"
+                label={gettext("New topics created")}
+              />
+              <.input
+                field={@email_form[:all_activity]}
+                type="checkbox"
+                label={gettext("Any activity in the forum")}
+              />
+            </fieldset>
+            <.input
+              field={@email_form[:once_a_week]}
+              type="checkbox"
+              label={
+                gettext("Don't send me a second message in the same week if I don't log in.")
+              }
+            />
+            <.button class="btn btn-primary">{gettext("Save email notifications")}</.button>
+          </.form>
+        </section>
+
+        <%!-- PN-24: push notifications (while the server has them on, PN-19). --%>
+        <section
+          :if={@push_on?}
+          class="settings-section"
+          aria-labelledby="push-notifications-heading"
+        >
+          <h2 id="push-notifications-heading" class="font-semibold mb-2">
+            {gettext("Push notifications")}
+          </h2>
+          <%!-- This browser's state, worked out by the PushSettings hook
+               (assets/js/push_settings.js); without JavaScript, the "unknown" line stays. --%>
+          <div
+            id="push-browser"
+            class="push-browser mb-4"
+            phx-hook="PushSettings"
+            phx-update="ignore"
+            role="status"
+          >
+            <p class="push-browser-unknown">
+              {gettext("Turning notifications on needs JavaScript.")}
+            </p>
+            <p class="push-browser-on" hidden>
+              {gettext("Notifications are on in this browser.")}
+            </p>
+            <div class="push-browser-off" hidden>
+              <p>{gettext("Notifications are off in this browser.")}</p>
+              <button type="button" class="btn btn-sm btn-primary mt-2 push-browser-turn-on">
+                {gettext("Turn on")}
+              </button>
+            </div>
+            <p class="push-browser-blocked" hidden>
+              {gettext(
+                "Notifications are blocked in this browser. To allow them, open the site settings (the icon at the left of the address), set Notifications to Allow, then reload this page."
+              )}
+            </p>
+            <p class="push-browser-ios" hidden>
+              {gettext(
+                "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+              )}
+            </p>
+            <p class="push-browser-unsupported" hidden>
+              {gettext("This browser cannot show notifications.")}
+            </p>
+          </div>
+
+          <.form for={@push_form} id="push-notifications-form" phx-submit="save_push">
+            <fieldset class="mb-2">
+              <legend class="mb-2">{gettext("Send me a notification for:")}</legend>
+              <.input
+                field={@push_form[:reply]}
+                type="checkbox"
+                label={gettext("Replies to me")}
+              />
+              <.input
+                field={@push_form[:mention]}
+                type="checkbox"
+                label={gettext("@%{username} mentions", username: @current_scope.user.username)}
+              />
+              <.input
+                field={@push_form[:role_mention]}
+                type="checkbox"
+                label={gettext("+role mentions")}
+              />
+              <.input
+                field={@push_form[:followed]}
+                type="checkbox"
+                label={gettext("New messages in topics I follow")}
+              />
+              <.input
+                field={@push_form[:private]}
+                type="checkbox"
+                label={gettext("Private messages")}
+              />
+            </fieldset>
+            <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
+            <.button class="btn btn-primary">{gettext("Save push notifications")}</.button>
+          </.form>
+
+          <h3 class="font-semibold mt-6 mb-2">{gettext("Devices")}</h3>
+          <p :if={@devices == []} id="push-no-devices" class="text-sm opacity-70">
+            {gettext("No device takes notifications yet.")}
+          </p>
+          <ul :if={@devices != []} id="push-devices" class="space-y-2">
+            <li
+              :for={device <- @devices}
+              id={"push-device-#{device.id}"}
+              class="flex flex-wrap items-center gap-3 rounded border border-base-300 p-3"
+            >
+              <span class="font-medium">{device_name(device.user_agent)}</span>
+              <span :if={device.endpoint == @this_endpoint} class="badge badge-sm">
+                {gettext("This browser")}
+              </span>
+              <span class="text-sm opacity-70">
+                {gettext("Added %{date}", date: Calendar.strftime(device.created_at, "%Y-%m-%d"))}
+              </span>
+              <span class="flex-1"></span>
+              <button
+                type="button"
                 class="btn btn-xs"
-                aria-label={gettext("Remove %{name}", name: device.name)}
+                phx-click="remove_device"
+                phx-value-id={device.id}
+                aria-label={gettext("Remove %{device}", device: device_name(device.user_agent))}
               >
                 {gettext("Remove")}
               </button>
-            </.form>
-          </li>
-        </ul>
-      </section>
+            </li>
+          </ul>
+          <button type="button" id="push-test" class="btn btn-sm mt-4" phx-click="send_test">
+            {gettext("Send test notification")}
+          </button>
+        </section>
+      </div>
 
-      <section class="mt-10" aria-labelledby="email-notifications-heading">
-        <h2 id="email-notifications-heading" class="font-semibold mb-2">
-          {gettext("Email notifications")}
-        </h2>
-        <.form for={@email_form} id="email-notifications-form" phx-submit="save_email">
-          <fieldset class="mb-2">
-            <legend class="mb-2">
-              {gettext(
-                "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
-              )}
-            </legend>
-            <.input
-              field={@email_form[:mentions]}
-              type="checkbox"
-              label={
-                gettext("@%{username} mentions and replies to my posts",
-                  username: @current_scope.user.username
-                )
-              }
-            />
-            <.input
-              field={@email_form[:role_mentions]}
-              type="checkbox"
-              label={gettext("+role mentions")}
-            />
-            <.input
-              field={@email_form[:own_topics]}
-              type="checkbox"
-              label={gettext("New messages in a thread I created")}
-            />
-            <.input
-              field={@email_form[:followed_topics]}
-              type="checkbox"
-              label={gettext("New messages in a thread I follow")}
-            />
-            <.input
-              field={@email_form[:new_topics]}
-              type="checkbox"
-              label={gettext("New topics created")}
-            />
-            <.input
-              field={@email_form[:all_activity]}
-              type="checkbox"
-              label={gettext("Any activity in the forum")}
-            />
-          </fieldset>
-          <.input
-            field={@email_form[:once_a_week]}
-            type="checkbox"
-            label={gettext("Don't send me a second message in the same week if I don't log in.")}
-          />
-          <.button class="btn btn-primary">{gettext("Save email notifications")}</.button>
-        </.form>
-      </section>
-
-      <%!-- PN-24: push notifications (while the server has them on, PN-19). --%>
-      <section :if={@push_on?} class="mt-10" aria-labelledby="push-notifications-heading">
-        <h2 id="push-notifications-heading" class="font-semibold mb-2">
-          {gettext("Push notifications")}
-        </h2>
-        <%!-- This browser's state, worked out by the PushSettings hook (assets/js/push_settings.js);
-             without JavaScript, the "unknown" line stays. --%>
-        <div
-          id="push-browser"
-          class="push-browser mb-4"
-          phx-hook="PushSettings"
-          phx-update="ignore"
-          role="status"
+      <div
+        id="settings-account"
+        class="settings-panel"
+        role="region"
+        aria-labelledby="settings-tab-account"
+        hidden={@tab != "account"}
+      >
+        <section
+          :if={@oidc_label}
+          id="oidc-section"
+          class="settings-section"
+          aria-labelledby="oidc-heading"
         >
-          <p class="push-browser-unknown">
-            {gettext("Turning notifications on needs JavaScript.")}
+          <h2 id="oidc-heading" class="font-semibold mb-2">
+            {gettext("Sign in with %{provider}", provider: @oidc_label)}
+          </h2>
+          <p :if={@identity} id="oidc-linked" class="text-sm">
+            {gettext("Your account is linked to %{provider}: you can sign in with it.",
+              provider: @oidc_label
+            )}
           </p>
-          <p class="push-browser-on" hidden>{gettext("Notifications are on in this browser.")}</p>
-          <div class="push-browser-off" hidden>
-            <p>{gettext("Notifications are off in this browser.")}</p>
-            <button type="button" class="btn btn-sm btn-primary mt-2 push-browser-turn-on">
-              {gettext("Turn on")}
-            </button>
+          <div :if={!@identity}>
+            <p class="text-sm mb-2">
+              {gettext(
+                "Link your account to %{provider} to sign in with it. You will be asked to sign in there.",
+                provider: @oidc_label
+              )}
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <a id="oidc-link" href={~p"/users/oidc?intent=link"} class="btn">
+                {gettext("Link %{provider}", provider: @oidc_label)}
+              </a>
+              <%!-- Steward decision, 2026-11-06: for someone without one yet
+                   (IDEJO_OIDC_SIGN_UP_URL), in a new tab, so this page stays to press Link
+                   once it exists. --%>
+              <a
+                :if={@oidc_sign_up_url}
+                id="oidc-create-link"
+                href={@oidc_sign_up_url}
+                target="_blank"
+                rel="noopener"
+                class="btn btn-ghost"
+              >
+                {gettext("Create %{provider} and link", provider: @oidc_label)}
+              </a>
+            </div>
+            <p :if={@oidc_sign_up_url} id="oidc-create-hint" class="text-sm mt-2">
+              {gettext(
+                "No %{provider} yet? Create one in the new tab, confirm it from the email, then come back here and choose Link.",
+                provider: @oidc_label
+              )}
+            </p>
           </div>
-          <p class="push-browser-blocked" hidden>
+        </section>
+
+        <%!-- AP-09 (steward decision, 2026-11-10): plain forms, so Remove works without
+             JavaScript like the rest of the page. --%>
+        <section class="settings-section" id="apps-section" aria-labelledby="apps-heading">
+          <h2 id="apps-heading" class="font-semibold mb-2">{gettext("Apps and devices")}</h2>
+          <p class="text-sm opacity-70 mb-3">
             {gettext(
-              "Notifications are blocked in this browser. To allow them, open the site settings (the icon at the left of the address), set Notifications to Allow, then reload this page."
+              "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
             )}
           </p>
-          <p class="push-browser-ios" hidden>
-            {gettext(
-              "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
-            )}
+          <p :if={@app_devices == []} id="apps-none" class="text-sm">
+            {gettext("No device is signed in to the Idejo app.")}
           </p>
-          <p class="push-browser-unsupported" hidden>
-            {gettext("This browser cannot show notifications.")}
-          </p>
-        </div>
-
-        <.form for={@push_form} id="push-notifications-form" phx-submit="save_push">
-          <fieldset class="mb-2">
-            <legend class="mb-2">{gettext("Send me a notification for:")}</legend>
-            <.input field={@push_form[:reply]} type="checkbox" label={gettext("Replies to me")} />
-            <.input
-              field={@push_form[:mention]}
-              type="checkbox"
-              label={gettext("@%{username} mentions", username: @current_scope.user.username)}
-            />
-            <.input
-              field={@push_form[:role_mention]}
-              type="checkbox"
-              label={gettext("+role mentions")}
-            />
-            <.input
-              field={@push_form[:followed]}
-              type="checkbox"
-              label={gettext("New messages in topics I follow")}
-            />
-            <.input
-              field={@push_form[:private]}
-              type="checkbox"
-              label={gettext("Private messages")}
-            />
-          </fieldset>
-          <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
-          <.button class="btn btn-primary">{gettext("Save push notifications")}</.button>
-        </.form>
-
-        <h3 class="font-semibold mt-6 mb-2">{gettext("Devices")}</h3>
-        <p :if={@devices == []} id="push-no-devices" class="text-sm opacity-70">
-          {gettext("No device takes notifications yet.")}
-        </p>
-        <ul :if={@devices != []} id="push-devices" class="space-y-2">
-          <li
-            :for={device <- @devices}
-            id={"push-device-#{device.id}"}
-            class="flex flex-wrap items-center gap-3 rounded border border-base-300 p-3"
-          >
-            <span class="font-medium">{device_name(device.user_agent)}</span>
-            <span :if={device.endpoint == @this_endpoint} class="badge badge-sm">
-              {gettext("This browser")}
-            </span>
-            <span class="text-sm opacity-70">
-              {gettext("Added %{date}", date: Calendar.strftime(device.created_at, "%Y-%m-%d"))}
-            </span>
-            <span class="flex-1"></span>
-            <button
-              type="button"
-              class="btn btn-xs"
-              phx-click="remove_device"
-              phx-value-id={device.id}
-              aria-label={gettext("Remove %{device}", device: device_name(device.user_agent))}
+          <ul :if={@app_devices != []} id="apps-list" class="space-y-2">
+            <li
+              :for={device <- @app_devices}
+              id={"app-device-#{device.id}"}
+              class="flex flex-wrap items-center gap-3"
             >
-              {gettext("Remove")}
-            </button>
-          </li>
-        </ul>
-        <button type="button" id="push-test" class="btn btn-sm mt-4" phx-click="send_test">
-          {gettext("Send test notification")}
-        </button>
-      </section>
+              <span class="font-medium">{device.name}</span>
+              <span class="text-sm opacity-70">
+                {gettext("signed in on %{date}",
+                  date: Calendar.strftime(device.inserted_at, "%Y-%m-%d")
+                )}
+                <span :if={device.last_used_at}>
+                  · {gettext("last used %{date}",
+                    date: Calendar.strftime(device.last_used_at, "%Y-%m-%d")
+                  )}
+                </span>
+              </span>
+              <.form
+                for={%{}}
+                action={~p"/users/settings/apps/#{device.id}"}
+                method="delete"
+                id={"remove-app-device-#{device.id}"}
+              >
+                <button
+                  class="btn btn-xs"
+                  aria-label={gettext("Remove %{name}", name: device.name)}
+                >
+                  {gettext("Remove")}
+                </button>
+              </.form>
+            </li>
+          </ul>
+        </section>
 
-      <section :if={@oidc_label} id="oidc-section" class="mt-10" aria-labelledby="oidc-heading">
-        <h2 id="oidc-heading" class="font-semibold mb-2">
-          {gettext("Sign in with %{provider}", provider: @oidc_label)}
-        </h2>
-        <p :if={@identity} id="oidc-linked" class="text-sm">
-          {gettext("Your account is linked to %{provider}: you can sign in with it.",
-            provider: @oidc_label
-          )}
-        </p>
-        <div :if={!@identity}>
+        <section :if={@password?} class="settings-section" aria-labelledby="password-heading">
+          <h2 id="password-heading" class="font-semibold mb-2">{gettext("Change password")}</h2>
+          <.form
+            for={@password_form}
+            id="password-form"
+            phx-change="validate_password"
+            phx-submit="save_password"
+          >
+            <.input
+              field={@password_form[:current_password]}
+              type="password"
+              label={gettext("Current password")}
+              autocomplete="current-password"
+              required
+            />
+            <.input
+              field={@password_form[:password]}
+              type="password"
+              label={gettext("New password (at least 12 characters)")}
+              autocomplete="new-password"
+              required
+            />
+            <.input
+              field={@password_form[:password_confirmation]}
+              type="password"
+              label={gettext("Repeat the new password")}
+              autocomplete="new-password"
+              required
+            />
+            <.button class="btn btn-primary">{gettext("Change password")}</.button>
+          </.form>
+        </section>
+
+        <section class="settings-section" aria-labelledby="delete-heading">
+          <h2 id="delete-heading" class="font-semibold mb-2">{gettext("Delete account")}</h2>
           <p class="text-sm mb-2">
             {gettext(
-              "Link your account to %{provider} to sign in with it. You will be asked to sign in there.",
-              provider: @oidc_label
+              "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
             )}
           </p>
-          <div class="flex flex-wrap gap-2">
-            <a id="oidc-link" href={~p"/users/oidc?intent=link"} class="btn">
-              {gettext("Link %{provider}", provider: @oidc_label)}
-            </a>
-            <%!-- Steward decision, 2026-11-06: for someone without one yet (IDEJO_OIDC_SIGN_UP_URL),
-                 in a new tab, so this page stays to press Link once it exists. --%>
+          <div :if={@identity} id="delete-with-oidc" class="mb-4">
             <a
-              :if={@oidc_sign_up_url}
-              id="oidc-create-link"
-              href={@oidc_sign_up_url}
-              target="_blank"
-              rel="noopener"
-              class="btn btn-ghost"
+              :if={!@reauth_at}
+              id="delete-reauth"
+              href={~p"/users/oidc?intent=reauth"}
+              class="btn"
             >
-              {gettext("Create %{provider} and link", provider: @oidc_label)}
+              {gettext("Confirm with %{provider}", provider: @oidc_label)}
             </a>
+            <button
+              :if={@reauth_at}
+              id="delete-account-oidc"
+              type="button"
+              class="btn btn-error"
+              phx-click="delete_account_oidc"
+              data-confirm={gettext("Delete your account for good?")}
+            >
+              {gettext("Delete my account")}
+            </button>
+            <p :if={@password?} class="text-sm mt-2">{gettext("Or with your password:")}</p>
           </div>
-          <p :if={@oidc_sign_up_url} id="oidc-create-hint" class="text-sm mt-2">
-            {gettext(
-              "No %{provider} yet? Create one in the new tab, confirm it from the email, then come back here and choose Link.",
-              provider: @oidc_label
-            )}
-          </p>
-        </div>
-      </section>
 
-      <section :if={@password?} class="mt-10" aria-labelledby="password-heading">
-        <h2 id="password-heading" class="font-semibold mb-2">{gettext("Change password")}</h2>
-        <.form
-          for={@password_form}
-          id="password-form"
-          phx-change="validate_password"
-          phx-submit="save_password"
-        >
-          <.input
-            field={@password_form[:current_password]}
-            type="password"
-            label={gettext("Current password")}
-            autocomplete="current-password"
-            required
-          />
-          <.input
-            field={@password_form[:password]}
-            type="password"
-            label={gettext("New password (at least 12 characters)")}
-            autocomplete="new-password"
-            required
-          />
-          <.input
-            field={@password_form[:password_confirmation]}
-            type="password"
-            label={gettext("Repeat the new password")}
-            autocomplete="new-password"
-            required
-          />
-          <.button class="btn btn-primary">{gettext("Change password")}</.button>
-        </.form>
-      </section>
-
-      <section class="mt-10" aria-labelledby="delete-heading">
-        <h2 id="delete-heading" class="font-semibold mb-2">{gettext("Delete account")}</h2>
-        <p class="text-sm mb-2">
-          {gettext(
-            "Your email address, username, display name and password are removed and you are signed out everywhere. This cannot be undone."
-          )}
-        </p>
-        <div :if={@identity} id="delete-with-oidc" class="mb-4">
-          <a
-            :if={!@reauth_at}
-            id="delete-reauth"
-            href={~p"/users/oidc?intent=reauth"}
-            class="btn"
+          <.form
+            :if={@password?}
+            for={@delete_form}
+            id="delete-account-form"
+            phx-submit="delete_account"
           >
-            {gettext("Confirm with %{provider}", provider: @oidc_label)}
-          </a>
-          <button
-            :if={@reauth_at}
-            id="delete-account-oidc"
-            type="button"
-            class="btn btn-error"
-            phx-click="delete_account_oidc"
-            data-confirm={gettext("Delete your account for good?")}
-          >
-            {gettext("Delete my account")}
-          </button>
-          <p :if={@password?} class="text-sm mt-2">{gettext("Or with your password:")}</p>
-        </div>
-
-        <.form
-          :if={@password?}
-          for={@delete_form}
-          id="delete-account-form"
-          phx-submit="delete_account"
-        >
-          <.input
-            field={@delete_form[:password]}
-            type="password"
-            label={gettext("Your password, to confirm")}
-            autocomplete="current-password"
-            required
-          />
-          <.button
-            class="btn btn-error"
-            data-confirm={gettext("Delete your account for good?")}
-          >
-            {gettext("Delete my account")}
-          </.button>
-        </.form>
-      </section>
+            <.input
+              field={@delete_form[:password]}
+              type="password"
+              label={gettext("Your password, to confirm")}
+              autocomplete="current-password"
+              required
+            />
+            <.button
+              class="btn btn-error"
+              data-confirm={gettext("Delete your account for good?")}
+            >
+              {gettext("Delete my account")}
+            </.button>
+          </.form>
+        </section>
+      </div>
     </Layouts.app>
     """
   end

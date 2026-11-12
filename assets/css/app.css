@@ -4066,6 +4066,35 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
     text-decoration: none;
   }
   .inbox-tabs a[aria-current="page"] { border-bottom-color: var(--color-primary); color: var(--color-primary); }
+  /* Profile and account's tabs (steward request, 2026-11-13), drawn like the inbox's: one
+     line, scrolling sideways on phones rather than wrapping; under them, the tab's sections
+     one under the other, a hairline between. */
+  .settings-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 1.5rem 0 2rem;
+    border-bottom: 1px solid var(--hairline);
+    overflow-x: auto;
+    scrollbar-width: none;
+    & a {
+      flex: none;
+      padding: 0.5rem 0.9rem;
+      margin-bottom: -1px;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      white-space: nowrap;
+      color: var(--ink-soft);
+      text-decoration: none;
+      &:hover { color: var(--color-base-content); }
+      &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+    }
+    & a[aria-current="page"] { border-bottom-color: var(--color-primary); color: var(--color-primary); }
+  }
+  .settings-section + .settings-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--hairline);
+  }
   .inbox-forum-logo { width: 3rem; height: 3rem; border-radius: 0.75rem; object-fit: contain; flex: none; }
   .inbox-more { opacity: 0.8; }
   /* The Topics tab's toolbar (steward request, 2026-11-12): View at the left, the "Unread

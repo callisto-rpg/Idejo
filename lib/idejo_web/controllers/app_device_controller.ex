@@ -21,6 +21,6 @@ defmodule IdejoWeb.AppDeviceController do
           put_flash(conn, :error, gettext("This device was already signed out."))
       end
 
-    redirect(conn, to: ~p"/users/settings" <> "#apps-section")
+    redirect(conn, to: IdejoWeb.UserSettingsLive.path("account", "apps-section"))
   end
 end

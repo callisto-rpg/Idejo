@@ -22,6 +22,48 @@ defmodule IdejoWeb.UserSettingsLiveTest do
   end
 
   @tag req: "AC-04"
+  test "AC-04 the page's sections sit in four tabs, Profile first, each with its address", %{
+    conn: conn
+  } do
+    {:ok, view, html} = live(conn, ~p"/users/settings")
+
+    tabs =
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#settings-tabs a")
+      |> Enum.map(&String.trim(LazyHTML.text(&1)))
+
+    assert tabs == ["Profile", "Interface", "Messages and notifications", "Account"]
+    assert has_element?(view, ~s(#settings-tab-profile[aria-current="page"]))
+
+    panel = fn tab -> "#settings-#{tab}" end
+    refute has_element?(view, panel.("profile") <> "[hidden]")
+    assert has_element?(view, panel.("account") <> "[hidden]")
+
+    # Each section is in its tab.
+    for {tab, ids} <- [
+          profile: ~w(profile-form bio-form avatar-form),
+          interface: ~w(writing-form controls-form),
+          messages: ~w(private-form ignored-section email-notifications-form),
+          account: ~w(apps-section delete-account-form)
+        ],
+        id <- ids do
+      assert has_element?(view, "#{panel.(tab)} ##{id}"), "#{id} in #{tab}"
+    end
+
+    # A tab link patches the address; the panel shows, the others hide.
+    view |> element("#settings-tab-account") |> render_click()
+    assert_patch(view, "/users/settings?tab=account")
+    refute has_element?(view, panel.("account") <> "[hidden]")
+    assert has_element?(view, panel.("profile") <> "[hidden]")
+    assert has_element?(view, ~s(#settings-tab-account[aria-current="page"]))
+
+    # An unknown tab shows Profile.
+    {:ok, view, _html} = live(conn, ~p"/users/settings?tab=nope")
+    refute has_element?(view, panel.("profile") <> "[hidden]")
+  end
+
+  @tag req: "AC-04"
   test "AC-04 visitors are sent to sign in" do
     assert {:error, {:redirect, %{to: "/users/sign-in"}}} =
              live(build_conn(), ~p"/users/settings")
