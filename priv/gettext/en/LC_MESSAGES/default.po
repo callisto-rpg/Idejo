@@ -7695,3 +7695,37 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "signed in on %{date}"
 msgstr ""
+
+#: lib/idejo_web/components/topic_components.ex:346
+#, elixir-autogen, elixir-format
+msgid "1 mention"
+msgid_plural "%{count} mentions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:59
+#, elixir-autogen, elixir-format
+msgid "1 hidden"
+msgid_plural "%{count} hidden"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:57
+#, elixir-autogen, elixir-format
+msgid "Filter"
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:75
+#, elixir-autogen, elixir-format
+msgid "Apply"
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:64
+#, elixir-autogen, elixir-format
+msgid "Show topics from"
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html/topics.html.heex:31
+#, elixir-autogen, elixir-format
+msgid "No topics from the forums you chose. Change the Filter to see more."
+msgstr ""

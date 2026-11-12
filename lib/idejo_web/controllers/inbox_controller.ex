@@ -7,9 +7,10 @@ defmodule IdejoWeb.InboxController do
   otherwise), for signed-in members, plain pages that work without JavaScript:
 
     * `forums/2` (`/`): the communities the member joined, as cards with their logos;
-    * `topics/2` (`/topics`): the topics they follow there, Idejo's topic rows (`?view=`
-      compact or expanded, as the home page's, `IdejoWeb.TopicView`; `?show=` all or
-      unread only, remembered in the session);
+    * `topics/2` (`/topics`): the topics they follow there, Idejo's topic rows with the
+      forum's logo and the activity lines (`?view=` compact or expanded, as the home page's,
+      `IdejoWeb.TopicView`; `?show=` all or unread only; the Filter's hidden forums; each
+      remembered in the session);
     * `chats/2` (`/chat`): their private conversations, after copying those still in the
       forums (`Inbox.import/1`); `ConversationController` shows each;
     * `new_chat/2` (`/chat/new?with=<subject>`): a forum's "Private Message": the
@@ -47,12 +48,49 @@ defmodule IdejoWeb.InboxController do
     {conn, show} = choose_show(conn, params)
     entries = Inbox.topics(conn.assigns.current_scope.user)
 
+    forums =
+      entries
+      |> Enum.map(& &1.forum)
+      |> Enum.uniq_by(& &1.host)
+      |> Enum.sort_by(&String.downcase(&1.name))
+
+    {conn, hidden} = choose_hidden(conn, params, forums)
+
+    shown =
+      for entry <- entries,
+          entry.forum.host not in hidden,
+          show == :all or entry.unread != nil,
+          do: entry
+
     render(conn, :topics,
       page_title: gettext("Topics"),
-      entries: if(show == :unread, do: Enum.filter(entries, & &1.unread), else: entries),
+      entries: shown,
+      any?: entries != [],
+      forums: forums,
+      hidden: hidden,
       view: view,
       show: show
     )
+  end
+
+  # "Filter" (steward request, 2026-11-12): the forums whose topics are hidden, by host,
+  # remembered in the session as `:inbox_hidden`. A submitted form (`filter=1`) hides every
+  # listed forum not ticked; forums not listed now (no followed topic) stay as they were.
+  defp choose_hidden(conn, %{"filter" => "1"} = params, forums) do
+    ticked = List.wrap(params["forums"])
+    listed = Enum.map(forums, & &1.host)
+    kept = Enum.reject(remembered_hidden(conn), &(&1 in listed))
+    hidden = kept ++ Enum.reject(listed, &(&1 in ticked))
+    {put_session(conn, :inbox_hidden, hidden), hidden}
+  end
+
+  defp choose_hidden(conn, _params, _forums), do: {conn, remembered_hidden(conn)}
+
+  defp remembered_hidden(conn) do
+    case get_session(conn, :inbox_hidden) do
+      hosts when is_list(hosts) -> Enum.filter(hosts, &is_binary/1)
+      _ -> []
+    end
   end
 
   # "Show" (steward request, 2026-11-10): all followed topics, or only those with unread

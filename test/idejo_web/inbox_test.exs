@@ -174,7 +174,7 @@ defmodule IdejoWeb.InboxTest do
     assert html =~ "Latest messages" and html =~ "And basil" and html =~ "Tomatoes first"
   end
 
-  test "Topics: Show all my topics, or unread only, beside the View, remembered", %{conn: conn} do
+  test "Topics: the Unread only switch between View and Filter, remembered", %{conn: conn} do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")
 
@@ -200,9 +200,10 @@ defmodule IdejoWeb.InboxTest do
     conn = log_in_user(conn, ada)
     html = conn |> get(~p"/topics?view=compact") |> html_response(200)
     assert html =~ "Garden plans" and html =~ "Read already"
-    assert html =~ ~s(id="show-toggle") and html =~ ~s(id="view-toggle")
-    assert html =~ "All my topics" and html =~ "Unread only"
-    # Each toggle keeps the other's choice.
+    assert html =~ ~s(id="unread-switch") and html =~ ~s(id="view-toggle")
+    assert html =~ ~s(id="forum-filter")
+    assert html =~ ~s(role="switch" aria-checked="false") and html =~ "Unread only"
+    # Each keeps the other's choice; the switch turns to the other one.
     assert html =~ ~s(href="/topics?show=unread&amp;view=compact")
     assert html =~ ~s(href="/topics?show=all&amp;view=expanded")
 
@@ -210,7 +211,8 @@ defmodule IdejoWeb.InboxTest do
     html = html_response(conn, 200)
     assert html =~ "Garden plans"
     refute html =~ "Read already"
-    assert html =~ ~s(id="show-unread" aria-current="true")
+    assert html =~ ~s(aria-checked="true")
+    assert html =~ ~s(href="/topics?show=all&amp;view=compact")
 
     # Remembered for the next visit.
     html = conn |> recycle() |> get(~p"/topics") |> html_response(200)
@@ -218,6 +220,113 @@ defmodule IdejoWeb.InboxTest do
 
     html = conn |> recycle() |> get(~p"/topics?show=all") |> html_response(200)
     assert html =~ "Read already"
+  end
+
+  test "Topics: each card leads with its forum's logo and lists what is new at its right", %{
+    conn: conn
+  } do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+    mentioned = Map.merge(@topic, %{"unread" => 2, "mentions" => 1, "reactions" => 0})
+
+    # A forum before the counts (no "mentions", "reactions"): only its new messages.
+    older = %{
+      @topic
+      | "id" => "0192f0c4-0000-7000-8000-000000000003",
+        "title" => "Old forum topic",
+        "unread" => 1
+    }
+
+    reacted = %{
+      @topic
+      | "id" => "0192f0c4-0000-7000-8000-000000000004",
+        "title" => "Quiet",
+        "unread" => 0
+    }
+
+    reacted = Map.put(reacted, "reactions", 3)
+
+    service(%{
+      "/inbox/topics" => %{
+        "forums" => [
+          %{
+            "name" => "Garden club",
+            "url" => "https://garden.example.test/",
+            "topics" => [mentioned, reacted]
+          },
+          %{"name" => "Chess", "url" => "https://chess.example.test/", "topics" => [older]}
+        ]
+      }
+    })
+
+    html = conn |> log_in_user(ada) |> get(~p"/topics") |> html_response(200)
+    assert html =~ ~s(class="topic-row-forum" aria-hidden="true")
+    assert html =~ ~s(src="https://garden.example.test/logo")
+    assert html =~ ~s(src="https://chess.example.test/logo")
+
+    lines = fn id ->
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#topic-#{id} .topic-row-activity li")
+      |> Enum.map(&String.trim(LazyHTML.text(&1)))
+    end
+
+    assert lines.(mentioned["id"]) == ["2 new messages", "1 mention"]
+    assert lines.(reacted["id"]) == ["3 reactions"]
+    assert lines.(older["id"]) == ["1 new message"]
+    # The list replaces the "N new" badge.
+    refute html =~ "unread-marker"
+  end
+
+  test "Topics: Filter hides the topics of the forums not ticked, remembered", %{conn: conn} do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+    chess = %{@topic | "id" => "0192f0c4-0000-7000-8000-000000000005", "title" => "Openings"}
+
+    service(%{
+      "/inbox/topics" => %{
+        "forums" => [
+          %{
+            "name" => "Garden club",
+            "url" => "https://garden.example.test/",
+            "topics" => [@topic]
+          },
+          %{"name" => "Chess", "url" => "https://chess.example.test/", "topics" => [chess]}
+        ]
+      }
+    })
+
+    conn = log_in_user(conn, ada)
+    html = conn |> get(~p"/topics?view=compact") |> html_response(200)
+    assert html =~ "Garden plans" and html =~ "Openings"
+    # Every forum listed, ticked, by name.
+    assert html =~ ~s(name="forums[]" value="chess.example.test" checked)
+    assert html =~ ~s(name="forums[]" value="garden.example.test" checked)
+    refute html =~ ~s(id="forum-filter-hidden")
+
+    conn = get(conn, ~p"/topics?#{[filter: 1, forums: ["garden.example.test"], view: :compact]}")
+    html = html_response(conn, 200)
+    assert html =~ "Garden plans"
+    refute html =~ "Openings"
+    assert html =~ "1 hidden"
+    refute html =~ ~s(value="chess.example.test" checked)
+
+    # Remembered, also with the switch.
+    html = conn |> recycle() |> get(~p"/topics?show=unread") |> html_response(200)
+    assert html =~ "Garden plans"
+    refute html =~ "Openings"
+
+    # Nothing ticked: no topics, said in words.
+    conn = conn |> recycle() |> get(~p"/topics?#{[filter: 1, show: :all]}")
+    assert html_response(conn, 200) =~ ~s(id="no-filtered-topics")
+
+    html =
+      conn
+      |> recycle()
+      |> get(~p"/topics?#{[filter: 1, forums: ["garden.example.test", "chess.example.test"]]}")
+      |> html_response(200)
+
+    assert html =~ "Garden plans" and html =~ "Openings"
   end
 
   test "Chats: a forum's Private Message starts the conversation, made for an ID new here", %{

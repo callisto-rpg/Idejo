@@ -221,7 +221,18 @@ defmodule IdejoWeb.TopicComponents do
 
   attr :forum, :map,
     default: nil,
-    doc: "the forum the topic is in, `%{name:, url:}`, named first in its meta line (the inbox)"
+    doc: """
+    the forum the topic is in, `%{name:, url:}`, named first in its meta line (the inbox);
+    with `logo:`, its logo leads the row (steward request, 2026-11-12)
+    """
+
+  attr :activity, :map,
+    default: nil,
+    doc: """
+    the inbox's activity list at the row's right (steward request, 2026-11-12):
+    `%{unread:, mentions:, reactions:}`, one line each when above 0 ("N new messages",
+    "N mentions", "N reactions"), in place of the "N new" badge
+    """
 
   attr :base, :string,
     default: "",
@@ -241,11 +252,15 @@ defmodule IdejoWeb.TopicComponents do
         "topic-row",
         "cat-#{@topic.category_id}",
         @preview && "is-expanded",
-        @topic.inactive && "is-inactive"
+        @topic.inactive && "is-inactive",
+        @forum[:logo] && "has-forum"
       ]}
       data-topic-menu={@base == "" && @topic.id}
       data-topic-path={@base == "" && ~p"/t/#{@topic.id}/#{@topic.slug}"}
     >
+      <span :if={@forum[:logo]} class="topic-row-forum" aria-hidden="true">
+        <img src={@forum.logo} alt="" loading="lazy" />
+      </span>
       <span class="topic-row-avatar">
         <.category_mark :if={@lead == :category} category={@topic.category} />
         <%!-- Topic Type: a topical topic shows its icon, never its starter. --%>
@@ -261,7 +276,7 @@ defmodule IdejoWeb.TopicComponents do
       <span class="topic-row-badges">
         <%!-- Nobody follows it (steward decision, 2026-11-01): faded, and said in words. --%>
         <span :if={@topic.inactive} class="sr-only topic-inactive">{gettext("Inactive")}</span>
-        <span :if={@unread} class="badge badge-sm badge-primary unread-marker">
+        <span :if={@unread && !@activity} class="badge badge-sm badge-primary unread-marker">
           {ngettext("1 new", "%{count} new", @unread)}
         </span>
         <span :if={@topic.pinned} class="badge badge-sm badge-ghost">
@@ -308,9 +323,31 @@ defmodule IdejoWeb.TopicComponents do
           {ngettext("1 message", "%{count} messages", @topic.message_count)}
         </span>
       </p>
+      <ul :if={activity_lines(@activity) != []} class="topic-row-activity">
+        <li :for={{kind, text} <- activity_lines(@activity)} class={"topic-row-#{kind}"}>
+          {text}
+        </li>
+      </ul>
       <.topic_preview :if={@preview} topic={@topic} preview={@preview} base={@base} />
     </li>
     """
+  end
+
+  # The inbox's activity lines (steward request, 2026-11-12), only those above 0.
+  defp activity_lines(nil), do: []
+
+  defp activity_lines(activity) do
+    unread = activity[:unread] || 0
+    mentions = activity[:mentions] || 0
+    reactions = activity[:reactions] || 0
+
+    [
+      {"new", unread, ngettext("1 new message", "%{count} new messages", unread)},
+      {"mentions", mentions, ngettext("1 mention", "%{count} mentions", mentions)},
+      {"reactions", reactions, ngettext("1 reaction", "%{count} reactions", reactions)}
+    ]
+    |> Enum.filter(fn {_kind, n, _text} -> n > 0 end)
+    |> Enum.map(fn {kind, _n, text} -> {kind, text} end)
   end
 
   attr :topic, :map, required: true

@@ -158,6 +158,39 @@ defmodule IdejoWeb.ChatServiceTest do
     assert build_conn() |> get("/community/topics?ticket=#{other}") |> json_response(404)
   end
 
+  test "followed topics count unread mentions and reactions since last read (inbox cards)" do
+    chat_on()
+    admin = user_with_role_fixture(:administrator)
+    {:ok, general} = Forum.create_category(admin, %{"name" => "General"})
+    ada = user_fixture() |> link("ada-sub")
+    bo = user_fixture()
+
+    {:ok, topic} =
+      Forum.create_topic(ada, general, %{"title" => "Garden plans", "body" => "Tomatoes first"})
+
+    {:ok, mine} = Forum.post_message(ada, topic, %{"body" => "Mine"})
+    {:ok, _} = Forum.post_message(bo, topic, %{"body" => "Hello @#{ada.username}"})
+    {:ok, _} = Forum.post_message(bo, topic, %{"body" => "No mention"})
+    {:ok, _} = Reactions.toggle(bo, mine, "agree")
+    # Ada's own reaction to her message does not count.
+    {:ok, _} = Reactions.toggle(ada, mine, "heart")
+
+    card = fn ->
+      vouch(%{@ticket => {"ada-sub", "topics"}})
+      body = build_conn() |> get("/community/topics?ticket=#{@ticket}") |> json_response(200)
+      [card] = body["topics"]
+      Map.take(card, ["unread", "mentions", "reactions"])
+    end
+
+    assert card.() == %{"unread" => 2, "mentions" => 1, "reactions" => 1}
+
+    # Reading the topic clears them; a reaction after that counts again.
+    :ok = Idejo.Reading.mark_read(ada, topic)
+    assert card.() == %{"unread" => 0, "mentions" => 0, "reactions" => 0}
+    {:ok, _} = Reactions.toggle(user_fixture(), mine, "agree")
+    assert card.() == %{"unread" => 0, "mentions" => 0, "reactions" => 1}
+  end
+
   test "conversations between linked members are copied, then leave the forum", %{conn: conn} do
     chat_on()
     ada = user_fixture(%{display_name: "Ada"}) |> link("ada-sub")

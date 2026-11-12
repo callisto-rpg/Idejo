@@ -59,7 +59,7 @@ defmodule IdejoWeb.ChatServiceController do
     end
   end
 
-  defp topic_json(%{topic: topic, unread: unread, preview: preview}) do
+  defp topic_json(%{topic: topic, unread: unread, preview: preview} = entry) do
     preview =
       preview || %{first: nil, latest: [], images: [], participants: [], participant_count: 0}
 
@@ -68,6 +68,10 @@ defmodule IdejoWeb.ChatServiceController do
       title: topic.title,
       url: absolute_url("/t/#{topic.id}/#{topic.slug}"),
       unread: unread,
+      # The inbox's topic cards (steward request, 2026-11-12): unread @/+ mentions, and
+      # others' reactions to the member's messages since they last read the topic.
+      mentions: Map.get(entry, :mentions, 0),
+      reactions: Map.get(entry, :reactions, 0),
       message_count: topic.message_count,
       last_activity_at: topic.last_activity_at,
       pinned: topic.pinned,

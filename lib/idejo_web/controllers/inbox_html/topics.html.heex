@@ -3,20 +3,32 @@
   SPDX-License-Identifier: AGPL-3.0-only
 --%>
 <%!-- The topics the member follows across the group's forums, as Idejo's own topic rows
-     (compact or expanded), each naming its forum. --%>
+     (compact or expanded), each led by its forum's logo and naming it, with what is new at
+     its right. Over them: View, the "Unread only" switch and the forums Filter (steward
+     request, 2026-11-12). --%>
 <Layouts.app flash={@flash} current_scope={@current_scope} width={:wide} inbox={:topics}>
   <Layouts.inbox_tabs current={:topics} />
   <div class="section-divider-row inbox-toggles">
     <h1 class="sr-only">{gettext("Topics")}</h1>
-    <.show_toggle show={@show} view={@view} />
     <TopicComponents.view_toggle view={@view} path={~p"/topics?#{[show: @show]}"} />
+    <.unread_switch show={@show} view={@view} />
+    <.forum_filter
+      :if={@forums != []}
+      forums={@forums}
+      hidden={@hidden}
+      show={@show}
+      view={@view}
+    />
   </div>
 
-  <p :if={@entries == [] && @show == :all} id="no-topics" class="empty-state">
+  <p :if={!@any?} id="no-topics" class="empty-state">
     {gettext("No followed topics yet. Topics you write in, or follow, in your forums show here.")}
   </p>
-  <p :if={@entries == [] && @show == :unread} id="no-unread-topics" class="empty-state">
+  <p :if={@any? && @entries == [] && @show == :unread} id="no-unread-topics" class="empty-state">
     {gettext("Nothing unread in the topics you follow.")}
+  </p>
+  <p :if={@any? && @entries == [] && @show == :all} id="no-filtered-topics" class="empty-state">
+    {gettext("No topics from the forums you chose. Change the Filter to see more.")}
   </p>
 
   <ol :if={@entries != []} id="inbox-topics" class="topic-list">
@@ -25,6 +37,7 @@
       topic={entry.topic}
       category={entry.topic.category != nil}
       unread={entry.unread}
+      activity={%{unread: entry.unread, mentions: entry.mentions, reactions: entry.reactions}}
       preview={@view == :expanded && entry.preview}
       base={entry.base}
       forum={entry.forum}

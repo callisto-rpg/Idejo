@@ -469,6 +469,59 @@ defmodule Idejo.Reading do
   end
 
   @doc """
+  The unread messages that mention the user, by @username or by one of their roles, in each
+  of the given topics that has any, as `%{topic_id => count}`; read from their notifications
+  (NO-01), among the unread messages `unread_counts/2` counts. For the inbox's topic cards
+  (steward request, 2026-11-12).
+  """
+  @spec mention_counts(User.t(), [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => pos_integer()}
+  def mention_counts(_user, []), do: %{}
+
+  def mention_counts(%User{id: user_id} = user, topic_ids) do
+    mentions = fn unread ->
+      unread
+      |> join(:inner, [m], n in Idejo.Notifications.Notification,
+        on:
+          n.message_id == m.id and n.user_id == ^user_id and
+            n.kind in ["mention", "role_mention"]
+      )
+      |> select([m], %{count: count(m.id)})
+    end
+
+    Topic
+    |> with_unread(user, mentions)
+    |> where([t], t.id in ^topic_ids)
+    |> select([t, unread: u], {t.id, u.count})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  The reactions others added to the user's own messages since the user last read each of
+  the given topics (their read position's time; every reaction where they have none), as
+  `%{topic_id => count}`, topics with none left out. Reactions no longer notify (2026-10-23):
+  this is how the inbox's topic cards tell of them (steward request, 2026-11-12).
+  """
+  @spec new_reaction_counts(User.t(), [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => pos_integer()}
+  def new_reaction_counts(_user, []), do: %{}
+
+  def new_reaction_counts(%User{id: user_id}, topic_ids) do
+    Repo.all(
+      from r in Idejo.Messages.Reaction,
+        join: m in Message,
+        on: m.id == r.message_id,
+        left_join: rp in ReadPosition,
+        on: rp.topic_id == m.topic_id and rp.user_id == ^user_id,
+        where: m.topic_id in ^topic_ids and m.author_id == ^user_id and is_nil(m.deleted_at),
+        where: r.user_id != ^user_id,
+        where: is_nil(rp.updated_at) or r.created_at > rp.updated_at,
+        group_by: m.topic_id,
+        select: {m.topic_id, count(r.id)}
+    )
+    |> Map.new()
+  end
+
+  @doc """
   The topics with unread messages across every category the user may view, most recently
   active first, 30 a page: `{[{topic, unread_count}], more?}`. Topics come with their author
   and category. `following: false` leaves out the topics the user follows (the Unread page
