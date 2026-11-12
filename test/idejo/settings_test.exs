@@ -51,7 +51,7 @@ defmodule Idejo.SettingsTest do
              secondary: "#f2c94c",
              tertiary: "#b8860b",
              light_bg: "#fdfcf6",
-             dark_bg: "#1d1a00"
+             dark_bg: "#000000"
            }
 
     assert {:ok, _} =

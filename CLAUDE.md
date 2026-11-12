@@ -274,8 +274,8 @@ The contract (M6; mark each item done here when its PR merges):
 - **Website theme** (steward decision, 2026-10-24): five settings in **Admin → Settings**
   (`theme_primary`, `theme_secondary`, `theme_tertiary`, `theme_light_bg`, `theme_dark_bg`;
   `#rrggbb` or `#rrggbbaa`; defaults gold `#daa304ff`, `#f2c94c`, `#b8860b`, `#fdfcf6`,
-  `#1d1a00`), read in one query by `Settings.theme/0`. `Layouts.theme_colours/1` (root
-  layout, a nonce `<style>` after `app.css` and before `/theme.css`) sets daisyUI's
+  `#000000`; until 2026-11-12 `#1d1a00`), read in one query by `Settings.theme/0`.
+  `Layouts.theme_colours/1` (root layout, a nonce `<style>` after `app.css` and before `/theme.css`) sets daisyUI's
   variables for both themes with daisyUI's own selectors: primary, secondary and accent
   (the tertiary) with their `-content` (white or `#111111`, `CategoryIcons.contrast/1`),
   `base-200` the background (the page), `base-100` a little lighter (cards), `base-300` a

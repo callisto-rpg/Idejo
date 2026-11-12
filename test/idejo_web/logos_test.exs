@@ -40,7 +40,7 @@ defmodule IdejoWeb.LogosTest do
     assert style =~ "--color-accent:#b8860b;"
     assert style =~ "--color-base-200:#fdfcf6;"
     assert style =~ "[data-theme=dark]{"
-    assert style =~ "--color-base-200:#1d1a00;"
+    assert style =~ "--color-base-200:#000000;"
   end
 
   test "the sign-in and sign-up pages show the full logo" do
