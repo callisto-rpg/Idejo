@@ -5544,7 +5544,7 @@ msgstr ""
 #: lib/idejo_web/category_icon_names.ex:80
 #: lib/idejo_web/components/layouts.ex:306
 #: lib/idejo_web/components/layouts.ex:1727
-#: lib/idejo_web/controllers/inbox_controller.ex:48
+#: lib/idejo_web/controllers/inbox_controller.ex:51
 #: lib/idejo_web/controllers/inbox_html/topics.html.heex:10
 #, elixir-autogen, elixir-format
 msgid "Topics"
@@ -5818,7 +5818,7 @@ msgid "You are sending very fast. Wait a moment, then try again."
 msgstr ""
 
 #: lib/idejo_web/controllers/conversation_controller.ex:70
-#: lib/idejo_web/controllers/inbox_controller.ex:78
+#: lib/idejo_web/controllers/inbox_controller.ex:92
 #, elixir-autogen, elixir-format
 msgid "You are starting conversations too quickly. Try again later."
 msgstr ""
@@ -5844,7 +5844,7 @@ msgid "You cannot post a new message yet. Append your old message."
 msgstr ""
 
 #: lib/idejo_web/controllers/conversation_controller.ex:76
-#: lib/idejo_web/controllers/inbox_controller.ex:84
+#: lib/idejo_web/controllers/inbox_controller.ex:98
 #, elixir-autogen, elixir-format
 msgid "You cannot send this user a private message."
 msgstr ""
@@ -7194,6 +7194,7 @@ msgid "Topics you write in are followed automatically and appear in the sidebar.
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:918
+#: lib/idejo_web/controllers/inbox_html.ex:26
 #, elixir-autogen, elixir-format
 msgid "All my topics"
 msgstr ""
@@ -7208,14 +7209,14 @@ msgstr[1] ""
 #: lib/idejo_web/components/layouts.ex:328
 #: lib/idejo_web/components/layouts.ex:1731
 #: lib/idejo_web/controllers/conversation_html/index.html.heex:11
-#: lib/idejo_web/controllers/inbox_controller.ex:61
+#: lib/idejo_web/controllers/inbox_controller.ex:75
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Chats"
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:306
 #: lib/idejo_web/components/layouts.ex:1723
-#: lib/idejo_web/controllers/inbox_controller.ex:35
+#: lib/idejo_web/controllers/inbox_controller.ex:36
 #: lib/idejo_web/controllers/inbox_html/forums.html.heex:7
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Forums"
@@ -7226,7 +7227,7 @@ msgstr ""
 msgid "Inbox"
 msgstr ""
 
-#: lib/idejo_web/controllers/inbox_html/topics.html.heex:15
+#: lib/idejo_web/controllers/inbox_html/topics.html.heex:16
 #, elixir-autogen, elixir-format
 msgid "No followed topics yet. Topics you write in, or follow, in your forums show here."
 msgstr ""
@@ -7239,4 +7240,19 @@ msgstr ""
 #: lib/idejo_web/controllers/inbox_html/forums.html.heex:10
 #, elixir-autogen, elixir-format
 msgid "You have not joined a forum yet."
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html/topics.html.heex:19
+#, elixir-autogen, elixir-format
+msgid "Nothing unread in the topics you follow."
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:23
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show"
+msgstr ""
+
+#: lib/idejo_web/controllers/inbox_html.ex:26
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unread only"
 msgstr ""
