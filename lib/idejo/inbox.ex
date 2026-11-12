@@ -30,7 +30,7 @@ defmodule Idejo.Inbox do
 
   alias Idejo.Accounts
   alias Idejo.Accounts.{OIDC, User, UserIdentity}
-  alias Idejo.Community.Profile
+  alias Idejo.Community.{Profile, SharedSettings}
   alias Idejo.{Conversations, Federation, Repo}
   alias Idejo.Forum.Topic
   alias Idejo.Inbox.RemoteTopic
@@ -185,6 +185,46 @@ defmodule Idejo.Inbox do
       |> Enum.sort_by(& &1.topic.last_activity_at, {:desc, DateTime})
     else
       _ -> []
+    end
+  end
+
+  ## Settings for all forums
+
+  @doc """
+  Whether `user` can save settings for all their forums here (steward request, 2026-11-13):
+  inbox mode, and linked to the provider.
+  """
+  @spec everywhere?(User.t() | nil) :: boolean()
+  def everywhere?(%User{} = user), do: on?() and service_url() != nil and subject(user) != nil
+  def everywhere?(_user), do: false
+
+  @doc """
+  Saves `user`'s `sections` (`Idejo.Community.SharedSettings`) on every forum they joined,
+  through the group's service, `POST <service>/settings` `{subject, settings}` →
+  `{"forums": [{"name", "host", "answered", "saved", "failed"}]}`. `shared:` also sets
+  whether their notification choices are shared. `{:ok, %{done: [name], missed: [name]}}`,
+  a forum missed when it did not answer (an Idejo before 0.3.7, or down) or did not take a
+  section; `:error` when the service did not answer.
+  """
+  @spec save_everywhere(User.t(), [String.t()], keyword()) ::
+          {:ok, %{done: [String.t()], missed: [String.t()]}} | :error
+  def save_everywhere(%User{} = user, sections, opts \\ []) do
+    settings = SharedSettings.export(user, sections, Keyword.take(opts, [:shared]))
+
+    with subject when is_binary(subject) <- subject(user),
+         {:ok, %{"forums" => forums}} when is_list(forums) <-
+           ask(:post, "/settings",
+             json: %{subject: subject, settings: settings},
+             receive_timeout: 15_000
+           ) do
+      {done, missed} =
+        forums
+        |> Enum.filter(&(is_map(&1) and is_binary(&1["name"])))
+        |> Enum.split_with(&(&1["answered"] == true and &1["failed"] in [nil, []]))
+
+      {:ok, %{done: Enum.map(done, & &1["name"]), missed: Enum.map(missed, & &1["name"])}}
+    else
+      _ -> :error
     end
   end
 

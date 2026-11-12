@@ -61,6 +61,19 @@ defmodule Idejo.Community.Chat do
     end
   end
 
+  @doc """
+  The group's Profile and account, where `user` changes settings for all their forums at once
+  (steward request, 2026-11-13; `IDEJO_SETTINGS_URL`), for a member linked to the provider;
+  else nil.
+  """
+  @spec settings_url(User.t() | nil) :: String.t() | nil
+  def settings_url(user) do
+    case (Application.get_env(:idejo, :community) || [])[:settings_url] do
+      "http" <> _ = url -> if subject(user), do: url
+      _ -> nil
+    end
+  end
+
   @doc "Where this server asks the service (tickets, counts), or nil."
   @spec api_url() :: String.t() | nil
   def api_url do
@@ -145,9 +158,9 @@ defmodule Idejo.Community.Chat do
   end
 
   @doc """
-  The member a ticket from the chat service names, for `scope` (`"topics"` or
-  `"conversations"`): `{:ok, user}` when the service vouches for it and that person is a
-  member here; else `:error`.
+  The member a ticket from the chat service names, for `scope` (`"topics"`,
+  `"conversations"` or `"settings"`): `{:ok, user}` when the service vouches for it and that
+  person is a member here; else `:error`.
   """
   @spec check_ticket(term(), String.t()) :: {:ok, User.t()} | :error
   def check_ticket(ticket, scope) when is_binary(ticket) and byte_size(ticket) in 16..128 do
