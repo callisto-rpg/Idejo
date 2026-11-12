@@ -4068,14 +4068,111 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
   .inbox-tabs a[aria-current="page"] { border-bottom-color: var(--color-primary); color: var(--color-primary); }
   .inbox-forum-logo { width: 3rem; height: 3rem; border-radius: 0.75rem; object-fit: contain; flex: none; }
   .inbox-more { opacity: 0.8; }
-  /* The Topics tab's "Show" and "View" toggles, on one line at the right, wrapping on phones. */
+  /* The Topics tab's toolbar (steward request, 2026-11-12): View at the left, the "Unread
+     only" switch in the middle, the forums Filter at the right; wrapping on phones. */
   .inbox-toggles {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: flex-end;
     gap: 0.75rem 1.25rem;
+    & > .view-toggle { justify-self: start; }
+    & > .inbox-switch { justify-self: center; }
+    & > .inbox-filter { justify-self: end; }
+  }
+  @media (max-width: 639.98px) {
+    .inbox-toggles { display: flex; flex-wrap: wrap; justify-content: space-between; }
+  }
+  /* A link drawn as a switch: the track's knob moves right and takes the primary colour
+     when on (aria-checked). */
+  .inbox-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    cursor: pointer;
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 999px; }
+  }
+  .inbox-switch-track {
+    position: relative;
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+    transition: background 150ms;
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0.125rem;
+      left: 0.125rem;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 999px;
+      background: var(--color-base-100);
+      box-shadow: var(--shadow-soft);
+      transition: transform 150ms;
+    }
+  }
+  .inbox-switch[aria-checked="true"] .inbox-switch-track {
+    background: var(--color-primary);
+    &::after { transform: translateX(1rem); }
+  }
+  .inbox-filter-logo { width: 1.25rem; height: 1.25rem; border-radius: 0.3rem; object-fit: contain; flex: none; }
+  .inbox-filter-menu { min-width: 14rem; }
+  .popup-menu .inbox-filter-apply {
+    justify-content: center;
+    margin-top: 0.25rem;
+    background: var(--color-primary);
+    color: var(--color-primary-content);
+    font-weight: 600;
+    &:hover, &:focus-visible { background: color-mix(in oklab, var(--color-primary) 85%, var(--color-base-content)); }
   }
   .topic-forum { font-weight: 600; }
+  /* Inbox topic cards (steward request, 2026-11-12): the forum's logo leads the row, and
+     what is new ("N new messages", "N mentions", "N reactions") stands at its right. */
+  .topic-row.has-forum {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "forum avatar title badges tags activity"
+      "forum avatar meta  meta   count activity";
+    &.is-expanded {
+      grid-template-areas:
+        "forum avatar title   badges  tags    activity"
+        "forum avatar meta    meta    count   activity"
+        ".     .      preview preview preview preview";
+    }
+  }
+  .topic-row-forum {
+    grid-area: forum;
+    align-self: center;
+    & img { width: 2.25rem; height: 2.25rem; border-radius: 0.625rem; object-fit: contain; }
+  }
+  .topic-row-activity {
+    grid-area: activity;
+    align-self: center;
+    justify-self: end;
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    & .topic-row-new { color: var(--color-primary); font-weight: 600; }
+  }
+  @media (max-width: 639.98px) {
+    .topic-row.has-forum {
+      grid-template-columns: auto auto 1fr;
+      grid-template-areas:
+        "forum avatar title" "forum avatar badges" "forum avatar meta" "forum avatar tags"
+        "forum avatar count" "forum avatar activity";
+      &.is-expanded {
+        grid-template-areas:
+          "forum avatar title" "forum avatar badges" "forum avatar meta" "forum avatar tags"
+          "forum avatar count" "forum avatar activity" "preview preview preview";
+      }
+    }
+    .topic-row-forum { align-self: start; }
+    .topic-row-activity { justify-self: start; padding-left: 0; text-align: left; }
+  }
   #chats-remaining ul { list-style: disc; padding-left: 1.25rem; text-align: left; }
 }

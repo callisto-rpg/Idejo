@@ -29,7 +29,9 @@ defmodule Idejo.Community.ChatExport do
 
   @doc """
   The topics `user` follows, at most #{@topics}, the latest active first:
-  `[%{topic:, unread:, preview:}]`, topics with their category.
+  `[%{topic:, unread:, mentions:, reactions:, preview:}]`, topics with their category;
+  `mentions` and `reactions` as `Reading.mention_counts/2` and `new_reaction_counts/2` (the
+  inbox's topic cards, steward request, 2026-11-12).
   """
   @spec followed_topics(User.t()) :: [map()]
   def followed_topics(%User{} = user) do
@@ -42,10 +44,19 @@ defmodule Idejo.Community.ChatExport do
 
     ids = Enum.map(topics, & &1.id)
     unread = Reading.unread_counts(user, ids)
+    mentions = Reading.mention_counts(user, ids)
+    reactions = Reading.new_reaction_counts(user, ids)
     previews = Forum.topic_previews(ids)
 
-    for topic <- topics,
-        do: %{topic: topic, unread: Map.get(unread, topic.id, 0), preview: previews[topic.id]}
+    for topic <- topics do
+      %{
+        topic: topic,
+        unread: Map.get(unread, topic.id, 0),
+        mentions: Map.get(mentions, topic.id, 0),
+        reactions: Map.get(reactions, topic.id, 0),
+        preview: previews[topic.id]
+      }
+    end
   end
 
   @doc """

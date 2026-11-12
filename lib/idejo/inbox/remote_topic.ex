@@ -8,8 +8,10 @@ defmodule Idejo.Inbox.RemoteTopic do
   same topic rows as any forum (`IdejoWeb.TopicComponents.topic_row/1` with `base:`, the
   forum's address every link and picture of the row starts with). Nothing is stored.
 
-  `from_json/3` → `%{topic:, preview:, unread:, base:, forum:}`, or nil for something
-  unreadable. A forum before the full row (0.3.4) sends no `preview`: compact only.
+  `from_json/3` → `%{topic:, preview:, unread:, mentions:, reactions:, base:, forum:}`
+  (`forum`: `name`, `url`, `host`, `logo`), or nil for something unreadable. A forum
+  before the full row (0.3.4) sends no `preview`: compact only; before 0.3.6, no
+  `mentions` or `reactions` (0).
   """
 
   alias Idejo.Accounts.User
@@ -43,8 +45,17 @@ defmodule Idejo.Inbox.RemoteTopic do
       },
       preview: preview(json["preview"]),
       unread: if(integer(json["unread"]) > 0, do: integer(json["unread"])),
+      # The topic card's activity (steward request, 2026-11-12); 0 from forums before it.
+      mentions: integer(json["mentions"]),
+      reactions: integer(json["reactions"]),
       base: base,
-      forum: %{name: forum_name || URI.parse(url).host, url: url}
+      forum: %{
+        name: forum_name || URI.parse(url).host,
+        url: url,
+        host: URI.parse(url).host,
+        # 0.2.9's /logo: the forum's own logo, or Idejo's small one.
+        logo: base <> "/logo"
+      }
     }
   end
 
