@@ -134,7 +134,7 @@ defmodule Idejo.Settings do
     theme_secondary: %{type: :string, default: "#f2c94c", required: true, format: :colour},
     theme_tertiary: %{type: :string, default: "#b8860b", required: true, format: :colour},
     theme_light_bg: %{type: :string, default: "#fdfcf6", required: true, format: :colour},
-    theme_dark_bg: %{type: :string, default: "#1d1a00", required: true, format: :colour},
+    theme_dark_bg: %{type: :string, default: "#000000", required: true, format: :colour},
     # AD-11: the forum's own logo in the header, an upload's address
     # (`Idejo.Settings.Logo`); empty for Idejo's small logo.
     brand_logo: %{type: :string, default: "", max: 100, format: :logo}
