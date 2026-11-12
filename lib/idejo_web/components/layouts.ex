@@ -1415,6 +1415,20 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
+  The favicon (AD-11; steward request, 2026-11-13): the forum's own logo (Admin → Settings
+  → Logo, a WebP upload, the `brand_logo` setting) when it has one, else Idejo's (steward
+  decision, 2026-10-24). The app icons (manifest, touch icon) and `/favicon.ico` stay Idejo's.
+  """
+  def favicon(assigns) do
+    assigns = assign(assigns, :logo, Idejo.Settings.get(:brand_logo))
+
+    ~H"""
+    <link :if={@logo != ""} rel="icon" type="image/webp" href={@logo} />
+    <link :if={@logo == ""} rel="icon" type="image/png" href={~p"/images/favicon.png"} />
+    """
+  end
+
+  @doc """
   The page title: "Page · Server name", or the server name alone.
   """
   attr :page_title, :string, default: nil

@@ -1564,7 +1564,9 @@ The contract (M6; mark each item done here when its PR merges):
   without a session, redirects to it or to the small Idejo logo, cached an hour, a fixed
   address for directories of forums: steward decision, 2026-11-06); `.brand-mark.is-custom`
   draws it whole (`object-fit: contain`), without the tile's rounding and shadow. The
-  favicon and app icons stay Idejo's. Pages set `page_title`; the title reads "Page · Server name". No
+  favicon is the forum's logo too while it has one (steward request, 2026-11-13;
+  `Layouts.favicon/1`, `type="image/webp"`; else Idejo's `/images/favicon.png`), the app
+  icons and `/favicon.ico` stay Idejo's. Pages set `page_title`; the title reads "Page · Server name". No
   framework branding in the interface. The small logo, rendered from `logo-small.svg` at 180,
   192 and 512 px (`/images/icon-*.png`; steward decision, 2026-10-26), is the app icon (and
   the push notifications' icon): the web app manifest (CL-01,

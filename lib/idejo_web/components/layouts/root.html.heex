@@ -13,8 +13,8 @@
     <IdejoWeb.Layouts.page_title page_title={assigns[:page_title]} />
     <%!-- SE-04: public pages name their one address, so search engines index it once. --%>
     <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
-    <%!-- The Idejo favicon (steward decision, 2026-10-24). --%>
-    <link rel="icon" type="image/png" href={~p"/images/favicon.png"} />
+    <%!-- The forum's logo, else Idejo's favicon (steward request, 2026-11-13). --%>
+    <IdejoWeb.Layouts.favicon />
     <%!-- CL-01: installable; iPhones and iPads read the touch icon, not the manifest's. --%>
     <link rel="manifest" href={~p"/manifest.webmanifest"} />
     <link rel="apple-touch-icon" href={~p"/images/icon-180.png"} />

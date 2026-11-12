@@ -128,4 +128,24 @@ defmodule IdejoWeb.AD11LogoTest do
     assert redirected_to(get(build_conn(), ~p"/logo"), 302) == url
     assert get(build_conn(), url).status == 200
   end
+
+  @tag req: "AD-11"
+  test "AD-11 the favicon is the forum's logo once it has one, else Idejo's", %{admin: admin} do
+    icons = fn ->
+      build_conn()
+      |> get(~p"/")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(~s(link[rel="icon"]))
+      |> Enum.map(&{LazyHTML.attribute(&1, "type"), LazyHTML.attribute(&1, "href")})
+    end
+
+    assert icons.() == [{["image/png"], ["/images/favicon.png"]}]
+
+    {:ok, url} = Logo.set(admin, image_file(:png))
+    assert icons.() == [{["image/webp"], [url]}]
+
+    {:ok, _} = Logo.remove(admin)
+    assert icons.() == [{["image/png"], ["/images/favicon.png"]}]
+  end
 end
