@@ -136,6 +136,26 @@ defmodule IdejoWeb.SharedSettingsTest do
     assert %{"saved" => ["bio"], "failed" => ["profile"]} = json_response(conn, 200)
   end
 
+  # AC-04 (steward request, 2026-11-13): confirmed on the inbox, so no password here; the
+  # forum's own rules on names still hold.
+  test "a forum changes the username the inbox sent, where the name is free" do
+    group(chat_url: "https://my.example.test/chat")
+    ada = link(user_fixture(), "sub-ada")
+    taken = user_fixture()
+    vouch("settings")
+
+    new = ada.username <> "_k"
+    conn = send_settings(%{ticket: @ticket, settings: %{"username" => %{"username" => new}}})
+    assert %{"saved" => ["username"], "failed" => []} = json_response(conn, 200)
+    assert Accounts.get_user(ada.id).username == new
+
+    # Taken here, or changed here in the last 30 days: failed, and the inbox says so.
+    settings = %{"username" => %{"username" => taken.username}}
+    conn = send_settings(%{ticket: @ticket, settings: settings})
+    assert %{"saved" => [], "failed" => ["username"]} = json_response(conn, 200)
+    assert Accounts.get_user(ada.id).username == new
+  end
+
   test "without a chat service the address does not exist" do
     Application.put_env(:idejo, :community, url: nil, chat_url: nil)
     conn = send_settings(%{ticket: @ticket, settings: %{}})
@@ -226,6 +246,31 @@ defmodule IdejoWeb.SharedSettingsTest do
       |> render_submit(%{"everywhere" => "true"})
 
     assert html =~ "Not saved on Kitchen"
+  end
+
+  test "the inbox sends a new username to every forum, naming those that refused", %{
+    conn: conn
+  } do
+    group(inbox: true)
+    ada = link(user_fixture(), "sub-ada")
+    new = ada.username <> "_k"
+    {:ok, view, _html} = live(log_in_user(conn, ada), ~p"/users/settings")
+    Req.Test.allow(Idejo.Community, self(), view.pid)
+
+    service(fn ->
+      %{"forums" => [forum("Garden"), forum("Kitchen", %{"failed" => ["username"]})]}
+    end)
+
+    fields = %{username: new, password: valid_user_password()}
+
+    view
+    |> form("#username-form", username: fields)
+    |> render_submit(%{"everywhere" => "true"})
+
+    {_to, flash} = assert_redirect(view)
+    assert flash["error"] =~ "Your username is now @#{new}. Not changed on Kitchen"
+    assert Accounts.get_user(ada.id).username == new
+    assert_received {:sent, %{"settings" => %{"username" => %{"username" => ^new}}}}
   end
 
   test "the inbox shares its notification choices with every forum", %{conn: conn} do

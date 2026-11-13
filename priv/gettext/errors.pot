@@ -107,3 +107,6 @@ msgstr ""
 
 msgid "must be equal to %{number}"
 msgstr ""
+
+msgid "was given up recently and is reserved for now"
+msgstr ""

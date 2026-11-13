@@ -7,7 +7,8 @@ defmodule IdejoWeb.OIDCController do
 
   `GET /users/oidc` starts it: `intent` `sign_in` (the default; an `invite` code is carried
   through the provider), `link` (a signed-in member links their account from the profile)
-  or `reauth` (a signed-in member confirms deleting their account). The request's `state`,
+  or `reauth` (a signed-in member confirms deleting their account, or with `for=username`
+  changing their username: steward request, 2026-11-13). The request's `state`,
   `nonce` and PKCE verifier wait in the encrypted session, used once.
   `GET /users/oidc/callback` is where the provider sends the browser back. Someone not yet
   a member is then asked at `GET /users/oidc/consent` whether to join, seeing what this
@@ -45,7 +46,7 @@ defmodule IdejoWeb.OIDCController do
         redirect(conn, to: ~p"/")
 
       true ->
-        request = OIDC.new_request(intent, blank_to_nil(params["invite"]))
+        request = new_request(intent, params)
 
         case OIDC.authorize_url(request, redirect_uri()) do
           {:ok, url} ->
@@ -139,18 +140,17 @@ defmodule IdejoWeb.OIDCController do
     conn |> put_flash(elem(message, 0), elem(message, 1)) |> redirect(to: back("link"))
   end
 
-  defp finish(conn, "reauth", claims, _request) do
+  defp finish(conn, "reauth", claims, request) do
     user = current_user(conn)
 
     case OIDC.find_user(claims) do
       %{id: id} when user != nil and id == user.id ->
+        {text, to} = reauthenticated(request["for"])
+
         conn
         |> put_session("oidc_reauth_at", System.system_time(:second))
-        |> put_flash(
-          :info,
-          gettext("Confirmed. You can delete your account in the next five minutes.")
-        )
-        |> redirect(to: IdejoWeb.UserSettingsLive.path("account", "delete-heading"))
+        |> put_flash(:info, text)
+        |> redirect(to: to)
 
       _ ->
         conn
@@ -282,6 +282,23 @@ defmodule IdejoWeb.OIDCController do
 
   defp refusal(%Ecto.Changeset{}),
     do: gettext("Your account could not be created. Please try again.")
+
+  # `for`: what a `reauth` confirms (deleting the account, or `username`).
+  defp new_request(intent, params) do
+    intent
+    |> OIDC.new_request(blank_to_nil(params["invite"]))
+    |> Map.put("for", if(params["for"] == "username", do: "username"))
+  end
+
+  defp reauthenticated("username"),
+    do:
+      {gettext("Confirmed. You can change your username in the next five minutes."),
+       IdejoWeb.UserSettingsLive.path("profile", "username-heading")}
+
+  defp reauthenticated(_for),
+    do:
+      {gettext("Confirmed. You can delete your account in the next five minutes."),
+       IdejoWeb.UserSettingsLive.path("account", "delete-heading")}
 
   defp back("sign_in"), do: ~p"/users/sign-in"
   defp back(_intent), do: IdejoWeb.UserSettingsLive.path("account")

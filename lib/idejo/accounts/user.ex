@@ -9,6 +9,8 @@ defmodule Idejo.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Idejo.Accounts.Usernames
+
   @type t :: %__MODULE__{}
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -61,6 +63,8 @@ defmodule Idejo.Accounts.User do
     # Steward request, 2026-11-13 (Idejo.Community.SharedSettings): on a forum, email and
     # push choices come from the group's inbox; on the inbox, they go to every forum.
     field :notifications_shared, :boolean, default: false
+    # AC-04, steward request, 2026-11-13: the last username change (once every 30 days).
+    field :username_changed_at, :utc_datetime
     # MO-02: a warning waits to be seen (Idejo.Moderation.Warnings), so pages ask only then.
     field :warning_pending, :boolean, default: false
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
@@ -104,13 +108,40 @@ defmodule Idejo.Accounts.User do
       message: "may only contain letters, digits and underscores"
     )
     |> validate_length(:username, min: 3, max: 30)
+    |> validate_not_reserved()
     |> unsafe_validate_unique(:username, Idejo.Repo)
     |> unique_constraint(:username)
   end
 
+  # A name given up in the last 30 days is kept for whoever gave it up (steward request,
+  # 2026-11-13; `Idejo.Accounts.Usernames`).
+  defp validate_not_reserved(changeset) do
+    id = get_field(changeset, :id)
+
+    validate_change(changeset, :username, fn :username, username ->
+      if Usernames.reserved?(username, id),
+        do: [username: "was given up recently and is reserved for now"],
+        else: []
+    end)
+  end
+
   @doc """
-  A changeset for the user's own profile (AC-04): the display name. The username stays as
-  chosen at sign-up, since @mentions use it.
+  A changeset for a new username (AC-04; steward request, 2026-11-13): checked as at sign-up.
+  Only `Idejo.Accounts.Usernames` saves it, which also rewrites @mentions of the old one.
+  """
+  def username_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:username])
+    |> update_change(:username, &trimmed/1)
+    |> validate_username()
+  end
+
+  defp trimmed(value) when is_binary(value), do: String.trim(value)
+  defp trimmed(value), do: value
+
+  @doc """
+  A changeset for the user's own profile (AC-04): the display name and the user tag. The
+  username changes on its own (`username_changeset/2`), since @mentions use it.
   """
   def profile_changeset(user, attrs) do
     user
