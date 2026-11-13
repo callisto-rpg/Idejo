@@ -29,6 +29,8 @@
         </h2>
       </div>
       <p class="category-card-stats">{URI.parse(forum.url).host}</p>
+      <%!-- Steward request, 2026-11-13: what is new in the topics they follow there. --%>
+      <.forum_news count={Map.get(@news, URI.parse(forum.url).host, 0)} />
     </li>
   </ul>
   <p :if={@communities != [] && Idejo.Community.directory_url()} class="inbox-more">

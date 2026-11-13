@@ -89,7 +89,13 @@ defmodule IdejoWeb.ChatServiceTest do
     assert html =~ ~s(action="/u/#{bo.id}/message")
     home = conn |> get(~p"/") |> html_response(200)
     assert home =~ ~s(href="/p")
-    refute home =~ "all-topics-sidebar-link"
+    refute home =~ "community-all-topics"
+    # No chat service: no dot on the logo, and nothing to show at /community/activity.
+    refute home =~ "community-dot"
+
+    assert conn |> get(~p"/community/activity") |> json_response(200) ==
+             %{"unread" => 0, "mentions" => 0}
+
     assert Chat.start_url(ada, bo) == nil
 
     # And the service's questions are not answered.
@@ -113,22 +119,59 @@ defmodule IdejoWeb.ChatServiceTest do
     html = conn |> get(~p"/u/#{cy.id}") |> html_response(200)
     refute html =~ "private-message"
 
-    # The sidebar's button leads to the service, with its count.
+    # The forums menu's button (steward request, 2026-11-13: out of the sidebar) leads to
+    # the service, with its count.
     html = conn |> get(~p"/") |> html_response(200)
-    assert html =~ ~s(href="#{@chat}" class="sidebar-link" id="conversations-sidebar-link")
+    assert html =~ ~s(href="#{@chat}" class="community-link" id="community-conversations")
     assert Chat.unread(ada) == 2
+    refute html =~ "sidebar-pinned"
 
     # "All my topics" (steward request, 2026-11-10), above Private Conversations.
     assert html =~
-             ~s(href="https://my.example.test/topics" class="sidebar-link" id="all-topics-sidebar-link")
+             ~s(href="https://my.example.test/topics" class="community-link" id="community-all-topics")
 
-    [_, after_topics] = String.split(html, "all-topics-sidebar-link", parts: 2)
-    assert after_topics =~ "conversations-sidebar-link"
+    [_, after_topics] = String.split(html, "community-all-topics", parts: 2)
+    assert after_topics =~ "community-conversations"
 
-    # A member not linked keeps the forum's own.
+    # The dot on the logo, filled by community_menu.js from /community/activity.
+    assert html =~ ~s(id="community-dot")
+
+    # A member not linked keeps the forum's own, and gets no dot.
     html = build_conn() |> log_in_user(cy) |> get(~p"/") |> html_response(200)
-    assert html =~ ~s(href="/p" class="sidebar-link")
-    refute html =~ "all-topics-sidebar-link"
+    assert html =~ ~s(href="/p" class="community-link")
+    refute html =~ "community-all-topics"
+    refute html =~ "community-dot"
+  end
+
+  test "the logo's dot: what is new in the member's other forums, asked of the service", %{
+    conn: conn
+  } do
+    chat_on()
+    test = self()
+
+    Req.Test.stub(Idejo.Community, fn conn ->
+      send(test, {:asked, conn.request_path, conn.query_params["subject"]})
+      Req.Test.json(conn, %{"unread" => 5, "mentions" => 1})
+    end)
+
+    ada = user_fixture() |> link("ada-dot")
+    conn = log_in_user(conn, ada)
+
+    assert conn |> get(~p"/community/activity") |> json_response(200) ==
+             %{"unread" => 5, "mentions" => 1}
+
+    assert_received {:asked, path, "ada-dot"}
+    assert String.ends_with?(path, "/activity")
+
+    # Kept a minute: not asked again.
+    assert conn |> get(~p"/community/activity") |> json_response(200) ==
+             %{"unread" => 5, "mentions" => 1}
+
+    refute_received {:asked, _, _}
+
+    # Visitors are told nothing.
+    assert build_conn() |> get(~p"/community/activity") |> json_response(200) ==
+             %{"unread" => 0, "mentions" => 0}
   end
 
   test "followed topics, for a ticket the service vouches for" do

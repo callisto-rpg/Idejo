@@ -60,6 +60,14 @@ defmodule IdejoWeb.CommunityMenuTest do
     assert html =~ ~s(<a href="/" class="brand" id="brand">)
     refute html =~ "community-menu"
     assert Community.communities(user_fixture()) == []
+
+    # A member's menu still opens (steward request, 2026-11-13): it holds Private
+    # Conversations, out of the sidebar; no other forums, no dot.
+    html = build_conn() |> log_in_user(user_fixture()) |> get(~p"/") |> html_response(200)
+    doc = LazyHTML.from_document(html)
+    assert doc |> LazyHTML.query("#community-menu a#community-conversations") |> Enum.count() == 1
+    assert doc |> LazyHTML.query("#sidebar #community-conversations") |> Enum.count() == 0
+    refute html =~ "community-dot"
   end
 
   test "the server asks with its client's credentials and the member's subject" do
@@ -113,7 +121,7 @@ defmodule IdejoWeb.CommunityMenuTest do
     doc = LazyHTML.from_document(html)
 
     assert doc
-           |> LazyHTML.query("details#community-menu > summary#brand > img.brand-mark")
+           |> LazyHTML.query("details#community-menu > summary#brand img.brand-mark")
            |> Enum.count() == 1
 
     assert doc |> LazyHTML.query(~s(#community-home[href="/"])) |> Enum.count() == 1

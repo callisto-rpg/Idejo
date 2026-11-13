@@ -1045,7 +1045,7 @@ defmodule Idejo.Messages do
   defp pin_locked(moderator, id, pinned) do
     message = Repo.one!(from m in Message, where: m.id == ^id, lock: "FOR UPDATE")
 
-    if (message.pinned_at != nil) == pinned do
+    if is_nil(message.pinned_at) != pinned do
       {:ok, message}
     else
       at = if pinned, do: DateTime.utc_now()

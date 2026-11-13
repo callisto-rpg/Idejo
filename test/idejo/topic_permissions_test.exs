@@ -55,7 +55,10 @@ defmodule Idejo.TopicPermissionsTest do
     reader = user_fixture()
     insider = holding(team)
 
+    # Visitors hold guest, not member: each role is set apart, as in categories.
+    guest = Access.built_in_role!(:guest)
     assert {:ok, :deny} = Access.set_topic_permission(admin, member, topic, :view, :deny)
+    assert {:ok, :deny} = Access.set_topic_permission(admin, guest, topic, :view, :deny)
     assert {:ok, :allow} = Access.set_topic_permission(admin, team, topic, :view, :allow)
 
     refute Access.can?(reader, :view, topic)
@@ -98,6 +101,7 @@ defmodule Idejo.TopicPermissionsTest do
 
     entry = Repo.one!(from a in Action, where: a.action == "topic.permission")
     assert entry.target_id == topic.id
+
     assert entry.details == %{
              "role" => "member",
              "right" => "post",
@@ -108,8 +112,10 @@ defmodule Idejo.TopicPermissionsTest do
     # A role that moderates the topic by its own setting moderates it, and sets it too.
     keeper = holding(team)
     refute Access.moderates_a_topic?(keeper)
+
     assert :ok =
              Access.set_topic_permissions(admin, topic, %{team.id => %{"moderate" => "allow"}})
+
     assert Access.can?(keeper, :moderate, topic)
     assert Access.moderates_a_topic?(keeper)
     assert Idejo.Moderation.moderator?(keeper)

@@ -20,6 +20,7 @@ defmodule IdejoWeb.Api.CategoryController do
            page_number(params, {:category, category.id}) || {:error, :bad_request} do
       {topics, more?} =
         Forum.list_topics(category, page: page, per_page: limit(params), viewer: user(conn))
+
       {next, prev} = page_cursors({:category, category.id}, page, more?)
 
       send_page(

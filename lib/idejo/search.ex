@@ -53,6 +53,7 @@ defmodule Idejo.Search do
   defp run(user, text, opts) do
     per_page = Keyword.get(opts, :per_page, 20)
     page = max(Keyword.get(opts, :page, 1), 1)
+
     query =
       from m in Message,
         join: t in Topic,

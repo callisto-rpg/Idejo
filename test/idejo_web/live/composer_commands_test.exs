@@ -126,9 +126,12 @@ defmodule IdejoWeb.ComposerCommandsTest do
     refute other |> element("textarea") |> render() =~ "Ideas?"
   end
 
-  test "!new-topic with nothing sent asks for the message first", %{conn: conn, topic: topic} do
+  # Since 0.3.9 (steward request, 2026-11-13): with nothing sent, the New topic card opens.
+  test "!new-topic with nothing sent opens the New topic card", %{conn: conn, topic: topic} do
     {:ok, view, _html} = watch(conn, topic)
-    assert render_hook(view, "new_topic", %{}) =~ "Write your message first"
+    html = render_hook(view, "new_topic", %{})
+    assert html =~ ~s(id="new-topic-dialog")
+    refute html =~ "Write your message first"
   end
 
   test "!schedule asks for hours, then lists the message for its author, who may cancel it", %{

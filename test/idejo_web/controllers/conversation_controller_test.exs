@@ -83,7 +83,7 @@ defmodule IdejoWeb.ConversationControllerTest do
     assert redirected_to(get(build_conn(), ~p"/p/#{topic.id}")) == ~p"/users/sign-in"
   end
 
-  test "the list shows a card per conversation, and the sidebar links it at the bottom", %{
+  test "the list shows a card per conversation, and the forums menu links it", %{
     conn: conn,
     ada: ada,
     bo: bo
@@ -93,7 +93,7 @@ defmodule IdejoWeb.ConversationControllerTest do
 
     assert [_] =
              page
-             |> LazyHTML.query(".sidebar-pinned a#conversations-sidebar-link[href='/p']")
+             |> LazyHTML.query("#community-menu a#community-conversations[href='/p']")
              |> Enum.to_list()
 
     {:ok, topic} = Conversations.start(bo, ada)
@@ -105,7 +105,7 @@ defmodule IdejoWeb.ConversationControllerTest do
     assert LazyHTML.text(card) =~ "Are you there?"
     assert LazyHTML.text(card) =~ "1 new"
 
-    assert page |> LazyHTML.query("#conversations-sidebar-link .sidebar-count") |> LazyHTML.text() =~
+    assert page |> LazyHTML.query("#community-conversations .sidebar-count") |> LazyHTML.text() =~
              "1"
 
     # Opening it reads it.
