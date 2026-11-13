@@ -147,6 +147,63 @@ defmodule IdejoWeb.InfoBoxesTest do
            )
   end
 
+  # Steward request, 2026-11-13: before the categories, or in a section, first or last.
+  @tag req: "AD-02"
+  test "AD-02 an info box goes before the categories or in a section, at its start or end", %{
+    conn: conn,
+    admin: admin,
+    general: general
+  } do
+    n = System.unique_integer([:positive])
+    {:ok, clubs} = Forum.create_group(admin, %{"name" => "Clubs #{n}"})
+
+    {:ok, chess} =
+      Forum.create_category(admin, %{"name" => "Chess #{n}", "group_id" => clubs.id})
+
+    box = fn title, attrs ->
+      {:ok, box} = InfoBoxes.create(admin, Map.merge(%{"title" => title}, attrs))
+      box
+    end
+
+    top = box.("Top", %{"place" => "before"})
+    first = box.("First", %{})
+    club = box.("Club", %{"place" => "group:" <> clubs.id})
+    club_end = box.("Club end", %{"place" => "group:" <> clubs.id, "at_end" => "true"})
+    other_end = box.("Other end", %{"place" => "other", "at_end" => true})
+
+    assert {top.placement, first.placement, club.group_id} == {"before", "first", clubs.id}
+    assert club_end.at_end and other_end.placement == "other"
+
+    html = build_conn() |> get(~p"/") |> html_response(200)
+    assert texts(html, "#info-boxes-before > li h3") == ["Top"]
+
+    # Sections: the group's first, then "Other" (the ungrouped General).
+    assert texts(html, "#categories > li h3") == ["First", "Club", chess.name, "Club end"]
+    assert texts(html, "#categories-1 > li h3") == [general.name, "Other end"]
+
+    # A group with nothing shown gives the first section.
+    {:ok, _} = Forum.update_category(admin, chess, %{"group_id" => nil})
+    html = build_conn() |> get(~p"/") |> html_response(200)
+    assert texts(html, "#categories > li h3") |> List.first() == "First"
+    assert "Club" in texts(html, "#categories > li h3")
+    refute "Club" in texts(html, "#info-boxes-before > li h3")
+
+    assert {:error, changeset} = InfoBoxes.create(admin, %{"title" => "X", "place" => "side"})
+    assert changeset.errors[:place]
+
+    # The admin page sets it, and lists where each one is.
+    {:ok, lv, _html} = live(conn |> log_in_user(admin), ~p"/admin/info-boxes")
+    assert render(lv) =~ "Before the categories"
+
+    lv
+    |> form("#info-box-form", box: %{title: "Late", place: "group:" <> clubs.id, at_end: "true"})
+    |> render_submit()
+
+    late = Enum.find(InfoBoxes.list(), &(&1.title == "Late"))
+    assert {late.placement, late.group_id, late.at_end} == {"group", clubs.id, true}
+    assert has_element?(lv, "#info-box-#{late.id}-place", "at the end")
+  end
+
   @tag req: "AD-02"
   test "AD-02 only administrators reach the info boxes page", %{conn: conn} do
     member = user_fixture()

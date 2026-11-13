@@ -8,6 +8,9 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
   categories' picker, `IdejoWeb.Admin.look/1`) and Markdown text written in the message
   editor (TP-02). Made, changed, reordered and deleted here (`Idejo.Settings.InfoBoxes`);
   one form, for a new box or the one being edited.
+
+  Each box's place (steward request, 2026-11-13): before the categories, or in a section of
+  them (the first, a category group's, or "Other"), at the start or the end of its cards.
   """
   use IdejoWeb, :live_view
 
@@ -20,6 +23,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
      socket
      |> assign(:page_title, gettext("Info boxes"))
      |> assign(:boxes, InfoBoxes.list())
+     |> assign(:groups, Idejo.Forum.list_groups())
      |> start_form(nil)}
   end
 
@@ -29,6 +33,32 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
     |> assign(:editing, box)
     |> assign(:form, to_form(InfoBoxes.change(box || %Idejo.Settings.InfoBox{}), as: :box))
     |> assign(editor_mode: :write, preview_html: "")
+  end
+
+  # The places a box can take, for the form.
+  defp places(groups) do
+    [
+      {gettext("Before the categories"), "before"},
+      {gettext("In the first section"), "first"}
+    ] ++
+      Enum.map(groups, &group_place/1) ++
+      [{gettext("In “Other” (categories without a group)"), "other"}]
+  end
+
+  defp group_place(group),
+    do: {gettext("In the section “%{name}”", name: group.name), "group:" <> group.id}
+
+  # How the list says where a box is.
+  defp place_label(box, groups) do
+    place = Idejo.Settings.InfoBox.place(box)
+    {label, _} = Enum.find(places(groups), {nil, nil}, &(elem(&1, 1) == place))
+    label = label || gettext("In the first section")
+
+    cond do
+      box.placement == "before" -> label
+      box.at_end -> gettext("%{place}, at the end", place: label)
+      true -> gettext("%{place}, at the start", place: label)
+    end
   end
 
   defp admin(socket), do: socket.assigns.current_scope.user
@@ -128,7 +158,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
         {gettext("Info boxes")}
         <:subtitle>
           {gettext(
-            "Cards shown to everyone before the categories on the home page, in this order, with your own text."
+            "Cards shown to everyone on the home page, before the categories or in a section of them, in this order, with your own text."
           )}
         </:subtitle>
       </.header>
@@ -143,6 +173,9 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
         >
           <TopicComponents.category_mark category={IdejoWeb.PageHTML.info_box_mark(box)} />
           <span class="font-semibold">{box.title}</span>
+          <span id={"info-box-#{box.id}-place"} class="text-sm opacity-70">
+            {place_label(box, @groups)}
+          </span>
           <span :if={@editing && @editing.id == box.id} class="badge badge-sm">
             {gettext("Editing")}
           </span>
@@ -209,6 +242,19 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
             field={@form[:show_head]}
             type="checkbox"
             label={gettext("Show title and icon")}
+          />
+          <%!-- Steward request, 2026-11-13. --%>
+          <.input
+            field={@form[:place]}
+            type="select"
+            label={gettext("Place on the home page")}
+            options={places(@groups)}
+          />
+          <.input
+            :if={@form[:place].value != "before"}
+            field={@form[:at_end]}
+            type="checkbox"
+            label={gettext("At the end of the section, after its categories")}
           />
           <MessageComponents.editor
             field={@form[:body_md]}

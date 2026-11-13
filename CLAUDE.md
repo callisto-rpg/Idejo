@@ -991,8 +991,13 @@ The contract (M6; mark each item done here when its PR merges):
   with `Body.to_html/2` as the admin), each with a title, an icon and a `#rrggbb` colour,
   ordered, made in **Admin → Info boxes** (`Admin.InfoBoxesLive`: one form for new or
   edited, the message editor with Write / Preview; audited `info_box.create|update|reorder|
-  delete`). The home page shows them to everyone first in the first section's
-  `.category-grid`, as `.category-card.info-box` (no card link, so links in the text work;
+  delete`). The home page shows them to everyone (`PageHTML.info_box/1`) where each is placed
+  (steward request, 2026-11-13; `placement`, `group_id`, `at_end`, set in the form as `place`
+  and "At the end of the section"): before the categories, `#info-boxes-before`, a
+  `.category-grid` of their own; or in a section's `.category-grid` (`"first"`, the default
+  and what boxes had before; `"group"`, that category group's; `"other"`, the ungrouped),
+  before its categories or after them; in the first section when that one is not shown
+  (`PageController.sections/2`). Each is a `.category-card.info-box` (no card link, so links in the text work;
   the mark from `PageHTML.info_box_mark/1`), drawn without the card's background, lines,
   shadow or padding, and without its `.category-card-head` when `show_head` ("Show title
   and icon") is off (steward decisions, 2026-10-26); `--cat` comes from `Layouts.category_colours/1`
@@ -1169,8 +1174,14 @@ The contract (M6; mark each item done here when its PR merges):
   never `Idejo.Markdown.to_html/1` directly. `Markdown.references/1` finds, outside code and
   links, `@username` (→ `/u/{id}`), `+role` (the role's name as a slug, `Access.role_slug/1`,
   → `/r/{slug}`), `#slug` (a topic → `/t/{id}`: the one the author last wrote in, else the
-  most recently active), `/slug` (a category → `/c/{slug}`) and `$slug` (a tag →
-  `/tags?tags[]=slug`), resolved as the author may view them; unknown ones stay text. Links
+  most recently active), `/slug` (a category → `/c/{slug}`), `$slug` (a tag →
+  `/tags?tags[]=slug`) and `&slug` (steward request, 2026-11-13: another forum, by its
+  address's first label, `&garden` → `https://garden.idejo.org/`, reading `&Its name`, titled
+  `&<host>`, which `app.css` styles by; only one of the author's communities,
+  `Community.communities/1`, that the public directory lists, `GET
+  <IDEJO_COMMUNITY_DIRECTORY_URL>/api/forums?q=<host>`, kept five minutes per host:
+  `Community.forums/3`; never followed by `;`, so HTML entities stay), resolved as the author
+  may view them; unknown ones stay text. Links
   read the name (`#Garden plans`, `+Moderator`) unless it lives where some readers may not
   look (only names guests may view, or of the message's own category), then the slug as
   typed. Highlighted by `a[href^=…]` in `.message-body` (the sanitiser keeps no classes).
@@ -1183,7 +1194,7 @@ The contract (M6; mark each item done here when its PR merges):
   `role_mention`); an @mentioned user, or a member of a +mentioned role (steward decision,
   2026-10-23), who may view the topic also follows it (`auto_follow`, so an explicit
   unfollow stays). `/r/{slug}` (`RoleController`, public) lists a role's members.
-  **Suggestions while typing**: after `@`, `+`, `#`, `/` or `$` at the start of a word, the
+  **Suggestions while typing**: after `@`, `+`, `#`, `/`, `$` or `&` at the start of a word, the
   composer and the message editor show a list (`assets/js/suggest.js`: the `Suggest` class,
   used by the `Composer` hook before its own Enter handler, and the `EditorSuggest` hook; an
   ARIA combobox on the text box with a `role="listbox"` `<ul>` beside it). The LiveView answers

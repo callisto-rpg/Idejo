@@ -161,4 +161,7 @@ defmodule IdejoWeb.Api.ServerController do
 
   defp suggestion(:tag, tag),
     do: %{"kind" => "tag", "insert" => tag.slug, "label" => tag.name, "id" => tag.id}
+
+  defp suggestion(:forum, forum),
+    do: %{"kind" => "forum", "insert" => forum.slug, "label" => forum.name, "id" => forum.url}
 end

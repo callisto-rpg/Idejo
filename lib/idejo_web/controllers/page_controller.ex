@@ -28,10 +28,12 @@ defmodule IdejoWeb.PageController do
     # Compact or expanded topic cards (steward decision, 2026-10-23).
     {conn, view} = IdejoWeb.TopicView.choose(conn, params)
     info_boxes = InfoBoxes.list()
+    {before_boxes, sections} = sections(categories, info_boxes)
 
     render(conn, :home,
       categories: categories,
-      sections: sections(categories, info_boxes),
+      sections: sections,
+      before_boxes: before_boxes,
       info_boxes: info_boxes,
       active_topics: active_topics,
       view: view,
@@ -43,11 +45,34 @@ defmodule IdejoWeb.PageController do
     )
   end
 
-  # The info boxes go in the first section, so with no category there is still one.
+  # The info boxes before the categories, and each section as `{group, summaries, boxes
+  # first, boxes last}` (steward request, 2026-11-13): a box goes in its group's section, or
+  # "Other" (no group), at the start or the end; in the first one when that section is not
+  # shown, so a box placed in a section always shows. With no category there is still one
+  # section for them.
   defp sections(categories, info_boxes) do
-    case Forum.sections(categories, Forum.list_groups()) do
-      [] when info_boxes != [] -> [{nil, []}]
-      sections -> sections
-    end
+    {before, placed} = Enum.split_with(info_boxes, &(&1.placement == "before"))
+
+    sections =
+      case Forum.sections(categories, Forum.list_groups()) do
+        [] when placed != [] -> [{nil, []}]
+        sections -> sections
+      end
+
+    by_index = Enum.group_by(placed, &section_index(&1, sections))
+
+    {before,
+     for {{group, summaries}, index} <- Enum.with_index(sections) do
+       {last, first} = by_index |> Map.get(index, []) |> Enum.split_with(& &1.at_end)
+       {group, summaries, first, last}
+     end}
   end
+
+  defp section_index(%{placement: "group", group_id: id}, sections) when is_binary(id),
+    do: Enum.find_index(sections, &match?({%{id: ^id}, _}, &1)) || 0
+
+  defp section_index(%{placement: "other"}, sections),
+    do: Enum.find_index(sections, &match?({nil, _}, &1)) || 0
+
+  defp section_index(_box, _sections), do: 0
 end

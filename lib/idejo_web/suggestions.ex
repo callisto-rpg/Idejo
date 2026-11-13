@@ -54,6 +54,9 @@ defmodule IdejoWeb.Suggestions do
 
   defp item(:tag, tag), do: %{insert: tag.slug, label: tag.name, detail: "$" <> tag.slug}
 
+  defp item(:forum, forum),
+    do: %{insert: forum.slug, label: forum.name, detail: "&" <> forum.slug <> " · " <> forum.host}
+
   @doc "The label of a suggestion list, for screen readers."
   def list_label, do: gettext("Suggestions")
 end

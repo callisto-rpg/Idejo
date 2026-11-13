@@ -416,9 +416,9 @@ defmodule IdejoWeb.Api.Operations do
         :suggest,
         "read",
         {:list, "Suggestion"},
-        "The composer's suggestions after @ + # / $.",
+        "The composer's suggestions after @ + # / $ &.",
         query: [
-          {"sigil", "string", "One of @ + # / $."},
+          {"sigil", "string", "One of @ + # / $ &."},
           {"q", "string", "What follows the sign."},
           {"topic_id", "string", "The topic written in."}
         ]
