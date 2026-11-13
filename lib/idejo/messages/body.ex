@@ -13,6 +13,9 @@ defmodule Idejo.Messages.Body do
       last wrote in, else the most recently active.
     * `/slug` links to a category the author may view (`/c/{slug}`).
     * `$slug` links to "Filter by tag" with a tag the author may view.
+    * `&slug` links to one of the author's other communities that the public directory
+      lists (`Idejo.Community.forums/3`; steward request, 2026-11-13), reading `&Its name`,
+      with the title `&<its host>` (the stylesheet's mark for these links).
 
   A topic, category or tag link reads its name (`#Garden plans`) only when that name gives
   nothing away: everyone may view it, or it is in the message's own category. Otherwise it
@@ -146,6 +149,9 @@ defmodule Idejo.Messages.Body do
         Enum.map(tags(author, slugs(references, :tag)), fn tag ->
           label = if tag.category_id == nil or visible.(tag.category_id), do: "$" <> tag.name
           {{:tag, tag.slug}, {"/tags?tags[]=" <> tag.slug, label}}
+        end) ++
+        Enum.map(forums(author, slugs(references, :forum)), fn forum ->
+          {{:forum, forum.slug}, {forum.url, "&" <> forum.name, "&" <> forum.host}}
         end)
     )
   end
@@ -233,6 +239,12 @@ defmodule Idejo.Messages.Body do
     |> Access.where_allowed(author, :view)
     |> Repo.all()
   end
+
+  # Only asked when the text names one: the member's communities and the directory are
+  # asked once, then kept (`Idejo.Community`).
+  defp forums(_author, []), do: []
+  defp forums(nil, _slugs), do: []
+  defp forums(author, slugs), do: Idejo.Community.forums(author, slugs)
 
   defp tags(_author, []), do: []
   defp tags(nil, _slugs), do: []

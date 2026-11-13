@@ -2975,10 +2975,6 @@ msgstr ""
 msgid "Cancel the message scheduled for %{time}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/info_boxes_live.ex:130
-#, elixir-autogen, elixir-format
-msgid "Cards shown to everyone before the categories on the home page, in this order, with your own text."
-msgstr ""
 
 #: lib/idejo_web/category_icon_names.ex:61
 #, elixir-autogen, elixir-format
@@ -4026,7 +4022,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/help_html/show.html.heex:109
 #, elixir-autogen, elixir-format
-msgid "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, / and $ links are above."
+msgid "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, /, $ and & links are above."
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:237
@@ -7841,3 +7837,58 @@ msgid "Saved on your forum too."
 msgid_plural "Saved on all %{count} of your forums too."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "forum"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Links to another forum you joined, when the forums directory lists it; once sent, it reads the forum's name."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Before the categories"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In the first section"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In the section “%{name}”"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In “Other” (categories without a group)"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "%{place}, at the end"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "%{place}, at the start"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Place on the home page"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "At the end of the section, after its categories"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Cards shown to everyone on the home page, before the categories or in a section of them, in this order, with your own text."
+msgstr ""

@@ -11,6 +11,8 @@ defmodule Idejo.Suggestions do
     * `+` roles: those the user may notify (`Idejo.Access.mentionable_roles/1`), by rank.
     * `#` topics, `/` categories, `$` tags: those of the topics the user last read, then
       the most recently active. Only what the user may view, filtered in the query.
+    * `&` forums: the user's other communities the public directory lists
+      (`Idejo.Community.forums/3`; steward request, 2026-11-13), by name.
 
   A user's own name is never suggested; visitors get nothing.
   """
@@ -18,6 +20,7 @@ defmodule Idejo.Suggestions do
 
   alias Idejo.Access
   alias Idejo.Access.Role
+  alias Idejo.Community
   alias Idejo.Accounts.User
   alias Idejo.Forum.{Category, Tag, Topic}
   alias Idejo.Messages.Message
@@ -27,10 +30,17 @@ defmodule Idejo.Suggestions do
   @limit 8
   @recent_topics 30
 
-  @kinds %{"@" => :user, "+" => :role, "#" => :topic, "/" => :category, "$" => :tag}
+  @kinds %{
+    "@" => :user,
+    "+" => :role,
+    "#" => :topic,
+    "/" => :category,
+    "$" => :tag,
+    "&" => :forum
+  }
 
   @doc "The kind of item a sign starts (`\"@\"` → `:user`), or nil."
-  @spec kind(String.t()) :: :user | :role | :topic | :category | :tag | nil
+  @spec kind(String.t()) :: :user | :role | :topic | :category | :tag | :forum | nil
   def kind(sign), do: Map.get(@kinds, sign)
 
   @doc """
@@ -38,7 +48,7 @@ defmodule Idejo.Suggestions do
   rest is ignored). `topic_id:` ranks the people of that topic first.
   """
   @spec suggest(User.t() | nil, atom(), String.t(), keyword()) ::
-          [User.t() | Role.t() | Topic.t() | Category.t() | Tag.t()]
+          [User.t() | Role.t() | Topic.t() | Category.t() | Tag.t() | Community.forum_link()]
   def suggest(user, kind, query, opts \\ [])
   def suggest(nil, _kind, _query, _opts), do: []
 
@@ -131,6 +141,12 @@ defmodule Idejo.Suggestions do
     |> Repo.all()
     |> Enum.filter(&(query == "" or starts?(&1.slug, query) or starts?(&1.name, query)))
     |> ranked(recent)
+  end
+
+  defp items(:forum, user, query, _opts) do
+    user
+    |> Community.forums(:all, query: query, limit: @limit)
+    |> Enum.sort_by(&String.downcase(&1.name))
   end
 
   defp items(_kind, _user, _query, _opts), do: []
