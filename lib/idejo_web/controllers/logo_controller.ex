@@ -5,7 +5,7 @@ defmodule IdejoWeb.LogoController do
   @moduledoc """
   AD-11 (steward decision, 2026-11-06): `GET /logo`, the forum's logo at a fixed public address
   (no session), for directories of forums and link previews: a redirect to the forum's own logo
-  (`Idejo.Settings.Logo`, an upload), or the small Idejo logo when it has none. Cached an hour,
+  (`Idejo.Settings.Logo`, an upload), or the small idejo logo when it has none. Cached an hour,
   so a new logo shows within the hour.
   """
   use IdejoWeb, :controller

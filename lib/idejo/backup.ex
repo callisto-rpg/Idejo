@@ -180,7 +180,7 @@ defmodule Idejo.Backup do
   to keep, which used to fail). Then empties
   the database, restores the dump, runs the migrations a backup from an older version lacks,
   replaces the uploaded files and records `backup.restore` in the audit log. Refuses a
-  backup made by a newer version of Idejo.
+  backup made by a newer version of idejo.
 
   Returns the path of the backup made first, or nil when there was nothing to keep.
   """
@@ -364,8 +364,8 @@ defmodule Idejo.Backup do
 
   defp describe({tool, output}) when tool in [:pg_dump, :pg_restore], do: "#{tool}: #{output}"
   defp describe(:no_such_backup), do: "no such file"
-  defp describe(:not_a_backup), do: "not an Idejo backup"
-  defp describe(:newer_version), do: "made by a newer version of Idejo; upgrade it first"
+  defp describe(:not_a_backup), do: "not an idejo backup"
+  defp describe(:newer_version), do: "made by a newer version of idejo; upgrade it first"
   defp describe(reason) when is_atom(reason), do: :file.format_error(reason) |> to_string()
   defp describe(reason), do: inspect(reason)
 end

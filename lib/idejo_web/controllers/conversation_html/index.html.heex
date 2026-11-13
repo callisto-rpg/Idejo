@@ -42,10 +42,10 @@
     </li>
   </ul>
 
-  <%!-- Conversations that stayed in a forum: someone there has no Idejo ID. --%>
+  <%!-- Conversations that stayed in a forum: someone there has no idejo ID. --%>
   <div :if={assigns[:remaining] not in [nil, []]} id="chats-remaining" class="empty-state">
     <p>
-      {gettext("Some conversations stayed in their forum, with people who have no Idejo ID:")}
+      {gettext("Some conversations stayed in their forum, with people who have no idejo ID:")}
     </p>
     <ul>
       <li :for={r <- @remaining}>

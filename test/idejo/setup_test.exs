@@ -141,7 +141,7 @@ defmodule Idejo.SetupTest do
 
     assert "has already been taken" in errors_on(owner).email
     assert Setup.needed?()
-    assert Settings.get(:server_name) == "Idejo"
+    assert Settings.get(:server_name) == "idejo"
   end
 
   @tag req: "AD-01"

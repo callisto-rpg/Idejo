@@ -4,7 +4,7 @@
 defmodule Idejo.Plugins.Definition do
   @moduledoc """
   A plugin file, read and checked (steward request, 2026-11-08). A plugin is data, never code:
-  one JSON object naming a composer command and one of the blocks Idejo itself draws, so an
+  one JSON object naming a composer command and one of the blocks idejo itself draws, so an
   uploaded plugin can do nothing a built-in one cannot.
 
       {
@@ -71,7 +71,7 @@ defmodule Idejo.Plugins.Definition do
   def blocks, do: @blocks
 
   @typedoc """
-  Why a file is not a plugin Idejo can use (`parse/1`); the admin page words it
+  Why a file is not a plugin idejo can use (`parse/1`); the admin page words it
   (`IdejoWeb.PluginComponents.problem/1`).
   """
   @type problem ::
@@ -94,7 +94,7 @@ defmodule Idejo.Plugins.Definition do
           | :embed
 
   @doc """
-  Reads a plugin file's text. `{:error, problem}` when it is not a plugin Idejo can use.
+  Reads a plugin file's text. `{:error, problem}` when it is not a plugin idejo can use.
   """
   @spec parse(binary()) :: {:ok, t()} | {:error, problem()}
   def parse(text) when is_binary(text) and byte_size(text) > @max_bytes,

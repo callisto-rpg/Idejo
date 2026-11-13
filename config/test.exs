@@ -82,7 +82,7 @@ config :idejo, read_mark_ms: {0, 0}
 # The community menu's requests go to a Req.Test stub, never the network.
 config :idejo, :community_req_options, plug: {Req.Test, Idejo.Community}
 
-# Connecting to Idejo ID: the registry is a Req.Test stub, and no provider worker starts.
+# Connecting to idejo ID: the registry is a Req.Test stub, and no provider worker starts.
 config :idejo,
   id_registry_url: "https://login.idejo.test",
   id_registry_req_options: [plug: {Req.Test, Idejo.Accounts.OIDCRegistry}],

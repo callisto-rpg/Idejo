@@ -141,7 +141,7 @@ defmodule IdejoWeb.PushBannerTest do
       |> Enum.to_list()
 
     assert LazyHTML.text(ios) =~
-             "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+             "To get notifications on iPhone, add idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
 
     js = File.read!("assets/js/push_banner.js")
     assert js =~ "if (appleTouch() && !fromHomeScreen()) {"

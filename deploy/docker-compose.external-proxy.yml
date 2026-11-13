@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# AD-16: run Idejo behind your own reverse proxy, without the bundled Caddy. Given after the
+# AD-16: run idejo behind your own reverse proxy, without the bundled Caddy. Given after the
 # main file, it changes only this:
 #
 #   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.external-proxy.yml \

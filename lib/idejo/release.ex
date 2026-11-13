@@ -80,7 +80,7 @@ defmodule Idejo.Release do
         """)
 
       {:error, :already_set_up} ->
-        fail("Idejo is already set up: nothing changed.")
+        fail("idejo is already set up: nothing changed.")
 
       {:error, %Ecto.Changeset{} = changeset} ->
         fail("Nothing changed: " <> changeset_errors(changeset))
@@ -239,7 +239,7 @@ defmodule Idejo.Release do
     end
   end
 
-  ## Shared identity (AC-09, for Idejo Hub's ID-05 and ID-06)
+  ## Shared identity (AC-09, for idejo Hub's ID-05 and ID-06)
 
   @doc """
   `bin/idejo-admin delete-account --oidc-subject SUB`: deletes (anonymises, AC-07) the account
@@ -370,7 +370,7 @@ defmodule Idejo.Release do
 
   @doc """
   `bin/idejo-admin stats` (AD-09): how big this server is, as one line of JSON on standard
-  output, for monitoring and for Idejo Hub (Running under Idejo Hub): `members` (active
+  output, for monitoring and for idejo Hub (Running under idejo Hub): `members` (active
   accounts, no server accounts), `topics` (not private conversations), `messages` (not
   deleted), `database_bytes`, `uploads_bytes`. Counts and sizes only: nothing about anyone.
   """

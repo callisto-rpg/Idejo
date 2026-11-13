@@ -15,8 +15,8 @@ defmodule Idejo.SettingsTest do
 
   @tag req: "AD-02"
   test "AD-02 a setting that was never saved has its default" do
-    assert Settings.get(:server_name) == "Idejo"
-    assert %{server_name: "Idejo"} = Settings.all()
+    assert Settings.get(:server_name) == "idejo"
+    assert %{server_name: "idejo"} = Settings.all()
   end
 
   @tag req: "AD-02"
@@ -29,7 +29,7 @@ defmodule Idejo.SettingsTest do
     assert [entry] = Audit.list_entries()
     assert entry.admin_id == admin.id
     assert entry.change == "settings.update"
-    assert entry.before == %{"server_name" => "Idejo"}
+    assert entry.before == %{"server_name" => "idejo"}
     assert entry.after == %{"server_name" => "Lumière"}
   end
 
@@ -74,7 +74,7 @@ defmodule Idejo.SettingsTest do
   test "AD-02 saving unchanged values writes nothing", %{admin: admin} do
     # The push keys (PN-14) are rows of their own, made by a migration.
     stored = Repo.aggregate(Idejo.Settings.Setting, :count)
-    assert {:ok, _} = Settings.update_settings(admin, %{"server_name" => "Idejo"})
+    assert {:ok, _} = Settings.update_settings(admin, %{"server_name" => "idejo"})
     assert Audit.list_entries() == []
     assert Repo.aggregate(Idejo.Settings.Setting, :count) == stored
   end
@@ -88,7 +88,7 @@ defmodule Idejo.SettingsTest do
     assert {:error, changeset} = Settings.update_settings(admin, %{"server_name" => long})
     assert "should be at most 80 character(s)" in errors_on(changeset).server_name
 
-    assert Settings.get(:server_name) == "Idejo"
+    assert Settings.get(:server_name) == "idejo"
     assert Audit.list_entries() == []
   end
 

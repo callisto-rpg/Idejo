@@ -99,7 +99,7 @@ defmodule IdejoWeb.ChatServiceController do
           do: %{name: user.display_name, avatar: avatar(user)}
         ),
       people_count: preview.participant_count,
-      # The inbox draws Idejo's own topic row from these (steward request, 2026-11-10):
+      # The inbox draws idejo's own topic row from these (steward request, 2026-11-10):
       # paths stay relative to this forum, the inbox prefixes them.
       slug: topic.slug,
       topical: topic.topical,

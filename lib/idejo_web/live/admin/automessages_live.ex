@@ -349,7 +349,7 @@ defmodule IdejoWeb.Admin.AutomessagesLive do
           />
           <p class="text-sm opacity-70 mb-2">
             {gettext(
-              "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the Idejo picture."
+              "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the idejo picture."
             )}
           </p>
           <div class="flex items-center gap-3 mb-4">

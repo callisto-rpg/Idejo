@@ -1168,7 +1168,7 @@ defmodule IdejoWeb.UserSettingsLive do
             </p>
             <p class="push-browser-ios" hidden>
               {gettext(
-                "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+                "To get notifications on iPhone, add idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
               )}
             </p>
             <p class="push-browser-unsupported" hidden>
@@ -1312,11 +1312,11 @@ defmodule IdejoWeb.UserSettingsLive do
           <h2 id="apps-heading" class="font-semibold mb-2">{gettext("Apps and devices")}</h2>
           <p class="text-sm opacity-70 mb-3">
             {gettext(
-              "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
+              "Devices signed in to the idejo app. Remove one to sign it out; it stops getting notifications."
             )}
           </p>
           <p :if={@app_devices == []} id="apps-none" class="text-sm">
-            {gettext("No device is signed in to the Idejo app.")}
+            {gettext("No device is signed in to the idejo app.")}
           </p>
           <ul :if={@app_devices != []} id="apps-list" class="space-y-2">
             <li

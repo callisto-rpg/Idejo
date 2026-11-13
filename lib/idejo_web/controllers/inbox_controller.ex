@@ -9,7 +9,7 @@ defmodule IdejoWeb.InboxController do
     * `forums/2` (`/`): the communities the member joined, as cards with their logos, each
       with "N new messages": the unread messages in the topics they follow there (steward
       request, 2026-11-13; `Inbox.topics/1`, as the Topics tab counts them);
-    * `topics/2` (`/topics`): the topics they follow there, Idejo's topic rows with the
+    * `topics/2` (`/topics`): the topics they follow there, idejo's topic rows with the
       forum's logo and the activity lines (`?view=` compact or expanded, as the home page's,
       `IdejoWeb.TopicView`; `?show=` all or unread only; the Filter's hidden forums; each
       remembered in the session);

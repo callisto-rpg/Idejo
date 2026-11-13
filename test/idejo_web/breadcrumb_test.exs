@@ -27,7 +27,7 @@ defmodule IdejoWeb.BreadcrumbTest do
     topic: topic
   } do
     doc = page(~p"/t/#{topic.id}/#{topic.slug}")
-    assert doc |> LazyHTML.query("header #brand .brand-name") |> LazyHTML.text() =~ "Idejo"
+    assert doc |> LazyHTML.query("header #brand .brand-name") |> LazyHTML.text() =~ "idejo"
 
     crumbs = LazyHTML.query(doc, "header nav#breadcrumb[aria-label=Breadcrumb]")
     category_link = LazyHTML.query(crumbs, "a#breadcrumb-category")

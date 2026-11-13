@@ -385,7 +385,7 @@
   }
   .community-dot[hidden] { display: none; }
   .community-dot.is-mention { background: var(--color-error); border-color: var(--color-error); }
-  /* The small Idejo logo (steward decision, 2026-10-23): rounded already. */
+  /* The small idejo logo (steward decision, 2026-10-23): rounded already. */
   .brand-mark {
     flex: none;
     width: 2rem;

@@ -246,7 +246,7 @@ defmodule Idejo.Accounts do
 
   @doc """
   Closes the getting-started card: until the next sign-in, or with `hide: true` ("Close and
-  hide this in the future") for good, whatever the version of Idejo.
+  hide this in the future") for good, whatever the version of idejo.
   """
   @spec close_intro(User.t(), keyword()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def close_intro(%User{} = user, opts \\ []) do
@@ -1008,7 +1008,7 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
-  AC-09, for a shared identity provider (Idejo Hub's ID-05, ID-06): the account linked to
+  AC-09, for a shared identity provider (idejo Hub's ID-05, ID-06): the account linked to
   the configured provider's `subject`, deleted as AC-07 deletes one (anonymised: its messages
   stay, shown as "Deleted user"; the last owner is refused). No password or sign-in is asked:
   only the server's command line calls it, for the provider's operator. Audited as
@@ -1030,7 +1030,7 @@ defmodule Idejo.Accounts do
   end
 
   @doc """
-  AC-09, for a shared identity provider (Idejo Hub's ID-05): the person leaves this forum but
+  AC-09, for a shared identity provider (idejo Hub's ID-05): the person leaves this forum but
   keeps their account. Their sessions end, their browsers stop getting pushes and their email
   summaries are turned off; their account, messages, roles and link to the provider stay, so
   signing in again with the same identity brings everything back. Audited as `user.leave`.

@@ -19,7 +19,7 @@ export const PushSettings = {
   mounted() {
     this.el.querySelector(".push-browser-turn-on")?.addEventListener("click", () => this.turnOn())
     this.handleEvent("push_unsubscribe", async () => {
-      await disablePush().catch(error => console.warn("Idejo push:", error))
+      await disablePush().catch(error => console.warn("idejo push:", error))
       this.refresh()
     })
     this.refresh()
@@ -41,7 +41,7 @@ export const PushSettings = {
     try {
       endpoint = await currentEndpoint()
     } catch (error) {
-      console.warn("Idejo push:", error)
+      console.warn("idejo push:", error)
     }
     this.pushEvent("push_endpoint", {endpoint})
     this.show(endpoint ? "on" : "off")
@@ -51,7 +51,7 @@ export const PushSettings = {
     try {
       await enablePush()
     } catch (error) {
-      console.warn("Idejo push:", error)
+      console.warn("idejo push:", error)
     }
     this.pushEvent("push_changed", {})
     this.refresh()

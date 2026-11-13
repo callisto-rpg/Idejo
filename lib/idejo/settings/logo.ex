@@ -4,9 +4,9 @@
 defmodule Idejo.Settings.Logo do
   @moduledoc """
   The forum's own logo (AD-11), shown in the header before the server's name in place of
-  Idejo's small logo. Administrators upload it in Admin → Settings: `set/2` stores the image
+  idejo's small logo. Administrators upload it in Admin → Settings: `set/2` stores the image
   (`Idejo.Uploads.store_logo/2`) and saves its address in the `brand_logo` setting, audited as
-  any `settings.update`; `remove/1` goes back to Idejo's logo. A replaced logo's file and row
+  any `settings.update`; `remove/1` goes back to idejo's logo. A replaced logo's file and row
   are deleted. While the setting names it, `Uploads.delete_unused/1` keeps the upload.
   """
 
@@ -17,7 +17,7 @@ defmodule Idejo.Settings.Logo do
   @default "/images/logo-small.svg"
 
   @doc """
-  The address of the header's logo: the forum's own, or Idejo's small logo. Takes the
+  The address of the header's logo: the forum's own, or idejo's small logo. Takes the
   `brand_logo` setting when the caller has read it already.
   """
   @spec url(String.t()) :: String.t()
@@ -36,7 +36,7 @@ defmodule Idejo.Settings.Logo do
     end
   end
 
-  @doc "Goes back to Idejo's small logo, as `admin`."
+  @doc "Goes back to idejo's small logo, as `admin`."
   @spec remove(User.t()) :: {:ok, String.t()} | {:error, Ecto.Changeset.t()}
   def remove(%User{} = admin),
     do: Idejo.Access.as_administrator(admin, fn -> replace(admin, "") end)

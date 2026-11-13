@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.ServerNameTest do
   @moduledoc """
-  The header and page titles show the server name set in the admin panel, or "Idejo".
+  The header and page titles show the server name set in the admin panel, or "idejo".
   """
   use IdejoWeb.ConnCase, async: true
 
@@ -16,11 +16,11 @@ defmodule IdejoWeb.ServerNameTest do
   defp title(html), do: html |> LazyHTML.from_document() |> LazyHTML.query("title")
 
   @tag req: "AD-02"
-  test "AD-02 without a server name, header and title say Idejo", %{conn: conn} do
+  test "AD-02 without a server name, header and title say idejo", %{conn: conn} do
     html = conn |> get(~p"/users/sign-in") |> html_response(200)
 
-    assert LazyHTML.text(header(html)) =~ "Idejo"
-    assert LazyHTML.text(title(html)) == "Sign in · Idejo"
+    assert LazyHTML.text(header(html)) =~ "idejo"
+    assert LazyHTML.text(title(html)) == "Sign in · idejo"
   end
 
   @tag req: "AD-02"

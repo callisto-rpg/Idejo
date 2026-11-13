@@ -3,7 +3,7 @@
 
 defmodule Idejo.AC09IdentityCommandsTest do
   @moduledoc """
-  AC-09, for a shared identity provider (Idejo Hub): delete or leave by the provider's subject,
+  AC-09, for a shared identity provider (idejo Hub): delete or leave by the provider's subject,
   from the command line (`delete-account`, `leave`).
   """
   # Not async: the provider's configuration is global.
@@ -25,7 +25,7 @@ defmodule Idejo.AC09IdentityCommandsTest do
       issuer: @issuer,
       client_id: "c",
       client_secret: "s",
-      label: "Idejo ID"
+      label: "idejo ID"
     )
 
     on_exit(fn -> Application.put_env(:idejo, :oidc, original) end)

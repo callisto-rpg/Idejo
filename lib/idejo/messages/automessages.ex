@@ -15,7 +15,7 @@ defmodule Idejo.Messages.Automessages do
   never signs in (an email that cannot be typed, a random password, never confirmed) and,
   not being active, is never mentioned, suggested, notified or emailed. Automessages with
   the same username share the account and its picture; an account without one shows the
-  Idejo picture (`Idejo.Uploads.avatar_url/1`) until one is uploaded. A username a member
+  idejo picture (`Idejo.Uploads.avatar_url/1`) until one is uploaded. A username a member
   already has is refused. Accounts stay when no automessage names them any more: their
   messages keep their author.
 

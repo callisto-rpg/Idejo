@@ -73,7 +73,7 @@ defmodule IdejoWeb.Api.ServerController do
   end
 
   # KLIPY's terms (steward decision, 2026-11-03): the client calls the provider and loads
-  # its media itself, never through Idejo; so the app gets the browser's configuration.
+  # its media itself, never through idejo; so the app gets the browser's configuration.
   def gifs(conn, _params) do
     json(conn, %{"enabled" => Gifs.enabled?(), "config" => Gifs.client_config()})
   end

@@ -87,7 +87,7 @@ defmodule IdejoWeb.Router do
     # AD-11 (steward decision, 2026-11-06): the forum's logo at a fixed public address, for
     # directories and link previews.
     get "/logo", LogoController, :show
-    # AC-09 (steward decisions, 2026-11-06): the proof an Idejo ID registry fetches while
+    # AC-09 (steward decisions, 2026-11-06): the proof an idejo ID registry fetches while
     # an administrator connects the server.
     get "/.well-known/idejo-id-registration", IdRegistrationController, :show
     # PN-17: the service worker, from the root so its scope is the whole site, and the key

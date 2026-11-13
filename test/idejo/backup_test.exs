@@ -140,14 +140,14 @@ defmodule Idejo.BackupTest do
 
   describe "restore refuses" do
     @tag req: "AD-05"
-    test "AD-05 a file that is not an Idejo backup" do
+    test "AD-05 a file that is not an idejo backup" do
       File.mkdir_p!(Backup.dir())
       missing = Path.join(Backup.dir(), "missing.tar")
       assert Backup.restore(missing) == {:error, "no such file"}
 
       not_tar = Path.join(Backup.dir(), "notes.tar")
       File.write!(not_tar, "hello")
-      assert Backup.restore(not_tar) == {:error, "not an Idejo backup"}
+      assert Backup.restore(not_tar) == {:error, "not an idejo backup"}
     end
 
     @tag req: "AD-05"
@@ -161,7 +161,7 @@ defmodule Idejo.BackupTest do
           {~c"uploads/../../escape.txt", "x"}
         ])
 
-      assert Backup.restore(path) == {:error, "not an Idejo backup"}
+      assert Backup.restore(path) == {:error, "not an idejo backup"}
       refute File.exists?(Path.join(uploads_dir(), "../escape.txt"))
     end
 
@@ -173,7 +173,7 @@ defmodule Idejo.BackupTest do
       :ok = :erl_tar.create(String.to_charlist(path), [{~c"manifest.json", manifest}])
 
       assert Backup.restore(path) ==
-               {:error, "made by a newer version of Idejo; upgrade it first"}
+               {:error, "made by a newer version of idejo; upgrade it first"}
 
       assert Backup.list() == []
     end

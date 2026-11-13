@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # M6 exit check
 
-The milestone M6 check (MVP §7, "Ready for Idejo Hub"), one command:
+The milestone M6 check (MVP §7, "Ready for idejo Hub"), one command:
 
 ```sh
 deploy/test/m6/run.sh               # everything, the mix flow test included
@@ -37,8 +37,8 @@ browser step leaves `failure.png` here). CI runs it nightly and on demand
    invite-only; an invite is made on B for the member.
 3. **`GET /health` through Caddy** (AD-15) on both: `"status":"ok"`.
 4. **One member, both forums** (AC-09), in a real browser (Playwright's Chromium, in its
-   Docker image, `browser/check.mjs`): signs in to A with **Sign in with Idejo ID**, and to B
-   from B's invite link with **Sign up with Idejo ID**, through Dex's login page. Then
+   Docker image, `browser/check.mjs`): signs in to A with **Sign in with idejo ID**, and to B
+   from B's invite link with **Sign up with idejo ID**, through Dex's login page. Then
    `run.sh` makes them moderator on A only, as A's owner (`Access.assign_role/3`), and the
    browser checks each forum's page of the member: Moderator on A, not on B.
 5. **No session cookie crosses hosts** (SP-10): each forum's `_idejo_key` is host-only in

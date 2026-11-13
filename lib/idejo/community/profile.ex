@@ -8,7 +8,7 @@ defmodule Idejo.Community.Profile do
   member starts with them, and linking an existing account offers the provider this account's
   username and picture (it keeps them only when it has none). Optional and generic, like the
   community menu: `<IDEJO_COMMUNITY_URL>/profile`, or `<registry>/account/api/profile` for a
-  server connected from Admin → Idejo ID; unset, nothing is asked.
+  server connected from Admin → idejo ID; unset, nothing is asked.
 
   `GET ?subject=` → `{"username", "picture"}` (the picture's address, at the provider's own
   host only); `POST {"subject", "username", "picture"}` (the avatar's WebP in Base64), both
@@ -114,7 +114,7 @@ defmodule Idejo.Community.Profile do
     |> Req.merge(Application.get_env(:idejo, :community_req_options, []))
   end
 
-  # A username fit to use: Idejo's characters only, never an address.
+  # A username fit to use: idejo's characters only, never an address.
   defp text(value) when is_binary(value) do
     if value =~ ~r/\A[A-Za-z0-9_]{3,30}\z/, do: value
   end

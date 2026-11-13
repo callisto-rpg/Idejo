@@ -610,7 +610,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/setup_html/new.html.heex:22
 #, elixir-autogen, elixir-format
-msgid "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “Idejo is not set up yet” (see “Set up your server” in the deployment guide)."
+msgid "Only the person who runs the server can set it up. The code is in the app log, in the line that starts with “idejo is not set up yet” (see “Set up your server” in the deployment guide)."
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:123
@@ -2615,7 +2615,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/automessages_live.ex:351
 #, elixir-autogen, elixir-format
-msgid "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the Idejo picture."
+msgid "A server account with this name sends the message. Automessages with the same name share its account and picture; until you upload one, it shows the idejo picture."
 msgstr ""
 
 #: lib/idejo_web/controllers/help_controller.ex:57
@@ -2952,7 +2952,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/stylesheet_live.ex:67
 #, elixir-autogen, elixir-format
-msgid "CSS that every page loads after Idejo's own styles, so its rules win. Reset to default brings back the stylesheet Idejo came with."
+msgid "CSS that every page loads after idejo's own styles, so its rules win. Reset to default brings back the stylesheet idejo came with."
 msgstr ""
 
 #: lib/idejo_web/live/admin/roles_live.ex:126
@@ -5301,7 +5301,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:78
 #, elixir-autogen, elixir-format
-msgid "The Idejo logo is back."
+msgid "The idejo logo is back."
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:271
@@ -5511,7 +5511,7 @@ msgstr ""
 #: lib/idejo_web/components/layouts.ex:1393
 #: lib/idejo_web/live/user_settings_live.ex:784
 #, elixir-autogen, elixir-format
-msgid "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+msgid "To get notifications on iPhone, add idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
 msgstr ""
 
 #: lib/idejo_web/live/user_settings_live.ex:299
@@ -5673,7 +5673,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:392
 #, elixir-autogen, elixir-format
-msgid "Use the Idejo logo"
+msgid "Use the idejo logo"
 msgstr ""
 
 #: lib/idejo_web/live/user_settings_live.ex:564
@@ -6194,12 +6194,12 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:139
 #, elixir-autogen, elixir-format
-msgid "Connect to Idejo ID (%{host})"
+msgid "Connect to idejo ID (%{host})"
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:83
 #, elixir-autogen, elixir-format
-msgid "Connect to Idejo ID first."
+msgid "Connect to idejo ID first."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:151
@@ -6214,7 +6214,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:130
 #, elixir-autogen, elixir-format
-msgid "Connecting to Idejo ID is turned off on this server (IDEJO_ID_REGISTRY_URL)."
+msgid "Connecting to idejo ID is turned off on this server (IDEJO_ID_REGISTRY_URL)."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:137
@@ -6235,12 +6235,12 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:170
 #, elixir-autogen, elixir-format
-msgid "Disconnect from Idejo ID? Members can no longer sign in with it here until you connect again."
+msgid "Disconnect from idejo ID? Members can no longer sign in with it here until you connect again."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:59
 #, elixir-autogen, elixir-format
-msgid "Disconnected from Idejo ID."
+msgid "Disconnected from idejo ID."
 msgstr ""
 
 #: lib/idejo_web/components/layouts.ex:281
@@ -6259,27 +6259,27 @@ msgstr ""
 #: lib/idejo_web/live/admin/idejo_id_live.ex:18
 #: lib/idejo_web/live/admin/idejo_id_live.ex:112
 #, elixir-autogen, elixir-format
-msgid "Idejo ID"
+msgid "idejo ID"
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:75
 #, elixir-autogen, elixir-format
-msgid "Idejo ID answered: %{message}"
+msgid "idejo ID answered: %{message}"
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:78
 #, elixir-autogen, elixir-format
-msgid "Idejo ID could not be reached: try again in a moment."
+msgid "idejo ID could not be reached: try again in a moment."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:86
 #, elixir-autogen, elixir-format
-msgid "Idejo ID gave an answer this server does not understand."
+msgid "idejo ID gave an answer this server does not understand."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:125
 #, elixir-autogen, elixir-format
-msgid "Let members sign in with their Idejo ID: one account for every Idejo forum that uses it. Local accounts keep working."
+msgid "Let members sign in with their idejo ID: one account for every idejo forum that uses it. Local accounts keep working."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:195
@@ -6314,7 +6314,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:183
 #, elixir-autogen, elixir-format
-msgid "Only forums that sign in with Idejo ID can be listed. Connect to Idejo ID first."
+msgid "Only forums that sign in with idejo ID can be listed. Connect to idejo ID first."
 msgstr ""
 
 #: lib/idejo_web/live/admin/idejo_id_live.ex:163
@@ -6669,7 +6669,7 @@ msgstr ""
 
 #: lib/idejo_web/components/plugin_components.ex:482
 #, elixir-autogen, elixir-format
-msgid "!%{command} is already a command of Idejo or an automessage."
+msgid "!%{command} is already a command of idejo or an automessage."
 msgstr ""
 
 #: lib/idejo_web/live/admin/plugins_live.ex:122
@@ -6744,7 +6744,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/plugins_live.ex:223
 #, elixir-autogen, elixir-format
-msgid "A plugin is a .json file naming a command and one of the blocks Idejo draws: a video, a page in a frame, a link button or a card. It is installed turned off."
+msgid "A plugin is a .json file naming a command and one of the blocks idejo draws: a video, a page in a frame, a link button or a card. It is installed turned off."
 msgstr ""
 
 #: lib/idejo_web/components/plugin_components.ex:244
@@ -6835,7 +6835,7 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/plugins_live.ex:202
 #, elixir-autogen, elixir-format
-msgid "Not a plugin Idejo can use: %{reason}"
+msgid "Not a plugin idejo can use: %{reason}"
 msgstr ""
 
 #: lib/idejo_web/components/plugin_components.ex:89
@@ -7244,7 +7244,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/conversation_html/index.html.heex:48
 #, elixir-autogen, elixir-format
-msgid "Some conversations stayed in their forum, with people who have no Idejo ID:"
+msgid "Some conversations stayed in their forum, with people who have no idejo ID:"
 msgstr ""
 
 #: lib/idejo_web/controllers/inbox_html/forums.html.heex:10
@@ -7305,7 +7305,7 @@ msgstr ""
 
 #: lib/idejo_web/live/user_settings_live.ex:658
 #, elixir-autogen, elixir-format
-msgid "Devices signed in to the Idejo app. Remove one to sign it out; it stops getting notifications."
+msgid "Devices signed in to the idejo app. Remove one to sign it out; it stops getting notifications."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:229
@@ -7340,12 +7340,12 @@ msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:333
 #, elixir-autogen, elixir-format
-msgid "Members can use the Idejo app"
+msgid "Members can use the idejo app"
 msgstr ""
 
 #: lib/idejo_web/live/user_settings_live.ex:663
 #, elixir-autogen, elixir-format
-msgid "No device is signed in to the Idejo app."
+msgid "No device is signed in to the idejo app."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:234
@@ -7381,18 +7381,18 @@ msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_controller.ex:37
 #, elixir-autogen, elixir-format
-msgid "Sign in to connect the Idejo app."
+msgid "Sign in to connect the idejo app."
 msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_controller.ex:75
 #: lib/idejo_web/controllers/app_authorize_controller.ex:85
 #, elixir-autogen, elixir-format
-msgid "Sign in to the Idejo app"
+msgid "Sign in to the idejo app"
 msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_html/new.html.heex:8
 #, elixir-autogen, elixir-format
-msgid "Sign in to the Idejo app on this device as %{name}?"
+msgid "Sign in to the idejo app on this device as %{name}?"
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:176
@@ -7417,17 +7417,17 @@ msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_html/error.html.heex:7
 #, elixir-autogen, elixir-format
-msgid "The Idejo app cannot sign in"
+msgid "The idejo app cannot sign in"
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:337
 #, elixir-autogen, elixir-format
-msgid "The Idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
+msgid "The idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
 msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_html.ex:13
 #, elixir-autogen, elixir-format
-msgid "The Idejo app is turned off on this server."
+msgid "The idejo app is turned off on this server."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:162
@@ -7442,7 +7442,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/app_device_controller.ex:18
 #, elixir-autogen, elixir-format
-msgid "The device was signed out of the Idejo app."
+msgid "The device was signed out of the idejo app."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:185
@@ -7513,7 +7513,7 @@ msgstr ""
 
 #: lib/idejo_web/api/errors.ex:175
 #, elixir-autogen, elixir-format
-msgid "This app is not the official Idejo app."
+msgid "This app is not the official idejo app."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:230
@@ -7599,7 +7599,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/app_authorize_html.ex:17
 #, elixir-autogen, elixir-format
-msgid "This sign-in request does not come from the official Idejo app, or it is incomplete. Nothing was shared. Close this page and try again from the app."
+msgid "This sign-in request does not come from the official idejo app, or it is incomplete. Nothing was shared. Close this page and try again from the app."
 msgstr ""
 
 #: lib/idejo_web/api/errors.ex:183

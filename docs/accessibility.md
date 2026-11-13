@@ -1,6 +1,6 @@
 # Accessibility
 
-What Idejo promises (AX-01 to AX-04), how it is checked, and what a person still has to check
+What idejo promises (AX-01 to AX-04), how it is checked, and what a person still has to check
 by hand before a release.
 
 ## Checked by the tests

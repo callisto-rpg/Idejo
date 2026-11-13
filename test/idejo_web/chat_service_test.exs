@@ -115,7 +115,7 @@ defmodule IdejoWeb.ChatServiceTest do
     assert html =~ ~s(href="#{@chat}/new?with=bo-sub")
     refute html =~ ~s(action="/u/#{bo.id}/message")
 
-    # Cy has no Idejo ID: no button at all.
+    # Cy has no idejo ID: no button at all.
     html = conn |> get(~p"/u/#{cy.id}") |> html_response(200)
     refute html =~ "private-message"
 

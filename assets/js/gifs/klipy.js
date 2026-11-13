@@ -5,7 +5,7 @@
 // standard terms (docs.klipy.com/integration-requirements) the browser calls the API itself
 // and the GIFs load from the URLs it returns, unchanged; results keep the order and make-up
 // KLIPY gives them. Ads come only when they are switched on for the key in KLIPY's Partner
-// Panel; Idejo shows no ads, so they must stay off there (docs/admin-guide.md).
+// Panel; idejo shows no ads, so they must stay off there (docs/admin-guide.md).
 const API = "https://api.klipy.com/api/v1"
 const PER_PAGE = 24
 

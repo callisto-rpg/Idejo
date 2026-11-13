@@ -81,7 +81,7 @@ defmodule Idejo.Setup do
   def announce do
     if needed?() do
       Logger.warning("""
-      Idejo is not set up yet. Open this link to run the setup wizard:
+      idejo is not set up yet. Open this link to run the setup wizard:
 
           #{Application.fetch_env!(:idejo, :base_uri)}/setup?code=#{token()}
 

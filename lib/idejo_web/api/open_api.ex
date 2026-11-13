@@ -188,10 +188,10 @@ defmodule IdejoWeb.Api.OpenApi do
     %{
       "openapi" => "3.1.0",
       "info" => %{
-        "title" => "Idejo API",
+        "title" => "idejo API",
         "version" => "1",
         "description" =>
-          "The API of an Idejo forum, for the official app (org.idejo.app). Within v1 only additive changes are made. See docs/api-guide.md.",
+          "The API of an idejo forum, for the official app (org.idejo.app). Within v1 only additive changes are made. See docs/api-guide.md.",
         "license" => %{"name" => "AGPL-3.0-only", "identifier" => "AGPL-3.0-only"}
       },
       "servers" => [%{"url" => Idejo.Api.base() <> "/api/v1"}],

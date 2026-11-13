@@ -65,9 +65,9 @@ defmodule IdejoWeb.SetupControllerTest do
     assert html =~ ~s(name="setup[owner][email]")
     assert html =~ ~s(name="setup[owner][password]")
     assert html =~ ~s(name="setup[settings][smtp_host]")
-    assert html =~ "Idejo is not set up yet"
-    # The full Idejo logo above it (steward decision, 2026-10-23).
-    assert html =~ ~s(src="/images/logo.svg" alt="Idejo" class="full-logo")
+    assert html =~ "idejo is not set up yet"
+    # The full idejo logo above it (steward decision, 2026-10-23).
+    assert html =~ ~s(src="/images/logo.svg" alt="idejo" class="full-logo")
     # A plain form: it works without JavaScript.
     assert html =~ ~s(action="/setup")
     assert html =~ ~s(method="post")

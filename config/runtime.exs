@@ -163,7 +163,7 @@ config :idejo,
             raise "environment variable IDEJO_OIDC_SIGN_UP_URL must be an http:// or https:// address."
         end)
 
-# AC-09 (steward decisions, 2026-11-06): the Idejo ID registry an administrator may connect
+# AC-09 (steward decisions, 2026-11-06): the idejo ID registry an administrator may connect
 # this server to from the admin panel, when the environment sets no provider. Default
 # https://login.idejo.org (config.exs); `off` hides connecting.
 case System.get_env("IDEJO_ID_REGISTRY_URL", "") |> String.trim() do

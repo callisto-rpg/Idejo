@@ -5,14 +5,14 @@ defmodule Idejo.Inbox do
   @moduledoc """
   Inbox mode (steward request, 2026-11-10): `IDEJO_INBOX=on` makes this install the inbox of
   a group of communities sharing one sign-in (the community menu's, `Idejo.Community`): one
-  page per member, with Idejo's own look, header, menus, composer and topic lists, but no
+  page per member, with idejo's own look, header, menus, composer and topic lists, but no
   sidebar and no categories of its own. It answers the group's chat service
   (`Idejo.Community.Chat`): the forums' `IDEJO_CHAT_URL` and `IDEJO_TOPICS_URL` point here.
 
     * **Forums** (`/`): the communities the member joined (`Idejo.Community.communities/1`).
-    * **Topics** (`/topics`): the topics they follow in each, as Idejo's topic rows, compact
+    * **Topics** (`/topics`): the topics they follow in each, as idejo's topic rows, compact
       or expanded (`topics/1`, `Idejo.Inbox.RemoteTopic`).
-    * **Chats** (`/chat`, `/p/{id}`): Idejo's private conversations, between members known
+    * **Chats** (`/chat`, `/p/{id}`): idejo's private conversations, between members known
       here by their provider subject. Someone named by a forum's "Private Message"
       (`/chat/new?with=<subject>`) gets an account here at once (`member/1`), linked to that
       subject, which their own sign-in later finds. Their conversations in the forums are
@@ -85,7 +85,7 @@ defmodule Idejo.Inbox do
 
   @doc """
   The member linked to `subject`, made when there is none (someone a forum's "Private
-  Message" names before they ever came here): their Idejo ID's username and picture
+  Message" names before they ever came here): their idejo ID's username and picture
   (`Idejo.Community.Profile`), an address nobody receives mail at until they sign in
   (`claim/2`), verified, welcomed. `{:error, :unknown}` when the provider has no such person.
   """
@@ -203,7 +203,7 @@ defmodule Idejo.Inbox do
   through the group's service, `POST <service>/settings` `{subject, settings}` →
   `{"forums": [{"name", "host", "answered", "saved", "failed"}]}`. `shared:` also sets
   whether their notification choices are shared. `{:ok, %{done: [name], missed: [name]}}`,
-  a forum missed when it did not answer (an Idejo before 0.3.7, or down) or did not take a
+  a forum missed when it did not answer (an idejo before 0.3.7, or down) or did not take a
   section; `:error` when the service did not answer.
   """
   @spec save_everywhere(User.t(), [String.t()], keyword()) ::
@@ -233,7 +233,7 @@ defmodule Idejo.Inbox do
   @doc """
   Copies `user`'s private conversations from the group's forums, at most once an hour
   (`force: true` asks anyway): `%{copied:, remaining: [%{name:, url:, count:}]}`, the
-  conversations that stayed in a forum (someone there has no Idejo ID).
+  conversations that stayed in a forum (someone there has no idejo ID).
   """
   @spec import(User.t(), keyword()) :: %{copied: non_neg_integer(), remaining: [map()]}
   def import(%User{} = user, opts \\ []) do

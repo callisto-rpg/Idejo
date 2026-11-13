@@ -4,8 +4,8 @@
 defmodule IdejoWeb.InboxTest do
   @moduledoc """
   Inbox mode (steward request, 2026-11-10; `Idejo.Inbox`): IDEJO_INBOX=on makes the install
-  a group's inbox: Idejo's own header and menus without a sidebar, Forums, Topics and Chats
-  tabs, the forums' topics drawn as Idejo's topic rows, chats as private conversations, and
+  a group's inbox: idejo's own header and menus without a sidebar, Forums, Topics and Chats
+  tabs, the forums' topics drawn as idejo's topic rows, chats as private conversations, and
   the forums' old conversations copied in. Off, none of it answers.
   """
   use IdejoWeb.ConnCase, async: false
@@ -117,7 +117,7 @@ defmodule IdejoWeb.InboxTest do
     assert conn |> get(~p"/") |> html_response(200) =~ ~s(id="sidebar")
   end
 
-  test "Forums: Idejo's header and menus, no sidebar, the forums joined", %{conn: conn} do
+  test "Forums: idejo's header and menus, no sidebar, the forums joined", %{conn: conn} do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")
 
@@ -165,7 +165,7 @@ defmodule IdejoWeb.InboxTest do
     assert build_conn() |> get(~p"/") |> redirected_to() == ~p"/users/sign-in"
   end
 
-  test "Topics: the forums' topics as Idejo's own rows, compact or expanded", %{conn: conn} do
+  test "Topics: the forums' topics as idejo's own rows, compact or expanded", %{conn: conn} do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")
 
@@ -375,7 +375,7 @@ defmodule IdejoWeb.InboxTest do
     claimed = Inbox.claim(bo, %{"email" => "bo@example.test", "email_verified" => true})
     assert claimed.email == "bo@example.test"
 
-    # An Idejo ID the provider does not know: refused.
+    # An idejo ID the provider does not know: refused.
     service(%{})
     conn = build_conn() |> log_in_user(ada) |> get(~p"/chat/new?with=nobody")
     assert redirected_to(conn) == ~p"/chat"

@@ -130,4 +130,4 @@ if ("serviceWorker" in navigator) {
   })
 }
 
-syncPush().catch(error => console.warn("Idejo push:", error))
+syncPush().catch(error => console.warn("idejo push:", error))

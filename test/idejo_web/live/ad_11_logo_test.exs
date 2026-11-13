@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.AD11LogoTest do
   @moduledoc """
-  AD-11: administrators replace the header's small Idejo logo with the forum's own, in
+  AD-11: administrators replace the header's small idejo logo with the forum's own, in
   Admin → Settings. Not async: the logo is a setting every page reads.
   """
   use IdejoWeb.ConnCase, async: false
@@ -74,7 +74,7 @@ defmodule IdejoWeb.AD11LogoTest do
     assert has_element?(lv, "#remove-logo")
   end
 
-  test "AD-11 \"Use the Idejo logo\" goes back, and a replaced logo's file is deleted", %{
+  test "AD-11 \"Use the idejo logo\" goes back, and a replaced logo's file is deleted", %{
     conn: conn,
     admin: admin
   } do
@@ -130,7 +130,7 @@ defmodule IdejoWeb.AD11LogoTest do
   end
 
   @tag req: "AD-11"
-  test "AD-11 the favicon is the forum's logo once it has one, else Idejo's", %{admin: admin} do
+  test "AD-11 the favicon is the forum's logo once it has one, else idejo's", %{admin: admin} do
     icons = fn ->
       build_conn()
       |> get(~p"/")

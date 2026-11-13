@@ -479,7 +479,7 @@ defmodule IdejoWeb.PluginComponents do
   def problem(:embed), do: gettext("\"embed\" must be an https address holding {id}.")
 
   def problem({:reserved, command}),
-    do: gettext("!%{command} is already a command of Idejo or an automessage.", command: command)
+    do: gettext("!%{command} is already a command of idejo or an automessage.", command: command)
 
   def problem({:duplicate, command}),
     do: gettext("Another file already defines !%{command}.", command: command)

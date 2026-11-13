@@ -4,7 +4,7 @@
 defmodule IdejoWeb.IdRegistrationController do
   @moduledoc """
   AC-09 (steward decisions, 2026-11-06): `GET /.well-known/idejo-id-registration`, the proof
-  an Idejo ID registry fetches while an administrator connects this server
+  an idejo ID registry fetches while an administrator connects this server
   (`Idejo.Accounts.OIDCRegistry`): plain text for ten minutes, else 404. No session.
   """
   use IdejoWeb, :controller

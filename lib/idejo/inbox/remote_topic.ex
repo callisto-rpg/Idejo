@@ -4,7 +4,7 @@
 defmodule Idejo.Inbox.RemoteTopic do
   @moduledoc """
   A topic another forum of the group sent the inbox (steward request, 2026-11-10; its
-  `GET /community/topics`), turned into Idejo's own structs, so the inbox draws it with the
+  `GET /community/topics`), turned into idejo's own structs, so the inbox draws it with the
   same topic rows as any forum (`IdejoWeb.TopicComponents.topic_row/1` with `base:`, the
   forum's address every link and picture of the row starts with). Nothing is stored.
 
@@ -53,7 +53,7 @@ defmodule Idejo.Inbox.RemoteTopic do
         name: forum_name || URI.parse(url).host,
         url: url,
         host: URI.parse(url).host,
-        # 0.2.9's /logo: the forum's own logo, or Idejo's small one.
+        # 0.2.9's /logo: the forum's own logo, or idejo's small one.
         logo: base <> "/logo"
       }
     }

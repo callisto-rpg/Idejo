@@ -57,7 +57,7 @@ async function setUp() {
     try {
       permission = await enablePush()
     } catch (error) {
-      console.warn("Idejo push:", error)
+      console.warn("idejo push:", error)
       return hide(banner)
     }
     if (permission !== "granted") return hide(banner)

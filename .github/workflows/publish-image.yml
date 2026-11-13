@@ -6,7 +6,7 @@
 #   git tag v0.1.0 && git push origin v0.1.0
 #
 # The tag must match `version` in mix.exs. The M6 exit check runs first; the image is pushed
-# to ghcr.io/callisto-rpg/idejo as `X.Y.Z` and `X.Y` only once it passes. Idejo Hub starts
+# to ghcr.io/callisto-rpg/idejo as `X.Y.Z` and `X.Y` only once it passes. idejo Hub starts
 # forums from these images and pins each one to an exact version.
 # The image is built from the tagged commit with .git/HEAD in the build context, so its
 # "Source code" link points at that commit (LI-03).
@@ -66,7 +66,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           labels: |
-            org.opencontainers.image.title=Idejo
+            org.opencontainers.image.title=idejo
             org.opencontainers.image.licenses=AGPL-3.0-only
       - uses: docker/build-push-action@v6
         with:

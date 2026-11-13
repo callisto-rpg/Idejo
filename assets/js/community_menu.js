@@ -26,7 +26,7 @@ const load = (list) => {
         const item = document.createElement("li")
         const link = document.createElement("a")
         link.href = url
-        // Each forum's logo at Idejo's fixed address (`/logo`, 0.2.9), drawn like this
+        // Each forum's logo at idejo's fixed address (`/logo`, 0.2.9), drawn like this
         // forum's; a forum that has none to give (older) shows its name alone.
         if (secure(url)) {
           const logo = document.createElement("img")

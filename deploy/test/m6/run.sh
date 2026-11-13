@@ -6,7 +6,7 @@
 #
 #   deploy/test/m6/run.sh [--skip-flow]
 #
-# Two Idejo instances from one image behind one Caddy, set up with bin/idejo-admin setup,
+# Two idejo instances from one image behind one Caddy, set up with bin/idejo-admin setup,
 # /health on both, one member signed in to both through Dex with a different role on each,
 # no session cookie crossing hosts; then the "admin sets up the server" flow (mix, unless
 # --skip-flow: CI runs it in its Tests job) and the default Compose install. Everything is
@@ -97,7 +97,7 @@ for host in a.idejo.test b.idejo.test; do
   echo "$body" | grep -q '"status":"ok"' || { echo "$host is not healthy"; exit 1; }
 done
 
-step "4, 5. One member, both forums, through Idejo ID (Dex), in a browser"
+step "4, 5. One member, both forums, through idejo ID (Dex), in a browser"
 network="${check}_m6"
 docker run -d --name "$browser" --network "$network" \
   -e "B_INVITE=$invite" \

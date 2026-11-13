@@ -21,7 +21,7 @@ defmodule IdejoWeb.TopicChannel do
   the grace.
 
   The client may push `typing` (`{"typing": true}`), as the composer's typing endpoint.
-  Typing is never broadcast: Idejo shows nobody that someone is typing.
+  Typing is never broadcast: idejo shows nobody that someone is typing.
   """
   use Phoenix.Channel
 

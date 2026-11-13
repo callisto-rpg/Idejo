@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# Writing in Idejo
+# Writing in idejo
 
-Idejo looks like a forum (categories, topics, messages) and every topic is a live chat.
+idejo looks like a forum (categories, topics, messages) and every topic is a live chat.
 What is different is how you write: **your message grows as you go.**
 
 After you sign in, a **Getting started** card sums up the keys and the sidebar. **Close**
@@ -69,7 +69,7 @@ The keys keep working as well.
 1. You type a line and press Enter. Your message appears for everyone. What you sent **stays
    where you write**, looking like any message, while what you have not sent yet is
    highlighted as temporary. Text you just sent glows for a moment, then settles into the
-   message. If your sentence had no punctuation, Idejo adds a full stop (unless you turned
+   message. If your sentence had no punctuation, idejo adds a full stop (unless you turned
    **Automatic punctuation** off under **Writing** in **Profile and account**).
 2. You keep writing and pressing Enter, as in a chat. Each part joins the same message.
    Others can reply meanwhile; their replies appear below your message, which keeps growing.
@@ -213,12 +213,12 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
     quotes then read *(spoiler: Ending of book 3)*. It runs as soon as you type the last
     colon.
   - **Plugins** add more commands, when an administrator has turned them on for you; **Help**
-    lists those of your forum. Those Idejo comes with: **!youtube** puts a video under your
+    lists those of your forum. Those idejo comes with: **!youtube** puts a video under your
     message (type `!youtube:` then the video's link and a last `:`, or choose it and paste
     the link), **!iframe** shows another site's page in a frame (paste the code the site
     gives to embed it), **!button** adds a button opening a link (`!button:label:`, then the
     link), **!card** a button opening a card of text (`!card:label:`, then the text) and
-    **!forum** a small card for another Idejo forum, with a **Join** button (search the
+    **!forum** a small card for another idejo forum, with a **Join** button (search the
     forums, then **Choose** one). **!collapse** folds part of your message: write
     `!collapse` and a title on one line, then each line to hide starting with `:` (use
     **Shift+Enter** between lines); readers unroll it with the arrow or by clicking the
@@ -378,9 +378,9 @@ second message in the same week if I don't log in** (on at first) you get at mos
 week while you stay away; without it, one a day. Nothing new, no email. Each email has a
 link that stops them all in one click.
 
-**Apps and devices**, on the same page, lists the phones signed in to the **Idejo app**,
+**Apps and devices**, on the same page, lists the phones signed in to the **idejo app**,
 with when each signed in and was last used. To sign the app in, add this forum in the app:
-it opens this forum's sign-in page, then asks "Sign in to the Idejo app on this device as
+it opens this forum's sign-in page, then asks "Sign in to the idejo app on this device as
 …?"; **Allow** signs it in, until you sign out in the app or press **Remove** here. Changing
 or resetting your password signs every device out.
 

@@ -3,8 +3,8 @@
 
 defmodule IdejoWeb.Admin.IdejoIdLive do
   @moduledoc """
-  Admin → Idejo ID (AC-09; steward decisions, 2026-11-06): connect the server to an Idejo ID
-  registry (`Idejo.Accounts.OIDCRegistry`), so members sign in with their Idejo ID, and ask
+  Admin → idejo ID (AC-09; steward decisions, 2026-11-06): connect the server to an idejo ID
+  registry (`Idejo.Accounts.OIDCRegistry`), so members sign in with their idejo ID, and ask
   to be listed in its directory of forums, which only a connected server may (the registry's
   operator approves). Set by the environment (`IDEJO_OIDC_*`), the page only says so.
   Extra review: DV-06.
@@ -15,7 +15,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(page_title: gettext("Idejo ID"), busy?: false) |> load()}
+    {:ok, socket |> assign(page_title: gettext("idejo ID"), busy?: false) |> load()}
   end
 
   defp load(socket) do
@@ -56,7 +56,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
 
   def handle_event("disconnect", _params, socket) do
     :ok = OIDCRegistry.disconnect(socket.assigns.current_scope.user)
-    {:noreply, socket |> put_flash(:info, gettext("Disconnected from Idejo ID.")) |> load()}
+    {:noreply, socket |> put_flash(:info, gettext("Disconnected from idejo ID.")) |> load()}
   end
 
   def handle_event("listing", params, socket) do
@@ -72,18 +72,18 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
   end
 
   defp error_text(message) when is_binary(message),
-    do: gettext("Idejo ID answered: %{message}", message: message)
+    do: gettext("idejo ID answered: %{message}", message: message)
 
   defp error_text(:unreachable),
-    do: gettext("Idejo ID could not be reached: try again in a moment.")
+    do: gettext("idejo ID could not be reached: try again in a moment.")
 
   defp error_text(:environment),
     do: gettext("This server's environment already sets a sign-in provider.")
 
-  defp error_text(:not_connected), do: gettext("Connect to Idejo ID first.")
+  defp error_text(:not_connected), do: gettext("Connect to idejo ID first.")
 
   defp error_text(_reason),
-    do: gettext("Idejo ID gave an answer this server does not understand.")
+    do: gettext("idejo ID gave an answer this server does not understand.")
 
   defp registry_host(nil), do: nil
   defp registry_host(url), do: URI.parse(url).host
@@ -109,7 +109,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
   def render(assigns) do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope} section={:idejo_id}>
-      <h1 class="page-intro">{gettext("Idejo ID")}</h1>
+      <h1 class="page-intro">{gettext("idejo ID")}</h1>
 
       <section :if={@environment?} id="idejo-id-environment" class="space-y-2">
         <p>
@@ -123,11 +123,11 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
       <section :if={!@environment? and is_nil(@connection)} id="idejo-id-connect" class="space-y-3">
         <p>
           {gettext(
-            "Let members sign in with their Idejo ID: one account for every Idejo forum that uses it. Local accounts keep working."
+            "Let members sign in with their idejo ID: one account for every idejo forum that uses it. Local accounts keep working."
           )}
         </p>
         <p :if={is_nil(@registry)}>
-          {gettext("Connecting to Idejo ID is turned off on this server (IDEJO_ID_REGISTRY_URL).")}
+          {gettext("Connecting to idejo ID is turned off on this server (IDEJO_ID_REGISTRY_URL).")}
         </p>
         <button
           :if={@registry}
@@ -136,7 +136,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
           phx-click="connect"
           phx-disable-with={gettext("Connecting…")}
         >
-          {gettext("Connect to Idejo ID (%{host})", host: registry_host(@registry))}
+          {gettext("Connect to idejo ID (%{host})", host: registry_host(@registry))}
         </button>
         <p :if={@registry} class="text-sm">
           {gettext(
@@ -168,7 +168,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
             phx-click="disconnect"
             data-confirm={
               gettext(
-                "Disconnect from Idejo ID? Members can no longer sign in with it here until you connect again."
+                "Disconnect from idejo ID? Members can no longer sign in with it here until you connect again."
               )
             }
           >
@@ -180,7 +180,7 @@ defmodule IdejoWeb.Admin.IdejoIdLive do
       <section :if={!@environment?} id="idejo-id-directory" class="space-y-3 mt-8">
         <h2 class="text-lg font-semibold">{gettext("Forums directory")}</h2>
         <p :if={is_nil(@connection)}>
-          {gettext("Only forums that sign in with Idejo ID can be listed. Connect to Idejo ID first.")}
+          {gettext("Only forums that sign in with idejo ID can be listed. Connect to idejo ID first.")}
         </p>
         <form :if={@connection} id="idejo-id-listing" phx-change="listing">
           <input type="hidden" name="listed" value="false" />
