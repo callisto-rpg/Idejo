@@ -653,6 +653,18 @@ defmodule Idejo.Accounts do
     do: user |> User.private_messages_changeset(attrs) |> Repo.update()
 
   @doc """
+  Sets whether the user's email and push choices are shared across the group's forums
+  (steward request, 2026-11-13; `Idejo.Community.SharedSettings`).
+  """
+  @spec set_notifications_shared(User.t(), boolean()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def set_notifications_shared(%User{} = user, shared) when is_boolean(shared) do
+    user
+    |> User.notifications_shared_changeset(%{notifications_shared: shared})
+    |> Repo.update()
+  end
+
+  @doc """
   Updates the user's own profile: the display name and the user tag (steward decision,
   2026-10-27). Records an `update` activity (FD-02) when either changes.
   """

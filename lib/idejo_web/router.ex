@@ -66,6 +66,8 @@ defmodule IdejoWeb.Router do
     # The inbox, asked by the group's service with this server's own client credentials.
     get "/inbox-unread", InboxController, :unread
     post "/conversations/moved", ChatServiceController, :moved
+    # "Save for all forums" from the group's inbox (steward request, 2026-11-13).
+    post "/settings", ChatServiceController, :settings
   end
 
   # SE-04: for search engines; no session, nothing personal.
