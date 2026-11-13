@@ -14,7 +14,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
   """
   use IdejoWeb, :live_view
 
-  alias Idejo.Settings.InfoBoxes
+  alias Idejo.Settings.{InfoBox, InfoBoxes}
   alias IdejoWeb.Admin
 
   @impl true
@@ -31,7 +31,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
   defp start_form(socket, box) do
     socket
     |> assign(:editing, box)
-    |> assign(:form, to_form(InfoBoxes.change(box || %Idejo.Settings.InfoBox{}), as: :box))
+    |> assign(:form, to_form(InfoBoxes.change(box || %InfoBox{}), as: :box))
     |> assign(editor_mode: :write, preview_html: "")
   end
 
@@ -50,7 +50,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
 
   # How the list says where a box is.
   defp place_label(box, groups) do
-    place = Idejo.Settings.InfoBox.place(box)
+    place = InfoBox.place(box)
     {label, _} = Enum.find(places(groups), {nil, nil}, &(elem(&1, 1) == place))
     label = label || gettext("In the first section")
 
@@ -71,7 +71,7 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
     params = Admin.picked_colour(params, all)
 
     form =
-      (socket.assigns.editing || %Idejo.Settings.InfoBox{})
+      (socket.assigns.editing || %InfoBox{})
       |> InfoBoxes.change(params)
       |> Map.put(:action, :validate)
 

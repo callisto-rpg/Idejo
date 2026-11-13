@@ -109,13 +109,16 @@ defmodule Idejo.Community do
     |> communities()
     |> Enum.flat_map(&forum_link/1)
     |> Enum.uniq_by(& &1.slug)
-    |> Enum.filter(&(slugs == :all or &1.slug in slugs))
-    |> Enum.filter(
-      &(query == "" or String.starts_with?(&1.slug, query) or
-          String.starts_with?(String.downcase(&1.name), query))
-    )
+    |> Enum.filter(&((slugs == :all or &1.slug in slugs) and matches?(&1, query)))
     |> Enum.take(Keyword.get(opts, :limit, 50))
     |> Enum.filter(&listed?(&1.host))
+  end
+
+  defp matches?(_forum, ""), do: true
+
+  defp matches?(forum, query) do
+    String.starts_with?(forum.slug, query) or
+      String.starts_with?(String.downcase(forum.name), query)
   end
 
   defp forum_link(%{name: name, url: url}) do

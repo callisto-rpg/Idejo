@@ -111,38 +111,35 @@ defmodule Idejo.Community.SharedSettings do
   @spec save(User.t(), map()) :: %{saved: [String.t()], failed: [String.t()]}
   def save(%User{} = user, settings) when is_map(settings) do
     {user, results} =
-      Enum.reduce(@sections, {user, []}, fn section, {user, results} ->
-        case Map.fetch(settings, section) do
-          {:ok, value} when is_map(value) ->
-            case apply_section(user, section, value) do
-              {:ok, user} -> {user, [{section, :ok} | results]}
-              _ -> {user, [{section, :error} | results]}
-            end
-
-          _ ->
-            {user, results}
-        end
+      Enum.reduce(@sections, {user, []}, fn section, acc ->
+        save_section(acc, section, Map.get(settings, section))
       end)
 
-    results =
-      case settings["notifications_shared"] do
-        shared when is_boolean(shared) ->
-          case Accounts.set_notifications_shared(user, shared) do
-            {:ok, _} -> [{"notifications_shared", :ok} | results]
-            _ -> [{"notifications_shared", :error} | results]
-          end
-
-        _ ->
-          results
-      end
-
-    results = Enum.reverse(results)
+    results = Enum.reverse(save_shared(results, user, settings["notifications_shared"]))
 
     %{
       saved: for({section, :ok} <- results, do: section),
       failed: for({section, :error} <- results, do: section)
     }
   end
+
+  defp save_section({user, results}, section, value) when is_map(value) do
+    case apply_section(user, section, value) do
+      {:ok, user} -> {user, [{section, :ok} | results]}
+      _ -> {user, [{section, :error} | results]}
+    end
+  end
+
+  defp save_section(acc, _section, _value), do: acc
+
+  defp save_shared(results, user, shared) when is_boolean(shared) do
+    case Accounts.set_notifications_shared(user, shared) do
+      {:ok, _} -> [{"notifications_shared", :ok} | results]
+      _ -> [{"notifications_shared", :error} | results]
+    end
+  end
+
+  defp save_shared(results, _user, _shared), do: results
 
   defp apply_section(user, "profile", value),
     do: Accounts.update_user_profile(user, only(value, "profile"))

@@ -20,8 +20,8 @@ defmodule Idejo.Suggestions do
 
   alias Idejo.Access
   alias Idejo.Access.Role
-  alias Idejo.Community
   alias Idejo.Accounts.User
+  alias Idejo.Community
   alias Idejo.Forum.{Category, Tag, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Reading.ReadPosition
