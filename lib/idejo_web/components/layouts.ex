@@ -265,8 +265,7 @@ defmodule IdejoWeb.Layouts do
             data-mention={gettext("you were mentioned in another forum")}
             phx-update="ignore"
             hidden
-          >
-          </span>
+          ></span>
         </span>
         <span class="brand-name">{server_name()}</span>
         <.icon :if={@chevron} name="hero-chevron-down-micro" class="size-4 community-chevron" />
