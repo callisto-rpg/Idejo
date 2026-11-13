@@ -64,3 +64,36 @@ document.addEventListener("toggle", (e) => {
   const list = menu.querySelector("#community-list")
   if (list) load(list)
 }, true)
+
+// The dot on the forum's logo (steward request, 2026-11-13; Layouts.community_menu/1): what is
+// new in the topics the member follows in their other forums, asked of /community/activity
+// (kept a minute by the server). White for new messages, red when one mentions them; the
+// menu's name says so for screen readers. Asked again after each LiveView navigation, as a
+// new page may bring a new header.
+const showActivity = () => {
+  const dot = document.getElementById("community-dot")
+  if (!dot || dot.dataset.loaded) return
+  dot.dataset.loaded = "true"
+  const brand = document.getElementById("brand")
+  const label = brand && brand.getAttribute("aria-label")
+
+  fetch(dot.dataset.src, {credentials: "same-origin"})
+    .then((response) => (response.ok ? response.json() : {}))
+    .then(({unread, mentions}) => {
+      const mention = Number.isInteger(mentions) && mentions > 0
+      const fresh = mention || (Number.isInteger(unread) && unread > 0)
+      dot.hidden = !fresh
+      dot.classList.toggle("is-mention", mention)
+      if (brand && label && fresh) {
+        brand.setAttribute("aria-label", `${label}, ${mention ? dot.dataset.mention : dot.dataset.new}`)
+      }
+    })
+    .catch(() => {})
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", showActivity)
+} else {
+  showActivity()
+}
+window.addEventListener("phx:page-loading-stop", showActivity)

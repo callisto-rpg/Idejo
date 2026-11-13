@@ -363,7 +363,28 @@
     & .community-mark { width: 1.25rem; height: 1.25rem; border-radius: 0.25rem; object-fit: contain; }
     & .community-more { border-top: 1px solid var(--hairline); margin-top: 0.25rem; padding-top: 0.625rem; }
     & .community-connect { color: var(--color-primary); }
+    /* "All my topics" and "Private Conversations" (steward request, 2026-11-13). */
+    & .community-links { border-top: 1px solid var(--hairline); margin-top: 0.25rem; padding-top: 0.25rem; }
+    & .community-link { display: flex; align-items: center; gap: 0.5rem; }
   }
+  /* The dot on the forum's logo (steward request, 2026-11-13): white when the member's other
+     forums have new messages in topics they follow, red when one mentions them. A ring in
+     the header's colour keeps it apart from any logo, in both themes. */
+  .brand-mark-wrap { position: relative; display: inline-flex; flex: none; }
+  .community-dot {
+    position: absolute;
+    top: -0.1875rem;
+    right: -0.1875rem;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 35%, transparent);
+    box-shadow: 0 0 0 2px var(--color-base-100);
+    pointer-events: none;
+  }
+  .community-dot[hidden] { display: none; }
+  .community-dot.is-mention { background: var(--color-error); border-color: var(--color-error); }
   /* The small Idejo logo (steward decision, 2026-10-23): rounded already. */
   .brand-mark {
     flex: none;
@@ -943,18 +964,7 @@
       border: 0;
     }
   }
-  /* "Private Conversations" (steward decision, 2026-10-27): at the very bottom, kept in view
-     while the sidebar scrolls. */
   .sidebar-nav { flex: 1 0 auto; }
-  .sidebar-pinned {
-    position: sticky;
-    bottom: -1.25rem;
-    margin: 1rem -0.75rem -1.25rem;
-    padding: 0.5rem 0.75rem 1.25rem;
-    border-top: 1px solid var(--hairline);
-    background: var(--color-base-200);
-  }
-  @media (max-width: 1023.98px) { .sidebar-pinned { background: var(--color-base-100); } }
   .sidebar-count {
     margin-left: auto;
     min-width: 1.25rem;
@@ -4139,6 +4149,8 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
     padding-top: 2rem;
     border-top: 1px solid var(--hairline);
   }
+  /* A forum card's "N new messages" (steward request, 2026-11-13): small, in the accent. */
+  .inbox-forum-news { margin-top: 0.25rem; font-size: 0.8125rem; font-weight: 600; color: var(--color-primary); }
   .inbox-forum-logo { width: 3rem; height: 3rem; border-radius: 0.75rem; object-fit: contain; flex: none; }
   .inbox-more { opacity: 0.8; }
   /* The Topics tab's toolbar (steward request, 2026-11-12): View at the left, the "Unread

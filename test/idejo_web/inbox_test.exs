@@ -121,13 +121,36 @@ defmodule IdejoWeb.InboxTest do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")
 
+    more = Map.merge(@topic, %{"id" => "0192f0c4-0000-7000-8000-000000000002", "unread" => 3})
+
     service(%{
       "" => %{
-        "communities" => [%{"name" => "Garden club", "url" => "https://garden.example.test/"}]
+        "communities" => [
+          %{"name" => "Garden club", "url" => "https://garden.example.test/"},
+          %{"name" => "Quiet club", "url" => "https://quiet.example.test/"}
+        ]
+      },
+      "/inbox/topics" => %{
+        "forums" => [
+          %{
+            "name" => "Garden club",
+            "url" => "https://garden.example.test/",
+            "topics" => [@topic, more]
+          }
+        ]
       }
     })
 
     html = conn |> log_in_user(ada) |> get(~p"/") |> html_response(200)
+
+    # Each card's "N new messages" (steward request, 2026-11-13); none where nothing is new.
+    cards = html |> LazyHTML.from_document() |> LazyHTML.query(".inbox-forum-card")
+    assert [garden, quiet] = Enum.map(cards, &LazyHTML.text/1)
+    assert garden =~ "5 new messages"
+    refute quiet =~ "new message"
+
+    # The member's links stay in the inbox's tabs: none in the forums menu.
+    refute html =~ ~s(id="conversations-link")
     refute html =~ ~s(id="sidebar")
     refute html =~ ~s(id="sidebar-toggle")
     refute html =~ ~s(id="unread-link")

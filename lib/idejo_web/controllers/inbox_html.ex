@@ -9,6 +9,20 @@ defmodule IdejoWeb.InboxHTML do
 
   embed_templates "inbox_html/*"
 
+  attr :count, :integer, required: true
+
+  @doc """
+  A forum card's "N new messages" (steward request, 2026-11-13): the unread messages in the
+  topics the member follows there; nothing when none.
+  """
+  def forum_news(assigns) do
+    ~H"""
+    <p :if={@count > 0} class="inbox-forum-news">
+      {ngettext("1 new message", "%{count} new messages", @count)}
+    </p>
+    """
+  end
+
   attr :show, :atom, required: true, values: [:all, :unread]
   attr :view, :atom, required: true
 

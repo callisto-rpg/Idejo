@@ -158,6 +158,40 @@ defmodule Idejo.Community.Chat do
   end
 
   @doc """
+  What is new for `user` in the topics they follow in their other forums of the group
+  (steward request, 2026-11-13: the dot on the forum's logo): `%{unread:, mentions:}`, asked
+  of the service (`GET <api>/activity?subject=`, the Hub since its 2026-11-13 release),
+  zeros when it cannot be asked; kept a minute per member.
+  """
+  @spec activity(User.t() | nil) :: %{unread: non_neg_integer(), mentions: non_neg_integer()}
+  def activity(user) do
+    with true <- for?(user),
+         api when is_binary(api) <- api_url(),
+         oidc when is_list(oidc) <- OIDC.config() do
+      subject = subject(user)
+
+      cached({:activity, user.id}, fn -> fetch_activity(api, oidc, subject) end)
+    else
+      _ -> %{unread: 0, mentions: 0}
+    end
+  end
+
+  defp fetch_activity(api, oidc, subject) do
+    # The service asks each of the member's forums: more time than a count of chats.
+    request =
+      request(api <> "/activity", oidc, params: [subject: subject], receive_timeout: 6_000)
+
+    case Req.get(request) do
+      {:ok, %{status: 200, body: %{"unread" => unread, "mentions" => mentions}}}
+      when is_integer(unread) and unread >= 0 and is_integer(mentions) and mentions >= 0 ->
+        %{unread: unread, mentions: mentions}
+
+      _ ->
+        %{unread: 0, mentions: 0}
+    end
+  end
+
+  @doc """
   The member a ticket from the chat service names, for `scope` (`"topics"`,
   `"conversations"` or `"settings"`): `{:ok, user}` when the service vouches for it and that
   person is a member here; else `:error`.
@@ -215,6 +249,7 @@ defmodule Idejo.Community.Chat do
   @spec forget(Ecto.UUID.t()) :: :ok
   def forget(user_id) do
     :ets.delete(@table, user_id)
+    :ets.delete(@table, {:activity, user_id})
     :ok
   rescue
     ArgumentError -> :ok

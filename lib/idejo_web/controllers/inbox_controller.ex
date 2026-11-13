@@ -6,7 +6,9 @@ defmodule IdejoWeb.InboxController do
   The inbox's pages (steward request, 2026-11-10; `Idejo.Inbox`), only in inbox mode (404
   otherwise), for signed-in members, plain pages that work without JavaScript:
 
-    * `forums/2` (`/`): the communities the member joined, as cards with their logos;
+    * `forums/2` (`/`): the communities the member joined, as cards with their logos, each
+      with "N new messages": the unread messages in the topics they follow there (steward
+      request, 2026-11-13; `Inbox.topics/1`, as the Topics tab counts them);
     * `topics/2` (`/topics`): the topics they follow there, Idejo's topic rows with the
       forum's logo and the activity lines (`?view=` compact or expanded, as the home page's,
       `IdejoWeb.TopicView`; `?show=` all or unread only; the Filter's hidden forums; each
@@ -35,11 +37,19 @@ defmodule IdejoWeb.InboxController do
         |> put_view(IdejoWeb.InboxHTML)
         |> render(:forums,
           page_title: gettext("Forums"),
-          communities: Community.communities(user)
+          communities: Community.communities(user),
+          news: news(user)
         )
 
       _ ->
         redirect(conn, to: ~p"/users/sign-in")
+    end
+  end
+
+  # Each forum's unread messages, by host: the topics the member follows there.
+  defp news(user) do
+    for entry <- Inbox.topics(user), reduce: %{} do
+      acc -> Map.update(acc, entry.forum.host, entry.unread || 0, &(&1 + (entry.unread || 0)))
     end
   end
 

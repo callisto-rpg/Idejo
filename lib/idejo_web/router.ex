@@ -54,6 +54,7 @@ defmodule IdejoWeb.Router do
     pipe_through :member_json
 
     get "/community", CommunityController, :index
+    get "/community/activity", CommunityController, :activity
   end
 
   # The chat service's questions about one member (steward request, 2026-11-10): JSON, no

@@ -84,6 +84,15 @@ defmodule IdejoWeb.Layouts do
       # Inbox mode (steward request, 2026-11-10): no sidebar, no categories, no Unread.
       |> assign(:inbox?, Idejo.Inbox.on?())
 
+    # A signed-in member's menu holds "All my topics" and "Private Conversations" (steward
+    # request, 2026-11-13), so it opens on a standalone forum too.
+    assigns =
+      assign(
+        assigns,
+        :community_menu?,
+        assigns.community_menu? or (assigns.user != nil and not assigns.inbox?)
+      )
+
     ~H"""
     <header class="app-header">
       <%!-- Opens the drawer on narrow screens (assets/js/sidebar.js); not shown in the bar
@@ -196,10 +205,17 @@ defmodule IdejoWeb.Layouts do
 
   @doc """
   The community menu (steward decision, 2026-11-06; `Idejo.Community`): with
-  `IDEJO_COMMUNITY_URL` or `IDEJO_COMMUNITY_DIRECTORY_URL` set, the forum's icon opens a menu:
-  this forum, the member's other communities (`#community-list`, filled from `/community`
-  by `assets/js/community_menu.js` when the menu first opens) and "Find more forums" (the
-  directory). A `<details>`, so it opens without scripts (this forum and the directory).
+  `IDEJO_COMMUNITY_URL` or `IDEJO_COMMUNITY_DIRECTORY_URL` set, or for a signed-in member,
+  the forum's icon opens a menu: this forum, the member's other communities
+  (`#community-list`, filled from `/community` by `assets/js/community_menu.js` when the
+  menu first opens) and "Find more forums" (the directory). A `<details>`, so it opens
+  without scripts (this forum and the directory).
+
+  Outside inbox mode, a member's menu also holds "All my topics" (`Chat.topics_url/1`) and
+  "Private Conversations" with its count, out of the sidebar (steward request, 2026-11-13).
+  For a member linked to the group's chat service, `#community-dot` on the logo shows what is
+  new in the topics they follow in their other forums (`/community/activity`, asked by
+  `community_menu.js`): white for new messages, red when one mentions them.
   """
   attr :logo, :string, required: true
   attr :user, :any, required: true
@@ -210,10 +226,18 @@ defmodule IdejoWeb.Layouts do
     doc: "the dropdown arrow; none while the breadcrumb follows (steward request, 2026-11-07)"
 
   def community_menu(assigns) do
+    member? = assigns.user != nil and not assigns.inbox?
+
     assigns =
       assign(assigns,
         directory: Idejo.Community.directory_url(),
-        unlinked?: Idejo.Community.unlinked?(assigns.user)
+        unlinked?: Idejo.Community.unlinked?(assigns.user),
+        member?: member?,
+        dot?: member? and Chat.for?(assigns.user),
+        conversations_unread: if(member?, do: conversations_unread(assigns.user), else: 0),
+        # The chat service (steward request, 2026-11-10): the same button leads there.
+        conversations_url: (Chat.for?(assigns.user) && Chat.url()) || ~p"/p",
+        topics_url: member? && Chat.topics_url(assigns.user)
       )
 
     ~H"""
@@ -223,13 +247,27 @@ defmodule IdejoWeb.Layouts do
         id="brand"
         aria-label={gettext("%{name}: communities", name: server_name())}
       >
-        <img
-          src={Idejo.Settings.Logo.url(@logo)}
-          alt=""
-          class={["brand-mark", @logo != "" && "is-custom"]}
-          width="32"
-          height="32"
-        />
+        <span class="brand-mark-wrap">
+          <img
+            src={Idejo.Settings.Logo.url(@logo)}
+            alt=""
+            class={["brand-mark", @logo != "" && "is-custom"]}
+            width="32"
+            height="32"
+          />
+          <%!-- Filled by community_menu.js; kept through LiveView's patches. --%>
+          <span
+            :if={@dot?}
+            id="community-dot"
+            class="community-dot"
+            data-src={~p"/community/activity"}
+            data-new={gettext("new messages in your other forums")}
+            data-mention={gettext("you were mentioned in another forum")}
+            phx-update="ignore"
+            hidden
+          >
+          </span>
+        </span>
         <span class="brand-name">{server_name()}</span>
         <.icon :if={@chevron} name="hero-chevron-down-micro" class="size-4 community-chevron" />
       </summary>
@@ -280,6 +318,25 @@ defmodule IdejoWeb.Layouts do
           <.icon name="hero-plus" class="size-4" />
           {gettext("Find more forums")}
         </a>
+        <%!-- Out of the sidebar (steward request, 2026-11-13). --%>
+        <div :if={@member?} class="community-links">
+          <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
+          <a :if={@topics_url} href={@topics_url} class="community-link" id="all-topics-link">
+            <.icon name="hero-rectangle-stack" class="size-4" />
+            {gettext("All my topics")}
+          </a>
+          <a href={@conversations_url} class="community-link" id="conversations-link">
+            <.icon name="hero-chat-bubble-left-right" class="size-4" />
+            {gettext("Private Conversations")}
+            <span :if={@conversations_unread > 0} class="sidebar-count">
+              {@conversations_unread}<span class="sr-only">{ngettext(
+                " conversation with new messages",
+                " conversations with new messages",
+                @conversations_unread
+              )}</span>
+            </span>
+          </a>
+        </div>
       </div>
     </details>
     """
@@ -774,11 +831,7 @@ defmodule IdejoWeb.Layouts do
         sections: sections,
         followed: Enum.group_by(listed, & &1.category_id),
         activity: activity,
-        place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil},
-        conversations_unread: conversations_unread(assigns.user),
-        # The chat service (steward request, 2026-11-10): the same button leads there.
-        conversations_url: (Chat.for?(assigns.user) && Chat.url()) || ~p"/p",
-        topics_url: Chat.topics_url(assigns.user)
+        place: %{topic_id: topic && topic.id, following: following, user?: assigns.user != nil}
       )
 
     ~H"""
@@ -908,26 +961,6 @@ defmodule IdejoWeb.Layouts do
       <div :if={!@user} class="sidebar-theme sm:hidden">
         <span>{gettext("Theme")}</span>
         <.theme_toggle />
-      </div>
-      <%!-- Pinned at the very bottom (steward decision, 2026-10-27), with how many
-           conversations have something new. --%>
-      <div :if={@user} class="sidebar-pinned">
-        <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
-        <a :if={@topics_url} href={@topics_url} class="sidebar-link" id="all-topics-sidebar-link">
-          <.icon name="hero-rectangle-stack" class="size-4" />
-          {gettext("All my topics")}
-        </a>
-        <a href={@conversations_url} class="sidebar-link" id="conversations-sidebar-link">
-          <.icon name="hero-chat-bubble-left-right" class="size-4" />
-          {gettext("Private Conversations")}
-          <span :if={@conversations_unread > 0} class="sidebar-count">
-            {@conversations_unread}<span class="sr-only">{ngettext(
-              " conversation with new messages",
-              " conversations with new messages",
-              @conversations_unread
-            )}</span>
-          </span>
-        </a>
       </div>
     </aside>
     """
