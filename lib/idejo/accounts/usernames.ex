@@ -57,15 +57,17 @@ defmodule Idejo.Accounts.Usernames do
         {:ok, user}
 
       %Ecto.Changeset{valid?: true} = changeset ->
-        case next_change_at(user) do
-          nil -> Repo.transact(fn -> rename(user, changeset) end)
-          at -> {:error, {:too_soon, at}}
-        end
+        rename_when_allowed(user, changeset, next_change_at(user))
 
       changeset ->
         {:error, changeset}
     end
   end
+
+  defp rename_when_allowed(user, changeset, nil),
+    do: Repo.transact(fn -> rename(user, changeset) end)
+
+  defp rename_when_allowed(_user, _changeset, at), do: {:error, {:too_soon, at}}
 
   @doc "When `user` may change their username again, or nil when they may now."
   @spec next_change_at(User.t()) :: DateTime.t() | nil

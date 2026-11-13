@@ -132,9 +132,12 @@ defmodule Idejo.Accounts.User do
   def username_changeset(user, attrs) do
     user
     |> cast(attrs, [:username])
-    |> update_change(:username, &String.trim/1)
+    |> update_change(:username, &trimmed/1)
     |> validate_username()
   end
+
+  defp trimmed(value) when is_binary(value), do: String.trim(value)
+  defp trimmed(value), do: value
 
   @doc """
   A changeset for the user's own profile (AC-04): the display name and the user tag. The

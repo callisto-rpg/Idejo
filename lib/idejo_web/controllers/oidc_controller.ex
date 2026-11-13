@@ -46,10 +46,7 @@ defmodule IdejoWeb.OIDCController do
         redirect(conn, to: ~p"/")
 
       true ->
-        request =
-          intent
-          |> OIDC.new_request(blank_to_nil(params["invite"]))
-          |> Map.put("for", if(params["for"] == "username", do: "username"))
+        request = new_request(intent, params)
 
         case OIDC.authorize_url(request, redirect_uri()) do
           {:ok, url} ->
@@ -285,6 +282,13 @@ defmodule IdejoWeb.OIDCController do
 
   defp refusal(%Ecto.Changeset{}),
     do: gettext("Your account could not be created. Please try again.")
+
+  # `for`: what a `reauth` confirms (deleting the account, or `username`).
+  defp new_request(intent, params) do
+    intent
+    |> OIDC.new_request(blank_to_nil(params["invite"]))
+    |> Map.put("for", if(params["for"] == "username", do: "username"))
+  end
 
   defp reauthenticated("username"),
     do:

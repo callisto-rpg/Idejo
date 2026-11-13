@@ -154,7 +154,7 @@ defmodule IdejoWeb.UserSettingsLive do
   defp saved_text(:dark), do: gettext("Dark mode picture saved.")
 
   defp username_form(user, changeset \\ nil),
-    do: to_form(changeset || Accounts.change_user_username(user, %{username: ""}), as: :username)
+    do: to_form(changeset || Accounts.change_user_username(user), as: :username)
 
   defp password_form(user, changeset \\ nil),
     do: to_form(changeset || Accounts.change_user_password(user), as: :password)

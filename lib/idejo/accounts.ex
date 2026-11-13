@@ -24,9 +24,9 @@ defmodule Idejo.Accounts do
     User,
     UserIdentity,
     UserIgnore,
+    Usernames,
     UserNotifier,
-    UserToken,
-    Usernames
+    UserToken
   }
 
   alias Idejo.Audit
