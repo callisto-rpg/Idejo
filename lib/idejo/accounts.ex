@@ -25,7 +25,8 @@ defmodule Idejo.Accounts do
     UserIdentity,
     UserIgnore,
     UserNotifier,
-    UserToken
+    UserToken,
+    Usernames
   }
 
   alias Idejo.Audit
@@ -209,9 +210,10 @@ defmodule Idejo.Accounts do
   end
 
   defp username_taken?(username) do
-    Repo.exists?(
-      from u in User, where: fragment("lower(?)", u.username) == ^String.downcase(username)
-    )
+    Usernames.reserved?(username, nil) or
+      Repo.exists?(
+        from u in User, where: fragment("lower(?)", u.username) == ^String.downcase(username)
+      )
   end
 
   @doc """
@@ -694,6 +696,24 @@ defmodule Idejo.Accounts do
       {:ok, user}
     end
   end
+
+  ## Username (AC-04; steward request, 2026-11-13)
+
+  @doc "A changeset for the username form."
+  def change_user_username(%User{} = user, attrs \\ %{}),
+    do: User.username_changeset(user, attrs)
+
+  @doc """
+  Changes the user's own username, confirmed by their password or `{:oidc, at}`, at most
+  once every 30 days; every @mention of the old name follows (`Idejo.Accounts.Usernames`).
+  """
+  defdelegate change_username(user, username, confirmation), to: Usernames, as: :change
+
+  @doc "A username change already confirmed on the group's inbox (`Usernames.change_vouched/2`)."
+  defdelegate change_username_vouched(user, username), to: Usernames, as: :change_vouched
+
+  @doc "When the user may change their username again, or nil."
+  defdelegate username_next_change_at(user), to: Usernames, as: :next_change_at
 
   ## Avatar (AC-04)
 

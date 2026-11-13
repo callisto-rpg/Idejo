@@ -13,10 +13,13 @@ defmodule Idejo.Community.SharedSettings do
   ticket of scope `settings`. The forum checks the ticket (`Chat.check_ticket/2`) and
   `save/2` saves each section through the same functions as its own page.
 
-  Sections: `profile` (display name, user tag; never the username), `bio`, `avatar` (both
-  pictures as WebP in Base64, or `null` for none), `writing`, `controls`, `private`,
-  `email` and `push`. Ignored users, apps and devices, push devices, the password and
-  deleting the account stay each forum's own.
+  Sections: `profile` (display name, user tag), `username` (AC-04; steward request,
+  2026-11-13: confirmed on the inbox, so each forum changes it without a password, where the
+  name is free and its own 30 days allow, `Accounts.change_username_vouched/2`; elsewhere
+  it fails, and the inbox names the forum), `bio`, `avatar` (both pictures as WebP in Base64,
+  or `null` for none), `writing`, `controls`, `private`, `email` and `push`. Ignored users,
+  apps and devices, push devices, the password and deleting the account stay each forum's
+  own.
 
   `notifications_shared` (users column): on the inbox, the member's choice to use one set of
   email and push choices everywhere ("Use these notification choices on all my forums");
@@ -31,13 +34,14 @@ defmodule Idejo.Community.SharedSettings do
   alias Idejo.Notifications.Digest
   alias Idejo.{Push, Uploads}
 
-  @sections ~w(profile bio avatar writing controls private email push)
+  @sections ~w(profile username bio avatar writing controls private email push)
 
   # Base64 of a 256 px WebP is far below this; anything larger is refused unread.
   @max_picture 2_000_000
 
   @fields %{
     "profile" => ~w(display_name user_tag),
+    "username" => ~w(username),
     "bio" => ~w(bio_md),
     "writing" => ~w(auto_punctuation graphical_composer),
     "controls" => ~w(controls_on_mobile controls_on_desktop),
@@ -146,6 +150,11 @@ defmodule Idejo.Community.SharedSettings do
 
   defp apply_section(user, "profile", value),
     do: Accounts.update_user_profile(user, only(value, "profile"))
+
+  defp apply_section(user, "username", %{"username" => username}) when is_binary(username),
+    do: Accounts.change_username_vouched(user, username)
+
+  defp apply_section(_user, "username", _value), do: {:error, :invalid}
 
   defp apply_section(user, "bio", value), do: Accounts.update_user_bio(user, only(value, "bio"))
 

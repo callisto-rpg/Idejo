@@ -7892,3 +7892,38 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Cards shown to everyone on the home page, before the categories or in a section of them, in this order, with your own text."
 msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Others mention you as @%{username}. A new username replaces every mention of you on this forum; nobody else can take your old one for 30 days. You can change it once every 30 days."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "You can change your username again on %{date}."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "New username (letters, digits and _)"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Change username"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Your username is now @%{username}."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Not changed on %{forums}: the name is taken there, was changed there in the last 30 days, or the forum did not answer."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Confirmed. You can change your username in the next five minutes."
+msgstr ""

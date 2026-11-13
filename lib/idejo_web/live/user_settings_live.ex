@@ -49,6 +49,8 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:tab, "profile")
      |> assign(:session_token, session["user_token"])
      |> assign(:form, to_form(Accounts.change_user_profile(user), as: :profile))
+     |> assign(:username_form, username_form(user))
+     |> assign(:username_next, Accounts.username_next_change_at(user))
      |> assign(:password_form, password_form(user))
      |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
      |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))
@@ -151,6 +153,9 @@ defmodule IdejoWeb.UserSettingsLive do
   defp saved_text(:light), do: gettext("Avatar saved.")
   defp saved_text(:dark), do: gettext("Dark mode picture saved.")
 
+  defp username_form(user, changeset \\ nil),
+    do: to_form(changeset || Accounts.change_user_username(user, %{username: ""}), as: :username)
+
   defp password_form(user, changeset \\ nil),
     do: to_form(changeset || Accounts.change_user_password(user), as: :password)
 
@@ -175,6 +180,42 @@ defmodule IdejoWeb.UserSettingsLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset, as: :profile))}
+    end
+  end
+
+  # AC-04, changing the username (steward request, 2026-11-13).
+  def handle_event("validate_username", %{"username" => params}, socket) do
+    changeset =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_username(Map.take(params, ["username"]))
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :username_form, username_form(nil, changeset))}
+  end
+
+  def handle_event("save_username", %{"username" => params} = all, socket) do
+    user = socket.assigns.current_scope.user
+
+    confirmation =
+      if socket.assigns.password?,
+        do: params["password"],
+        else: {:oidc, socket.assigns.reauth_at}
+
+    case Accounts.change_username(user, params["username"], confirmation) do
+      {:ok, renamed} ->
+        text = gettext("Your username is now @%{username}.", username: renamed.username)
+
+        # A full page load, so every page shows the new name.
+        {:noreply,
+         socket
+         |> saved(renamed, all, ["username"], text)
+         |> redirect(to: path("profile", "username-heading"))}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :username_form, username_form(nil, changeset))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, username_error(reason))}
     end
   end
 
@@ -455,6 +496,19 @@ defmodule IdejoWeb.UserSettingsLive do
     end
   end
 
+  defp username_error(:invalid_password), do: gettext("That is not your current password.")
+
+  defp username_error(:reauthentication),
+    do:
+      gettext("Confirm with %{provider} again: the confirmation lasts five minutes.",
+        provider: OIDC.label()
+      )
+
+  defp username_error({:too_soon, at}),
+    do: gettext("You can change your username again on %{date}.", date: day(at))
+
+  defp day(at), do: Calendar.strftime(at, "%Y-%m-%d")
+
   defp delete_error(:invalid_password), do: gettext("That is not your current password.")
 
   defp delete_error(:reauthentication),
@@ -508,13 +562,15 @@ defmodule IdejoWeb.UserSettingsLive do
 
     if socket.assigns.everywhere? and (params["everywhere"] == "true" or shared?) do
       opts = if notifications?, do: [shared: user.notifications_shared], else: []
-      put_result(socket, Inbox.save_everywhere(user, [section], opts), text)
+      put_result(socket, Inbox.save_everywhere(user, [section], opts), text, section)
     else
       put_flash(socket, :info, text)
     end
   end
 
-  defp put_result(socket, {:ok, %{done: done, missed: []}}, text) do
+  defp put_result(socket, result, text, section \\ nil)
+
+  defp put_result(socket, {:ok, %{done: done, missed: []}}, text, _section) do
     message =
       case done do
         [] ->
@@ -531,7 +587,20 @@ defmodule IdejoWeb.UserSettingsLive do
     put_flash(socket, :info, text <> " " <> message)
   end
 
-  defp put_result(socket, {:ok, %{missed: missed}}, text) do
+  defp put_result(socket, {:ok, %{missed: missed}}, text, "username") do
+    put_flash(
+      socket,
+      :error,
+      text <>
+        " " <>
+        gettext(
+          "Not changed on %{forums}: the name is taken there, was changed there in the last 30 days, or the forum did not answer.",
+          forums: Enum.join(missed, ", ")
+        )
+    )
+  end
+
+  defp put_result(socket, {:ok, %{missed: missed}}, text, _section) do
     put_flash(
       socket,
       :error,
@@ -544,7 +613,7 @@ defmodule IdejoWeb.UserSettingsLive do
     )
   end
 
-  defp put_result(socket, :error, text) do
+  defp put_result(socket, :error, text, _section) do
     put_flash(
       socket,
       :error,
@@ -670,6 +739,64 @@ defmodule IdejoWeb.UserSettingsLive do
               maxlength="32"
             />
             <.save_buttons label={gettext("Save")} everywhere?={@everywhere?} />
+          </.form>
+        </section>
+
+        <%!-- AC-04: changing the username (steward request, 2026-11-13). --%>
+        <section
+          id="username-section"
+          class="settings-section"
+          aria-labelledby="username-heading"
+        >
+          <h2 id="username-heading" class="font-semibold mb-2">{gettext("Username")}</h2>
+          <p id="username-help" class="text-sm opacity-70 mb-2 max-w-prose">
+            {gettext(
+              "Others mention you as @%{username}. A new username replaces every mention of you on this forum; nobody else can take your old one for 30 days. You can change it once every 30 days.",
+              username: @current_scope.user.username
+            )}
+          </p>
+          <p :if={@username_next} id="username-wait" class="text-sm">
+            {gettext("You can change your username again on %{date}.", date: day(@username_next))}
+          </p>
+          <.form
+            :if={!@username_next}
+            for={@username_form}
+            id="username-form"
+            phx-change="validate_username"
+            phx-submit="save_username"
+            aria-describedby="username-help"
+          >
+            <.input
+              field={@username_form[:username]}
+              type="text"
+              label={gettext("New username (letters, digits and _)")}
+              required
+              minlength="3"
+              maxlength="30"
+              autocomplete="off"
+            />
+            <.input
+              :if={@password?}
+              field={@username_form[:password]}
+              type="password"
+              label={gettext("Your password, to confirm")}
+              autocomplete="current-password"
+              value=""
+              required
+            />
+            <a
+              :if={!@password? && @identity && !@reauth_at}
+              id="username-reauth"
+              href={~p"/users/oidc?intent=reauth&for=username"}
+              class="btn mb-2"
+            >
+              {gettext("Confirm with %{provider}", provider: @oidc_label)}
+            </a>
+            <.save_buttons
+              :if={@password? or @reauth_at}
+              label={gettext("Change username")}
+              everywhere?={@everywhere?}
+            />
           </.form>
         </section>
 

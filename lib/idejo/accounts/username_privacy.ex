@@ -16,7 +16,7 @@ defmodule Idejo.Accounts.UsernamePrivacy do
   import Ecto.Query
 
   alias Idejo.Accounts
-  alias Idejo.Accounts.{User, UserIdentity}
+  alias Idejo.Accounts.{User, UserIdentity, Usernames}
   alias Idejo.Audit.Entry
   alias Idejo.Repo
 
@@ -52,49 +52,6 @@ defmodule Idejo.Accounts.UsernamePrivacy do
 
   def from_email?(_username, _email), do: false
 
-  # Where text can @mention someone: {table, Markdown column, its stored HTML column or nil}.
-  @texts [
-    {"messages", :body_md, :body_html},
-    {"message_versions", :body_md, nil},
-    {"users", :bio_md, :bio_html},
-    {"scheduled_messages", :body_md, nil},
-    {"automessages", :body_md, nil},
-    {"info_boxes", :body_md, :body_html}
-  ]
-
-  # Markdown: `@old` not inside a longer name or an address; HTML: a mention link's text.
-  # Usernames hold only letters, digits and underscores: nothing to escape.
-  defp rewrite_mentions(old, new) do
-    pattern = "(?<![A-Za-z0-9_@.])@" <> old <> "(?![A-Za-z0-9_])"
-    mention = "@" <> new
-    {link, new_link} = {">@" <> old <> "<", ">@" <> new <> "<"}
-
-    for {table, md, html} <- @texts do
-      query = from t in table, where: fragment("? ~* ?", field(t, ^md), ^pattern)
-
-      sets =
-        [
-          {md,
-           dynamic(
-             [t],
-             fragment("regexp_replace(?, ?, ?, 'gi')", field(t, ^md), ^pattern, ^mention)
-           )}
-        ] ++
-          if(html,
-            do: [
-              {html,
-               dynamic(
-                 [t],
-                 fragment("regexp_replace(?, ?, ?, 'gi')", field(t, ^html), ^link, ^new_link)
-               )}
-            ],
-            else: []
-          )
-
-      Repo.update_all(update(query, set: ^sets), [])
-    end
-  end
-
   defp rename(%User{} = user) do
     shown? = String.contains?(user.display_name || "", "@")
     username = Accounts.free_username(if(shown?, do: nil, else: user.display_name))
@@ -102,7 +59,7 @@ defmodule Idejo.Accounts.UsernamePrivacy do
 
     Repo.transact(fn ->
       {1, _} = Repo.update_all(from(u in User, where: u.id == ^user.id), set: changes)
-      rewrite_mentions(user.username, username)
+      Usernames.rewrite_mentions(user.username, username)
 
       Repo.insert(%Entry{
         change: "user.rename",
