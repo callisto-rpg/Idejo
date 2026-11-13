@@ -112,8 +112,10 @@ defmodule Idejo.TopicPermissionsTest do
     # A role that moderates the topic by its own setting moderates it, and sets it too.
     keeper = holding(team)
     refute Access.moderates_a_topic?(keeper)
+
     assert :ok =
              Access.set_topic_permissions(admin, topic, %{team.id => %{"moderate" => "allow"}})
+
     assert Access.can?(keeper, :moderate, topic)
     assert Access.moderates_a_topic?(keeper)
     assert Idejo.Moderation.moderator?(keeper)

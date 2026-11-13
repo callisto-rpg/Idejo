@@ -321,11 +321,11 @@ defmodule IdejoWeb.Layouts do
         <%!-- Out of the sidebar (steward request, 2026-11-13). --%>
         <div :if={@member?} class="community-links">
           <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
-          <a :if={@topics_url} href={@topics_url} class="community-link" id="all-topics-link">
+          <a :if={@topics_url} href={@topics_url} class="community-link" id="community-all-topics">
             <.icon name="hero-rectangle-stack" class="size-4" />
             {gettext("All my topics")}
           </a>
-          <a href={@conversations_url} class="community-link" id="conversations-link">
+          <a href={@conversations_url} class="community-link" id="community-conversations">
             <.icon name="hero-chat-bubble-left-right" class="size-4" />
             {gettext("Private Conversations")}
             <span :if={@conversations_unread > 0} class="sidebar-count">

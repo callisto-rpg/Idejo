@@ -93,7 +93,7 @@ defmodule IdejoWeb.ConversationControllerTest do
 
     assert [_] =
              page
-             |> LazyHTML.query("#community-menu a#conversations-link[href='/p']")
+             |> LazyHTML.query("#community-menu a#community-conversations[href='/p']")
              |> Enum.to_list()
 
     {:ok, topic} = Conversations.start(bo, ada)
@@ -105,7 +105,7 @@ defmodule IdejoWeb.ConversationControllerTest do
     assert LazyHTML.text(card) =~ "Are you there?"
     assert LazyHTML.text(card) =~ "1 new"
 
-    assert page |> LazyHTML.query("#conversations-link .sidebar-count") |> LazyHTML.text() =~ "1"
+    assert page |> LazyHTML.query("#community-conversations .sidebar-count") |> LazyHTML.text() =~ "1"
 
     # Opening it reads it.
     get(conn, ~p"/p/#{topic.id}")

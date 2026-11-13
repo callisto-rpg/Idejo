@@ -150,7 +150,7 @@ defmodule IdejoWeb.InboxTest do
     refute quiet =~ "new message"
 
     # The member's links stay in the inbox's tabs: none in the forums menu.
-    refute html =~ ~s(id="conversations-link")
+    refute html =~ ~s(id="community-conversations")
     refute html =~ ~s(id="sidebar")
     refute html =~ ~s(id="sidebar-toggle")
     refute html =~ ~s(id="unread-link")

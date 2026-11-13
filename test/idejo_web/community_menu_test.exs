@@ -65,8 +65,8 @@ defmodule IdejoWeb.CommunityMenuTest do
     # Conversations, out of the sidebar; no other forums, no dot.
     html = build_conn() |> log_in_user(user_fixture()) |> get(~p"/") |> html_response(200)
     doc = LazyHTML.from_document(html)
-    assert doc |> LazyHTML.query("#community-menu a#conversations-link") |> Enum.count() == 1
-    assert doc |> LazyHTML.query("#sidebar #conversations-link") |> Enum.count() == 0
+    assert doc |> LazyHTML.query("#community-menu a#community-conversations") |> Enum.count() == 1
+    assert doc |> LazyHTML.query("#sidebar #community-conversations") |> Enum.count() == 0
     refute html =~ "community-dot"
   end
 

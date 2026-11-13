@@ -89,11 +89,13 @@ defmodule IdejoWeb.ChatServiceTest do
     assert html =~ ~s(action="/u/#{bo.id}/message")
     home = conn |> get(~p"/") |> html_response(200)
     assert home =~ ~s(href="/p")
-    refute home =~ "all-topics-link"
+    refute home =~ "community-all-topics"
     # No chat service: no dot on the logo, and nothing to show at /community/activity.
     refute home =~ "community-dot"
+
     assert conn |> get(~p"/community/activity") |> json_response(200) ==
              %{"unread" => 0, "mentions" => 0}
+
     assert Chat.start_url(ada, bo) == nil
 
     # And the service's questions are not answered.
@@ -120,16 +122,16 @@ defmodule IdejoWeb.ChatServiceTest do
     # The forums menu's button (steward request, 2026-11-13: out of the sidebar) leads to
     # the service, with its count.
     html = conn |> get(~p"/") |> html_response(200)
-    assert html =~ ~s(href="#{@chat}" class="community-link" id="conversations-link")
+    assert html =~ ~s(href="#{@chat}" class="community-link" id="community-conversations")
     assert Chat.unread(ada) == 2
     refute html =~ "sidebar-pinned"
 
     # "All my topics" (steward request, 2026-11-10), above Private Conversations.
     assert html =~
-             ~s(href="https://my.example.test/topics" class="community-link" id="all-topics-link")
+             ~s(href="https://my.example.test/topics" class="community-link" id="community-all-topics")
 
-    [_, after_topics] = String.split(html, "all-topics-link", parts: 2)
-    assert after_topics =~ "conversations-link"
+    [_, after_topics] = String.split(html, "community-all-topics", parts: 2)
+    assert after_topics =~ "community-conversations"
 
     # The dot on the logo, filled by community_menu.js from /community/activity.
     assert html =~ ~s(id="community-dot")
@@ -137,7 +139,7 @@ defmodule IdejoWeb.ChatServiceTest do
     # A member not linked keeps the forum's own, and gets no dot.
     html = build_conn() |> log_in_user(cy) |> get(~p"/") |> html_response(200)
     assert html =~ ~s(href="/p" class="community-link")
-    refute html =~ "all-topics-link"
+    refute html =~ "community-all-topics"
     refute html =~ "community-dot"
   end
 
