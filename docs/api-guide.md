@@ -191,6 +191,10 @@ and never gets HTML:
   message keeps its place; its text only for moderators of the category.
 - `held`: closed early with Ctrl+Enter; `edited`, `moderator_edited`; `versions_count`
   (moderators only).
+- `pinned_at`: when a moderator pinned it to the topic's navigator, or null. `GET
+  /topics/{id}/pins` lists a topic's pinned messages, oldest pin first; with `moderate`,
+  `PUT` and `DELETE /messages/{id}/pin` pin and unpin (logged; never in private
+  conversations).
 - `author`: name, user tag, pictures (`avatar_dark_url` for the dark theme), the role shown
   beside the name, `ignored_by_me` (collapse it, as the web does). An opening message of a
   topical topic has no author: `{"id": null, "display_name": "the topic", "topical": true}`.
@@ -211,6 +215,16 @@ idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plu
 
 Raw HTML is never rendered. Inline reply quotes are block quotes whose first line links to
 the quoted message's permalink: `> [Replying to Ada:](/m/{id}) [excerpt](/m/{id})`.
+
+### Topic permissions
+
+A topic can override its category's rights for each role (`view`, `post`, `moderate`, and
+`tag`, editing tags). With `moderate` there, `GET /topics/{id}/permissions` gives every
+role but owner and administrator (who always have every right), with its own setting per
+right (`own`: `allow`, `deny` or `unset`) and what the category gives it (`category`: true
+or false). `PUT` the same path with `{"settings": {role_id: {right: "allow" | "deny" |
+"unset"}}}`; roles and rights it does not know are left out, `moderate` is set last, and
+each change is logged.
 
 ## 6. The growing message
 

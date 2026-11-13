@@ -374,6 +374,34 @@ defmodule Idejo.Api do
     map
   end
 
+  @doc """
+  A topic's permissions (steward request, 2026-11-13; `Idejo.Access`): each role but owner
+  and administrator (who always have every right), with its own setting for each topic right
+  (`"allow"`, `"deny"` or `"unset"`, the category's) and what the category gives it.
+  """
+  @spec topic_permissions(Topic.t()) :: map()
+  def topic_permissions(%Topic{} = topic) do
+    own = Access.topic_permissions(topic)
+    inherited = Access.category_rights(topic)
+    rights = Access.topic_rights()
+
+    roles =
+      for role <- Access.list_roles(),
+          not (role.built_in and role.name in ~w(owner administrator)) do
+        %{
+          "id" => role.id,
+          "name" => role.name,
+          "own" => Map.new(rights, &{Atom.to_string(&1), effect(own[{role.id, &1}])}),
+          "category" => Map.new(rights, &{Atom.to_string(&1), inherited[{role.id, &1}] == :allow})
+        }
+      end
+
+    %{"topic_id" => topic.id, "roles" => roles}
+  end
+
+  defp effect(nil), do: "unset"
+  defp effect(effect), do: Atom.to_string(effect)
+
   @doc "Whether the viewer moderates the topic's category (never a private conversation's)."
   @spec moderator?(User.t() | nil, Topic.t()) :: boolean()
   def moderator?(nil, _topic), do: false
@@ -400,6 +428,8 @@ defmodule Idejo.Api do
       "reactions" => reactions(context.reactions[message.id], context.viewer),
       "edited" => message.edited,
       "moderator_edited" => message.moderator_edited,
+      # Steward request, 2026-11-13: pinned to the topic navigator, since when.
+      "pinned_at" => time(message.pinned_at),
       "versions_count" => if(context.moderator?, do: versions_count(message)),
       "scheduled" => message.scheduled,
       "held" => message.held,

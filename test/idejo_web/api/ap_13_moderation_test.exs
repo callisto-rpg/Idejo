@@ -124,6 +124,42 @@ defmodule IdejoWeb.Api.AP13ModerationTest do
   end
 
   @tag req: "AP-13"
+  test "AP-13 message pins (steward request, 2026-11-13): moderators pin, everyone lists", ctx do
+    pin = "/api/v1/messages/#{ctx.message.id}/pin"
+    pins = "/api/v1/topics/#{ctx.topic.id}/pins"
+
+    assert api(ctx.member_token, :put, pin) |> api_json(403)
+    assert api(ctx.mod, :put, pin) |> api_json(200) |> Map.get("pinned_at")
+    assert logged?("message.pin")
+
+    listed = api(ctx.member_token, :get, pins) |> api_json(200)
+    assert Enum.map(listed["data"], & &1["id"]) == [ctx.message.id]
+
+    assert api(ctx.mod, :delete, pin) |> api_json(200) |> Map.get("pinned_at") == nil
+    assert logged?("message.unpin")
+    assert api(ctx.member_token, :get, pins) |> api_json(200) == %{"data" => []}
+  end
+
+  @tag req: "AP-13"
+  test "AP-13 topic permissions (steward request, 2026-11-13): read and set by moderators",
+       ctx do
+    path = "/api/v1/topics/#{ctx.topic.id}/permissions"
+    assert api(ctx.member_token, :get, path) |> api_json(403)
+
+    before = api(ctx.mod, :get, path) |> api_json(200)
+    assert before["topic_id"] == ctx.topic.id
+    refute Enum.any?(before["roles"], &(&1["name"] in ~w(owner administrator)))
+    member = Enum.find(before["roles"], &(&1["name"] == "member"))
+    assert member["own"]["post"] == "unset"
+    assert is_boolean(member["category"]["post"])
+
+    settings = %{"settings" => %{member["id"] => %{"post" => "deny", "nonsense" => "allow"}}}
+    after_put = api(ctx.mod, :put, path, settings) |> api_json(200)
+    assert Enum.find(after_put["roles"], &(&1["id"] == member["id"]))["own"]["post"] == "deny"
+    assert logged?("topic.permission")
+  end
+
+  @tag req: "AP-13"
   test "AP-13 followed by everyone, for administrators only", ctx do
     path = "/api/v1/topics/#{ctx.topic.id}/followed-by-everyone"
     assert api(ctx.mod, :put, path) |> api_json(403)
