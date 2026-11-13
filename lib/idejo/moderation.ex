@@ -183,7 +183,7 @@ defmodule Idejo.Moderation do
 
       Access.server_moderator?(moderator) ->
         moderated = Access.topic_allowed(moderator, :moderate)
-        where(query, [topic: t], t.private or ^moderated)
+        where(query, ^dynamic([topic: t], t.private or ^moderated))
 
       true ->
         Access.where_topic_allowed(query, moderator, :moderate)

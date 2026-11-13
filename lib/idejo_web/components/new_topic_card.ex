@@ -14,7 +14,8 @@ defmodule IdejoWeb.NewTopicCard do
   """
   use IdejoWeb, :html
 
-  alias Idejo.{Access, Forum, Tags}
+  alias Idejo.{Access, Forum}
+  alias Idejo.Forum.Tags
   alias Idejo.Accounts.User
   alias Idejo.Forum.{Category, Topic}
 
@@ -225,9 +226,7 @@ defmodule IdejoWeb.NewTopicCard do
             <details :if={@state.permissions?} id="new-topic-permissions" class="mt-3">
               <summary class="label cursor-pointer">{gettext("Topic permissions")}</summary>
               <p class="text-sm opacity-70 mt-1">
-                {gettext(
-                  "Over what the category gives; owners and administrators may do everything."
-                )}
+                {gettext("Over what the category gives; owners and administrators may do everything.")}
               </p>
               <div class="overflow-x-auto">
                 <table class="table table-sm">

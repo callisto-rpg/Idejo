@@ -223,7 +223,7 @@ defmodule IdejoWeb.TopicLive do
          )
          |> put_reactions()
          |> put_polls()
-         |> assign(schedule: nil, schedule_error: nil, poll_form: nil)
+         |> assign(schedule: nil, schedule_error: nil, poll_form: nil, new_topic_card: nil)
          |> assign(live?: connected?(socket), revealed: MapSet.new())
          |> put_pending()
          # TP-12: `@uploads` exists only when they were allowed here, at mount.
@@ -3417,8 +3417,7 @@ defmodule IdejoWeb.TopicLive do
           MapSet.member?(assigns.ignored, message.author_id),
       mod_edit?: mod_edit?,
       # Steward request, 2026-11-13: moderators pin messages to the topic navigator.
-      pin?:
-        assigns.can_moderate? and not assigns.topic.private and is_nil(message.deleted_at),
+      pin?: assigns.can_moderate? and not assigns.topic.private and is_nil(message.deleted_at),
       warn?: warn?(assigns, message, viewer)
     }
   end
