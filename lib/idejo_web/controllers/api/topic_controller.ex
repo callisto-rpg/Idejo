@@ -129,6 +129,13 @@ defmodule IdejoWeb.Api.TopicController do
   defp read_to(user, topic, nil), do: Reading.mark_read(user, topic)
   defp read_to(user, topic, message_id), do: Reading.mark_read_to(user, topic, message_id)
 
+  @doc "The topic's pinned messages, oldest pin first (steward request, 2026-11-13)."
+  def pins(conn, %{"id" => id}) do
+    with {:ok, topic} <- readable_topic(conn, id) do
+      json(conn, %{"data" => Api.messages(user(conn), topic, Forum.pinned_messages(topic))})
+    end
+  end
+
   def messages(conn, %{"id" => id} = params) do
     with {:ok, topic} <- readable_topic(conn, id), do: window(conn, topic, params)
   end

@@ -110,3 +110,84 @@ msgstr ""
 
 msgid "was given up recently and is reserved for now"
 msgstr ""
+
+msgid "are not tags of this category"
+msgstr ""
+
+msgid "cannot sign up: sign-ups are closed"
+msgstr ""
+
+msgid "choose an icon"
+msgstr ""
+
+msgid "choose at least one tag"
+msgstr ""
+
+msgid "does not match password"
+msgstr ""
+
+msgid "is already an automessage"
+msgstr ""
+
+msgid "is already used by another category"
+msgstr ""
+
+msgid "is already used by another group"
+msgstr ""
+
+msgid "is already used by another role"
+msgstr ""
+
+msgid "is already used by another tag"
+msgstr ""
+
+msgid "is not a category"
+msgstr ""
+
+msgid "is not a group"
+msgstr ""
+
+msgid "is not one of the icons"
+msgstr ""
+
+msgid "is not one of the places"
+msgstr ""
+
+msgid "is not valid, used or expired"
+msgstr ""
+
+msgid "is not your current password"
+msgstr ""
+
+msgid "is one of the composer's own commands"
+msgstr ""
+
+msgid "may only contain letters, digits and underscores"
+msgstr ""
+
+msgid "may only contain letters, digits, - and _"
+msgstr ""
+
+msgid "may only contain lowercase letters, digits and single dashes"
+msgstr ""
+
+msgid "must be a host name such as smtp.example.org"
+msgstr ""
+
+msgid "must be an uploaded logo"
+msgstr ""
+
+msgid "must have the @ sign and no spaces"
+msgstr ""
+
+msgid "must look like #3366ff"
+msgstr ""
+
+msgid "must look like #daa304 or #daa304ff"
+msgstr ""
+
+msgid "must look like \"subject.action\", e.g. \"role.create\""
+msgstr ""
+
+msgid "you have already reported this message"
+msgstr ""

@@ -13,7 +13,7 @@ defmodule IdejoWeb.Api.ModerationController do
   """
   use IdejoWeb.Api.Controller
 
-  alias Idejo.{Accounts, Forum, Messages, Moderation}
+  alias Idejo.{Access, Accounts, Forum, Messages, Moderation}
   alias Idejo.Forum.TopicIcons
   alias Idejo.Moderation.Warnings
   alias IdejoWeb.Api.{CategoryController, UserController}
@@ -137,6 +137,41 @@ defmodule IdejoWeb.Api.ModerationController do
   end
 
   ## Topics (TP-14, TP-15, MO-02)
+
+  @doc "A topic's permissions (steward request, 2026-11-13), for those who moderate it."
+  def topic_permissions(conn, %{"id" => id}) do
+    with {:ok, topic} <- moderated_topic(conn, id),
+         do: json(conn, Api.topic_permissions(topic))
+  end
+
+  @doc """
+  Sets them: `settings`, `{role_id => {right => "allow" | "deny" | "unset"}}`; roles and
+  rights it does not know are left out (`Access.set_topic_permissions/3`).
+  """
+  def set_topic_permissions(conn, %{"id" => id} = params) do
+    settings = if is_map(params["settings"]), do: params["settings"], else: %{}
+
+    with {:ok, topic} <- moderated_topic(conn, id),
+         :ok <- Access.set_topic_permissions(user(conn), topic, settings),
+         do: json(conn, Api.topic_permissions(topic))
+  end
+
+  # A topic the moderator may view (404 otherwise, as any other) and moderates; never a
+  # private conversation, which has no permissions of its own.
+  defp moderated_topic(conn, id) do
+    with {:ok, topic} <- viewable_topic(conn, id) do
+      if not topic.private and Access.can?(user(conn), :moderate, topic),
+        do: {:ok, topic},
+        else: {:error, :forbidden}
+    end
+  end
+
+  @doc "Pins a message to its topic's navigator (steward request, 2026-11-13)."
+  def pin_message(conn, %{"id" => id}),
+    do: on_message(conn, id, &Messages.set_pinned(user(conn), &1, true))
+
+  def unpin_message(conn, %{"id" => id}),
+    do: on_message(conn, id, &Messages.set_pinned(user(conn), &1, false))
 
   def topic(conn, %{"id" => id}) do
     moderator = user(conn)

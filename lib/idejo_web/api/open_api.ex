@@ -23,7 +23,7 @@ defmodule IdejoWeb.Api.OpenApi do
   @me @card ++
         ~w(email verified welcomed auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator)
   @topic ~w(id uri title slug url category_id private tags author topical icon created_at last_activity_at messages_count unread_count mention_state followed muted locked archived pinned inactive followed_by_everyone continues_from)
-  @message ~w(id uri topic_id url author state deleted_by body_md mentions images spoiler inline_spoilers replies_to forwarded_from poll plugins reactions edited moderator_edited versions_count scheduled held anonymous continues_topic_id continued_in cursor opened_at closed_at updated_at)
+  @message ~w(id uri topic_id url author state deleted_by body_md mentions images spoiler inline_spoilers replies_to forwarded_from poll plugins reactions edited moderator_edited pinned_at versions_count scheduled held anonymous continues_topic_id continued_in cursor opened_at closed_at updated_at)
 
   @schemas %{
     "Error" => {~w(error), ~w(error)},
@@ -86,6 +86,8 @@ defmodule IdejoWeb.Api.OpenApi do
     "TopicModeration" =>
       {~w(following inactive inactive_allowed archived unarchive_to move_targets), ~w(following)},
     "TopicIcon" => {~w(id name url), ~w(id url)},
+    # Steward request, 2026-11-13: each role's own setting and the category's, by right.
+    "TopicPermissions" => {~w(topic_id roles), ~w(topic_id roles)},
     "OpenApi" =>
       {~w(openapi info servers paths components security x-idejo-events x-idejo-error-codes),
        ~w(openapi info paths)},
@@ -121,6 +123,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "Unarchive" => {~w(category_id reason), []},
     "Move" => {~w(category_id reason), ~w(category_id)},
     "Icon" => {~w(icon_id), []},
+    "TopicPermissionsUpdate" => {~w(settings), ~w(settings)},
     "DeleteTopic" => {~w(confirm reason), ~w(confirm)},
     "MoveMessages" => {~w(message_ids topic_id new reason), ~w(message_ids)},
     "DeleteMessages" => {~w(topic_id message_ids reason), ~w(topic_id message_ids)},

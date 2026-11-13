@@ -657,6 +657,35 @@ defmodule IdejoWeb.Api.Operations do
         body: "TopicCreate"
       ),
       op(
+        :put,
+        "/messages/{id}/pin",
+        ModerationController,
+        :pin_message,
+        "moderate",
+        "Message",
+        "Pins the message to its topic's navigator (`pinned_at`).",
+        req: "AP-13"
+      ),
+      op(
+        :delete,
+        "/messages/{id}/pin",
+        ModerationController,
+        :unpin_message,
+        "moderate",
+        "Message",
+        "Unpins the message.",
+        req: "AP-13"
+      ),
+      op(
+        :get,
+        "/topics/{id}/pins",
+        TopicController,
+        :pins,
+        "read",
+        {:list, "Message"},
+        "The topic's pinned messages, oldest pin first."
+      ),
+      op(
         :post,
         "/topics/{id}/scheduled",
         ScheduledController,
@@ -981,6 +1010,27 @@ defmodule IdejoWeb.Api.Operations do
         "moderate",
         "TopicModeration",
         "Followers, move and unarchive targets of a topic.",
+        req: "AP-13"
+      ),
+      op(
+        :get,
+        "/topics/{id}/permissions",
+        ModerationController,
+        :topic_permissions,
+        "moderate",
+        "TopicPermissions",
+        "What each role may do in the topic: its own setting or the category's.",
+        req: "AP-13"
+      ),
+      op(
+        :put,
+        "/topics/{id}/permissions",
+        ModerationController,
+        :set_topic_permissions,
+        "moderate",
+        "TopicPermissions",
+        "Sets roles' rights in the topic: `allow`, `deny` or `unset` (the category's). Logged.",
+        body: "TopicPermissionsUpdate",
         req: "AP-13"
       ),
       op(
