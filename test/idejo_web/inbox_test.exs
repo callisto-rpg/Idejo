@@ -297,6 +297,16 @@ defmodule IdejoWeb.InboxTest do
     assert lines.(mentioned["id"]) == ["2 new messages", "1 mention"]
     assert lines.(reacted["id"]) == ["3 reactions"]
     assert lines.(older["id"]) == ["1 new message"]
+
+    # Both outside the card (steward request, 2026-11-13): the logo at its left, what is new
+    # at its right.
+    doc = LazyHTML.from_document(html)
+    id = mentioned["id"]
+    count = &(doc |> LazyHTML.query(&1) |> Enum.count())
+    outside = "li#topic-#{id}.topic-entry > .topic-row-forum + .topic-row + .topic-row-activity"
+    assert count.(outside) == 1
+    assert count.("#topic-#{id} .topic-row .topic-row-forum") == 0
+    assert count.("#topic-#{id} .topic-row .topic-row-activity") == 0
     # The list replaces the "N new" badge.
     refute html =~ "unread-marker"
   end

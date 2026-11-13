@@ -223,15 +223,17 @@ defmodule IdejoWeb.TopicComponents do
     default: nil,
     doc: """
     the forum the topic is in, `%{name:, url:}`, named first in its meta line (the inbox);
-    with `logo:`, its logo leads the row (steward request, 2026-11-12)
+    with `logo:`, its logo leads the row (steward request, 2026-11-12), outside the card
+    (steward request, 2026-11-13)
     """
 
   attr :activity, :map,
     default: nil,
     doc: """
-    the inbox's activity list at the row's right (steward request, 2026-11-12):
-    `%{unread:, mentions:, reactions:}`, one line each when above 0 ("N new messages",
-    "N mentions", "N reactions"), in place of the "N new" badge
+    the inbox's activity list at the row's right (steward request, 2026-11-12), outside the
+    card with a forum logo (steward request, 2026-11-13): `%{unread:, mentions:,
+    reactions:}`, one line each when above 0 ("N new messages", "N mentions",
+    "N reactions"), in place of the "N new" badge
     """
 
   attr :base, :string,
@@ -245,91 +247,118 @@ defmodule IdejoWeb.TopicComponents do
     assigns =
       assign(assigns, :href, at(assigns.base, ~p"/t/#{assigns.topic.id}/#{assigns.topic.slug}"))
 
+    # With a forum logo (the inbox; steward request, 2026-11-13): the logo at the left and
+    # what is new at the right, both outside the card, which is the row's middle.
     ~H"""
+    <li :if={@forum[:logo]} id={"topic-#{@topic.id}"} class="topic-entry">
+      <span class="topic-row-forum" aria-hidden="true">
+        <img src={@forum.logo} alt="" loading="lazy" />
+      </span>
+      <div class={row_class(@topic, @preview)}>
+        <.row_body {assigns} />
+      </div>
+      <.activity_list activity={@activity} />
+    </li>
     <li
+      :if={!@forum[:logo]}
       id={"topic-#{@topic.id}"}
-      class={[
-        "topic-row",
-        "cat-#{@topic.category_id}",
-        @preview && "is-expanded",
-        @topic.inactive && "is-inactive",
-        @forum[:logo] && "has-forum"
-      ]}
+      class={row_class(@topic, @preview)}
       data-topic-menu={@base == "" && @topic.id}
       data-topic-path={@base == "" && ~p"/t/#{@topic.id}/#{@topic.slug}"}
     >
-      <span :if={@forum[:logo]} class="topic-row-forum" aria-hidden="true">
-        <img src={@forum.logo} alt="" loading="lazy" />
-      </span>
-      <span class="topic-row-avatar">
-        <.category_mark :if={@lead == :category} category={@topic.category} />
-        <%!-- Topic Type: a topical topic shows its icon, never its starter. --%>
-        <.topic_icon :if={@lead == :author && @topic.topical} topic={@topic} base={@base} />
-        <UserComponents.avatar
-          :if={@lead == :author && !@topic.topical}
-          user={@topic.author}
-          size={:list}
-          base={@base}
-        />
-      </span>
-      <a href={@href} class="topic-row-title">{@topic.title}</a>
-      <span class="topic-row-badges">
-        <%!-- Nobody follows it (steward decision, 2026-11-01): faded, and said in words. --%>
-        <span :if={@topic.inactive} class="sr-only topic-inactive">{gettext("Inactive")}</span>
-        <span :if={@unread && !@activity} class="badge badge-sm badge-primary unread-marker">
-          {ngettext("1 new", "%{count} new", @unread)}
-        </span>
-        <span :if={@topic.pinned} class="badge badge-sm badge-ghost">
-          <.icon name="hero-bookmark-micro" class="size-3" />{gettext("Pinned")}
-        </span>
-        <span :if={@topic.state == "archived"} class="badge badge-sm badge-ghost">
-          {gettext("Archived")}
-        </span>
-        <span :if={@topic.state == "locked"} class="badge badge-sm badge-ghost">
-          <.icon name="hero-lock-closed-micro" class="size-3" />{gettext("Locked")}
-        </span>
-      </span>
-      <.tag_list :if={Ecto.assoc_loaded?(@topic.tags)} tags={@topic.tags} class="topic-row-tags" />
-      <p class="topic-row-meta">
-        <a :if={@forum} href={@forum.url} class="topic-forum">{@forum.name}</a>
-        <span :if={@forum} aria-hidden="true">›</span>
-        <a
-          :if={@lead == :category}
-          href={at(@base, ~p"/c/#{@topic.category.slug}")}
-          class="topic-category"
-        >
-          {@topic.category.name}
-        </a>
-        <a
-          :if={@lead == :author && @category}
-          href={at(@base, ~p"/c/#{@topic.category.slug}")}
-          class="topic-category"
-        >
-          <.category_mark category={@topic.category} />
-          {@topic.category.name}
-        </a>
-        <span :if={@lead == :author && @category && !@topic.topical} aria-hidden="true">·</span>
-        <span :if={@lead == :author && !@topic.topical} class="topic-starter">
-          {@topic.author.display_name}
-        </span>
-        <span :if={@lead == :category || @category || !@topic.topical} aria-hidden="true">·</span>
-        <span>
-          {gettext("last activity")} <.time_ago at={@topic.last_activity_at} />
-        </span>
-      </p>
-      <p class="topic-row-count">
-        <.icon name="hero-chat-bubble-left-right" class="size-4" />
-        <span class="topic-messages">
-          {ngettext("1 message", "%{count} messages", @topic.message_count)}
-        </span>
-      </p>
-      <ul :if={activity_lines(@activity) != []} class="topic-row-activity">
-        <li :for={{kind, text} <- activity_lines(@activity)} class={"topic-row-#{kind}"}>
-          {text}
-        </li>
-      </ul>
-      <.topic_preview :if={@preview} topic={@topic} preview={@preview} base={@base} />
+      <.row_body {assigns} />
+      <.activity_list activity={@activity} />
     </li>
+    """
+  end
+
+  defp row_class(topic, preview) do
+    [
+      "topic-row",
+      "cat-#{topic.category_id}",
+      preview && "is-expanded",
+      topic.inactive && "is-inactive"
+    ]
+  end
+
+  attr :activity, :map, required: true
+
+  defp activity_list(assigns) do
+    ~H"""
+    <ul :if={activity_lines(@activity) != []} class="topic-row-activity">
+      <li :for={{kind, text} <- activity_lines(@activity)} class={"topic-row-#{kind}"}>
+        {text}
+      </li>
+    </ul>
+    """
+  end
+
+  # What a row shows inside its card.
+  defp row_body(assigns) do
+    ~H"""
+    <span class="topic-row-avatar">
+      <.category_mark :if={@lead == :category} category={@topic.category} />
+      <%!-- Topic Type: a topical topic shows its icon, never its starter. --%>
+      <.topic_icon :if={@lead == :author && @topic.topical} topic={@topic} base={@base} />
+      <UserComponents.avatar
+        :if={@lead == :author && !@topic.topical}
+        user={@topic.author}
+        size={:list}
+        base={@base}
+      />
+    </span>
+    <a href={@href} class="topic-row-title">{@topic.title}</a>
+    <span class="topic-row-badges">
+      <%!-- Nobody follows it (steward decision, 2026-11-01): faded, and said in words. --%>
+      <span :if={@topic.inactive} class="sr-only topic-inactive">{gettext("Inactive")}</span>
+      <span :if={@unread && !@activity} class="badge badge-sm badge-primary unread-marker">
+        {ngettext("1 new", "%{count} new", @unread)}
+      </span>
+      <span :if={@topic.pinned} class="badge badge-sm badge-ghost">
+        <.icon name="hero-bookmark-micro" class="size-3" />{gettext("Pinned")}
+      </span>
+      <span :if={@topic.state == "archived"} class="badge badge-sm badge-ghost">
+        {gettext("Archived")}
+      </span>
+      <span :if={@topic.state == "locked"} class="badge badge-sm badge-ghost">
+        <.icon name="hero-lock-closed-micro" class="size-3" />{gettext("Locked")}
+      </span>
+    </span>
+    <.tag_list :if={Ecto.assoc_loaded?(@topic.tags)} tags={@topic.tags} class="topic-row-tags" />
+    <p class="topic-row-meta">
+      <a :if={@forum} href={@forum.url} class="topic-forum">{@forum.name}</a>
+      <span :if={@forum} aria-hidden="true">›</span>
+      <a
+        :if={@lead == :category}
+        href={at(@base, ~p"/c/#{@topic.category.slug}")}
+        class="topic-category"
+      >
+        {@topic.category.name}
+      </a>
+      <a
+        :if={@lead == :author && @category}
+        href={at(@base, ~p"/c/#{@topic.category.slug}")}
+        class="topic-category"
+      >
+        <.category_mark category={@topic.category} />
+        {@topic.category.name}
+      </a>
+      <span :if={@lead == :author && @category && !@topic.topical} aria-hidden="true">·</span>
+      <span :if={@lead == :author && !@topic.topical} class="topic-starter">
+        {@topic.author.display_name}
+      </span>
+      <span :if={@lead == :category || @category || !@topic.topical} aria-hidden="true">·</span>
+      <span>
+        {gettext("last activity")} <.time_ago at={@topic.last_activity_at} />
+      </span>
+    </p>
+    <p class="topic-row-count">
+      <.icon name="hero-chat-bubble-left-right" class="size-4" />
+      <span class="topic-messages">
+        {ngettext("1 message", "%{count} messages", @topic.message_count)}
+      </span>
+    </p>
+    <.topic_preview :if={@preview} topic={@topic} preview={@preview} base={@base} />
     """
   end
 
