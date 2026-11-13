@@ -150,7 +150,7 @@ defmodule IdejoWeb.OIDCController do
           :info,
           gettext("Confirmed. You can delete your account in the next five minutes.")
         )
-        |> redirect(to: ~p"/users/settings#delete-heading")
+        |> redirect(to: IdejoWeb.UserSettingsLive.path("account", "delete-heading"))
 
       _ ->
         conn
@@ -284,7 +284,7 @@ defmodule IdejoWeb.OIDCController do
     do: gettext("Your account could not be created. Please try again.")
 
   defp back("sign_in"), do: ~p"/users/sign-in"
-  defp back(_intent), do: ~p"/users/settings"
+  defp back(_intent), do: IdejoWeb.UserSettingsLive.path("account")
 
   defp redirect_uri, do: url(~p"/users/oidc/callback")
 

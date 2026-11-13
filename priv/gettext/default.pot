@@ -7729,3 +7729,23 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "No topics from the forums you chose. Change the Filter to see more."
 msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Profile"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Interface"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Messages and notifications"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Settings sections"
+msgstr ""

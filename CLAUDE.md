@@ -329,7 +329,12 @@ The contract (M6; mark each item done here when its PR merges):
   7 days, made by administrators in **Admin → Invites**; the link is
   `/users/sign-up?invite=CODE`. Test fixtures create users with `skip_invite: true`.
 - **Profile** (AC-04): `/users/settings` (`IdejoWeb.UserSettingsLive`, `live_session :signed_in`
-  with the `{IdejoWeb.UserAuth, :require_authenticated}` hook) changes the display name
+  with the `{IdejoWeb.UserAuth, :require_authenticated}` hook; four tabs, steward request,
+  2026-11-13: `?tab=` `profile` (name and tag, bio, avatar), `interface` (Writing, Message
+  controls), `messages` (Private messages, Ignored users, email and push notifications) and
+  `account` (sign-in provider, Apps and devices, password, deletion), `#settings-tabs` links
+  patching the address, every panel in the page and the others `hidden`; a link or redirect
+  into a section names its tab, `UserSettingsLive.path/2`) changes the display name
   through `Accounts.update_user_profile/2`, which records an `update` activity. The username
   never changes (@mentions). The same form sets the user tag (steward decision, 2026-10-27;
   `users.user_tag`, optional, at most 32 characters, blank is none, not unique, never read by

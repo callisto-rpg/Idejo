@@ -179,7 +179,7 @@ defmodule IdejoWeb.CommunityMenuTest do
     link =
       unlinked |> LazyHTML.from_document() |> LazyHTML.query("#community-menu #community-connect")
 
-    assert LazyHTML.attribute(link, "href") == ["/users/settings#oidc-section"]
+    assert LazyHTML.attribute(link, "href") == ["/users/settings?tab=account#oidc-section"]
     assert LazyHTML.text(link) =~ "Connect Example ID to view more forums"
     assert Accessibility.audit(unlinked) == []
 

@@ -105,7 +105,7 @@ defmodule IdejoWeb.AC06IgnoreTest do
     assert has_element?(lv, "#ignored-#{rude.id}", "Rude Ruth")
 
     conn = delete(conn, ~p"/u/#{rude.id}/ignore", %{"return_to" => "/users/settings"})
-    assert redirected_to(conn) == ~p"/users/settings"
+    assert redirected_to(conn) == "/users/settings?tab=messages#ignored-section"
     refute Accounts.ignoring?(reader, rude)
 
     {:ok, lv, _html} = watch(log_in_user(build_conn(), reader), topic)

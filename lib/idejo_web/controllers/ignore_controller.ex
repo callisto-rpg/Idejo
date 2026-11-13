@@ -43,7 +43,8 @@ defmodule IdejoWeb.IgnoreController do
 
   # Back to the topic the card was opened in, to Profile and account, or to the card's page.
   # Only those paths are followed, so the parameter can never send anyone to another site.
-  defp back(%{"return_to" => "/users/settings"}, _user), do: ~p"/users/settings"
+  defp back(%{"return_to" => "/users/settings"}, _user),
+    do: IdejoWeb.UserSettingsLive.path("messages", "ignored-section")
 
   defp back(%{"return_to" => "/t/" <> rest = path}, user) do
     if Regex.match?(~r|\A[0-9a-f-]{36}(/[a-z0-9-]*)?\z|, rest), do: path, else: ~p"/u/#{user.id}"

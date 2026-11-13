@@ -208,7 +208,7 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
     assert has_element?(view, ~s(#oidc-link[href="/users/oidc?intent=link"]))
 
     conn = through(provider, @ada, conn: signed_in, path: ~p"/users/oidc?intent=link")
-    assert redirected_to(conn) == ~p"/users/settings"
+    assert redirected_to(conn) == "/users/settings?tab=account"
     assert [%UserIdentity{user_id: user_id}] = identities()
     assert user_id == local.id
 
@@ -309,7 +309,7 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
     assert {request["prompt"], request["max_age"]} == {"login", "0"}
 
     conn = through(provider, @ada, conn: conn, path: ~p"/users/oidc?intent=reauth")
-    assert redirected_to(conn) == ~p"/users/settings#delete-heading"
+    assert redirected_to(conn) == "/users/settings?tab=account#delete-heading"
 
     {:ok, view, _html} = live(conn, ~p"/users/settings")
     view |> element("#delete-account-oidc") |> render_click()

@@ -269,7 +269,7 @@ defmodule IdejoWeb.Layouts do
              decision, 2026-11-06): Profile and account links one, or creates one and links it. --%>
         <a
           :if={@unlinked?}
-          href={~p"/users/settings#oidc-section"}
+          href={IdejoWeb.UserSettingsLive.path("account", "oidc-section")}
           id="community-connect"
           class="community-connect"
         >

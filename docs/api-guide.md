@@ -39,7 +39,7 @@ curl https://garden.example.org/.well-known/idejo
             "scopes": ["read", "write", "private", "moderate", "push"],
             "code_challenge_methods": ["S256"]},
   "community": {"directory_url": "https://forums.example.org/ or null"},
-  "account": {"deletion_url": "https://garden.example.org/users/settings#delete-heading",
+  "account": {"deletion_url": "https://garden.example.org/users/settings?tab=account#delete-heading",
               "sign_up_url": "https://garden.example.org/users/sign-up or null"},
   "features": ["unifiedpush", "gifs", "private_messages", "polls", "scheduled_messages"],
   "limits": {"page_size": 100, "requests_per_minute": 600, "upload_max_mb": 3,

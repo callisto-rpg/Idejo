@@ -307,7 +307,7 @@ defmodule IdejoWeb.Api.AP08SignInTest do
     assert html =~ ~s(action="/users/settings/apps/#{row.id}")
 
     conn = delete(conn, ~p"/users/settings/apps/#{row.id}")
-    assert redirected_to(conn) == "/users/settings#apps-section"
+    assert redirected_to(conn) == "/users/settings?tab=account#apps-section"
     assert {:error, :invalid} = Accounts.get_user_by_api_token(token)
 
     # Another user's device is not theirs to remove.
