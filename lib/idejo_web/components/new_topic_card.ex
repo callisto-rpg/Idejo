@@ -15,9 +15,8 @@ defmodule IdejoWeb.NewTopicCard do
   use IdejoWeb, :html
 
   alias Idejo.{Access, Forum}
-  alias Idejo.Forum.Tags
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.{Category, Tags, Topic}
 
   @type state :: %{
           params: map(),
