@@ -256,6 +256,9 @@ defmodule IdejoWeb.Router do
     post "/t/:id/moderate", TopicModerationController, :create
     # The administrators' topic menu (steward decision, 2026-11-01): followers, inactive.
     get "/topic-menu/:id", TopicMenuController, :show
+    # A topic's own permissions, for its moderators (steward request, 2026-11-13).
+    get "/topic-permissions/:id", TopicPermissionsController, :show
+    post "/topic-permissions/:id", TopicPermissionsController, :update
     # TP-19: change a topic's tags (the :tag right), a plain form.
     post "/t/:id/tags", TopicTagsController, :update
     # The topic's title, for its starter and moderators (steward decision, 2026-10-23).

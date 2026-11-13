@@ -26,7 +26,7 @@ defmodule Idejo.Notifications do
 
   alias Idejo.Access
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.Topic
   alias Idejo.Markdown
   alias Idejo.Messages.{Body, Message}
   alias Idejo.Notifications.Notification
@@ -204,11 +204,9 @@ defmodule Idejo.Notifications do
   end
 
   defp may_view(user_ids, topic) do
-    category = Repo.get!(Category, topic.category_id)
-
     topic
     |> active_unmuted(user_ids)
-    |> Access.filter_allowed(:view, category)
+    |> Access.filter_allowed(:view, topic)
     |> Enum.map(& &1.id)
   end
 

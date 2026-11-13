@@ -80,7 +80,6 @@ defmodule Idejo.Forum.Tags do
     per_page = Keyword.get(opts, :per_page, 30)
     page = max(Keyword.get(opts, :page, 1), 1)
     tag_ids = tags |> Enum.map(& &1.id) |> Enum.uniq()
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
     needed = if Keyword.get(opts, :match, :all) == :any, do: 1, else: length(tag_ids)
 
     carrying =
@@ -91,15 +90,16 @@ defmodule Idejo.Forum.Tags do
         select: type(tt.topic_id, :binary_id)
 
     topics =
-      Repo.all(
-        from t in Topic,
-          where: t.id in subquery(carrying),
-          where: t.category_id in subquery(viewable),
-          order_by: [desc: t.last_activity_at, desc: t.id],
-          offset: ^((page - 1) * per_page),
-          limit: ^(per_page + 1),
-          preload: [:author, :category, tags: ^ordered()]
+      from(t in Topic,
+        as: :topic,
+        where: t.id in subquery(carrying),
+        order_by: [desc: t.last_activity_at, desc: t.id],
+        offset: ^((page - 1) * per_page),
+        limit: ^(per_page + 1),
+        preload: [:author, :category, tags: ^ordered()]
       )
+      |> Access.where_topic_allowed(user, :view)
+      |> Repo.all()
 
     {Enum.take(topics, per_page), length(topics) > per_page}
   end

@@ -101,8 +101,8 @@ defmodule IdejoWeb.TopicController do
     ]
 
   defp moderator_tools(user, topic) do
-    can_moderate? = Idejo.Access.can?(user, :moderate, topic.category)
-    can_tag? = topic.state != "archived" and Idejo.Access.can?(user, :tag, topic.category)
+    can_moderate? = Idejo.Access.can?(user, :moderate, topic)
+    can_tag? = topic.state != "archived" and Idejo.Access.can?(user, :tag, topic)
     move_targets = if can_moderate?, do: Forum.list_move_targets(user, topic), else: []
 
     [

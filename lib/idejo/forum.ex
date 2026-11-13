@@ -57,10 +57,14 @@ defmodule Idejo.Forum do
           %{category: Category.t(), topics: non_neg_integer(), last_activity_at: DateTime.t()}
         ]
   def list_category_summaries(user) do
+    # Topics the user may not view (steward request, 2026-11-13) are not counted.
     stats =
-      from t in Topic,
+      from(t in Topic,
+        as: :topic,
         group_by: t.category_id,
         select: %{category_id: t.category_id, topics: count(), last: max(t.last_activity_at)}
+      )
+      |> Access.where_topic_allowed(user, :view)
 
     from(c in Category, order_by: [asc: c.position, asc: c.name])
     |> Access.where_allowed(user, :view)
@@ -76,15 +80,15 @@ defmodule Idejo.Forum do
   """
   @spec list_active_topics(User.t() | nil, pos_integer()) :: [Topic.t()]
   def list_active_topics(user, limit \\ 10) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
-    Repo.all(
-      from t in Topic,
-        where: t.category_id in subquery(viewable) and t.state != "archived",
-        order_by: [desc: t.last_activity_at, desc: t.id],
-        limit: ^limit,
-        preload: [:category, tags: ^Tags.ordered()]
+    from(t in Topic,
+      as: :topic,
+      where: t.state != "archived",
+      order_by: [desc: t.last_activity_at, desc: t.id],
+      limit: ^limit,
+      preload: [:category, tags: ^Tags.ordered()]
     )
+    |> Access.where_topic_allowed(user, :view)
+    |> Repo.all()
   end
 
   @doc """
@@ -570,7 +574,7 @@ defmodule Idejo.Forum do
       not Idejo.Settings.get(:inactive_topics) ->
         {:error, :disabled}
 
-      Access.can?(moderator, :moderate, topic.category) ->
+      Access.can?(moderator, :moderate, topic) ->
         Repo.transact(fn -> save_inactive(moderator, topic) end)
 
       true ->
@@ -588,7 +592,7 @@ defmodule Idejo.Forum do
   @spec topic_menu(User.t() | nil, term()) :: {:ok, map()} | {:error, :not_found}
   def topic_menu(user, id) when is_binary(id) do
     with %Topic{} = topic <- get_viewable_topic(user, id),
-         true <- Access.can?(user, :moderate, topic.category) do
+         true <- Access.can?(user, :moderate, topic) do
       {:ok,
        %{
          following: Idejo.Reading.follower_count(topic),
@@ -650,7 +654,7 @@ defmodule Idejo.Forum do
           |> Repo.preload(:category)
 
         cond do
-          not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+          not Access.can?(moderator, :moderate, topic) -> {:error, :forbidden}
           action in [:lock, :unlock] and topic.state == "archived" -> {:error, :archived}
           true -> apply_moderation(moderator, topic, action, reason)
         end
@@ -701,7 +705,7 @@ defmodule Idejo.Forum do
         target = Repo.get(Category, target.id)
 
         cond do
-          not Access.can?(moderator, :moderate, topic.category) ->
+          not Access.can?(moderator, :moderate, topic) ->
             {:error, :forbidden}
 
           is_nil(target) or target.archive or target.id == topic.category_id ->
@@ -760,7 +764,7 @@ defmodule Idejo.Forum do
     topic = Repo.preload(topic, :category)
 
     # Checked before the Archive may be made; again under the lock.
-    with true <- Access.can?(moderator, :moderate, topic.category) || {:error, :forbidden},
+    with true <- Access.can?(moderator, :moderate, topic) || {:error, :forbidden},
          {:ok, archive} <- archive_category(moderator),
          {:ok, {topic, closed}} <-
            Repo.transact(fn -> archive_locked(moderator, topic, archive, reason) end) do
@@ -796,7 +800,7 @@ defmodule Idejo.Forum do
       |> Repo.preload(:category)
 
     cond do
-      not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+      not Access.can?(moderator, :moderate, topic) -> {:error, :forbidden}
       topic.state == "archived" -> {:error, :archived}
       true -> save_archive(moderator, topic, archive, reason)
     end
@@ -862,7 +866,7 @@ defmodule Idejo.Forum do
 
     cond do
       topic.state != "archived" -> {:error, :not_archived}
-      not Access.can?(moderator, :moderate, topic.category) -> {:error, :forbidden}
+      not Access.can?(moderator, :moderate, topic) -> {:error, :forbidden}
       is_nil(target) or target.archive -> {:error, :invalid_target}
       not Access.can?(moderator, :moderate, target) -> {:error, :forbidden}
       true -> save_unarchive(moderator, topic, target, reason)
@@ -908,7 +912,7 @@ defmodule Idejo.Forum do
           Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
           |> Repo.preload(:category)
 
-        if Access.can?(moderator, :moderate, topic.category),
+        if Access.can?(moderator, :moderate, topic),
           do: save_delete(moderator, topic, reason),
           else: {:error, :forbidden}
       end)
@@ -976,7 +980,7 @@ defmodule Idejo.Forum do
   def can_rename_topic?(%User{} = user, %Topic{} = topic) do
     topic = Repo.preload(topic, :category)
 
-    Access.can?(user, :moderate, topic.category) or
+    Access.can?(user, :moderate, topic) or
       (topic.author_id == user.id and can_post?(user, topic))
   end
 
@@ -1050,7 +1054,7 @@ defmodule Idejo.Forum do
       chosen = Enum.filter(available, &(&1.id in tag_ids))
 
       cond do
-        not Access.can?(user, :tag, topic.category) -> {:error, :forbidden}
+        not Access.can?(user, :tag, topic) -> {:error, :forbidden}
         topic.state == "archived" -> {:error, :archived}
         length(chosen) != length(tag_ids) -> {:error, :invalid_tags}
         chosen == [] and available != [] -> {:error, :tag_required}
@@ -1111,7 +1115,7 @@ defmodule Idejo.Forum do
           Repo.one!(from t in Topic, where: t.id == ^source.id, lock: "FOR UPDATE")
           |> Repo.preload(:category)
 
-        with :ok <- check_moderator(moderator, source.category),
+        with :ok <- check_moderator(moderator, source),
              {:ok, messages} <- messages_to_move(source, ids),
              {:ok, target} <- move_target(moderator, source, target, messages) do
           save_message_move(moderator, source, target, messages, reason)
@@ -1126,8 +1130,9 @@ defmodule Idejo.Forum do
     end
   end
 
-  defp check_moderator(moderator, category),
-    do: if(Access.can?(moderator, :moderate, category), do: :ok, else: {:error, :forbidden})
+  # A topic (its own setting first) or the category a new topic goes to.
+  defp check_moderator(moderator, scope),
+    do: if(Access.can?(moderator, :moderate, scope), do: :ok, else: {:error, :forbidden})
 
   defp messages_to_move(_source, []), do: {:error, :nothing}
 
@@ -1166,7 +1171,7 @@ defmodule Idejo.Forum do
     cond do
       is_nil(target) or target.id == source.id -> {:error, :invalid_target}
       target.state == "archived" or target.category.archive -> {:error, :invalid_target}
-      true -> with :ok <- check_moderator(moderator, target.category), do: {:ok, target}
+      true -> with :ok <- check_moderator(moderator, target), do: {:ok, target}
     end
   end
 
@@ -1281,18 +1286,16 @@ defmodule Idejo.Forum do
   """
   @spec search_move_targets(User.t(), String.t(), Ecto.UUID.t() | nil) :: [Topic.t()]
   def search_move_targets(%User{} = moderator, query, except \\ nil) do
-    moderated =
-      Category
-      |> where([c], not c.archive)
-      |> Access.where_allowed(moderator, :moderate)
-      |> select([c], c.id)
-
     base =
-      from t in Topic,
-        where: t.category_id in subquery(moderated) and t.state != "archived",
+      from(t in Topic,
+        as: :topic,
+        join: c in assoc(t, :category),
+        where: not c.archive and t.state != "archived",
         order_by: [desc: t.last_activity_at, desc: t.id],
         limit: 10,
         preload: :category
+      )
+      |> Access.where_topic_allowed(moderator, :moderate)
 
     base = if except, do: from(t in base, where: t.id != ^except), else: base
 
@@ -1316,14 +1319,14 @@ defmodule Idejo.Forum do
   def viewable_message_ids(_user, []), do: MapSet.new()
 
   def viewable_message_ids(user, ids) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     from(m in Message,
       join: t in Topic,
+      as: :topic,
       on: t.id == m.topic_id,
-      where: m.id in ^ids and t.category_id in subquery(viewable),
+      where: m.id in ^ids,
       select: m.id
     )
+    |> Access.where_topic_allowed(user, :view)
     |> Repo.all()
     |> MapSet.new()
   end
@@ -1557,13 +1560,12 @@ defmodule Idejo.Forum do
   def list_forks(_user, []), do: %{}
 
   def list_forks(user, message_ids) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     from(t in Topic,
+      as: :topic,
       where: t.forked_from_message_id in ^message_ids,
-      where: t.category_id in subquery(viewable),
       order_by: [asc: t.created_at, asc: t.id]
     )
+    |> Access.where_topic_allowed(user, :view)
     |> Repo.all()
     |> Enum.group_by(& &1.forked_from_message_id)
   end
@@ -1596,9 +1598,7 @@ defmodule Idejo.Forum do
   @spec set_topic_icon(User.t(), Topic.t(), Idejo.Forum.TopicIcon.t() | nil) ::
           {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
   def set_topic_icon(%User{} = moderator, %Topic{} = topic, icon) do
-    category = Repo.get!(Category, topic.category_id)
-
-    if topic.topical and Access.can?(moderator, :moderate, category) do
+    if topic.topical and Access.can?(moderator, :moderate, topic) do
       result = Repo.transact(fn -> update_icon(moderator, topic, icon) end)
 
       with {:ok, updated} <- result,
@@ -1629,9 +1629,7 @@ defmodule Idejo.Forum do
   @spec make_topical(User.t(), Topic.t(), Idejo.Forum.TopicIcon.t() | nil) ::
           {:ok, Topic.t()} | {:error, :forbidden | Ecto.Changeset.t()}
   def make_topical(%User{} = moderator, %Topic{} = topic, icon) do
-    category = Repo.get!(Category, topic.category_id)
-
-    if not topic.topical and not topic.private and Access.can?(moderator, :moderate, category) do
+    if not topic.topical and not topic.private and Access.can?(moderator, :moderate, topic) do
       result = Repo.transact(fn -> mark_topical(moderator, topic, icon) end)
 
       with {:ok, {_updated, opening}} <- result do
@@ -1929,7 +1927,7 @@ defmodule Idejo.Forum do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %Topic{} = topic <-
            Repo.get(Topic, id) |> Repo.preload([:category, tags: Tags.ordered()]),
-         true <- Access.can?(user, :view, topic.category) do
+         true <- Access.can?(user, :view, topic) do
       topic
     else
       _ -> nil
@@ -1953,14 +1951,13 @@ defmodule Idejo.Forum do
   """
   @spec list_public_topics(pos_integer()) :: [Topic.t()]
   def list_public_topics(limit \\ 50_000) do
-    public = Category |> Access.where_allowed(nil, :view) |> select([c], c.id)
-
-    Repo.all(
-      from t in Topic,
-        where: t.category_id in subquery(public),
-        order_by: [desc: t.last_activity_at, desc: t.id],
-        limit: ^limit
+    from(t in Topic,
+      as: :topic,
+      order_by: [desc: t.last_activity_at, desc: t.id],
+      limit: ^limit
     )
+    |> Access.where_topic_allowed(nil, :view)
+    |> Repo.all()
   end
 
   @doc """
@@ -1989,7 +1986,7 @@ defmodule Idejo.Forum do
   def get_viewable_message(user, id) when is_binary(id) do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %Message{} = message <- Repo.get(Message, id) |> Repo.preload(topic: :category),
-         true <- Access.can?(user, :view, message.topic.category) do
+         true <- Access.can?(user, :view, message.topic) do
       message
     else
       _ -> nil
@@ -2035,17 +2032,41 @@ defmodule Idejo.Forum do
     per_page = Keyword.get(opts, :per_page, 30)
     page = max(Keyword.get(opts, :page, 1), 1)
 
-    topics =
-      Repo.all(
-        from t in Topic,
-          where: t.category_id == ^category_id,
-          order_by: [desc: t.pinned, desc: t.last_activity_at, desc: t.id],
-          offset: ^((page - 1) * per_page),
-          limit: ^(per_page + 1),
-          preload: [:author, tags: ^Tags.ordered()]
-      )
+    query =
+      from t in Topic,
+        as: :topic,
+        where: t.category_id == ^category_id,
+        order_by: [desc: t.pinned, desc: t.last_activity_at, desc: t.id],
+        offset: ^((page - 1) * per_page),
+        limit: ^(per_page + 1),
+        preload: [:author, tags: ^Tags.ordered()]
+
+    # `viewer:` (steward request, 2026-11-13): leaves out the topics they may not view.
+    query =
+      case Keyword.fetch(opts, :viewer) do
+        {:ok, viewer} -> Access.where_topic_allowed(query, viewer, :view)
+        :error -> query
+      end
+
+    topics = Repo.all(query)
 
     {Enum.take(topics, per_page), length(topics) > per_page}
+  end
+
+  @doc """
+  A topic's pinned messages (steward request, 2026-11-13; `Idejo.Messages.set_pinned/3`),
+  oldest pin first, not deleted, with their authors: for the topic navigator.
+  """
+  @spec pinned_messages(Topic.t()) :: [Message.t()]
+  def pinned_messages(%Topic{private: true}), do: []
+
+  def pinned_messages(%Topic{id: id}) do
+    Repo.all(
+      from m in Message,
+        where: m.topic_id == ^id and not is_nil(m.pinned_at) and is_nil(m.deleted_at),
+        order_by: [asc: m.pinned_at, asc: m.id],
+        preload: :author
+    )
   end
 
   @doc """
@@ -2098,9 +2119,8 @@ defmodule Idejo.Forum do
   def can_post?(user, %Topic{private: true} = topic),
     do: Idejo.Conversations.can_post?(user, topic)
 
-  # The check needs only the category's id: no query to load it.
-  def can_post?(%User{} = user, %Topic{category_id: category_id}),
-    do: Access.can?(user, :post, category_id && %Category{id: category_id})
+  # Steward request, 2026-11-13: the topic's own setting, else its category's.
+  def can_post?(%User{} = user, %Topic{} = topic), do: Access.can?(user, :post, topic)
 
   @doc """
   Posts a message in a topic, as `user`, closed (until growing messages arrive in M3).

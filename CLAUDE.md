@@ -170,6 +170,21 @@ The grid is **Admin → Permissions** (RP-05, `IdejoWeb.Admin.PermissionsLive`):
 `/admin/permissions/{slug}` per category (server-wide, allow or deny); owner and administrator
 rows show “Always” and take no setting.
 
+**Topic permissions** (since 0.3.9; steward request, 2026-11-13; extra review: DV-06): a topic
+may set `:view`, `:post`, `:moderate` and `:tag` for any role but owner and administrator,
+allow or deny, over its category (`topic_permissions`, `Idejo.Access.TopicPermission`); unset
+follows the category's setting, then the server-wide one, and across roles allow still wins.
+Pass the **topic** to `Access.can?(user, right, topic)` and `filter_allowed/3` for these
+rights (`:start` is the category's); topic lists filter with
+`Access.where_topic_allowed(query, user, right)`, which needs a `:topic` named binding
+(`Access.topic_allowed/2` is the dynamic it adds), never with the viewable categories alone.
+Settings change only through `Access.set_topic_permission/5` (or `set_topic_permissions/3`
+from a form), by someone with `:moderate` on the topic, logged as `topic.permission` (MO-03),
+never on a private conversation. Moderators set them at `/topic-permissions/{id}`
+(`IdejoWeb.TopicPermissionsController`, "Permissions" in the topic page's moderation tools)
+or in the `!new-topic` card. A role moderating a topic by its own setting sees that topic's
+reports and the Moderation link (`Access.moderates_a_topic?/1`); the log stays per category.
+
 **Owners and administrators always have every right and can never lock themselves out**
 (steward rule, 2026-10-19), in every category. `Idejo.Access.administrator?/1` (holds owner
 or administrator) is checked first by `can?/3` (after its one exception: no category, a
@@ -719,7 +734,12 @@ The contract (M6; mark each item done here when its PR merges):
   (`appendLine/2`); `!new-topic` sends with `then: "new_topic"` (or pushes `"new_topic"` with
   nothing new: the open message), and `TopicLive` redirects to
   `/m/{reply_to_id || message id}/new-topic?from={message id}`, where `NewTopicLive` fills the
-  first message with the author's own message (TP-09); `!schedule` pushes `"open_schedule"`
+  first message with the author's own message (TP-09). With no open message, or typed as
+  `!new-topic:Title:` (pushes `"open_new_topic"` with the title; since 0.3.9, steward request,
+  2026-11-13), `TopicLive` opens the New topic card (`IdejoWeb.NewTopicCard`,
+  `#new-topic-dialog`): title, category (this topic's to start with, among
+  `list_startable_categories/1`), first message, the category's tags, and for its moderators
+  the topic's permissions; a topical category leads to `/c/{slug}/new` for its icon. `!schedule` pushes `"open_schedule"`
   with the text not sent yet (never sent text: nothing when sent text was changed), and the
   dialog (`#schedule-dialog`, `InlineCard` hook) asks for hours; `!poll` and `!spoiler`
   send what is new with `then: "poll"` / `"spoiler"` (or push `"open_poll"` / `"spoiler"`
@@ -1092,7 +1112,12 @@ The contract (M6; mark each item done here when its PR merges):
   at the top right that opens it (`data-shown`, `data-mode`, `data-open`, kept by
   `JS.ignore_attributes`); a jump centres the message and focuses its first control, after
   loading the window around it when the page does not hold it (`jump`, Long topics).
-  Hidden without JavaScript.
+  Hidden without JavaScript. Under them, "Pinned" (`#topic-nav-pins`, since 0.3.9; steward
+  request, 2026-11-13): the messages moderators pinned (`messages.pinned_at`,
+  `Forum.pinned_messages/1`, oldest pin first, not deleted), each its author and excerpt.
+  "Pin message"/"Unpin message" sit in a message's Moderate group (`#message-{id}-pin`, those
+  with `:moderate` in the topic; never in private conversations): `Messages.set_pinned/3`,
+  logged `message.pin`/`message.unpin`, broadcasting the message and `{:pins_changed, id}`.
 - **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
   decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
   re-encoded in the same format without metadata (SP-05), animated frames kept, JPEGs turned

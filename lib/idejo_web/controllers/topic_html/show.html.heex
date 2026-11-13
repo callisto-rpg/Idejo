@@ -129,6 +129,15 @@
       <button :if={@topic.pinned} name="action" value="unpin" class="btn btn-sm">
         {gettext("Unpin")}
       </button>
+      <%!-- Steward request, 2026-11-13: who may view, post, moderate or tag here. --%>
+      <.link
+        :if={!@topic.private}
+        href={~p"/topic-permissions/#{@topic.id}"}
+        id="topic-permissions-link"
+        class="btn btn-sm"
+      >
+        {gettext("Permissions")}
+      </.link>
       <%!-- Steward decision, 2026-11-01: out of the Archive, open again, into the category it
            was archived from; without one (or one the moderator does not moderate), picked. --%>
       <button

@@ -51,7 +51,7 @@ defmodule Idejo.Moderation.Warnings do
 
   defp moderates(moderator, topic, message) do
     if topic.private or is_nil(topic.category_id) or message.deleted_at != nil or
-         not Access.can?(moderator, :moderate, %Category{id: topic.category_id}),
+         not Access.can?(moderator, :moderate, topic),
        do: {:error, :forbidden},
        else: :ok
   end

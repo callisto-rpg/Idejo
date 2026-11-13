@@ -18,7 +18,8 @@ defmodule IdejoWeb.Api.CategoryController do
     with {:ok, category} <- category(conn, id),
          page when is_integer(page) <-
            page_number(params, {:category, category.id}) || {:error, :bad_request} do
-      {topics, more?} = Forum.list_topics(category, page: page, per_page: limit(params))
+      {topics, more?} =
+        Forum.list_topics(category, page: page, per_page: limit(params), viewer: user(conn))
       {next, prev} = page_cursors({:category, category.id}, page, more?)
 
       send_page(

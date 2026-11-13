@@ -53,13 +53,11 @@ defmodule Idejo.Search do
   defp run(user, text, opts) do
     per_page = Keyword.get(opts, :per_page, 20)
     page = max(Keyword.get(opts, :page, 1), 1)
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     query =
       from m in Message,
         join: t in Topic,
+        as: :topic,
         on: t.id == m.topic_id,
-        where: t.category_id in subquery(viewable),
         # MO-02: a message deleted by a moderator is never found.
         where: is_nil(m.deleted_at),
         where:
@@ -99,6 +97,7 @@ defmodule Idejo.Search do
 
     rows =
       query
+      |> Access.where_topic_allowed(user, :view)
       |> in_category(opts[:category])
       |> Repo.all()
 

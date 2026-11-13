@@ -170,22 +170,23 @@ defmodule Idejo.Moderation do
       from r in Report,
         join: m in assoc(r, :message),
         join: t in Topic,
+        as: :topic,
         on: t.id == m.topic_id,
         where: r.status == "open"
 
     # Reports from private conversations (steward decision, 2026-10-27) go to server
-    # moderators, like bans: there is no category to moderate.
+    # moderators, like bans: there is no category to moderate. Topics that set who
+    # moderates them (steward request, 2026-11-13) go to those.
     cond do
       Access.administrator?(moderator) ->
         query
 
       Access.server_moderator?(moderator) ->
-        moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
-        where(query, [_r, _m, t], t.private or t.category_id in subquery(moderated))
+        moderated = Access.topic_allowed(moderator, :moderate)
+        where(query, [topic: t], t.private or ^moderated)
 
       true ->
-        moderated = Category |> Access.where_allowed(moderator, :moderate) |> select([c], c.id)
-        where(query, [_r, _m, t], t.category_id in subquery(moderated))
+        Access.where_topic_allowed(query, moderator, :moderate)
     end
   end
 
@@ -231,7 +232,7 @@ defmodule Idejo.Moderation do
     allowed? =
       if topic.private,
         do: Access.server_moderator?(moderator),
-        else: Access.can?(moderator, :moderate, topic.category)
+        else: Access.can?(moderator, :moderate, topic)
 
     if allowed? do
       Repo.transact(fn -> close_reports(moderator, message, outcome, note) end)
@@ -289,7 +290,8 @@ defmodule Idejo.Moderation do
 
   def moderator?(%User{} = user) do
     Access.server_moderator?(user) or
-      Category |> Access.where_allowed(user, :moderate) |> Repo.exists?()
+      Category |> Access.where_allowed(user, :moderate) |> Repo.exists?() or
+      Access.moderates_a_topic?(user)
   end
 
   @doc """

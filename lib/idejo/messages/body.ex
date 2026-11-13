@@ -139,7 +139,7 @@ defmodule Idejo.Messages.Body do
           &{{:role, Access.role_slug(&1)}, {"/r/" <> Access.role_slug(&1), "+" <> role_label(&1)}}
         ) ++
         Enum.map(topics(author, slugs(references, :topic)), fn topic ->
-          label = if visible.(topic.category_id), do: "#" <> topic.title
+          label = if visible_topic?(topic, category_id), do: "#" <> topic.title
           {{:topic, topic.slug}, {"/t/" <> topic.id, label}}
         end) ++
         Enum.map(categories(author, slugs(references, :category)), fn category ->
@@ -193,6 +193,14 @@ defmodule Idejo.Messages.Body do
     end
   end
 
+  # A topic's title shows when everyone may view it, or it is in the message's category and
+  # sets no view rights of its own (steward request, 2026-11-13).
+  defp visible_topic?(topic, own_category_id) do
+    Access.can?(nil, :view, topic) or
+      (topic.category_id == own_category_id and own_category_id != nil and
+         not Access.sets_right?(topic, :view))
+  end
+
   defp users([]), do: []
 
   defp users(names) do
@@ -213,8 +221,6 @@ defmodule Idejo.Messages.Body do
 
   # Several topics may share a slug: the one the author last wrote in, else the most active.
   defp topics(%User{id: author_id} = author, slugs) do
-    viewable = Category |> Access.where_allowed(author, :view) |> select([c], c.id)
-
     last_written =
       from m in Message,
         where: m.author_id == ^author_id,
@@ -222,11 +228,13 @@ defmodule Idejo.Messages.Body do
         select: %{topic_id: m.topic_id, at: max(m.opened_at)}
 
     from(t in Topic,
+      as: :topic,
       left_join: w in subquery(last_written),
       on: w.topic_id == t.id,
-      where: t.slug in ^slugs and t.category_id in subquery(viewable),
+      where: t.slug in ^slugs,
       order_by: [desc_nulls_last: w.at, desc: t.last_activity_at, desc: t.id]
     )
+    |> Access.where_topic_allowed(author, :view)
     |> Repo.all()
     |> Enum.uniq_by(& &1.slug)
   end

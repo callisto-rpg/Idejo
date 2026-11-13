@@ -36,6 +36,8 @@ defmodule Idejo.Messages.Message do
     # Edited by a moderator (MO-02; steward request, 2026-11-09): every reader sees "message
     # edited by a moderator" under it.
     field :moderator_edited, :boolean, default: false
+    # Steward request, 2026-11-13: pinned by a moderator, listed in the topic navigator.
+    field :pinned_at, :utc_datetime_usec
     # Posted by `!schedule` at the time its author chose (steward decision, 2026-10-23).
     field :scheduled, :boolean, default: false
     # `!spoiler`: readers see it blurred until they reveal it (steward decision, 2026-10-23).
