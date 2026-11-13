@@ -11,6 +11,14 @@ defmodule IdejoWeb.UserSettingsLive do
   email and push notifications) and Account (sign-in provider, apps, password, deletion).
   Links into the page name their tab (`path/1`).
 
+  Settings for all forums (steward request, 2026-11-13; `Idejo.Community.SharedSettings`):
+  on the group's inbox, for a member linked to the provider (`Inbox.everywhere?/1`), each
+  section that can be shared has "Save for all forums" beside Save, the avatar "Use these
+  pictures on all my forums", and Messages and notifications a switch to use one set of
+  email and push choices everywhere. On a forum of the group (`Chat.settings_url/1`), a note
+  says the settings apply only there and links to the inbox's; while the member shares
+  their notification choices, those two forms are read-only here.
+
   The avatar uploads as soon as a picture is chosen (`Idejo.Accounts.set_avatar/3`: a 256 px
   WebP square without metadata), and can be removed. So can a second picture for the dark
   theme, under "Dark mode picture", folded away until one is set (steward decision,
@@ -21,6 +29,8 @@ defmodule IdejoWeb.UserSettingsLive do
   alias Idejo.Accounts
   alias Idejo.Accounts.ApiTokens
   alias Idejo.Accounts.OIDC
+  alias Idejo.Community.{Chat, SharedSettings}
+  alias Idejo.Inbox
   alias Idejo.Messages.Body
   alias Idejo.Notifications.Digest
   alias Idejo.Push
@@ -55,6 +65,10 @@ defmodule IdejoWeb.UserSettingsLive do
      |> assign(:this_endpoint, nil)
      |> assign(:devices, Push.list_subscriptions(user))
      |> assign(:image_error, nil)
+     |> assign(:everywhere?, Inbox.everywhere?(user))
+     |> assign(:settings_url, if(!Inbox.on?(), do: Chat.settings_url(user)))
+     |> assign(:shared_form, shared_form(user))
+     |> assign(:notifications_locked?, SharedSettings.locked?(user, "email"))
      |> assign_oidc(user, session["oidc_reauth_at"])
      |> allow_avatar(:avatar)
      |> allow_avatar(:dark_avatar)}
@@ -150,13 +164,13 @@ defmodule IdejoWeb.UserSettingsLive do
     {:noreply, assign(socket, :form, to_form(changeset, as: :profile))}
   end
 
-  def handle_event("save", %{"profile" => params}, socket) do
+  def handle_event("save", %{"profile" => params} = all, socket) do
     case Accounts.update_user_profile(socket.assigns.current_scope.user, params) do
-      {:ok, _user} ->
+      {:ok, user} ->
         # A full page load, so the header shows the new name too.
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Profile saved."))
+         |> saved(user, all, ["profile"], gettext("Profile saved."))
          |> redirect(to: ~p"/users/settings")}
 
       {:error, changeset} ->
@@ -187,12 +201,12 @@ defmodule IdejoWeb.UserSettingsLive do
   end
 
   # AC-04: the bio, written like a message (Write / Preview), shown on the user card.
-  def handle_event("save_bio", %{"bio" => params}, socket) do
+  def handle_event("save_bio", %{"bio" => params} = all, socket) do
     case Accounts.update_user_bio(socket.assigns.current_scope.user, params) do
       {:ok, user} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Bio saved."))
+         |> saved(user, all, ["bio"], gettext("Bio saved."))
          |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
          |> assign(bio_form: bio_form(user), bio_mode: :write)}
 
@@ -217,12 +231,12 @@ defmodule IdejoWeb.UserSettingsLive do
   def handle_event("suggest", params, socket), do: IdejoWeb.Suggestions.reply(socket, params)
 
   # Receiving private messages (steward decision, 2026-10-27).
-  def handle_event("save_private", %{"private" => params}, socket) do
+  def handle_event("save_private", %{"private" => params} = all, socket) do
     case Accounts.update_user_private_messages(socket.assigns.current_scope.user, params) do
       {:ok, user} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Private messages preference saved."))
+         |> saved(user, all, ["private"], gettext("Private messages preference saved."))
          |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
          |> assign(:private_form, private_form(user))}
 
@@ -233,12 +247,12 @@ defmodule IdejoWeb.UserSettingsLive do
 
   # Message controls (steward decision, 2026-10-31): open topic pages pick them up when
   # reloaded (`TopicLive` reads them at mount).
-  def handle_event("save_controls", %{"controls" => params}, socket) do
+  def handle_event("save_controls", %{"controls" => params} = all, socket) do
     case Accounts.update_user_controls(socket.assigns.current_scope.user, params) do
       {:ok, user} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Message controls saved."))
+         |> saved(user, all, ["controls"], gettext("Message controls saved."))
          |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
          |> assign(:controls_form, to_form(Accounts.change_user_controls(user), as: :controls))}
 
@@ -250,12 +264,12 @@ defmodule IdejoWeb.UserSettingsLive do
   # Automatic punctuation (steward decision, 2026-10-26) and the graphical composer (TP-11;
   # steward decision, 2026-11-02): open topic pages pick them up when reloaded (`TopicLive`
   # reads them at mount, for the composer and for the engine alike).
-  def handle_event("save_writing", %{"writing" => params}, socket) do
+  def handle_event("save_writing", %{"writing" => params} = all, socket) do
     case Accounts.update_user_writing(socket.assigns.current_scope.user, params) do
       {:ok, user} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Writing preferences saved."))
+         |> saved(user, all, ["writing"], gettext("Writing preferences saved."))
          |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
          |> assign(:writing_form, to_form(Accounts.change_user_writing(user), as: :writing))}
 
@@ -265,15 +279,20 @@ defmodule IdejoWeb.UserSettingsLive do
   end
 
   # Email notifications (steward decision, 2026-10-23): the summary sent after a day away.
-  def handle_event("save_email", %{"email" => params}, socket) do
+  # On a forum whose member shares their choices from the inbox, these two are the inbox's
+  # (`SharedSettings.locked?/2`): refused here even when the form is sent anyway.
+  def handle_event("save_email", %{"email" => params} = all, socket) do
     user = socket.assigns.current_scope.user
 
-    case Digest.update_preferences(user, params) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Email notifications saved."))
-         |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))}
+    with false <- SharedSettings.locked?(user, "email"),
+         {:ok, _} <- Digest.update_preferences(user, params) do
+      {:noreply,
+       socket
+       |> saved(user, all, ["email"], gettext("Email notifications saved."))
+       |> assign(:email_form, to_form(Digest.change_preferences(user), as: :email))}
+    else
+      true ->
+        {:noreply, put_flash(socket, :error, locked_text())}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :email_form, to_form(changeset, as: :email))}
@@ -282,18 +301,51 @@ defmodule IdejoWeb.UserSettingsLive do
 
   # PN-24: push notifications. The `PushSettings` hook tells which subscription is this
   # browser's (`"push_endpoint"`) and when it subscribed (`"push_changed"`).
-  def handle_event("save_push", %{"push" => params}, socket) do
+  def handle_event("save_push", %{"push" => params} = all, socket) do
     user = socket.assigns.current_scope.user
 
-    case Push.update_preferences(user, params) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Push notifications saved."))
-         |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))}
+    with false <- SharedSettings.locked?(user, "push"),
+         {:ok, _} <- Push.update_preferences(user, params) do
+      {:noreply,
+       socket
+       |> saved(user, all, ["push"], gettext("Push notifications saved."))
+       |> assign(:push_form, to_form(Push.change_preferences(user), as: :push))}
+    else
+      true ->
+        {:noreply, put_flash(socket, :error, locked_text())}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :push_form, to_form(changeset, as: :push))}
+    end
+  end
+
+  # The inbox: one set of email and push choices for every forum, or each forum its own.
+  def handle_event("share_notifications", %{"shared" => params}, socket) do
+    shared = params["notifications_shared"] == "true"
+    user = socket.assigns.current_scope.user
+
+    with true <- socket.assigns.everywhere?,
+         {:ok, user} <- Accounts.set_notifications_shared(user, shared) do
+      sections = if shared, do: ["email", "push"], else: []
+      result = Inbox.save_everywhere(user, sections, shared: shared)
+
+      {:noreply,
+       socket
+       |> assign(:current_scope, %{socket.assigns.current_scope | user: user})
+       |> assign(:shared_form, shared_form(user))
+       |> put_result(result, shared_text(shared))}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  # The inbox: both pictures (or none) on every forum.
+  def handle_event("avatar_everywhere", _params, socket) do
+    if socket.assigns.everywhere? do
+      result = Inbox.save_everywhere(socket.assigns.current_scope.user, ["avatar"])
+      {:noreply, put_result(socket, result, gettext("Your pictures are kept here."))}
+    else
+      {:noreply, socket}
     end
   end
 
@@ -443,6 +495,75 @@ defmodule IdejoWeb.UserSettingsLive do
 
   defp bio_form(user), do: to_form(Accounts.change_user_bio(user), as: :bio)
 
+  defp shared_form(user),
+    do: to_form(%{"notifications_shared" => user.notifications_shared}, as: :shared)
+
+  # After a section saved here: on the inbox, with "Save for all forums" (or, for email and
+  # push, while the member shares those), on every forum too; the flash says how it went.
+  # Email and push always carry whether they are shared, so a forum that missed an earlier
+  # change of it catches up.
+  defp saved(socket, user, params, [section], text) do
+    notifications? = section in ~w(email push)
+    shared? = notifications? and user.notifications_shared
+
+    if socket.assigns.everywhere? and (params["everywhere"] == "true" or shared?) do
+      opts = if notifications?, do: [shared: user.notifications_shared], else: []
+      put_result(socket, Inbox.save_everywhere(user, [section], opts), text)
+    else
+      put_flash(socket, :info, text)
+    end
+  end
+
+  defp put_result(socket, {:ok, %{done: done, missed: []}}, text) do
+    message =
+      case done do
+        [] ->
+          gettext("You have joined no other forum yet.")
+
+        _ ->
+          ngettext(
+            "Saved on your forum too.",
+            "Saved on all %{count} of your forums too.",
+            length(done)
+          )
+      end
+
+    put_flash(socket, :info, text <> " " <> message)
+  end
+
+  defp put_result(socket, {:ok, %{missed: missed}}, text) do
+    put_flash(
+      socket,
+      :error,
+      text <>
+        " " <>
+        gettext(
+          "Not saved on %{forums}: they did not answer or need an update. Try again later.",
+          forums: Enum.join(missed, ", ")
+        )
+    )
+  end
+
+  defp put_result(socket, :error, text) do
+    put_flash(
+      socket,
+      :error,
+      text <> " " <> gettext("Your forums could not be reached. Try again later.")
+    )
+  end
+
+  defp shared_text(true),
+    do: gettext("Your forums now use these email and push choices.")
+
+  defp shared_text(false),
+    do: gettext("Each forum now keeps its own email and push choices.")
+
+  defp locked_text,
+    do:
+      gettext(
+        "These choices come from your settings for all forums. Change them there, or stop sharing them there."
+      )
+
   defp private_form(user),
     do: to_form(Accounts.change_user_private_messages(user), as: :private)
 
@@ -460,6 +581,35 @@ defmodule IdejoWeb.UserSettingsLive do
     end
   end
 
+  # Save, and on the inbox "Save for all forums" beside it (the button's name and value come
+  # with the form's, `"everywhere" => "true"`).
+  attr :label, :string, required: true
+  attr :everywhere?, :boolean, default: false
+
+  defp save_buttons(assigns) do
+    ~H"""
+    <div class="flex flex-wrap gap-2">
+      <.button class="btn btn-primary">{@label}</.button>
+      <.button :if={@everywhere?} name="everywhere" value="true" class="btn">
+        {gettext("Save for all forums")}
+      </.button>
+    </div>
+    """
+  end
+
+  # A forum, while the member shares their notification choices from the inbox.
+  attr :id, :string, required: true
+  attr :url, :string, default: nil
+
+  defp locked_note(assigns) do
+    ~H"""
+    <p id={@id} class="settings-shared-note text-sm">
+      {gettext("These choices come from your settings for all forums.")}
+      <a :if={@url} href={@url}>{gettext("Change them there")}</a>
+    </p>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -468,6 +618,20 @@ defmodule IdejoWeb.UserSettingsLive do
         {gettext("Profile and account")}
         <:subtitle>@{@current_scope.user.username} · {@current_scope.user.email}</:subtitle>
       </.header>
+
+      <%!-- A forum of the group (steward request, 2026-11-13): these settings are this forum's;
+           the inbox's Profile and account saves them for all forums. --%>
+      <div :if={@settings_url} id="shared-settings-note" class="settings-shared-note" role="note">
+        <p>
+          {gettext(
+            "These settings apply only to %{forum}. To change them for all your forums at once, use your settings for all forums.",
+            forum: Layouts.server_name()
+          )}
+        </p>
+        <a href={@settings_url} id="shared-settings-link" class="btn btn-sm">
+          {gettext("Settings for all forums")}
+        </a>
+      </div>
 
       <%!-- Tabs (steward request, 2026-11-13): links that patch `?tab=`, so each tab has its
            address and Back works; every panel stays in the page, the others `hidden`. --%>
@@ -505,7 +669,7 @@ defmodule IdejoWeb.UserSettingsLive do
               label={gettext("User tag or nickname (shown after your name, optional)")}
               maxlength="32"
             />
-            <.button class="btn btn-primary">{gettext("Save")}</.button>
+            <.save_buttons label={gettext("Save")} everywhere?={@everywhere?} />
           </.form>
         </section>
 
@@ -530,7 +694,7 @@ defmodule IdejoWeb.UserSettingsLive do
               mode={@bio_mode}
               preview_html={@bio_preview}
             />
-            <.button class="btn btn-primary">{gettext("Save bio")}</.button>
+            <.save_buttons label={gettext("Save bio")} everywhere?={@everywhere?} />
           </.form>
         </section>
 
@@ -555,6 +719,17 @@ defmodule IdejoWeb.UserSettingsLive do
             </button>
           </div>
           <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>
+          <%!-- The inbox (steward request, 2026-11-13): both pictures, or none, everywhere. --%>
+          <button
+            :if={@everywhere?}
+            type="button"
+            id="avatar-everywhere"
+            class="btn btn-sm mt-4"
+            phx-click="avatar_everywhere"
+            data-confirm={gettext("Use these pictures on all your forums, in place of theirs?")}
+          >
+            {gettext("Use these pictures on all my forums")}
+          </button>
 
           <%!-- Steward decision, 2026-10-23: folded away until there is one. --%>
           <details
@@ -640,7 +815,10 @@ defmodule IdejoWeb.UserSettingsLive do
                 "Adds buttons under the box you write in: emoji, images, text formatting, more commands, and Send. Open topics show them once reloaded."
               )}
             </p>
-            <.button class="btn btn-primary">{gettext("Save writing preferences")}</.button>
+            <.save_buttons
+              label={gettext("Save writing preferences")}
+              everywhere?={@everywhere?}
+            />
           </.form>
         </section>
 
@@ -665,7 +843,7 @@ defmodule IdejoWeb.UserSettingsLive do
               label={gettext("Show message controls on desktop")}
               aria-describedby="controls-help"
             />
-            <.button class="btn btn-primary">{gettext("Save message controls")}</.button>
+            <.save_buttons label={gettext("Save message controls")} everywhere?={@everywhere?} />
           </.form>
         </section>
       </div>
@@ -692,9 +870,10 @@ defmodule IdejoWeb.UserSettingsLive do
                 "When off, nobody can start a private conversation with you or write to you in one."
               )}
             </p>
-            <.button class="btn btn-primary">
-              {gettext("Save private messages preference")}
-            </.button>
+            <.save_buttons
+              label={gettext("Save private messages preference")}
+              everywhere?={@everywhere?}
+            />
           </.form>
         </section>
 
@@ -731,60 +910,96 @@ defmodule IdejoWeb.UserSettingsLive do
           </ul>
         </section>
 
+        <%!-- The inbox (steward request, 2026-11-13): one set of choices for every forum. --%>
+        <section
+          :if={@everywhere?}
+          id="shared-notifications-section"
+          class="settings-section"
+          aria-labelledby="shared-notifications-heading"
+        >
+          <h2 id="shared-notifications-heading" class="font-semibold mb-2">
+            {gettext("Notifications on all forums")}
+          </h2>
+          <.form
+            for={@shared_form}
+            id="shared-notifications-form"
+            phx-submit="share_notifications"
+          >
+            <.input
+              field={@shared_form[:notifications_shared]}
+              type="checkbox"
+              label={gettext("Use these email and push choices on all my forums")}
+              aria-describedby="shared-notifications-help"
+            />
+            <p id="shared-notifications-help" class="text-sm opacity-70 -mt-1 mb-4 max-w-prose">
+              {gettext(
+                "On: every forum follows the choices below and shows them without letting them change there; each forum still sends its own emails and notifications. Off: each forum keeps the choices it has."
+              )}
+            </p>
+            <.button class="btn btn-primary">{gettext("Save")}</.button>
+          </.form>
+        </section>
+
         <section class="settings-section" aria-labelledby="email-notifications-heading">
           <h2 id="email-notifications-heading" class="font-semibold mb-2">
             {gettext("Email notifications")}
           </h2>
+          <.locked_note :if={@notifications_locked?} id="email-locked" url={@settings_url} />
           <.form for={@email_form} id="email-notifications-form" phx-submit="save_email">
-            <fieldset class="mb-2">
-              <legend class="mb-2">
-                {gettext(
-                  "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
-                )}
-              </legend>
+            <%!-- Shared from the inbox: shown, not changed here (SharedSettings.locked?/2). --%>
+            <fieldset disabled={@notifications_locked?}>
+              <fieldset class="mb-2">
+                <legend class="mb-2">
+                  {gettext(
+                    "If I haven't logged in for 24 hours, send me a summary of activity if there are:"
+                  )}
+                </legend>
+                <.input
+                  field={@email_form[:mentions]}
+                  type="checkbox"
+                  label={
+                    gettext("@%{username} mentions and replies to my posts",
+                      username: @current_scope.user.username
+                    )
+                  }
+                />
+                <.input
+                  field={@email_form[:role_mentions]}
+                  type="checkbox"
+                  label={gettext("+role mentions")}
+                />
+                <.input
+                  field={@email_form[:own_topics]}
+                  type="checkbox"
+                  label={gettext("New messages in a thread I created")}
+                />
+                <.input
+                  field={@email_form[:followed_topics]}
+                  type="checkbox"
+                  label={gettext("New messages in a thread I follow")}
+                />
+                <.input
+                  field={@email_form[:new_topics]}
+                  type="checkbox"
+                  label={gettext("New topics created")}
+                />
+                <.input
+                  field={@email_form[:all_activity]}
+                  type="checkbox"
+                  label={gettext("Any activity in the forum")}
+                />
+              </fieldset>
               <.input
-                field={@email_form[:mentions]}
+                field={@email_form[:once_a_week]}
                 type="checkbox"
-                label={
-                  gettext("@%{username} mentions and replies to my posts",
-                    username: @current_scope.user.username
-                  )
-                }
+                label={gettext("Don't send me a second message in the same week if I don't log in.")}
               />
-              <.input
-                field={@email_form[:role_mentions]}
-                type="checkbox"
-                label={gettext("+role mentions")}
-              />
-              <.input
-                field={@email_form[:own_topics]}
-                type="checkbox"
-                label={gettext("New messages in a thread I created")}
-              />
-              <.input
-                field={@email_form[:followed_topics]}
-                type="checkbox"
-                label={gettext("New messages in a thread I follow")}
-              />
-              <.input
-                field={@email_form[:new_topics]}
-                type="checkbox"
-                label={gettext("New topics created")}
-              />
-              <.input
-                field={@email_form[:all_activity]}
-                type="checkbox"
-                label={gettext("Any activity in the forum")}
+              <.save_buttons
+                :if={!@notifications_locked?}
+                label={gettext("Save email notifications")}
+                everywhere?={@everywhere? and !@current_scope.user.notifications_shared}
               />
             </fieldset>
-            <.input
-              field={@email_form[:once_a_week]}
-              type="checkbox"
-              label={
-                gettext("Don't send me a second message in the same week if I don't log in.")
-              }
-            />
-            <.button class="btn btn-primary">{gettext("Save email notifications")}</.button>
           </.form>
         </section>
 
@@ -797,6 +1012,7 @@ defmodule IdejoWeb.UserSettingsLive do
           <h2 id="push-notifications-heading" class="font-semibold mb-2">
             {gettext("Push notifications")}
           </h2>
+          <.locked_note :if={@notifications_locked?} id="push-locked" url={@settings_url} />
           <%!-- This browser's state, worked out by the PushSettings hook
                (assets/js/push_settings.js); without JavaScript, the "unknown" line stays. --%>
           <div
@@ -834,36 +1050,43 @@ defmodule IdejoWeb.UserSettingsLive do
           </div>
 
           <.form for={@push_form} id="push-notifications-form" phx-submit="save_push">
-            <fieldset class="mb-2">
-              <legend class="mb-2">{gettext("Send me a notification for:")}</legend>
-              <.input
-                field={@push_form[:reply]}
-                type="checkbox"
-                label={gettext("Replies to me")}
-              />
-              <.input
-                field={@push_form[:mention]}
-                type="checkbox"
-                label={gettext("@%{username} mentions", username: @current_scope.user.username)}
-              />
-              <.input
-                field={@push_form[:role_mention]}
-                type="checkbox"
-                label={gettext("+role mentions")}
-              />
-              <.input
-                field={@push_form[:followed]}
-                type="checkbox"
-                label={gettext("New messages in topics I follow")}
-              />
-              <.input
-                field={@push_form[:private]}
-                type="checkbox"
-                label={gettext("Private messages")}
+            <%!-- Shared from the inbox: shown, not changed here (SharedSettings.locked?/2). --%>
+            <fieldset disabled={@notifications_locked?}>
+              <fieldset class="mb-2">
+                <legend class="mb-2">{gettext("Send me a notification for:")}</legend>
+                <.input
+                  field={@push_form[:reply]}
+                  type="checkbox"
+                  label={gettext("Replies to me")}
+                />
+                <.input
+                  field={@push_form[:mention]}
+                  type="checkbox"
+                  label={gettext("@%{username} mentions", username: @current_scope.user.username)}
+                />
+                <.input
+                  field={@push_form[:role_mention]}
+                  type="checkbox"
+                  label={gettext("+role mentions")}
+                />
+                <.input
+                  field={@push_form[:followed]}
+                  type="checkbox"
+                  label={gettext("New messages in topics I follow")}
+                />
+                <.input
+                  field={@push_form[:private]}
+                  type="checkbox"
+                  label={gettext("Private messages")}
+                />
+              </fieldset>
+              <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
+              <.save_buttons
+                :if={!@notifications_locked?}
+                label={gettext("Save push notifications")}
+                everywhere?={@everywhere? and !@current_scope.user.notifications_shared}
               />
             </fieldset>
-            <p class="text-sm opacity-70 mb-3">{gettext("These apply to all your devices.")}</p>
-            <.button class="btn btn-primary">{gettext("Save push notifications")}</.button>
           </.form>
 
           <h3 class="font-semibold mt-6 mb-2">{gettext("Devices")}</h3>

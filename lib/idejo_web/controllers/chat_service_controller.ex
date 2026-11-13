@@ -13,11 +13,14 @@ defmodule IdejoWeb.ChatServiceController do
     * `GET /community/conversations?ticket=`: their private conversations to copy
       (`{"conversations": [...], "remaining"}`);
     * `POST /community/conversations/moved` `{"ticket", "ids"}`: those the service copied,
-      which the forum then no longer shows (`{"moved": n}`).
+      which the forum then no longer shows (`{"moved": n}`);
+    * `POST /community/settings` `{"ticket", "settings"}`: the member's Profile and account
+      sections saved from the group's inbox, "Save for all forums" (steward request,
+      2026-11-13; `Idejo.Community.SharedSettings`) → `{"saved": [...], "failed": [...]}`.
   """
   use IdejoWeb, :controller
 
-  alias Idejo.Community.{Chat, ChatExport}
+  alias Idejo.Community.{Chat, ChatExport, SharedSettings}
   alias Idejo.{Emoji, Forum, Messages, Uploads}
   alias Idejo.Forum.TopicIcons
 
@@ -54,6 +57,17 @@ defmodule IdejoWeb.ChatServiceController do
       {:ok, count} = ChatExport.moved(user, ids)
       Chat.forget(user.id)
       json(conn, %{moved: count})
+    else
+      _ -> not_found(conn)
+    end
+  end
+
+  def settings(conn, params) do
+    with true <- Chat.url() != nil,
+         %{} = settings <- params["settings"],
+         {:ok, user} <- Chat.check_ticket(params["ticket"], "settings") do
+      result = SharedSettings.save(user, settings)
+      no_store(conn) |> json(result)
     else
       _ -> not_found(conn)
     end

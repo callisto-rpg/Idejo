@@ -5,7 +5,7 @@ defmodule IdejoWeb.HelpController do
   @moduledoc """
   The Help page at `/help`, linked from the sidebar under "Rules & Roles" (steward decision,
   2026-10-23): the keys that send, the signs that link or suggest (`@`, `+`, `#`, `/`, `$`,
-  `!`), every `!` command (`IdejoWeb.ComposerCommands`) and, last (steward decision,
+  `&`, `!`), every `!` command (`IdejoWeb.ComposerCommands`) and, last (steward decision,
   2026-10-28), "Formatting text": every Markdown format (`Idejo.Markdown`), what to type and
   how it shows, rendered as a message is. Public, no JavaScript needed.
   """

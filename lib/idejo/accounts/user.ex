@@ -58,6 +58,9 @@ defmodule Idejo.Accounts.User do
     # Whether other members may start a private conversation with this user, or write in one
     # (steward decision, 2026-10-27; Idejo.Conversations).
     field :accepts_private_messages, :boolean, default: true
+    # Steward request, 2026-11-13 (Idejo.Community.SharedSettings): on a forum, email and
+    # push choices come from the group's inbox; on the inbox, they go to every forum.
+    field :notifications_shared, :boolean, default: false
     # MO-02: a warning waits to be seen (Idejo.Moderation.Warnings), so pages ask only then.
     field :warning_pending, :boolean, default: false
     # Given at sign-up while registration is invite-only (AC-02); see Idejo.Accounts.Invite.
@@ -156,6 +159,16 @@ defmodule Idejo.Accounts.User do
     user
     |> cast(attrs, [:accepts_private_messages])
     |> validate_required([:accepts_private_messages])
+  end
+
+  @doc """
+  A changeset for whether email and push choices are shared across the group's forums
+  (steward request, 2026-11-13).
+  """
+  def notifications_shared_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:notifications_shared])
+    |> validate_required([:notifications_shared])
   end
 
   defp validate_display_name(changeset) do

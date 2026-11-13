@@ -61,24 +61,32 @@ defmodule Idejo.Markdown do
   # digit or another @.
   @mention ~r/(?<![\w@])@([A-Za-z0-9_]{3,30})(?!\w)/u
 
-  # Every inline link, whole, for splitting text: @user, +role, #topic, /category, $tag. A
-  # slug is letters and digits in parts joined by single dashes; roles and tags start with a
-  # letter ("+1", "$5" stay text). None may follow a letter or digit ("C#", "and/or"), and a
-  # /category is no part of a path ("/usr/bin", "a/b").
-  @reference ~r"(?<![\w@])@[A-Za-z0-9_]{3,30}(?!\w)|(?<![\w+])\+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w#&])\#[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w/.:~-])/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\w/])|(?<![\w$])\$[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)"u
+  # Every inline link, whole, for splitting text: @user, +role, #topic, /category, $tag,
+  # &forum (steward request, 2026-11-13). A slug is letters and digits in parts joined by
+  # single dashes; roles and tags start with a letter ("+1", "$5" stay text). None may follow
+  # a letter or digit ("C#", "and/or", "R&D"), a /category is no part of a path ("/usr/bin",
+  # "a/b"), and a &forum is never followed by ";" (an HTML entity such as "&amp;").
+  @reference ~r"(?<![\w@])@[A-Za-z0-9_]{3,30}(?!\w)|(?<![\w+])\+[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w#&])\#[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w/.:~-])/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\w/])|(?<![\w$])\$[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*(?!\w)|(?<![\w&])&[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\w;-])"u
 
   # A :name: that is not part of a word or of a time such as 12:30:45.
   @shortcode ~r/(?<![\w:]):([a-z0-9_+\-]+):(?![\w:])/
 
-  @sigils %{"@" => :user, "+" => :role, "#" => :topic, "/" => :category, "$" => :tag}
+  @sigils %{
+    "@" => :user,
+    "+" => :role,
+    "#" => :topic,
+    "/" => :category,
+    "$" => :tag,
+    "&" => :forum
+  }
 
   @typedoc "What an inline link names: its kind and its lowercased username or slug."
-  @type inline_link :: {:user | :role | :topic | :category | :tag, String.t()}
+  @type inline_link :: {:user | :role | :topic | :category | :tag | :forum, String.t()}
 
   @doc """
   Renders Markdown to sanitised HTML. `links:` maps references (`references/1`) to
-  `{path, label}`: each one written in the text becomes a link to `path`, showing `label`, or
-  what the author typed when the label is nil.
+  `{path, label}` or `{path, label, title}`: each one written in the text becomes a link to
+  `path`, showing `label`, or what the author typed when the label is nil, with `title`.
   """
   @spec to_html(String.t(), keyword()) :: String.t()
   def to_html(markdown, opts \\ [])
@@ -251,6 +259,9 @@ defmodule Idejo.Markdown do
 
         {path, label} ->
           %MDEx.Link{url: path, title: "", nodes: [%MDEx.Text{literal: label || part}]}
+
+        {path, label, title} ->
+          %MDEx.Link{url: path, title: title, nodes: [%MDEx.Text{literal: label || part}]}
       end
     end)
   end

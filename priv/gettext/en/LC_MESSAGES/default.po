@@ -2975,10 +2975,6 @@ msgstr ""
 msgid "Cancel the message scheduled for %{time}"
 msgstr ""
 
-#: lib/idejo_web/live/admin/info_boxes_live.ex:130
-#, elixir-autogen, elixir-format
-msgid "Cards shown to everyone before the categories on the home page, in this order, with your own text."
-msgstr ""
 
 #: lib/idejo_web/category_icon_names.ex:61
 #, elixir-autogen, elixir-format
@@ -4026,7 +4022,7 @@ msgstr ""
 
 #: lib/idejo_web/controllers/help_html/show.html.heex:109
 #, elixir-autogen, elixir-format
-msgid "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, / and $ links are above."
+msgid "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, /, $ and & links are above."
 msgstr ""
 
 #: lib/idejo_web/live/admin/settings_live.ex:237
@@ -7748,4 +7744,151 @@ msgstr ""
 #: lib/idejo_web/live/user_settings_live.ex
 #, elixir-autogen, elixir-format
 msgid "Settings sections"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save for all forums"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "These settings apply only to %{forum}. To change them for all your forums at once, use your settings for all forums."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Settings for all forums"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "These choices come from your settings for all forums."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Change them there"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications on all forums"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use these email and push choices on all my forums"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "On: every forum follows the choices below and shows them without letting them change there; each forum still sends its own emails and notifications. Off: each forum keeps the choices it has."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use these pictures on all your forums, in place of theirs?"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use these pictures on all my forums"
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your pictures are kept here."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "You have joined no other forum yet."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not saved on %{forums}: they did not answer or need an update. Try again later."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your forums could not be reached. Try again later."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your forums now use these email and push choices."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Each forum now keeps its own email and push choices."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "These choices come from your settings for all forums. Change them there, or stop sharing them there."
+msgstr ""
+
+#: lib/idejo_web/live/user_settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saved on your forum too."
+msgid_plural "Saved on all %{count} of your forums too."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "forum"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Links to another forum you joined, when the forums directory lists it; once sent, it reads the forum's name."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Before the categories"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In the first section"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In the section “%{name}”"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "In “Other” (categories without a group)"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "%{place}, at the end"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "%{place}, at the start"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Place on the home page"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "At the end of the section, after its categories"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Cards shown to everyone on the home page, before the categories or in a section of them, in this order, with your own text."
 msgstr ""

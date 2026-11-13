@@ -3379,9 +3379,9 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 }
 
 /* TP-10: inline links, highlighted: @user (/u/), +role (/r/), #topic (/t/), /category (/c/),
-   $tag (/tags?). The sanitiser keeps no classes, so they are told apart by their address.
+   $tag (/tags?), &forum (another forum's address, titled "&host"). The sanitiser keeps no classes, so they are told apart by their address.
    Each kind has its own hue from the theme, a hairline around it, and a soft glow on hover. */
-.message-body :is(a[href^="/u/"], a[href^="/r/"], a[href^="/t/"], a[href^="/c/"], a[href^="/tags?"]) {
+.message-body :is(a[href^="/u/"], a[href^="/r/"], a[href^="/t/"], a[href^="/c/"], a[href^="/tags?"], a[href^="https:"][title^="&"]) {
   --link: var(--color-primary);
   padding: 0 0.25rem;
   border-radius: 0.3125rem;
@@ -3403,6 +3403,9 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 .message-body a[href^="/t/"] { --link: var(--color-accent); }
 .message-body a[href^="/c/"] { --link: var(--color-info); }
 .message-body a[href^="/tags?"] { --link: var(--color-success); }
+/* &forum (steward request, 2026-11-13): another forum, at its own address; Idejo.Messages.Body
+   gives these links the title "&<its host>". */
+.message-body a[href^="https:"][title^="&"] { --link: var(--color-secondary); }
 
 /* Cards over the page (a user's card, moderation, the emoji picker, moving messages, the
    delete question): lined and lifted like the app's other boxes (steward request,
@@ -4090,6 +4093,21 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
     }
     & a[aria-current="page"] { border-bottom-color: var(--color-primary); color: var(--color-primary); }
   }
+  /* A forum of a group: its settings are its own; the inbox saves them for all forums
+     (steward request, 2026-11-13). */
+  .settings-shared-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--hairline);
+    border-radius: 0.75rem;
+    & p { flex: 1 1 18rem; }
+    & a:not(.btn) { color: var(--color-primary); text-decoration: underline; }
+  }
+  #shared-settings-note { margin-top: 1rem; }
   .settings-section + .settings-section {
     margin-top: 2rem;
     padding-top: 2rem;

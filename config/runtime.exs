@@ -199,7 +199,10 @@ config :idejo, :community,
   chat_url: community_env.("IDEJO_CHAT_URL"),
   # Steward request, 2026-11-10: where a member sees the topics they follow across the group
   # ("All my topics" in the sidebar); unset, no button.
-  topics_url: community_env.("IDEJO_TOPICS_URL")
+  topics_url: community_env.("IDEJO_TOPICS_URL"),
+  # Steward request, 2026-11-13: where a member changes Profile and account for all the
+  # group's forums at once; unset, the profile page does not point there.
+  settings_url: community_env.("IDEJO_SETTINGS_URL")
 
 # Inbox mode (steward request, 2026-11-10; Idejo.Inbox): this install is the inbox of a group
 # of communities sharing one sign-in: no sidebar, the member's forums, followed topics and

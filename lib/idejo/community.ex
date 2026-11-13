@@ -15,6 +15,12 @@ defmodule Idejo.Community do
   have a subject; for others the list is empty. Answers are kept for five minutes per
   member; a slow or failed answer gives an empty list, never an error on the page.
   `IDEJO_COMMUNITY_DIRECTORY_URL` (`directory_url:`) is the public directory.
+
+  `&forum` links (steward request, 2026-11-13; `forums/2`): a message names one of the
+  author's communities by its address's first label (`&garden` for
+  `https://garden.idejo.org/`), linked only when the directory lists it publicly
+  (`GET <directory>/api/forums?q=<host>`, its answer kept five minutes per host, a failure as
+  not listed).
   """
 
   import Ecto.Query
@@ -79,6 +85,82 @@ defmodule Idejo.Community do
       cached(id, fn -> fetch(url, subject, oidc) end)
     else
       _ -> []
+    end
+  end
+
+  @typedoc "A forum a member may link with `&slug`."
+  @type forum_link :: %{slug: String.t(), name: String.t(), url: String.t(), host: String.t()}
+
+  @doc """
+  The communities `user` joined that the directory lists publicly, for `&forum` links: all
+  of them (`:all`), or those whose slug is among `slugs`, matching `query` by slug or name
+  (`query:`), at most `limit:`. A slug is the forum address's first label, lowercased; two
+  communities with the same one give the first.
+  """
+  @spec forums(User.t() | nil, [String.t()] | :all, keyword()) :: [forum_link()]
+  def forums(user, slugs, opts \\ [])
+  def forums(nil, _slugs, _opts), do: []
+  def forums(_user, [], _opts), do: []
+
+  def forums(%User{} = user, slugs, opts) do
+    query = opts |> Keyword.get(:query, "") |> String.downcase()
+
+    user
+    |> communities()
+    |> Enum.flat_map(&forum_link/1)
+    |> Enum.uniq_by(& &1.slug)
+    |> Enum.filter(&((slugs == :all or &1.slug in slugs) and matches?(&1, query)))
+    |> Enum.take(Keyword.get(opts, :limit, 50))
+    |> Enum.filter(&listed?(&1.host))
+  end
+
+  defp matches?(_forum, ""), do: true
+
+  defp matches?(forum, query) do
+    String.starts_with?(forum.slug, query) or
+      String.starts_with?(String.downcase(forum.name), query)
+  end
+
+  defp forum_link(%{name: name, url: url}) do
+    with %URI{scheme: "https", host: host, userinfo: nil} when is_binary(host) <- URI.parse(url),
+         host = String.downcase(host),
+         [slug | _] <- String.split(host, "."),
+         true <- Regex.match?(~r/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/, slug) do
+      [%{slug: slug, name: name, url: "https://" <> host <> "/", host: host}]
+    else
+      _ -> []
+    end
+  end
+
+  # Whether the public directory lists the forum at `host`.
+  defp listed?(host) do
+    case directory_url() do
+      "http" <> _ = directory -> cached({:listed, host}, fn -> ask_listed(directory, host) end)
+      _ -> false
+    end
+  end
+
+  defp ask_listed(directory, host) do
+    request =
+      Req.new(
+        url: String.trim_trailing(directory, "/") <> "/api/forums",
+        params: [q: host],
+        receive_timeout: 2_000,
+        connect_options: [timeout: 2_000],
+        retry: false,
+        redirect: false
+      )
+      |> Req.merge(Application.get_env(:idejo, :community_req_options, []))
+
+    case Req.get(request) do
+      {:ok, %{status: 200, body: %{"forums" => forums}}} when is_list(forums) ->
+        Enum.any?(forums, fn
+          %{"url" => url} when is_binary(url) -> URI.parse(url).host == host
+          _ -> false
+        end)
+
+      _ ->
+        false
     end
   end
 

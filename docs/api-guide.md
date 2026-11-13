@@ -207,6 +207,7 @@ Idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plu
 | `@username` | a person |
 | `+role` | everyone with that role (if the author may tag it) |
 | `#topic-slug`, `/category-slug`, `$tag-slug` | a topic, a category, a tag |
+| `&forum` | another forum of the author's, listed in the public directory: the first label of its address (`&garden` for `garden.idejo.org`), linked to `https://garden.idejo.org/` with the title `&garden.idejo.org`; `GET /suggest?sigil=&` gives `kind: "forum"`, its address as `id` |
 
 Raw HTML is never rendered. Inline reply quotes are block quotes whose first line links to
 the quoted message's permalink: `> [Replying to Ada:](/m/{id}) [excerpt](/m/{id})`.

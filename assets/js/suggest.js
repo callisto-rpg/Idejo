@@ -15,7 +15,7 @@
 // added before the composer's, so Enter picks a suggestion instead of sending.
 
 // A sign at the start of the text or after a space or "(", then what follows it.
-export const TRIGGER = /(?:^|[\s(])([@+#/$!])([A-Za-z0-9_-]{0,40})$/
+export const TRIGGER = /(?:^|[\s(])([@+#/$&!])([A-Za-z0-9_-]{0,40})$/
 
 // What is being typed at the caret: {sign, query, start} (start: where the sign is), or null.
 export function tokenAt(value, caret) {

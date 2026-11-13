@@ -51,6 +51,15 @@
           <dt><kbd>$</kbd>{gettext("tag")}</dt>
           <dd>{gettext("Links to the topics with that tag.")}</dd>
         </div>
+        <%!-- Steward request, 2026-11-13. --%>
+        <div id="help-forum-links">
+          <dt><kbd>&amp;</kbd>{gettext("forum")}</dt>
+          <dd>
+            {gettext(
+              "Links to another forum you joined, when the forums directory lists it; once sent, it reads the forum's name."
+            )}
+          </dd>
+        </div>
         <div>
           <dt><kbd>!</kbd>{gettext("command")}</dt>
           <dd>
@@ -107,7 +116,7 @@
       <h2 id="help-formatting-title">{gettext("Formatting text")}</h2>
       <p>
         {gettext(
-          "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, / and $ links are above."
+          "Messages are written in Markdown: type these signs around or before your words. They show as below once sent; @, +, #, /, $ and & links are above."
         )}
       </p>
       <dl class="help-list help-formatting">

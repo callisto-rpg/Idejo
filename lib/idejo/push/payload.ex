@@ -170,8 +170,7 @@ defmodule Idejo.Push.Payload do
       "notification" => %{
         "title" => gettext("Test notification"),
         "body" => gettext("Notifications from this server work on this device."),
-        "navigate" =>
-          Application.fetch_env!(:idejo, :base_uri) <> "/users/settings?tab=messages",
+        "navigate" => Application.fetch_env!(:idejo, :base_uri) <> "/users/settings?tab=messages",
         "tag" => "test",
         "lang" => Gettext.get_locale(IdejoWeb.Gettext)
       },
