@@ -93,6 +93,7 @@ defmodule IdejoWeb.AC04UsernameChangeTest do
 
     ada = Repo.get!(User, ada.id)
     assert Accounts.username_next_change_at(ada) == nil
+
     assert {:ok, %User{username: ^old}} =
              Accounts.change_username(ada, old, valid_user_password())
 
@@ -100,6 +101,7 @@ defmodule IdejoWeb.AC04UsernameChangeTest do
     carl = named("carl")
     given_up = carl.username
     {:ok, _} = Accounts.change_username(carl, given_up <> "_x", valid_user_password())
+
     Repo.update_all(from(r in "released_usernames"),
       set: [released_at: DateTime.to_naive(days_ago(31))]
     )

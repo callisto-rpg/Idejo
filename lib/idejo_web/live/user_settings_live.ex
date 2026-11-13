@@ -209,7 +209,7 @@ defmodule IdejoWeb.UserSettingsLive do
         {:noreply,
          socket
          |> saved(renamed, all, ["username"], text)
-         |> redirect(to: path("profile", "username-heading"))}
+         |> redirect(to: __MODULE__.path("profile", "username-heading"))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :username_form, username_form(nil, changeset))}
