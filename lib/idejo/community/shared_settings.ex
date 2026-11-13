@@ -93,6 +93,9 @@ defmodule Idejo.Community.SharedSettings do
 
   defp picture(nil), do: nil
 
+  # The file of the member's own avatar, found by `Uploads` from its id, never a name from
+  # outside.
+  # sobelow_skip ["Traversal.FileModule"]
   defp picture(id) do
     with {_upload, file} <- Uploads.get_by_name("#{id}.webp"),
          {:ok, bytes} <- File.read(file) do
@@ -175,6 +178,8 @@ defmodule Idejo.Community.SharedSettings do
 
   defp set_picture(user, theme, {:ok, nil}), do: Accounts.remove_avatar(user, theme)
 
+  # A file of our own in the system's temporary folder, never a name from outside.
+  # sobelow_skip ["Traversal.FileModule"]
   defp set_picture(user, theme, {:ok, base64})
        when is_binary(base64) and byte_size(base64) <= @max_picture do
     with {:ok, bytes} <- Base.decode64(base64) do
