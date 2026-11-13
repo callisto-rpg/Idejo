@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# Deploying Idejo on Infomaniak — beginner's guide
+# Deploying idejo on Infomaniak — beginner's guide
 
-This guide walks you through putting Idejo online with an **Infomaniak** domain and server,
+This guide walks you through putting idejo online with an **Infomaniak** domain and server,
 one click and one command at a time. You do not need to know Linux: copy each command, paste
 it, press Enter, and check that you see what the guide says you should see.
 
@@ -18,10 +18,10 @@ Allow about **one hour**, most of it waiting for things to install.
 
 ## Before you start: check you bought the right kind of hosting
 
-Idejo runs in Docker, which needs a server you fully control. At Infomaniak that is a
+idejo runs in Docker, which needs a server you fully control. At Infomaniak that is a
 **VPS**:
 
-| Product in your Infomaniak account | Works for Idejo? |
+| Product in your Infomaniak account | Works for idejo? |
 | --- | --- |
 | **VPS Lite** or **VPS Cloud** | ✅ Yes |
 | Web Hosting, Starter hosting, Cloud Server (managed) | ❌ No — these run PHP websites, not Docker. Cancel within the trial period if you can and order a VPS instead. |
@@ -101,7 +101,7 @@ It is one long line starting with `ssh-ed25519`. You give this line to Infomania
 
 ## Step 3 — Open the firewall
 
-Infomaniak puts a firewall in front of every VPS. Idejo needs web traffic to reach it.
+Infomaniak puts a firewall in front of every VPS. idejo needs web traffic to reach it.
 
 1. In the Manager, on your VPS page, click **Firewall** in the left-hand menu.
 2. Check which rules already exist. You need all four of these; add each one that is
@@ -220,7 +220,7 @@ window and continue. If you cannot, undo it from the first window with
 
 ## Step 8 — Add swap memory
 
-Building Idejo needs more memory than 2 GB for a few minutes. Swap lets the server borrow
+Building idejo needs more memory than 2 GB for a few minutes. Swap lets the server borrow
 disk space as memory so the build is not killed:
 
 ```sh
@@ -270,7 +270,7 @@ You should see **"Hello from Docker!"**.
 
 ---
 
-## Step 10 — Download Idejo
+## Step 10 — Download idejo
 
 ```sh
 git clone https://github.com/callisto-rpg/Idejo.git ~/idejo
@@ -321,7 +321,7 @@ Save with **Ctrl+O** then **Enter**, and leave with **Ctrl+X**.
 
 ---
 
-## Step 12 — Start Idejo
+## Step 12 — Start idejo
 
 Before starting, check once more that your domain points at the server (step 4): if not,
 the certificate request fails (Caddy retries by itself, but it is quicker to wait).
@@ -331,7 +331,7 @@ cd ~/idejo
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
 ```
 
-The first time takes **5 to 15 minutes**: it builds Idejo on the server. You will see many
+The first time takes **5 to 15 minutes**: it builds idejo on the server. You will see many
 lines scroll by. It is done when you get your prompt back with lines ending in `Started`.
 
 Check that the three parts are running:
@@ -346,13 +346,13 @@ You should see `app`, `caddy` and `db` with the status **Up** (and `db` **health
 
 ## Step 13 — Visit your site
 
-Open **https://forum.example.org** in your browser. You should see the Idejo start page with
+Open **https://forum.example.org** in your browser. You should see the idejo start page with
 a **padlock** next to the address.
 
 The very first visit can take up to a minute while the certificate is fetched. If it does
 not work after a few minutes, see Troubleshooting.
 
-🎉 Idejo is online with HTTPS. This is the M0 exit check.
+🎉 idejo is online with HTTPS. This is the M0 exit check.
 
 ---
 
@@ -369,7 +369,7 @@ source ~/.bashrc
 | --- | --- |
 | see if everything runs | `idejo ps` |
 | read the app's messages | `idejo logs -f app` (stop reading with Ctrl+C) |
-| restart Idejo | `idejo restart app` |
+| restart idejo | `idejo restart app` |
 | stop everything | `idejo down` (your data is kept) |
 | start again | `idejo up -d` |
 
@@ -385,7 +385,7 @@ idejo up -d --build
 
 ### Backups
 
-Idejo backs itself up every night at 03:00 UTC (the database and the images, in one file)
+idejo backs itself up every night at 03:00 UTC (the database and the images, in one file)
 and keeps the last 7, on the server.
 
 1. **Make a backup now**, before every update:

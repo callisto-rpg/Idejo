@@ -14,7 +14,7 @@ defmodule IdejoWeb.PageControllerTest do
     conn = get(conn, ~p"/")
     response = html_response(conn, 200)
     assert response =~ "<h1"
-    assert response =~ "Idejo"
+    assert response =~ "idejo"
     refute response =~ "Phoenix"
   end
 

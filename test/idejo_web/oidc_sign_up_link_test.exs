@@ -70,7 +70,7 @@ defmodule IdejoWeb.OIDCSignUpLinkTest do
   end
 
   @tag req: "AC-09"
-  test "AC-09 an account not linked yet can create its Idejo ID from its settings, then link it",
+  test "AC-09 an account not linked yet can create its idejo ID from its settings, then link it",
        %{conn: conn} do
     Application.put_env(:idejo, :oidc_sign_up_url, @url)
     user = user_fixture()

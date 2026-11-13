@@ -220,7 +220,7 @@ defmodule Idejo.Accounts.OIDC do
   @doc """
   Signs a person in from checked claims: the linked account, or a new member made under the
   registration mode (an invite code when invite-only; none while closed). Their email is
-  verified only when the provider says so (`email_verified`); otherwise Idejo's own
+  verified only when the provider says so (`email_verified`); otherwise idejo's own
   verification email follows (AC-01), sent by the web layer for `{:ok, user, :unverified}`.
 
   Errors: `:no_email` (the provider gave none), `:email_taken` (an account here has that

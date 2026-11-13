@@ -10,7 +10,7 @@ defmodule IdejoWeb.FooterTest do
   import Phoenix.LiveViewTest
   import Idejo.AccountsFixtures
 
-  @notice "Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0"
+  @notice "Powered by idejo — © Mariano Pictet and contributors — AGPL-3.0"
 
   defp footer_link(html, id) do
     html |> LazyHTML.from_document() |> LazyHTML.query("footer a##{id}")

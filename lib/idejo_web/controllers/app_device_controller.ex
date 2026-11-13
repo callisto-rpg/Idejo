@@ -15,7 +15,7 @@ defmodule IdejoWeb.AppDeviceController do
     conn =
       case ApiTokens.revoke(conn.assigns.current_scope.user, id) do
         :ok ->
-          put_flash(conn, :info, gettext("The device was signed out of the Idejo app."))
+          put_flash(conn, :info, gettext("The device was signed out of the idejo app."))
 
         {:error, :not_found} ->
           put_flash(conn, :error, gettext("This device was already signed out."))

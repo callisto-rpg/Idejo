@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.ManifestController do
   @moduledoc """
-  The web app manifest (CL-01), at `/manifest.webmanifest`: the server's name, the Idejo
+  The web app manifest (CL-01), at `/manifest.webmanifest`: the server's name, the idejo
   icons, and `standalone`, so the site can be installed, which iPhones and iPads need before
   they take push notifications (PN-22). No session, nothing personal.
   """

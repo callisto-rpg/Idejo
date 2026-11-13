@@ -11,7 +11,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
   browser's colour picker; the page loads again after they change, so the panel shows them.
 
   The forum's logo (AD-11) uploads as soon as an image is chosen (`Idejo.Settings.Logo`),
-  and the page loads again so the header shows it; "Use the Idejo logo" goes back.
+  and the page loads again so the header shows it; "Use the idejo logo" goes back.
   """
   use IdejoWeb, :live_view
 
@@ -75,7 +75,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
     {:ok, _url} = Logo.remove(socket.assigns.current_scope.user)
 
     {:noreply,
-     socket |> put_flash(:info, gettext("The Idejo logo is back.")) |> redirect(to: ~p"/admin")}
+     socket |> put_flash(:info, gettext("The idejo logo is back.")) |> redirect(to: ~p"/admin")}
   end
 
   def handle_event("save", %{"settings" => params}, socket) do
@@ -330,12 +330,12 @@ defmodule IdejoWeb.Admin.SettingsLive do
           <.input
             field={@form[:api_enabled]}
             type="checkbox"
-            label={gettext("Members can use the Idejo app")}
+            label={gettext("Members can use the idejo app")}
             aria-describedby="api-help"
           />
           <p id="api-help" class="text-sm opacity-70 -mt-1 mb-4">
             {gettext(
-              "The Idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
+              "The idejo app for Android signs in through this server's own sign-in page and reads and writes as the member would here. When off, the app cannot sign in or connect, and signed-in devices are refused until it is on again."
             )}
           </p>
         </fieldset>
@@ -389,7 +389,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
             class="btn btn-sm"
             phx-click="remove_logo"
           >
-            {gettext("Use the Idejo logo")}
+            {gettext("Use the idejo logo")}
           </button>
         </div>
         <p :if={@image_error} role="alert" class="text-sm text-error mt-2">{@image_error}</p>

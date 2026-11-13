@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# M6 exit check (MVP §7): two Idejo instances from the same image, a.idejo.test and
+# M6 exit check (MVP §7): two idejo instances from the same image, a.idejo.test and
 # b.idejo.test, each with its own database (one PostgreSQL server, two databases and two
 # roles) and its own volumes, behind one Caddy with its internal CA, as AD-16 runs them
 # (no bundled Caddy per instance, IDEJO_TRUSTED_PROXIES naming the shared one), and one
@@ -67,7 +67,7 @@ services:
       IDEJO_OIDC_ISSUER: https://id.idejo.test
       IDEJO_OIDC_CLIENT_ID: forum-a
       IDEJO_OIDC_CLIENT_SECRET: ${FORUM_A_OIDC_SECRET}
-      IDEJO_OIDC_LABEL: Idejo ID
+      IDEJO_OIDC_LABEL: idejo ID
     volumes:
       - ${IDEJO_M6_CA_BUNDLE}:/etc/ssl/certs/ca-certificates.crt:ro
       - a_uploads:/data/uploads
@@ -87,7 +87,7 @@ services:
       IDEJO_OIDC_ISSUER: https://id.idejo.test
       IDEJO_OIDC_CLIENT_ID: forum-b
       IDEJO_OIDC_CLIENT_SECRET: ${FORUM_B_OIDC_SECRET}
-      IDEJO_OIDC_LABEL: Idejo ID
+      IDEJO_OIDC_LABEL: idejo ID
     volumes:
       - ${IDEJO_M6_CA_BUNDLE}:/etc/ssl/certs/ca-certificates.crt:ro
       - b_uploads:/data/uploads

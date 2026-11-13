@@ -350,14 +350,14 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
       "IDEJO_OIDC_ISSUER" => "https://id.idejo.test",
       "IDEJO_OIDC_CLIENT_ID" => "forum-a",
       "IDEJO_OIDC_CLIENT_SECRET" => "s3cret",
-      "IDEJO_OIDC_LABEL" => "Idejo ID"
+      "IDEJO_OIDC_LABEL" => "idejo ID"
     }
 
     assert read.(full)[:oidc] == [
              issuer: "https://id.idejo.test",
              client_id: "forum-a",
              client_secret: "s3cret",
-             label: "Idejo ID"
+             label: "idejo ID"
            ]
 
     assert read.(Map.put(full, "IDEJO_LOCAL_ACCOUNTS", "off"))[:local_accounts] == false

@@ -61,7 +61,7 @@ async function signIn(host, invite) {
 
   await page.waitForURL(`https://${host}/`)
   await page.goto(`https://${host}/users/settings`)
-  check(new URL(page.url()).pathname === "/users/settings", `${host}: signed in through Idejo ID`)
+  check(new URL(page.url()).pathname === "/users/settings", `${host}: signed in through idejo ID`)
 }
 
 async function roles(host, id) {

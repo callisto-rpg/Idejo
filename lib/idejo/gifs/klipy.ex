@@ -5,7 +5,7 @@ defmodule Idejo.Gifs.Klipy do
   @moduledoc """
   KLIPY (https://klipy.com) as the GIF provider (steward decision, 2026-11-03), on its
   standard terms (docs.klipy.com/integration-requirements): the browser calls the API and
-  loads the GIFs from KLIPY's hosts, never through Idejo, and shows the results as returned.
+  loads the GIFs from KLIPY's hosts, never through idejo, and shows the results as returned.
   The search box reads "Search KLIPY" (required by its attribution guidelines). The browser
   side is `assets/js/gifs/klipy.js`.
   """

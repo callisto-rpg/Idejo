@@ -199,7 +199,7 @@ defmodule IdejoWeb.Admin.PluginsLive do
           <% else %>
             <p class="font-semibold">{row.file}</p>
             <p class="text-sm text-error">
-              {gettext("Not a plugin Idejo can use: %{reason}",
+              {gettext("Not a plugin idejo can use: %{reason}",
                 reason: PluginComponents.problem(row.error)
               )}
             </p>
@@ -221,7 +221,7 @@ defmodule IdejoWeb.Admin.PluginsLive do
           <h2 id="add-plugin-heading" class="font-semibold mb-2">{gettext("Add custom plugin")}</h2>
           <p class="text-sm mb-2">
             {gettext(
-              "A plugin is a .json file naming a command and one of the blocks Idejo draws: a video, a page in a frame, a link button or a card. It is installed turned off."
+              "A plugin is a .json file naming a command and one of the blocks idejo draws: a video, a page in a frame, a link button or a card. It is installed turned off."
             )}
           </p>
           <.form for={%{}} id="plugin-upload-form" phx-change="validate_plugin" phx-submit="install">

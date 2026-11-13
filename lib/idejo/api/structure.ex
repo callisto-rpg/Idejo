@@ -4,7 +4,7 @@
 defmodule Idejo.Api.Structure do
   @moduledoc """
   What a message holds, as structured objects (AP-11; steward decision, 2026-11-10), so a
-  client never parses Idejo's Markdown extensions to know it.
+  client never parses idejo's Markdown extensions to know it.
 
     * `mentions/1` reads the inline links (TP-10) from the stored HTML (FD-03), where they
       were resolved as the author could view them when written: `@user` → `/u/{id}`,

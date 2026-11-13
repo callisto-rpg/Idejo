@@ -1,4 +1,4 @@
-# Idejo Contributor Licence Agreement
+# idejo Contributor Licence Agreement
 
 This document contains two agreements:
 
@@ -15,7 +15,7 @@ Part C explains how to sign.
 
 ## Part A — Individual Contributor Licence Agreement
 
-Thank you for your interest in Idejo (the "Project"). To clarify the intellectual property
+Thank you for your interest in idejo (the "Project"). To clarify the intellectual property
 licence granted with Contributions from any person or entity, the Steward must have a
 Contributor Licence Agreement ("Agreement") on file that has been signed by each Contributor,
 indicating agreement to the licence terms below. This licence is for your protection as a
@@ -165,7 +165,7 @@ jurisdiction, litigation will be pursued under Swiss law.
 
 ## Part B — Corporate Contributor Licence Agreement
 
-Thank you for your interest in Idejo (the "Project"). To clarify the intellectual property
+Thank you for your interest in idejo (the "Project"). To clarify the intellectual property
 licence granted with Contributions from any person or entity, the Steward must have a
 Contributor Licence Agreement on file that has been signed by each Contributor, indicating
 agreement to the licence terms below. This version allows an entity (the "Corporation") to

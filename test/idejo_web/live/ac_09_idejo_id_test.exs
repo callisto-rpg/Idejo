@@ -3,8 +3,8 @@
 
 defmodule IdejoWeb.AC09IdejoIdTest do
   @moduledoc """
-  AC-09 (steward decisions, 2026-11-06): an administrator connects the server to an Idejo ID
-  registry from Admin → Idejo ID, proving the server answers at its own address, and may then
+  AC-09 (steward decisions, 2026-11-06): an administrator connects the server to an idejo ID
+  registry from Admin → idejo ID, proving the server answers at its own address, and may then
   ask to be listed in the registry's directory; without the connection it cannot.
   """
   use IdejoWeb.ConnCase, async: false
@@ -63,7 +63,7 @@ defmodule IdejoWeb.AC09IdejoIdTest do
         "issuer" => "https://login.idejo.test",
         "client_id" => "client-1",
         "client_secret" => "secret-1",
-        "label" => "Idejo ID",
+        "label" => "idejo ID",
         "sign_up_url" => "https://login.idejo.test/account/sign-up",
         "directory_url" => "https://forums.idejo.test/"
       })
@@ -83,7 +83,7 @@ defmodule IdejoWeb.AC09IdejoIdTest do
     Req.Test.json(conn, %{"listing" => status})
   end
 
-  test "AC-09 the administrator connects to Idejo ID, and members can sign in with it", %{
+  test "AC-09 the administrator connects to idejo ID, and members can sign in with it", %{
     conn: conn,
     test_pid: test_pid
   } do
@@ -91,13 +91,13 @@ defmodule IdejoWeb.AC09IdejoIdTest do
     refute OIDC.enabled?()
 
     {:ok, view, html} = live(conn, ~p"/admin/idejo-id")
-    assert html =~ "Connect to Idejo ID (login.idejo.test)"
+    assert html =~ "Connect to idejo ID (login.idejo.test)"
     # Listing needs the connection first.
-    assert html =~ "Only forums that sign in with Idejo ID can be listed"
+    assert html =~ "Only forums that sign in with idejo ID can be listed"
     refute has_element?(view, "#idejo-id-listing")
 
     view |> element("#idejo-id-connect-button") |> render_click()
-    assert render(view) =~ "Connected: members can now sign in with Idejo ID."
+    assert render(view) =~ "Connected: members can now sign in with idejo ID."
 
     assert_received {:registry, "POST", "/account/api/registrations",
                      %{"host" => "localhost", "name" => _}, _}
@@ -109,7 +109,7 @@ defmodule IdejoWeb.AC09IdejoIdTest do
     assert get(build_conn(), "/.well-known/idejo-id-registration").status == 404
 
     assert OIDC.enabled?()
-    assert OIDC.label() == "Idejo ID"
+    assert OIDC.label() == "idejo ID"
     assert OIDC.sign_up_url() == "https://login.idejo.test/account/sign-up"
     assert Idejo.Community.directory_url() == "https://forums.idejo.test/"
 
@@ -150,7 +150,7 @@ defmodule IdejoWeb.AC09IdejoIdTest do
     view |> element("#idejo-id-disconnect") |> render_click()
     assert_received {:registry, "PUT", "/account/api/listing", %{"listed" => false}, _}
     refute OIDC.enabled?()
-    assert render(view) =~ "Connect to Idejo ID"
+    assert render(view) =~ "Connect to idejo ID"
   end
 
   test "AC-09 a registry's refusal is shown and nothing is kept", %{conn: conn} do
@@ -165,7 +165,7 @@ defmodule IdejoWeb.AC09IdejoIdTest do
 
     {:ok, view, _html} = live(conn, ~p"/admin/idejo-id")
     view |> element("#idejo-id-connect-button") |> render_click()
-    assert render(view) =~ "Idejo ID answered: Give the forum&#39;s own host name."
+    assert render(view) =~ "idejo ID answered: Give the forum&#39;s own host name."
     refute OIDC.enabled?()
   end
 

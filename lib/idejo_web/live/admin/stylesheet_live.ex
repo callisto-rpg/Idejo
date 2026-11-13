@@ -4,7 +4,7 @@
 defmodule IdejoWeb.Admin.StylesheetLive do
   @moduledoc """
   Admin panel: the server's stylesheet (steward decision, 2026-10-23). Edit the CSS served at
-  `/theme.css` after Idejo's own styles, save it, or reset it to the default
+  `/theme.css` after idejo's own styles, save it, or reset it to the default
   (`priv/theme/default.css`). Saved through `Idejo.Settings` (`custom_css`), so each change
   is audited (SP-06).
   """
@@ -65,7 +65,7 @@ defmodule IdejoWeb.Admin.StylesheetLive do
         {gettext("Stylesheet")}
         <:subtitle>
           {gettext(
-            "CSS that every page loads after Idejo's own styles, so its rules win. Reset to default brings back the stylesheet Idejo came with."
+            "CSS that every page loads after idejo's own styles, so its rules win. Reset to default brings back the stylesheet idejo came with."
           )}
         </:subtitle>
       </.header>

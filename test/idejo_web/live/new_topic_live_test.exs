@@ -50,7 +50,7 @@ defmodule IdejoWeb.NewTopicLiveTest do
     assert html =~ "Hello there"
     assert html =~ "Mia Member"
     assert html =~ "<strong>words</strong>"
-    assert html =~ "Hello there · Idejo"
+    assert html =~ "Hello there · idejo"
   end
 
   @tag req: "TP-01"

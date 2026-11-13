@@ -4,13 +4,13 @@
 defmodule IdejoWeb.AppAuthorizeController do
   @moduledoc """
   The official app's sign-in page (AP-08; steward decision, 2026-11-10), opened by the app
-  in a Custom Tab with the forum's normal session, so passwords, Idejo ID and whatever
+  in a Custom Tab with the forum's normal session, so passwords, idejo ID and whatever
   sign-in the forum has all work unchanged.
 
   `GET /app/authorize` checks the request first (`ApiTokens.check_request/1`): a wrong
   client id or redirect, no S256 challenge or a malformed one shows a plain error page and
   **never** redirects. Not signed in, it goes through the normal sign-in, which comes back
-  here (`:user_return_to`). Signed in, it asks "Sign in to the Idejo app on this device as
+  here (`:user_return_to`). Signed in, it asks "Sign in to the idejo app on this device as
   {name}?" with what the app may do; Allow (a POST with the CSRF token) redirects to
   `org.idejo.app:/oauth/callback?code=…&state=…`, Cancel with `error=access_denied`.
 
@@ -34,7 +34,7 @@ defmodule IdejoWeb.AppAuthorizeController do
       {{:ok, _request}, _visitor} ->
         conn
         |> put_session(:user_return_to, current_path(conn))
-        |> put_flash(:info, gettext("Sign in to connect the Idejo app."))
+        |> put_flash(:info, gettext("Sign in to connect the idejo app."))
         |> redirect(to: ~p"/users/sign-in")
     end
   end
@@ -72,7 +72,7 @@ defmodule IdejoWeb.AppAuthorizeController do
     conn
     |> put_resp_header("cache-control", "no-store")
     |> render(:new,
-      page_title: gettext("Sign in to the Idejo app"),
+      page_title: gettext("Sign in to the idejo app"),
       user: user,
       request: request,
       hidden: Map.take(params, @fields)
@@ -82,6 +82,6 @@ defmodule IdejoWeb.AppAuthorizeController do
   defp refuse(conn, reason) do
     conn
     |> put_status(if(reason in [:banned, :inactive], do: 403, else: 400))
-    |> render(:error, page_title: gettext("Sign in to the Idejo app"), reason: reason)
+    |> render(:error, page_title: gettext("Sign in to the idejo app"), reason: reason)
   end
 end

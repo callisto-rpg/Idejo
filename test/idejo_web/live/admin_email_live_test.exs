@@ -80,7 +80,7 @@ defmodule IdejoWeb.AdminEmailLiveTest do
 
     lv |> element("#send-test-email") |> render_click()
     assert render_async(lv) =~ "Test email sent to #{admin.email}."
-    assert_email_sent(to: admin.email, subject: "Test email from Idejo")
+    assert_email_sent(to: admin.email, subject: "Test email from idejo")
   end
 
   @tag req: "AD-08"

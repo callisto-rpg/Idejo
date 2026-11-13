@@ -88,7 +88,7 @@ defmodule Idejo.PluginsTest do
     assert PluginComponents.problem(reason) =~ "https"
 
     File.write!(Path.join(Plugins.dir(), "broken.json"), "not json")
-    # Another file for a command already taken, and one for a command of Idejo's own.
+    # Another file for a command already taken, and one for a command of idejo's own.
     File.write!(
       Path.join(Plugins.dir(), "zz-again.json"),
       File.read!(Path.join(Plugins.dir(), "button.json"))

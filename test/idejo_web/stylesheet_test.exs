@@ -24,7 +24,7 @@ defmodule IdejoWeb.StylesheetTest do
     assert css =~ ~r/\.welcome-card \{[^}]*backdrop-filter: blur\(var\(--overlay-blur\)\)/
   end
 
-  test "/theme.css serves it as CSS; pages link it by version, after Idejo's styles" do
+  test "/theme.css serves it as CSS; pages link it by version, after idejo's styles" do
     css = Settings.get(:custom_css)
     conn = get(build_conn(), ~p"/theme.css?v=#{ThemeController.version(css)}")
     assert response(conn, 200) == css

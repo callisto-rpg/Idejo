@@ -11,10 +11,10 @@ defmodule Idejo.Plugins do
 
   Each is off until an administrator turns it on in **Admin → Plugins**, and then usable by
   owners and administrators and by the roles chosen there (`plugin_settings`, by command).
-  The plugins Idejo ships (`priv/plugins/`) are copied into the folder once (`seed/0`, at
+  The plugins idejo ships (`priv/plugins/`) are copied into the folder once (`seed/0`, at
   boot): one deleted stays deleted, as its settings row remains.
 
-  A plugin is never code. Whatever a file says, Idejo draws one of four blocks itself, from
+  A plugin is never code. Whatever a file says, idejo draws one of four blocks itself, from
   checked data (`Idejo.Plugins.Embed`): a video from an https embed address, a sandboxed
   frame from an https address, a link button, a card of Markdown.
   """
@@ -56,7 +56,7 @@ defmodule Idejo.Plugins do
 
   @typedoc """
   Why a plugin file cannot be used or installed: what `Idejo.Plugins.Definition.parse/1`
-  finds, or `{:reserved, command}` (a command of Idejo's or an automessage's),
+  finds, or `{:reserved, command}` (a command of idejo's or an automessage's),
   `{:duplicate, command}` (another file defines it), `{:installed, command}`, `:unreadable`,
   `:not_a_file`, `:not_writable`. The admin page words it
   (`IdejoWeb.PluginComponents.problem/1`).
@@ -160,7 +160,7 @@ defmodule Idejo.Plugins do
     Repo.all(from s in Setting, where: s.command in ^commands) |> Map.new(&{&1.command, &1})
   end
 
-  # Commands a plugin can never take: Idejo's own and the automessages'.
+  # Commands a plugin can never take: idejo's own and the automessages'.
   defp reserved do
     MapSet.new(Automessages.reserved() ++ Enum.map(Automessages.list(), & &1.command))
   end
@@ -445,7 +445,7 @@ defmodule Idejo.Plugins do
   end
 
   @doc """
-  Copies the plugins Idejo ships (`priv/plugins/*.json`) into the folder, each once: never
+  Copies the plugins idejo ships (`priv/plugins/*.json`) into the folder, each once: never
   one that has a settings row already (installed before, then perhaps deleted on purpose).
   Run at boot; does nothing it cannot do.
   """

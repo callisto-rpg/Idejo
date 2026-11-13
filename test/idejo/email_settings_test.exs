@@ -183,8 +183,8 @@ defmodule Idejo.EmailSettingsTest do
       assert {:ok, _} = UserNotifier.deliver_test_email("ada@example.org")
 
       assert_receive {:smtp_mail, "forum@example.org", ["ada@example.org"], data}, 5_000
-      assert data =~ "Subject: Test email from Idejo"
-      assert data =~ "From: Idejo <forum@example.org>"
+      assert data =~ "Subject: Test email from idejo"
+      assert data =~ "From: idejo <forum@example.org>"
     end
 
     @tag req: "AD-08"

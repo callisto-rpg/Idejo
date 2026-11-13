@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# Contributing to Idejo
+# Contributing to idejo
 
-Thank you for helping. Idejo is licensed AGPL-3.0-only (see `LICENSE` and `NOTICE`).
+Thank you for helping. idejo is licensed AGPL-3.0-only (see `LICENSE` and `NOTICE`).
 
 ## 1. Sign the CLA once
 

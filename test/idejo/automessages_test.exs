@@ -44,7 +44,7 @@ defmodule Idejo.AutomessagesTest do
     )
   end
 
-  test "every install starts with the defaults, sent by idejo with the Idejo picture" do
+  test "every install starts with the defaults, sent by idejo with the idejo picture" do
     defaults = Map.new(Automessages.list(), &{&1.command, &1})
 
     for {command, body} <- Defaults.all() do

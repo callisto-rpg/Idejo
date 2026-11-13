@@ -52,7 +52,7 @@ self.addEventListener("push", event => {
   event.waitUntil(Promise.all([shown, badge.catch(() => {})]))
 })
 
-// Focus an open Idejo tab and take it to the notification's page, or open one.
+// Focus an open idejo tab and take it to the notification's page, or open one.
 self.addEventListener("notificationclick", event => {
   event.notification.close()
   const target = sameOrigin(event.notification.data && event.notification.data.navigate)

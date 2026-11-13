@@ -37,7 +37,7 @@ Install Claude Code with its official installer.
 ## 2. Generate the Phoenix app into this repository
 
 ```sh
-mix phx.new . --app idejo --module Idejo
+mix phx.new . --app idejo --module idejo
 ```
 
 Answer **Y** when asked to continue in an existing directory. The generator does not touch

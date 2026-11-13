@@ -4,7 +4,7 @@
 defmodule IdejoWeb.ThemeController do
   @moduledoc """
   The server's stylesheet (steward decision, 2026-10-23), written in **Admin → Stylesheet**
-  and served at `/theme.css`, after Idejo's own styles. A stylesheet from the app itself, so
+  and served at `/theme.css`, after idejo's own styles. A stylesheet from the app itself, so
   the content security policy allows it (`style-src 'self'`); pages link it with `?v=` and a
   hash of its text (`version/1`), so browsers keep it until it changes.
   """

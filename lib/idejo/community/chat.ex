@@ -10,7 +10,7 @@ defmodule Idejo.Community.Chat do
   private conversations stay here (`Idejo.Conversations`) and nothing changes.
 
   `IDEJO_CHAT_URL` (`config :idejo, :community, chat_url:`), or the `chat_url` a registry
-  answers when an administrator connects the server (Admin → Idejo ID), is the service's
+  answers when an administrator connects the server (Admin → idejo ID), is the service's
   page. With it, for a member linked to the provider:
 
     * the sidebar's "Private Conversations" leads there (`url/0`), with how many of their
@@ -25,7 +25,7 @@ defmodule Idejo.Community.Chat do
   secret (HTTP Basic), `POST <api>/tickets` `{"ticket"}` → `{"subject", "scope"}`
   (`check_ticket/1`), so it answers only about the member the service named, and only to the
   service its provider trusts. `<api>` is `<IDEJO_COMMUNITY_URL>/chats`, or
-  `<registry>/account/api/chats` for a server connected from Admin → Idejo ID. Two seconds
+  `<registry>/account/api/chats` for a server connected from Admin → idejo ID. Two seconds
   at most; any failure is silent (no count, no answer).
   """
 

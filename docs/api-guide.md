@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # API guide
 
-Idejo's API v1 is for **the official Idejo app** (`org.idejo.app`), and only for it: there
+idejo's API v1 is for **the official idejo app** (`org.idejo.app`), and only for it: there
 is one built-in client, no app registration, no personal tokens, no other clients and no
 CORS. It reads and writes as the signed-in member would in the web app, through the same
 rules, so whatever the web refuses, the API refuses with the same reason.
@@ -47,14 +47,14 @@ curl https://garden.example.org/.well-known/idejo
 }
 ```
 
-- Use https only. A server that answers without `api` is not an Idejo server with the API.
+- Use https only. A server that answers without `api` is not an idejo server with the API.
 - `"api": null` (with only `name` and `url`) means the administrator turned the API off.
 - Paths are relative to the forum's address.
 
 ## 2. Signing in with PKCE
 
 The app never sees a password. It opens the forum's own sign-in page in a **Custom Tab**,
-so passwords, "Sign in with Idejo ID" and anything the forum adds later all work.
+so passwords, "Sign in with idejo ID" and anything the forum adds later all work.
 
 1. Make a PKCE verifier (43 to 128 characters of `A-Z a-z 0-9 - . _ ~`) and its S256
    challenge, and a random `state`.
@@ -78,7 +78,7 @@ so passwords, "Sign in with Idejo ID" and anything the forum adds later all work
    Anything wrong (another client id or redirect, no S256, a malformed challenge) shows an
    error page and never redirects. Not signed in, the member goes through the forum's
    normal sign-in (or sign-up, under the forum's registration rules) and comes back. Then
-   the page asks "Sign in to the Idejo app on this device as **Name**?" with **Allow** and
+   the page asks "Sign in to the idejo app on this device as **Name**?" with **Allow** and
    **Cancel**.
 
 3. The browser is sent to `org.idejo.app:/oauth/callback?code=…&state=RANDOM`, or with
@@ -105,7 +105,7 @@ Errors at the token endpoint use the API's one error shape (below), with the RFC
 as codes (`invalid_request`, `invalid_client`, `invalid_grant`, `unsupported_grant_type`):
 `{"error": {"code": "invalid_grant", …}}`, not RFC 6749's `{"error": "invalid_grant"}`.
 
-Several forums: sign in to each one separately. With Idejo ID, the identity provider's
+Several forums: sign in to each one separately. With idejo ID, the identity provider's
 session makes each one a single tap.
 
 ## 3. Tokens, scopes and revocation
@@ -169,7 +169,7 @@ A user keeps at most 20 devices: a 21st sign-in revokes the oldest. A revoked to
 ## 5. The resource format and the Markdown dialect
 
 Messages come as their Markdown source (`body_md`, exactly as stored) with structured
-objects beside it, so the app never parses Idejo's extensions to know what a message holds,
+objects beside it, so the app never parses idejo's extensions to know what a message holds,
 and never gets HTML:
 
 - `mentions`: inline links, each `{type, text, id, slug, name}`; `type` is `user`, `role`,
@@ -195,7 +195,7 @@ and never gets HTML:
   beside the name, `ignored_by_me` (collapse it, as the web does). An opening message of a
   topical topic has no author: `{"id": null, "display_name": "the topic", "topical": true}`.
 
-Idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plus:
+idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plus:
 
 | Write | Shows |
 | --- | --- |
@@ -315,7 +315,7 @@ that ignore VAPID still work.
 
 ## 9. Forums directory and "my forums"
 
-- `GET /api/v1/me/communities`: the other forums the member joined in the same group (Idejo
+- `GET /api/v1/me/communities`: the other forums the member joined in the same group (idejo
   Hub), `[{name, url, logo_url}]`, as the forum's community menu shows them. Empty on a
   standalone forum.
 - Discovery's `community.directory_url` is the group's public directory page, or null. Its
@@ -329,5 +329,5 @@ answers, new events, new error codes. The app must ignore what it does not know.
 never renamed or removed and meanings never change within v1; anything else would be v2,
 listed in discovery's `api.versions` beside v1.
 
-Account deletion stays on the web (`account.deletion_url`): members linked to Idejo ID must
+Account deletion stays on the web (`account.deletion_url`): members linked to idejo ID must
 sign in there again first, which needs a browser.

@@ -167,7 +167,7 @@ defmodule IdejoWeb.AD13EnvironmentTest do
 
       assert {:ok, _} = UserNotifier.deliver_test_email("ada@idejo.test")
       assert_receive {:smtp_mail, "env@idejo.test", ["ada@idejo.test"], data}, 5_000
-      assert data =~ "From: Idejo <env@idejo.test>"
+      assert data =~ "From: idejo <env@idejo.test>"
 
       # The panel gets a host: its settings, all of them, and its sender.
       panel_port = SMTPCapture.start!(auth: {"panel-user", "panel-pass"})

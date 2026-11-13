@@ -43,7 +43,7 @@ defmodule Idejo.Settings do
                  )
 
   @definitions %{
-    server_name: %{type: :string, default: "Idejo", required: true, max: 80},
+    server_name: %{type: :string, default: "idejo", required: true, max: 80},
     # Who may sign up (AC-02): anyone, only people with an invite, or nobody (closed; steward
     # decision, 2026-11-02, for AD-14).
     registration_mode: %{
@@ -124,7 +124,7 @@ defmodule Idejo.Settings do
       required: true,
       in: ~w(off low medium high)
     },
-    # The server's stylesheet, served at /theme.css after Idejo's own (steward decision,
+    # The server's stylesheet, served at /theme.css after idejo's own (steward decision,
     # 2026-10-23).
     # AD-11: loads nothing from elsewhere, runs nothing (Idejo.Settings.Stylesheet).
     custom_css: %{type: :string, default: @default_css, max: 100_000, format: :stylesheet},
@@ -136,7 +136,7 @@ defmodule Idejo.Settings do
     theme_light_bg: %{type: :string, default: "#fdfcf6", required: true, format: :colour},
     theme_dark_bg: %{type: :string, default: "#000000", required: true, format: :colour},
     # AD-11: the forum's own logo in the header, an upload's address
-    # (`Idejo.Settings.Logo`); empty for Idejo's small logo.
+    # (`Idejo.Settings.Logo`); empty for idejo's small logo.
     brand_logo: %{type: :string, default: "", max: 100, format: :logo}
   }
 

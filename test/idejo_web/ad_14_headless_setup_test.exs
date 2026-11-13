@@ -160,7 +160,7 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
     before = {Repo.aggregate(User, :count), Audit.list_entries(), Settings.all()}
 
     output = refused(name: "Other Club", owner_email: "otto@idejo.test", registration: "open")
-    assert output =~ "Idejo is already set up: nothing changed."
+    assert output =~ "idejo is already set up: nothing changed."
     assert {Repo.aggregate(User, :count), Audit.list_entries(), Settings.all()} == before
 
     # The wizard refuses too.

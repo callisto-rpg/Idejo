@@ -10,7 +10,7 @@
 // never change one (bold is an outline, italic each word skewed, strikethrough a line, a
 // spoiler an opacity).
 //
-// `formatMarks/1` finds the spans as Idejo's Markdown does (MDEx, CommonMark's delimiter
+// `formatMarks/1` finds the spans as idejo's Markdown does (MDEx, CommonMark's delimiter
 // rules, GitHub's strikethrough, Discord's spoilers, ==highlight==), per paragraph, leaving
 // code (fenced blocks and `code spans`), escaped characters and bare links alone. It also
 // marks `code spans` (CODE; their backticks, and escapes' backslashes, as markers) for the

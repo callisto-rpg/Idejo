@@ -3,7 +3,7 @@
 
 defmodule IdejoWeb.LogosTest do
   @moduledoc """
-  The Idejo logos (steward decisions, 2026-10-23 and 2026-10-24): the small one before the
+  The idejo logos (steward decisions, 2026-10-23 and 2026-10-24): the small one before the
   server's name in the header, the favicon, the full one above the sign-in, sign-up and setup
   pages.
   """
@@ -18,7 +18,7 @@ defmodule IdejoWeb.LogosTest do
            |> LazyHTML.query(~s(#brand > img.brand-mark[src="/images/logo-small.svg"][alt=""]))
            |> Enum.count() == 1
 
-    assert doc |> LazyHTML.query("#brand .brand-name") |> LazyHTML.text() =~ "Idejo"
+    assert doc |> LazyHTML.query("#brand .brand-name") |> LazyHTML.text() =~ "idejo"
 
     assert doc
            |> LazyHTML.query(~s(link[rel="icon"][type="image/png"][href="/images/favicon.png"]))
@@ -46,7 +46,7 @@ defmodule IdejoWeb.LogosTest do
   test "the sign-in and sign-up pages show the full logo" do
     for path <- [~p"/users/sign-in", ~p"/users/sign-up"] do
       html = build_conn() |> get(path) |> html_response(200)
-      assert html =~ ~s(src="/images/logo.svg" alt="Idejo" class="full-logo"), path
+      assert html =~ ~s(src="/images/logo.svg" alt="idejo" class="full-logo"), path
     end
 
     # Not the other pages.

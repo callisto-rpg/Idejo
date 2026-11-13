@@ -3,9 +3,9 @@ SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# Deploying Idejo to a server
+# Deploying idejo to a server
 
-This guide takes you from an empty rented server to Idejo running at `https://your-domain`
+This guide takes you from an empty rented server to idejo running at `https://your-domain`
 with an automatic certificate. It is the M0 exit check: "an empty app deploys with HTTPS
 from one command".
 
@@ -15,7 +15,7 @@ in three Docker containers defined in `deploy/docker-compose.yml`:
 | Container | What it does |
 | --- | --- |
 | `caddy` | Receives web traffic on ports 80 and 443, gets and renews the HTTPS certificate (SP-01) |
-| `app` | The Idejo release, built from the `Dockerfile` at the repository root |
+| `app` | The idejo release, built from the `Dockerfile` at the repository root |
 | `db` | PostgreSQL 18, reachable only by the app |
 
 The server only needs **Docker** and **git**.
@@ -59,7 +59,7 @@ Check from your own computer (it may take a few minutes to an hour):
 dig +short forum.example.org        # must print 203.0.113.10
 ```
 
-## 2. First login and a user for Idejo
+## 2. First login and a user for idejo
 
 Log in as `root` with the key you gave the provider:
 
@@ -190,13 +190,13 @@ Fill in every value (leave `IDEJO_SOURCE_URL` empty unless you changed the code)
 | `ACME_EMAIL` | `admin@example.org` |
 | `SECRET_KEY_BASE` | output of `openssl rand -base64 48` (64 characters) |
 | `POSTGRES_PASSWORD` | output of `openssl rand -hex 32` — hex only, because the password goes into a URL where `/` or `+` would break it |
-| `IDEJO_SOURCE_URL` | empty for an unmodified Idejo: the "Source code" link in the footer (on the Help, profile and admin pages) then points at the exact upstream commit you built. If you run modified code, the AGPL requires that link to reach your source: publish it and put its address here |
+| `IDEJO_SOURCE_URL` | empty for an unmodified idejo: the "Source code" link in the footer (on the Help, profile and admin pages) then points at the exact upstream commit you built. If you run modified code, the AGPL requires that link to reach your source: publish it and put its address here |
 
 `deploy/.env` holds your secrets. It is git-ignored and kept out of the Docker image; never
 commit or share it. Keep a copy in your password manager: without `POSTGRES_PASSWORD` you
 cannot reach the existing database, and changing `SECRET_KEY_BASE` signs everyone out.
 
-## 8. Start Idejo
+## 8. Start idejo
 
 From `~/idejo`:
 
@@ -289,8 +289,8 @@ command-line setup name no admin, like the other commands.
 
 ## Prebuilt images
 
-Each Idejo release is also published as a Docker image, `ghcr.io/callisto-rpg/idejo:X.Y.Z`
-(and `X.Y` for the newest patch of that minor version), for linux/amd64. Idejo Hub uses these
+Each idejo release is also published as a Docker image, `ghcr.io/callisto-rpg/idejo:X.Y.Z`
+(and `X.Y` for the newest patch of that minor version), for linux/amd64. idejo Hub uses these
 images. The install above builds from source instead, so you do not need them for a
 standalone server.
 
@@ -345,12 +345,12 @@ database, the images and the backups too.
 
 ## Backups
 
-Every night at 03:00 UTC Idejo backs up the database and the uploaded images into one file,
+Every night at 03:00 UTC idejo backs up the database and the uploaded images into one file,
 `idejo-YYYYMMDD-HHMMSS.tar` (UTC), in the `backups` volume (`/data/backups` in the app
 container). The newest 7 are kept; older ones are deleted. `idejo exec app bin/idejo-admin
 health` shows when the last one was made; a failed backup is written to the app log.
 
-At 04:00 UTC Idejo deletes uploaded images that nothing uses any more: pictures pasted into
+At 04:00 UTC idejo deletes uploaded images that nothing uses any more: pictures pasted into
 a message and removed before sending, older than a day. Images in messages (deleted ones
 and earlier versions included), in the About and Rules texts and avatars are kept.
 
@@ -379,10 +379,10 @@ themselves).
 
 ### Restore a backup
 
-Restoring replaces the whole database and every uploaded image with the backup's. Idejo
+Restoring replaces the whole database and every uploaded image with the backup's. idejo
 first backs up what is there now (the command prints that file's name), so a restore can be
-undone by restoring that file. A backup made by a newer version of Idejo is refused: update
-Idejo first.
+undone by restoring that file. A backup made by a newer version of idejo is refused: update
+idejo first.
 
 1. Stop the app (the database keeps running):
 
@@ -409,7 +409,7 @@ Everyone has to sign in again only if they were signed in after the backup was m
 
 To move to a new server, or after losing one:
 
-1. Install Idejo on the new server (steps 1 to 9), with the old `deploy/.env` if you have it
+1. Install idejo on the new server (steps 1 to 9), with the old `deploy/.env` if you have it
    (keep `IDEJO_DOMAIN`, and point the domain at the new server). Do not run the setup
    wizard: the backup brings your owner account back.
 2. Copy the backup to the new server (on your computer:
@@ -464,7 +464,7 @@ page. The rotation is recorded in the audit log.
 
 The bundle's Caddy is the default and the simplest: it gets certificates and passes every
 request to the app. If the machine already runs a reverse proxy (nginx, Traefik, another
-Caddy, a load balancer), or runs several Idejo servers behind one, leave Caddy out (AD-16)
+Caddy, a load balancer), or runs several idejo servers behind one, leave Caddy out (AD-16)
 with the second Compose file, given after the first:
 
 ```sh
@@ -541,9 +541,9 @@ builds every link from `IDEJO_DOMAIN`, never from the headers. Check it with
 
 ## Sign in through an OpenID Connect provider
 
-Idejo can let people sign in with an account they already have at an OpenID Connect
+idejo can let people sign in with an account they already have at an OpenID Connect
 provider (AC-09): Keycloak, Authentik, Dex, Zitadel, a company's or a family of forums'
-own. Register Idejo there as a confidential web client with:
+own. Register idejo there as a confidential web client with:
 
 - **redirect URI** `https://forum.example.org/users/oidc/callback`;
 - the **authorization code** flow with **PKCE** (S256);
@@ -570,7 +570,7 @@ What happens:
   never by email. The first sign-in makes a member here, under **Who can sign up**: open,
   invite-only (the invite link's sign-up page has the button and carries the invite) or
   closed. Their username comes from the provider's `preferred_username` (or the email),
-  their display name from `name`. An email the provider has not verified gets Idejo's
+  their display name from `name`. An email the provider has not verified gets idejo's
   verification email, as a sign-up would.
 - **An account here with the same email is never joined by itself**: that sign-in is
   refused with a message. Its owner signs in with their password and presses **Link** in
@@ -602,7 +602,7 @@ and says nothing about your members:
 | Field | Values |
 | --- | --- |
 | `status` | `ok` when every check is ok, else `error` |
-| `version` | the Idejo version running |
+| `version` | the idejo version running |
 | `checks.database` | `ok`, or `error` when the database does not answer within 2 seconds |
 | `checks.migrations` | `ok`; `pending` when the release has a migration not applied yet; `error` when they cannot be read |
 
@@ -628,7 +628,7 @@ Unlike other pages it also answers over plain `http`, so the container's own che
 
 ## Outgoing email
 
-Idejo sends sign-up verification emails (and later invites and password resets) through an
+idejo sends sign-up verification emails (and later invites and password resets) through an
 SMTP server you choose: your mail provider or a transactional email service. Once signed
 in as an administrator, open **Admin → Email** and fill in:
 
@@ -675,23 +675,23 @@ message naming it.
 | `IDEJO_SMTP_PORT` | no | `587` | Its port. |
 | `IDEJO_SMTP_SECURITY` | no | `tls` on port 465, else `starttls` | `starttls`, `tls` (TLS from the start) or `none` (a relay on the same machine or network only). Certificates are always checked. |
 | `IDEJO_SMTP_USERNAME` | no | none | Its login, if it needs one. |
-| `IDEJO_SMTP_PASSWORD` | no | none | Its password. Never stored, shown or logged by Idejo. |
+| `IDEJO_SMTP_PASSWORD` | no | none | Its password. Never stored, shown or logged by idejo. |
 | `IDEJO_SMTP_FROM` | no | the panel's sender address | Sender address while this server is in use. |
 | `IDEJO_TRUSTED_PROXIES` | no | private networks | Reverse proxies whose `X-Forwarded-For`, `-Proto` and `-Host` are believed: IP addresses or CIDR ranges, comma-separated. See [Running behind your own reverse proxy](#running-behind-your-own-reverse-proxy). |
 | `IDEJO_OIDC_ISSUER` | with the next three | none | The OpenID Connect provider's issuer (`https://…`). See [Sign in through an OpenID Connect provider](#sign-in-through-an-openid-connect-provider). |
-| `IDEJO_OIDC_CLIENT_ID` | with the others | none | Idejo's client id at the provider. |
+| `IDEJO_OIDC_CLIENT_ID` | with the others | none | idejo's client id at the provider. |
 | `IDEJO_OIDC_CLIENT_SECRET` | with the others | none | Its client secret. Read from here only; never stored, shown or logged. |
 | `IDEJO_OIDC_LABEL` | with the others | none | The provider's name on the button: "Sign in with …". |
 | `IDEJO_OIDC_SIGN_UP_URL` | no | none | Where people without an account at the provider make one: "No … yet? Create one" under its button, on sign-in and sign-up. Only with the provider. |
-| `IDEJO_ID_REGISTRY_URL` | no | `https://login.idejo.org` | The Idejo ID registry an administrator may connect the server to from **Admin → Idejo ID**, when no `IDEJO_OIDC_*` provider is set; `off` hides it. |
+| `IDEJO_ID_REGISTRY_URL` | no | `https://login.idejo.org` | The idejo ID registry an administrator may connect the server to from **Admin → idejo ID**, when no `IDEJO_OIDC_*` provider is set; `off` hides it. |
 | `IDEJO_LOCAL_ACCOUNTS` | no | `on` | `off`: no password sign-up, sign-in or reset, except owners' and administrators' sign-in. Needs the provider. |
 | `IDEJO_COMMUNITY_URL` | no | none | For a forum among several sharing one sign-in: where this server asks which other communities a member joined (`GET ?subject=`, HTTP Basic with the OpenID Connect client id and secret; JSON `{"communities": [{"name", "url"}]}`), shown in the forum icon's menu. Needs the provider. |
 | `IDEJO_COMMUNITY_DIRECTORY_URL` | no | none | A public page listing those communities: "Find more forums" in the forum icon's menu. |
-| `IDEJO_INBOX` | no | `off` | `on` makes this install the inbox of a group of communities: Idejo's own pages without a sidebar or categories, for each member their forums (`/`), the topics they follow in them (`/topics`) and their chats (`/chat`, private conversations, those still in the forums copied in). Asks the group's service at `<IDEJO_COMMUNITY_URL>/inbox/topics`, `/inbox/conversations`, `/inbox/conversations/moved`, `/inbox/settings` ("Save for all forums" in Profile and account) and `/profile`, which asks back at `/community/inbox-unread`, all with this server's client id and secret. Needs `IDEJO_COMMUNITY_URL` and the provider. |
+| `IDEJO_INBOX` | no | `off` | `on` makes this install the inbox of a group of communities: idejo's own pages without a sidebar or categories, for each member their forums (`/`), the topics they follow in them (`/topics`) and their chats (`/chat`, private conversations, those still in the forums copied in). Asks the group's service at `<IDEJO_COMMUNITY_URL>/inbox/topics`, `/inbox/conversations`, `/inbox/conversations/moved`, `/inbox/settings` ("Save for all forums" in Profile and account) and `/profile`, which asks back at `/community/inbox-unread`, all with this server's client id and secret. Needs `IDEJO_COMMUNITY_URL` and the provider. |
 | `IDEJO_TOPICS_URL` | no | none | For such a group: a page listing the topics a member follows across its forums, linked as "All my topics" above the sidebar's "Private Conversations" for members linked to the provider. |
 | `IDEJO_SETTINGS_URL` | no | none | For such a group: the inbox's Profile and account, where a member saves settings for all their forums at once. For members linked to the provider, this forum's Profile and account says its settings apply only here and links there; while they share their notification choices from there, this forum shows them read-only. The inbox sends the settings through the group's service to `POST /community/settings`, with a ticket it vouches for (scope `settings`). |
 | `IDEJO_CHAT_URL` | no | none | For such a group: the chat service's page, where members linked to the provider keep their private conversations. The sidebar's "Private Conversations" leads there (with a count from `<IDEJO_COMMUNITY_URL>/chats/unread?subject=`), a user card's "Private Message" to `<IDEJO_CHAT_URL>/new?with=<their subject>` (only between linked members), and the service reads followed topics and copies conversations at `/community/topics`, `/community/conversations` and `/community/conversations/moved`, each with a ticket it vouches for at `<IDEJO_COMMUNITY_URL>/chats/tickets`. Needs `IDEJO_COMMUNITY_URL` and the provider. |
-| `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; Idejo does not use it. |
+| `DNS_CLUSTER_QUERY` | no | none | For clustering several nodes; idejo does not use it. |
 
 `deploy/.env` itself also holds `IDEJO_DOMAIN`, `ACME_EMAIL` and `POSTGRES_PASSWORD`, which
 Compose gives to Caddy and the database (step 7), and, only with

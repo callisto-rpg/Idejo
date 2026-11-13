@@ -1,6 +1,6 @@
-# Idejo
+# idejo
 
-Idejo is a forum application, which attempts to provide all the best parts of independently-hosted forums of old with live chat communication platforms. The append-based message system aims to combine instant communication with the advantages of slower, long-form discussions.
+idejo is a forum application, which attempts to provide all the best parts of independently-hosted forums of old with live chat communication platforms. The append-based message system aims to combine instant communication with the advantages of slower, long-form discussions.
 
 Forums can be self-hosted on a VPS, or hosted on idejo.org per request.
 
@@ -18,16 +18,16 @@ Forums can be self-hosted on a VPS, or hosted on idejo.org per request.
 
 ## Host your own
 
-Idejo runs on a small VPS (2 vCPU, 2 GB RAM is enough to start) with only Docker and git installed. Docker Compose runs the app, PostgreSQL and Caddy, and Caddy gets the HTTPS certificate for you.
+idejo runs on a small VPS (2 vCPU, 2 GB RAM is enough to start) with only Docker and git installed. Docker Compose runs the app, PostgreSQL and Caddy, and Caddy gets the HTTPS certificate for you.
 
-* [Deploying Idejo to a server](docs/deploying.md), step by step ([on Infomaniak](docs/deploying-infomaniak.md))
+* [Deploying idejo to a server](docs/deploying.md), step by step ([on Infomaniak](docs/deploying-infomaniak.md))
 * [Admin guide](docs/admin-guide.md): the admin panel, permissions and moderation
 * [Member guide](docs/member-guide.md): the keys and the composer, on one page
-* [API guide](docs/api-guide.md): the API for the official Idejo app (sign-in, events, push)
+* [API guide](docs/api-guide.md): the API for the official idejo app (sign-in, events, push)
 
 ## Develop
 
-Idejo is written in Elixir with Phoenix and LiveView, on PostgreSQL. With the versions in `.tool-versions` installed (`mise install`) and Docker running:
+idejo is written in Elixir with Phoenix and LiveView, on PostgreSQL. With the versions in `.tool-versions` installed (`mise install`) and Docker running:
 
 ```sh
 docker compose up -d   # PostgreSQL for development
@@ -40,4 +40,4 @@ mix test
 
 ## Licence
 
-Idejo is licensed under the [GNU Affero General Public License v3.0 only](LICENSE). If you run a modified version for others, you must offer them its source code: set `IDEJO_SOURCE_URL` so the "Source code" link in every page's footer points to your version. The Idejo logos, the reaction images and the bundled fonts and emoji have licences of their own, listed in [NOTICE](NOTICE).
+idejo is licensed under the [GNU Affero General Public License v3.0 only](LICENSE). If you run a modified version for others, you must offer them its source code: set `IDEJO_SOURCE_URL` so the "Source code" link in every page's footer points to your version. The idejo logos, the reaction images and the bundled fonts and emoji have licences of their own, listed in [NOTICE](NOTICE).

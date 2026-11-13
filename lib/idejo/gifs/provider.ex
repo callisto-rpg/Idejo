@@ -3,7 +3,7 @@
 
 defmodule Idejo.Gifs.Provider do
   @moduledoc """
-  A GIF provider (steward decision, 2026-11-03): what Idejo needs to know about the service
+  A GIF provider (steward decision, 2026-11-03): what idejo needs to know about the service
   the `!gif` overlay searches. The browser talks to the provider itself, through the adapter
   of the same `id/0` in `assets/js/gifs/` (`index.js` lists them); the server only says
   which provider, with which key and filter, and lets the browser reach its hosts

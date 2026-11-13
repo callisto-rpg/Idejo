@@ -1,6 +1,6 @@
 # Load testing
 
-Idejo promises live delivery within 200 ms (NF-01, 95th percentile) for about 200 people
+idejo promises live delivery within 200 ms (NF-01, 95th percentile) for about 200 people
 online on the minimum server: 2 vCPU, 2 GB RAM (NF-04). The v1 sheet asks for a load test
 before each release (NF-10); this is it.
 
@@ -122,7 +122,7 @@ VM runs 4 schedulers (one per core) and the default `POOL_SIZE` of 10.
 Each run was flat over its five minutes (a spread under 1 MiB): nothing grows while idle.
 
 **2026-11-06**, after `RELEASE_MODE=interactive` went into the image, as a forum runs under
-Idejo Hub (`POOL_SIZE` 5, 384 MB, half a CPU), warmed over https (`X-Forwarded-Proto` from a
+idejo Hub (`POOL_SIZE` 5, 384 MB, half a CPU), warmed over https (`X-Forwarded-Proto` from a
 trusted proxy: over plain http every page redirects, and nothing is warmed) and idle five
 minutes, 10 readings: **80.4–80.6 MiB** (≈ 84 MB). The same with the 0.2.3 image (embedded):
 207.5–208.0 MiB (≈ 218 MB).

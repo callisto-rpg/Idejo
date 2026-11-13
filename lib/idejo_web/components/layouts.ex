@@ -79,7 +79,7 @@ defmodule IdejoWeb.Layouts do
       |> assign(:user, assigns.current_scope && assigns.current_scope.user)
       |> assign(:logo, Idejo.Settings.get(:brand_logo))
       # One answer per render, as an assign: LiveView re-renders every place reading it
-      # together (the menu may start while a page is open: Admin → Idejo ID).
+      # together (the menu may start while a page is open: Admin → idejo ID).
       |> assign(:community_menu?, Idejo.Community.menu?())
       # Inbox mode (steward request, 2026-11-10): no sidebar, no categories, no Unread.
       |> assign(:inbox?, Idejo.Inbox.on?())
@@ -112,7 +112,7 @@ defmodule IdejoWeb.Layouts do
       </button>
 
       <a :if={!@community_menu?} href={~p"/"} class="brand" id="brand">
-        <%!-- The small Idejo logo, before the server's own name (steward decision, 2026-10-23),
+        <%!-- The small idejo logo, before the server's own name (steward decision, 2026-10-23),
              or the forum's own logo (AD-11). --%>
         <img
           src={Idejo.Settings.Logo.url(@logo)}
@@ -354,7 +354,7 @@ defmodule IdejoWeb.Layouts do
   attr :inbox, :atom, default: nil
   attr :inbox?, :boolean, default: false
 
-  # The inbox's pages (steward request, 2026-11-10): "Idejo › Forums", "Idejo › Topics".
+  # The inbox's pages (steward request, 2026-11-10): "idejo › Forums", "idejo › Topics".
   defp breadcrumb(%{inbox: section} = assigns) when section in [:forums, :topics] do
     assigns =
       assign(assigns,
@@ -1349,7 +1349,7 @@ defmodule IdejoWeb.Layouts do
     ~H"""
     <footer class="site-footer">
       <a href="https://idejo.org" id="attribution">
-        Powered by Idejo — © Mariano Pictet and contributors — AGPL-3.0
+        Powered by idejo — © Mariano Pictet and contributors — AGPL-3.0
       </a>
       <a href={Idejo.Source.url()} id="source-code">{gettext("Source code")}</a>
       <a href={~p"/privacy"} id="privacy-link">{gettext("Privacy")}</a>
@@ -1358,19 +1358,19 @@ defmodule IdejoWeb.Layouts do
   end
 
   @doc """
-  The full Idejo logo (steward decisions, 2026-10-23 and 2026-10-24), above the sign-in,
+  The full idejo logo (steward decisions, 2026-10-23 and 2026-10-24), above the sign-in,
   sign-up and setup pages and on the visitors' card: in colour, the same in both themes.
   CC-BY-4.0, © Mariano Pictet (NOTICE); `/images/logo.png` is the same as a raster image.
   """
   def full_logo(assigns) do
     ~H"""
-    <img src={~p"/images/logo.svg"} alt="Idejo" class="full-logo" width="199" height="105" />
+    <img src={~p"/images/logo.svg"} alt="idejo" class="full-logo" width="199" height="105" />
     """
   end
 
   @doc """
   The name shown in the header and page titles: the server name set by an administrator
-  (AD-02), or "Idejo" when none is set. The header shows it after the small Idejo logo.
+  (AD-02), or "idejo" when none is set. The header shows it after the small idejo logo.
   """
   @spec server_name() :: String.t()
   def server_name, do: Idejo.Settings.get(:server_name)
@@ -1423,7 +1423,7 @@ defmodule IdejoWeb.Layouts do
       </p>
       <p class="push-banner-ios grow" hidden>
         {gettext(
-          "To get notifications on iPhone, add Idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
+          "To get notifications on iPhone, add idejo to your Home Screen: tap Share, then Add to Home Screen, then open it from there."
         )}
       </p>
       <p class="push-banner-on grow" hidden>{gettext("Notifications are on")}</p>
@@ -1448,8 +1448,8 @@ defmodule IdejoWeb.Layouts do
 
   @doc """
   The favicon (AD-11; steward request, 2026-11-13): the forum's own logo (Admin → Settings
-  → Logo, a WebP upload, the `brand_logo` setting) when it has one, else Idejo's (steward
-  decision, 2026-10-24). The app icons (manifest, touch icon) and `/favicon.ico` stay Idejo's.
+  → Logo, a WebP upload, the `brand_logo` setting) when it has one, else idejo's (steward
+  decision, 2026-10-24). The app icons (manifest, touch icon) and `/favicon.ico` stay idejo's.
   """
   def favicon(assigns) do
     assigns = assign(assigns, :logo, Idejo.Settings.get(:brand_logo))
@@ -1554,7 +1554,7 @@ defmodule IdejoWeb.Layouts do
           class={["tab", @section == :idejo_id && "tab-active"]}
           aria-current={@section == :idejo_id && "page"}
         >
-          {gettext("Idejo ID")}
+          {gettext("idejo ID")}
         </.link>
         <.link
           navigate={~p"/admin/users"}

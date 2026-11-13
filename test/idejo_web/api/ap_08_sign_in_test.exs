@@ -71,7 +71,7 @@ defmodule IdejoWeb.Api.AP08SignInTest do
 
     signed_in = log_in_user(conn, user)
     page = authorize(signed_in, params) |> html_response(200)
-    assert page =~ "Sign in to the Idejo app on this device as"
+    assert page =~ "Sign in to the idejo app on this device as"
     assert page =~ user.display_name
     assert page =~ "Test phone"
     assert page =~ "app-authorize-allow"
@@ -129,7 +129,7 @@ defmodule IdejoWeb.Api.AP08SignInTest do
         ] do
       params = authorize_params(challenge, extra) |> Map.reject(fn {_k, v} -> is_nil(v) end)
       page = authorize(conn, params)
-      assert html_response(page, 400) =~ "does not come from the official Idejo app"
+      assert html_response(page, 400) =~ "does not come from the official idejo app"
       assert get_resp_header(page, "location") == []
 
       refused = allow(conn, params)

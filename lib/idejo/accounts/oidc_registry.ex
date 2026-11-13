@@ -3,9 +3,9 @@
 
 defmodule Idejo.Accounts.OIDCRegistry do
   @moduledoc """
-  Connecting to Idejo ID from the admin panel (AC-09; steward decisions, 2026-11-06): an
+  Connecting to idejo ID from the admin panel (AC-09; steward decisions, 2026-11-06): an
   install with no OpenID Connect provider in its environment registers itself as a client of
-  an Idejo ID registry (`IDEJO_ID_REGISTRY_URL`, by default `https://login.idejo.org`; `off`
+  an idejo ID registry (`IDEJO_ID_REGISTRY_URL`, by default `https://login.idejo.org`; `off`
   hides it), then may ask to be listed in that registry's directory of forums.
 
   The registry's protocol (JSON under `<registry>/account/api`):
@@ -152,7 +152,7 @@ defmodule Idejo.Accounts.OIDCRegistry do
        issuer: issuer,
        client_id: id,
        client_secret: secret,
-       label: text(creds["label"]) || "Idejo ID",
+       label: text(creds["label"]) || "idejo ID",
        sign_up_url: link(creds["sign_up_url"]),
        directory_url: link(creds["directory_url"]),
        chat_url: link(creds["chat_url"]),

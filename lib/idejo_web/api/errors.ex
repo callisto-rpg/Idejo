@@ -172,7 +172,7 @@ defmodule IdejoWeb.Api.Errors do
   def message(:validation), do: gettext("Some fields need a change.")
   def message(:cursor_expired), do: gettext("The topic changed too much. Load it again.")
   def message(:invalid_request), do: gettext("The sign-in request is not complete.")
-  def message(:invalid_client), do: gettext("This app is not the official Idejo app.")
+  def message(:invalid_client), do: gettext("This app is not the official idejo app.")
   def message(:invalid_grant), do: gettext("Signing in did not work. Please try again.")
   def message(:unsupported_grant_type), do: gettext("The sign-in request is not complete.")
 

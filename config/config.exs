@@ -28,7 +28,7 @@ config :idejo,
   generators: [timestamp_type: :utc_datetime]
 
 # PostgreSQL compiles a query to machine code (JIT) when its estimated cost is high, which
-# takes tens of milliseconds. Idejo's queries are short; the estimates of those that read an
+# takes tens of milliseconds. idejo's queries are short; the estimates of those that read an
 # index range per topic (the unread counts, Idejo.Reading) are high, as the database cannot
 # know how far each topic was read, so JIT would make them several times slower, never faster.
 config :idejo, Idejo.Repo, parameters: [jit: "off"]
@@ -135,7 +135,7 @@ config :phoenix, :filter_parameters, ~w(password token code code_verifier access
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-# AC-09 (steward decisions, 2026-11-06): the Idejo ID registry an administrator may connect
+# AC-09 (steward decisions, 2026-11-06): the idejo ID registry an administrator may connect
 # this server to from the admin panel (`IDEJO_ID_REGISTRY_URL`, `off` to hide it).
 config :idejo, :id_registry_url, "https://login.idejo.org"
 

@@ -5,14 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # Admin guide
 
-For the people who run an Idejo community: owners, administrators and moderators. It starts
+For the people who run an idejo community: owners, administrators and moderators. It starts
 where [the deployment guide](deploying.md) ends, with the server installed and your owner
 account made by the setup wizard. Everything here is done in the browser.
 
-Give your members the [member guide](member-guide.md): one page on how writing in Idejo
+Give your members the [member guide](member-guide.md): one page on how writing in idejo
 works.
 
-## How Idejo is organised
+## How idejo is organised
 
 - **Categories** hold **topics**; every topic is a live conversation made of **messages**.
 - A message **grows**: each time its author presses Enter, the new text joins the same
@@ -93,7 +93,7 @@ corner. It has ten tabs.
   `*.example.org` allows any name under `example.org`. Add your own, for example a
   UnifiedPush server, if members' browsers use one. Addresses on private networks are always
   refused.
-- **API and mobile app**: **Members can use the Idejo app** (on by default). The Idejo app
+- **API and mobile app**: **Members can use the idejo app** (on by default). The idejo app
   for Android signs members in through this server's own sign-in page and then reads and
   writes as they would here, with the same rights. Off, the app cannot sign in or connect,
   and devices already signed in are refused until you turn it on again (they are not
@@ -103,7 +103,7 @@ corner. It has ten tabs.
   and paste it here; empty, there are no GIFs. Members' browsers then search KLIPY and load
   GIFs from it directly, as KLIPY's terms require, so KLIPY sees the address of everyone who
   searches for or reads a GIF: say so in your **Privacy notice**. Keep ads off for the key in
-  the Partner Panel (Idejo shows none), and block words or GIFs there if you need to. A new
+  the Partner Panel (idejo shows none), and block words or GIFs there if you need to. A new
   key is in testing mode, limited to 100 searches an hour, until you ask KLIPY for production
   access.
 - **GIF content filter**: how strictly KLIPY leaves unsafe GIFs out of searches: **Off**,
@@ -112,7 +112,7 @@ corner. It has ten tabs.
   the roles they may choose, and at any time under **Rules & Roles** in the sidebar.
 - **Privacy notice** (Markdown): shown on the **Privacy** page, linked from the foot of the
   **Help** page (in the sidebar), **Profile and account** and the admin pages, where the
-  "Source code" link and the Idejo notice are too. Until you write one, the page says the server has not published a notice yet.
+  "Source code" link and the idejo notice are too. Until you write one, the page says the server has not published a notice yet.
 - **Theme**: the website's colours, as `#rrggbb` (or `#rrggbbaa` with transparency), typed
   or chosen with the colour button beside each. **Primary colour** fills buttons, toggles and
   links; **Secondary colour** and **Tertiary colour** appear only where a second colour is
@@ -120,10 +120,10 @@ corner. It has ten tabs.
   themes. Text on a colour turns white or near-black, whichever reads better. The page loads
   again when you save a change, to show it. **Stylesheet** can still override them.
 - **Logo**: your forum's own logo, shown in the header before the server name in place of
-  Idejo's small logo. Choose a JPEG, PNG, GIF or WebP image (up to the image size limit): it
+  idejo's small logo. Choose a JPEG, PNG, GIF or WebP image (up to the image size limit): it
   is saved at once, fitted whole into the header's small square (transparency is kept; only
-  the first frame of an animation) and the page loads again to show it. **Use the Idejo
-  logo** goes back. The browser tab's icon and the app icon stay Idejo's.
+  the first frame of an animation) and the page loads again to show it. **Use the idejo
+  logo** goes back. The browser tab's icon and the app icon stay idejo's.
 
 ### Info boxes
 
@@ -151,7 +151,7 @@ everybody (0: no wait; a deleted one does not count). **Sender's username** (`id
 unless you change it) and **Sender's picture (optional)** are the account it comes from.
 That account belongs to the server: nobody signs in to it, and it is never mentioned,
 suggested or notified. Automessages with the same sender's username share the account and
-its picture; until you upload one, it shows the Idejo picture. A name a member already has
+its picture; until you upload one, it shows the idejo picture. A name a member already has
 is refused.
 
 **Post a poll** makes the automessage carry a poll, with the same fields as a poll in a
@@ -168,7 +168,7 @@ name of whoever used it. Links in the text are resolved as that person may see t
 
 ### Plugins
 
-Plugins add `!` commands to the composer. Idejo comes with four:
+Plugins add `!` commands to the composer. idejo comes with four:
 
 - `!youtube` puts a YouTube video under the message, from its link (`!youtube:link:`, or
   choose `!youtube` and paste it). Videos play from `youtube-nocookie.com`, which sees the
@@ -189,7 +189,7 @@ Plugins add `!` commands to the composer. Idejo comes with four:
   chosen forum under the message: its logo, its name and a **Join** button. The logo is
   copied to this server when the card is posted, so readers' browsers never contact the
   other forum. A custom `forum` plugin can name another directory (`"directory"`, an https
-  address answering `/api/forums?q=` like Idejo Hub's).
+  address answering `/api/forums?q=` like idejo Hub's).
 
 Each plugin is **off** until you tick **Enabled**. Owners and administrators may then use
 it; **Add role** opens a list of roles: tick those whose members may use it too, then
@@ -198,7 +198,7 @@ it; **Add role** opens a list of roles: tick those whose members may use it too,
 Each plugin is one `.json` file in the plugins folder (`IDEJO_PLUGINS_DIR`, by default
 `plugins` in the uploads volume). **Delete a file there to remove its plugin**: its command
 leaves the composer and what it added under messages stops showing (it shows again if the
-file comes back). A plugin of Idejo's own that you delete is not put back by updates.
+file comes back). A plugin of idejo's own that you delete is not put back by updates.
 
 **Add custom plugin** uploads a plugin file. A plugin is never code: it names a command and
 one of the four blocks above, so it can only do what they do. For example, a Vimeo plugin:
@@ -219,11 +219,11 @@ one of the four blocks above, so it can only do what they do. For example, a Vim
 }
 ```
 
-`command` takes lower-case letters, digits and `-`, and may not be one of Idejo's commands
+`command` takes lower-case letters, digits and `-`, and may not be one of idejo's commands
 or an automessage's. `argument` is `link` (a video's), `text` (a button's or card's label)
 or `none`; `block` is `video`, `iframe`, `button`, `card`, `collapse` or `forum`. A video plugin's `match`
 patterns (regular expressions) each find the video's `id`, which fills `{id}` in its https
-`embed` address. A new plugin is installed off. A file Idejo cannot use is listed with the
+`embed` address. A new plugin is installed off. A file idejo cannot use is listed with the
 reason.
 
 ### Email
@@ -237,22 +237,22 @@ the page says so above the form, with its host and port: email already works, an
 host here replaces that server. [The deployment guide](deploying.md#outgoing-email) has more
 detail.
 
-### Idejo ID
+### idejo ID
 
-Lets members sign in with their **Idejo ID**, one account for every Idejo forum that uses
+Lets members sign in with their **idejo ID**, one account for every idejo forum that uses
 it; local accounts keep working.
 
-- **Connect to Idejo ID** (login.idejo.org unless your server's host set another): it
+- **Connect to idejo ID** (login.idejo.org unless your server's host set another): it
   checks that your server answers at its own address, then gives it its sign-in
-  credentials. The sign-in and sign-up pages then offer the Idejo ID button.
+  credentials. The sign-in and sign-up pages then offer the idejo ID button.
 - **Renew the connection** gets new credentials (after a restore, for example);
-  **Disconnect** stops sign-in with Idejo ID here (members keep their accounts).
+  **Disconnect** stops sign-in with idejo ID here (members keep their accounts).
 - **Forums directory:** once connected, tick **List this forum on the forums directory** to
   ask to be listed. The directory's operator approves it; the page shows "Waiting for the
   directory's approval", then "Listed in the directory". Untick it to leave at once. Only
-  forums that sign in with Idejo ID can be listed.
+  forums that sign in with idejo ID can be listed.
 
-When the server's host sets a sign-in provider itself (`IDEJO_OIDC_*`, as Idejo Hub does),
+When the server's host sets a sign-in provider itself (`IDEJO_OIDC_*`, as idejo Hub does),
 this page only says so.
 
 ### Users
@@ -354,9 +354,9 @@ warns that invite links do not work.
 
 ### Stylesheet
 
-CSS that every page loads after Idejo's own styles, so its rules win: change colours,
+CSS that every page loads after idejo's own styles, so its rules win: change colours,
 spacing, or anything else. **Save** applies it as pages load; **Reset to default** brings back
-the stylesheet Idejo came with. It may load nothing from another site and run nothing, so a
+the stylesheet idejo came with. It may load nothing from another site and run nothing, so a
 stylesheet with `@import`, a `url(…)` to another address (anything but a path on this server,
 such as `/uploads/…`, or a `data:` image or font), or something that once ran script in
 browsers (`expression(…)`, `behavior:`, `-moz-binding`, `javascript:`) is not saved: the page

@@ -81,7 +81,7 @@ defmodule IdejoWeb.AdminLiveTest do
     @tag req: "AD-02"
     test "AD-02 an administrator changes the server name", %{conn: conn, admin: admin} do
       {:ok, lv, html} = live(conn, ~p"/admin")
-      assert html =~ ~s(value="Idejo")
+      assert html =~ ~s(value="idejo")
 
       html =
         lv
@@ -131,7 +131,7 @@ defmodule IdejoWeb.AdminLiveTest do
       assert lv |> form("#settings-form", settings: %{server_name: ""}) |> render_submit() =~
                "can&#39;t be blank"
 
-      assert Settings.get(:server_name) == "Idejo"
+      assert Settings.get(:server_name) == "idejo"
     end
   end
 

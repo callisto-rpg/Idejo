@@ -141,17 +141,17 @@ defmodule Idejo.Accounts.ApiTokens do
 
   @doc """
   The name a device is listed under: what the app sent, trimmed, without control
-  characters, at most 64 characters; "Idejo app" when it sent none.
+  characters, at most 64 characters; "idejo app" when it sent none.
   """
   @spec device_name(term()) :: String.t()
   def device_name(name) when is_binary(name) do
     case name |> String.replace(~r/[[:cntrl:]]/u, "") |> String.trim() |> String.slice(0, 64) do
-      "" -> "Idejo app"
+      "" -> "idejo app"
       name -> name
     end
   end
 
-  def device_name(_name), do: "Idejo app"
+  def device_name(_name), do: "idejo app"
 
   @doc """
   Makes the authorization code for `user`, who allowed the app on the confirmation page
