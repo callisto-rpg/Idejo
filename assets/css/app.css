@@ -3381,7 +3381,7 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 /* TP-10: inline links, highlighted: @user (/u/), +role (/r/), #topic (/t/), /category (/c/),
    $tag (/tags?), &forum (another forum's address, titled "&host"). The sanitiser keeps no classes, so they are told apart by their address.
    Each kind has its own hue from the theme, a hairline around it, and a soft glow on hover. */
-.message-body :is(a[href^="/u/"], a[href^="/r/"], a[href^="/t/"], a[href^="/c/"], a[href^="/tags?"], a[href^="https://"][title^="&"]) {
+.message-body :is(a[href^="/u/"], a[href^="/r/"], a[href^="/t/"], a[href^="/c/"], a[href^="/tags?"], a[href^="https:"][title^="&"]) {
   --link: var(--color-primary);
   padding: 0 0.25rem;
   border-radius: 0.3125rem;
@@ -3405,7 +3405,7 @@ html[data-js] .message-collapsible .spoiler:not(.is-revealed, .is-revealed .spoi
 .message-body a[href^="/tags?"] { --link: var(--color-success); }
 /* &forum (steward request, 2026-11-13): another forum, at its own address; Idejo.Messages.Body
    gives these links the title "&<its host>". */
-.message-body a[href^="https://"][title^="&"] { --link: var(--color-secondary); }
+.message-body a[href^="https:"][title^="&"] { --link: var(--color-secondary); }
 
 /* Cards over the page (a user's card, moderation, the emoji picker, moving messages, the
    delete question): lined and lifted like the app's other boxes (steward request,

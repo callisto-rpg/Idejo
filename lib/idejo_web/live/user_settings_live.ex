@@ -517,7 +517,9 @@ defmodule IdejoWeb.UserSettingsLive do
   defp put_result(socket, {:ok, %{done: done, missed: []}}, text) do
     message =
       case done do
-        [] -> gettext("You have joined no other forum yet.")
+        [] ->
+          gettext("You have joined no other forum yet.")
+
         _ ->
           ngettext(
             "Saved on your forum too.",
@@ -990,9 +992,7 @@ defmodule IdejoWeb.UserSettingsLive do
               <.input
                 field={@email_form[:once_a_week]}
                 type="checkbox"
-                label={
-                  gettext("Don't send me a second message in the same week if I don't log in.")
-                }
+                label={gettext("Don't send me a second message in the same week if I don't log in.")}
               />
               <.save_buttons
                 :if={!@notifications_locked?}

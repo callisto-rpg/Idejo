@@ -181,7 +181,8 @@ defmodule Idejo.Community.SharedSettings do
   defp set_picture(user, theme, {:ok, base64})
        when is_binary(base64) and byte_size(base64) <= @max_picture do
     with {:ok, bytes} <- Base.decode64(base64) do
-      path = Plug.Upload.random_file!("shared-avatar")
+      path =
+        Path.join(System.tmp_dir!(), "idejo-shared-avatar-#{System.unique_integer([:positive])}")
 
       try do
         File.write!(path, bytes)

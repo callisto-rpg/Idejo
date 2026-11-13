@@ -149,6 +149,9 @@ defmodule IdejoWeb.SharedSettingsTest do
     ada = link(user_fixture(), "sub-ada")
     conn = log_in_user(conn, ada)
 
+    # The layout asks the chat service for unread conversations.
+    Req.Test.stub(Idejo.Community, &Req.Test.json(&1, %{"unread" => 0}))
+
     {:ok, view, _html} = live(conn, ~p"/users/settings")
     assert has_element?(view, ~s(#shared-settings-link[href="#{@settings}"]))
     refute has_element?(view, "#email-locked")
