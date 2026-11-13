@@ -49,6 +49,7 @@ defmodule IdejoWeb.TopicLive do
   alias IdejoWeb.Admin
   alias IdejoWeb.ImageUploads
   alias IdejoWeb.MessageModerationComponents
+  alias IdejoWeb.NewTopicCard
   alias IdejoWeb.PluginComponents
   alias IdejoWeb.PollComponents
   alias IdejoWeb.ReactionComponents
@@ -148,6 +149,7 @@ defmodule IdejoWeb.TopicLive do
            schedule: nil,
            polls: %{},
            poll_form: nil,
+           new_topic_card: nil,
            live?: connected?(socket),
            revealed: MapSet.new(),
            draft_over: nil,
@@ -175,7 +177,9 @@ defmodule IdejoWeb.TopicLive do
          |> assign(topic: topic, can_post?: can_post?, lost_access?: false, roles: %{})
          |> assign(forward_access: %{}, forward_card: nil)
          |> assign(committed: nil, read_timer: nil)
-         |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic.category))
+         |> assign(:can_moderate?, user != nil and Access.can?(user, :moderate, topic))
+         # Pinned messages, in the navigator (steward request, 2026-11-13).
+         |> assign(:pins, Forum.pinned_messages(topic))
          |> assign(:can_fork?, Forum.can_fork?(user, topic))
          # AC-06: whose messages are collapsed for this reader.
          |> assign(:ignored, Idejo.Accounts.ignored_ids(user))
@@ -1312,6 +1316,13 @@ defmodule IdejoWeb.TopicLive do
     {:noreply, assign(socket, :topic, topic)}
   end
 
+  # A moderator pinned or unpinned a message (steward request, 2026-11-13).
+  defp info({:pins_changed, _topic_id}, %{assigns: %{topic: nil}} = socket),
+    do: {:noreply, socket}
+
+  defp info({:pins_changed, _topic_id}, socket),
+    do: {:noreply, assign(socket, :pins, Forum.pinned_messages(socket.assigns.topic))}
+
   # A scheduled message was added, cancelled or posted: only its author's views reload.
   defp info({:scheduled, author_id}, socket) do
     if mine?(socket, %{author_id: author_id}),
@@ -1346,7 +1357,7 @@ defmodule IdejoWeb.TopicLive do
          socket
          |> assign(
            can_post?: Forum.can_post?(user, topic),
-           can_moderate?: user != nil and Access.can?(user, :moderate, topic.category),
+           can_moderate?: user != nil and Access.can?(user, :moderate, topic),
            can_fork?: Forum.can_fork?(user, topic),
            automessages: automessages(user, topic),
            plugins: Plugins.usable(user, topic)
@@ -1406,6 +1417,18 @@ defmodule IdejoWeb.TopicLive do
     source_id = message.reply_to_id || message.id
     redirect(socket, to: ~p"/m/#{source_id}/new-topic?from=#{message.id}")
   end
+
+  defp open_new_topic_card(socket, title) do
+    case socket.assigns.topic && NewTopicCard.open(user(socket), socket.assigns.topic, title) do
+      nil -> put_flash(socket, :error, gettext("You cannot start topics here."))
+      card -> assign(socket, :new_topic_card, card)
+    end
+  end
+
+  defp new_topic_error(:rate_limited),
+    do: gettext("You have started many topics lately. Please try again later.")
+
+  defp new_topic_error(_reason), do: gettext("You cannot start topics in this category.")
 
   # What a command sends for (steward decision, 2026-10-23): `!new-topic` goes on to the new
   # topic; `!poll` and `!spoiler` act on the message just sent.
@@ -1770,17 +1793,51 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  # `!new-topic` with nothing new to send: the topic starts from the open message.
+  # `!new-topic` with nothing new to send: the topic starts from the open message; with no
+  # open message, the New topic card opens (steward request, 2026-11-13).
   defp event("new_topic", _params, socket) do
     case open_message(socket.assigns.messages, user(socket)) do
-      nil ->
-        {:noreply,
-         put_flash(socket, :error, gettext("Write your message first, then choose !new-topic."))}
-
-      message ->
-        {:noreply, new_topic_from(socket, message)}
+      nil -> {:noreply, open_new_topic_card(socket, nil)}
+      message -> {:noreply, new_topic_from(socket, message)}
     end
   end
+
+  # `!new-topic:Title:` (steward request, 2026-11-13): the card, with that title.
+  defp event("open_new_topic", params, socket) do
+    title = if is_binary(params["title"]), do: params["title"]
+    {:noreply, open_new_topic_card(socket, title)}
+  end
+
+  defp event("new_topic_change", params, %{assigns: %{new_topic_card: %{} = card}} = socket) do
+    card = NewTopicCard.change(card, user(socket), params)
+    {:noreply, assign(socket, :new_topic_card, card)}
+  end
+
+  defp event("create_new_topic", params, %{assigns: %{new_topic_card: %{} = card}} = socket) do
+    case NewTopicCard.create(card, user(socket), params) do
+      {:ok, topic} ->
+        {:noreply, redirect(socket, to: ~p"/t/#{topic.id}/#{topic.slug}")}
+
+      {:pending, _pending} ->
+        {:noreply,
+         socket
+         |> assign(:new_topic_card, nil)
+         |> put_flash(
+           :info,
+           gettext("Your topic was sent. It will appear once a moderator approves it.")
+         )}
+
+      {:error, :invalid, card} ->
+        {:noreply, assign(socket, :new_topic_card, card)}
+
+      {:error, reason, card} ->
+        {:noreply,
+         assign(socket, :new_topic_card, put_in(card.errors[:base], new_topic_error(reason)))}
+    end
+  end
+
+  defp event("hide_new_topic", _params, socket),
+    do: {:noreply, assign(socket, :new_topic_card, nil)}
 
   # A new message's first keystroke, or its box emptied before sending (steward request,
   # 2026-11-09): the time is the server's, so it cannot be set back.
@@ -2274,6 +2331,16 @@ defmodule IdejoWeb.TopicLive do
 
     case result do
       {:ok, _} -> {:noreply, assign(socket, :moderating, nil)}
+      _ -> {:noreply, put_flash(socket, :error, gettext("This could not be done."))}
+    end
+  end
+
+  # Pin or unpin a message (steward request, 2026-11-13); the list follows as an event.
+  defp event("pin_message", %{"id" => id, "pinned" => pinned}, socket) when is_binary(id) do
+    message = Enum.find(socket.assigns.messages, &(&1.id == id))
+
+    case message && Messages.set_pinned(user(socket), message, pinned == "true") do
+      {:ok, _} -> {:noreply, socket}
       _ -> {:noreply, put_flash(socket, :error, gettext("This could not be done."))}
     end
   end
@@ -2833,6 +2900,7 @@ defmodule IdejoWeb.TopicLive do
       <WarningComponents.warn_card :if={@warn_form} form={@warn_form} />
       <.forward_dialog :if={@forward_card} card={@forward_card} />
       <.too_soon_dialog :if={@too_soon?} />
+      <NewTopicCard.dialog :if={@new_topic_card} state={@new_topic_card} />
       <TopicComponents.icon_dialog
         :if={@icon_picker}
         id="icon-picker"
@@ -2880,6 +2948,7 @@ defmodule IdejoWeb.TopicLive do
         title={@topic.title}
         nav={@nav}
         first_unread={@first_unread}
+        pins={@pins}
       />
       <p :if={@lost_access?} id="topic-gone" role="status" class="opacity-70">
         {gettext("You can no longer view this topic.")}
@@ -3169,6 +3238,7 @@ defmodule IdejoWeb.TopicLive do
   attr :title, :string, required: true
   attr :nav, :map, required: true, doc: "the messages it links to (`put_nav/1`)"
   attr :first_unread, :map, default: nil
+  attr :pins, :list, default: [], doc: "pinned messages (steward request, 2026-11-13)"
 
   # The topic navigator (steward decision, 2026-10-23): once the title has scrolled away, a
   # card at the right with the title and links to the first message, the first unread, the
@@ -3219,6 +3289,21 @@ defmodule IdejoWeb.TopicLive do
             </a>
           </li>
         </ul>
+        <%!-- Pinned by moderators (steward request, 2026-11-13). --%>
+        <div :if={@pins != []} id="topic-nav-pins">
+          <p class="topic-nav-subtitle">{gettext("Pinned")}</p>
+          <ul class="topic-nav-links topic-nav-pins">
+            <li :for={pin <- @pins}>
+              <a href={"#message-#{pin.id}"} id={"topic-nav-pin-#{pin.id}"}>
+                <.icon name="hero-bookmark" class="size-4" />
+                <span class="topic-nav-pin-text">
+                  <span class="topic-nav-pin-author">{Messages.author_name(pin)}</span>
+                  {Forum.excerpt(pin, 60)}
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
     </nav>
     """
@@ -3331,6 +3416,9 @@ defmodule IdejoWeb.TopicLive do
         is_nil(message.deleted_at) and not message.anonymous and
           MapSet.member?(assigns.ignored, message.author_id),
       mod_edit?: mod_edit?,
+      # Steward request, 2026-11-13: moderators pin messages to the topic navigator.
+      pin?:
+        assigns.can_moderate? and not assigns.topic.private and is_nil(message.deleted_at),
       warn?: warn?(assigns, message, viewer)
     }
   end
@@ -4035,6 +4123,20 @@ defmodule IdejoWeb.TopicLive do
             phx-click="open_icon_picker"
           >
             <.icon name="hero-photo-micro" class="size-4" />{gettext("Make topical")}
+          </button>
+          <%!-- Steward request, 2026-11-13: listed in the topic navigator. --%>
+          <button
+            :if={@entry.pin? and @live?}
+            type="button"
+            id={"message-#{@message.id}-pin"}
+            class="message-action"
+            phx-click="pin_message"
+            phx-value-id={@message.id}
+            phx-value-pinned={to_string(is_nil(@message.pinned_at))}
+            aria-pressed={to_string(@message.pinned_at != nil)}
+          >
+            <.icon name="hero-bookmark-micro" class="size-4" />
+            {if @message.pinned_at, do: gettext("Unpin message"), else: gettext("Pin message")}
           </button>
           <%!-- GM-16, MO-02, TP-15: moderator actions, in a card over the page. --%>
           <button

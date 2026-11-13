@@ -381,7 +381,7 @@ defmodule Idejo.Api do
 
   def moderator?(viewer, %Topic{} = topic) do
     topic = Repo.preload(topic, :category)
-    Access.can?(viewer, :moderate, topic.category)
+    Access.can?(viewer, :moderate, topic)
   end
 
   defp message_map(message, context) do

@@ -273,7 +273,9 @@ defmodule IdejoWeb.AccessibilityTest do
       ~p"/admin/tags",
       ~p"/admin/stylesheet",
       ~p"/admin/permissions",
-      ~p"/admin/permissions/#{general.slug}"
+      ~p"/admin/permissions/#{general.slug}",
+      # A topic's own permissions (steward request, 2026-11-13).
+      ~p"/topic-permissions/#{topic.id}"
     ])
   end
 
@@ -482,6 +484,21 @@ defmodule IdejoWeb.AccessibilityTest do
     render_hook(view, "load_earlier", %{})
     {:ok, _} = Forum.post_message(member, topic, %{"body" => "Later"})
     assert_fragment_accessible(render(view), "new messages")
+  end
+
+  @tag req: "AX-01"
+  test "AX-01 the New topic card, with a moderator's permissions", %{
+    topic: topic,
+    admin: admin
+  } do
+    {:ok, view, _html} =
+      live_isolated(log_in_user(build_conn(), admin), IdejoWeb.TopicLive,
+        session: %{"topic_id" => topic.id}
+      )
+
+    render_hook(view, "open_new_topic", %{"title" => "Seeds"})
+    assert has_element?(view, "#new-topic-dialog #new-topic-permissions")
+    assert_fragment_accessible(render(view), "the New topic card")
   end
 
   @tag req: "AX-01"

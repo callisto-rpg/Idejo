@@ -4943,7 +4943,7 @@ msgstr ""
 
 #: lib/idejo_web/composer_commands.ex:50
 #, elixir-autogen, elixir-format
-msgid "Sends what you wrote, then opens New topic with your message as its first message: give it a title. When you were replying, the new topic continues from the message you replied to; that message gets a Continue topic button."
+msgid "Sends what you wrote, then opens New topic with your message as its first message: give it a title. When you were replying, the new topic continues from the message you replied to; that message gets a Continue topic button. With nothing written, or typed as !new-topic:Title: (ending with a colon), it opens a card to start a topic: its title, its category (this one to start with), its first message and, for the category's moderators, who may view, post, moderate and edit its tags."
 msgstr ""
 
 #: lib/idejo_web/components/help_components.ex:34
@@ -7926,4 +7926,99 @@ msgstr ""
 #: lib/idejo_web
 #, elixir-autogen, elixir-format
 msgid "Confirmed. You can change your username in the next five minutes."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "%{right} for %{role}"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "As the category (allowed)"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "As the category (not allowed)"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Changed a topic's permissions"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Go to New topic"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Over what the category gives; owners and administrators may do everything."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Permissions of “%{topic}”"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Pin message"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Pinned a message"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Save permissions"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Some permissions could not be saved."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Start topic"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Topic permissions"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Topic permissions saved."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Topics in this category have an icon, chosen on the New topic page."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Unpin message"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "Unpinned a message"
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "What each role may do in “%{topic}”, over what its category gives. Owners and administrators always may do everything."
+msgstr ""
+
+#: lib/idejo_web
+#, elixir-autogen, elixir-format
+msgid "You cannot start topics here."
 msgstr ""

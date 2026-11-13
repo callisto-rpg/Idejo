@@ -36,7 +36,6 @@ defmodule Idejo.Messages.Automessages do
   alias Idejo.Audit
   alias Idejo.Federation
   alias Idejo.Forum
-  alias Idejo.Forum.Category
   alias Idejo.Forum.Topic
   alias Idejo.Messages
   alias Idejo.Messages.Automessage
@@ -91,7 +90,7 @@ defmodule Idejo.Messages.Automessages do
   defp who(%User{} = user, %Topic{state: "open", private: false, category_id: id} = topic)
        when is_binary(id) do
     cond do
-      Access.can?(user, :moderate, %Category{id: id}) -> :moderator
+      Access.can?(user, :moderate, topic) -> :moderator
       Forum.can_post?(user, topic) -> :poster
       true -> :none
     end

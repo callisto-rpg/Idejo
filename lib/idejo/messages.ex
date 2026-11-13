@@ -998,7 +998,7 @@ defmodule Idejo.Messages do
   def close_as_moderator(%User{} = moderator, %Message{} = message, reason \\ nil) do
     topic = Topic |> Repo.get!(message.topic_id) |> Repo.preload(:category)
 
-    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+    if Idejo.Access.can?(moderator, :moderate, topic) do
       result =
         Repo.transact(fn ->
           message = Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE")
@@ -1009,6 +1009,52 @@ defmodule Idejo.Messages do
       result
     else
       {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  Pins or unpins a message (steward request, 2026-11-13), as someone with `:moderate` in its
+  topic: pinned messages are listed in the topic navigator (`Idejo.Forum.pinned_messages/1`),
+  oldest pin first. Not in private conversations, not deleted ones. Logged `message.pin` or
+  `message.unpin` (MO-03); then the topic gets the message and `{:pins_changed, topic_id}`.
+  """
+  @spec set_pinned(User.t(), Message.t(), boolean()) ::
+          {:ok, Message.t()} | {:error, :forbidden | :deleted | Ecto.Changeset.t()}
+  def set_pinned(%User{} = moderator, %Message{} = message, pinned) when is_boolean(pinned) do
+    topic = Repo.get!(Topic, message.topic_id)
+
+    cond do
+      topic.private or not Idejo.Access.can?(moderator, :moderate, topic) ->
+        {:error, :forbidden}
+
+      pinned and message.deleted_at != nil ->
+        {:error, :deleted}
+
+      true ->
+        result = Repo.transact(fn -> pin_locked(moderator, message.id, pinned) end)
+
+        with {:ok, message} <- result do
+          broadcast(message.topic_id, {:message, message})
+          broadcast(message.topic_id, {:pins_changed, message.topic_id})
+        end
+
+        result
+    end
+  end
+
+  defp pin_locked(moderator, id, pinned) do
+    message = Repo.one!(from m in Message, where: m.id == ^id, lock: "FOR UPDATE")
+
+    if (message.pinned_at != nil) == pinned do
+      {:ok, message}
+    else
+      at = if pinned, do: DateTime.utc_now()
+      action = if pinned, do: "message.pin", else: "message.unpin"
+
+      with {:ok, message} <- message |> Ecto.Changeset.change(pinned_at: at) |> Repo.update(),
+           {:ok, _} <- Moderation.record(moderator, action, message) do
+        {:ok, message}
+      end
     end
   end
 
@@ -1090,7 +1136,7 @@ defmodule Idejo.Messages do
       when is_list(ids) do
     topic = Repo.preload(topic, :category)
 
-    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+    if Idejo.Access.can?(moderator, :moderate, topic) do
       result =
         Repo.transact(fn ->
           # Locked in id order, so two moderators never wait on each other.
@@ -1155,7 +1201,7 @@ defmodule Idejo.Messages do
   defp as_moderator(moderator, message, fun) do
     topic = Topic |> Repo.get!(message.topic_id) |> Repo.preload(:category)
 
-    if Idejo.Access.can?(moderator, :moderate, topic.category) do
+    if Idejo.Access.can?(moderator, :moderate, topic) do
       result =
         Repo.transact(fn ->
           fun.(Repo.one!(from m in Message, where: m.id == ^message.id, lock: "FOR UPDATE"))

@@ -25,7 +25,7 @@ defmodule Idejo.Notifications.Digest do
   alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.Topic
   alias Idejo.Mailer
   alias Idejo.Messages.Message
   alias Idejo.Notifications.{EmailPreference, Notification}
@@ -169,17 +169,16 @@ defmodule Idejo.Notifications.Digest do
 
   # Finished messages by others, since then, where the user may look and did not mute.
   defp messages(user, since, now) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
-    from m in Message,
+    from(m in Message,
       as: :message,
       join: t in Topic,
       as: :topic,
       on: t.id == m.topic_id,
       where: m.state == "closed" and m.closed_at > ^since and m.closed_at <= ^now,
       where: is_nil(m.deleted_at) and m.author_id != ^user.id,
-      where: t.category_id in subquery(viewable),
       where: t.id not in subquery(Reading.muted_topic_ids(user.id))
+    )
+    |> Access.where_topic_allowed(user, :view)
   end
 
   defp count(:mentions, user, since, now), do: notified(user, since, now, ["mention", "reply"])
@@ -196,12 +195,12 @@ defmodule Idejo.Notifications.Digest do
   end
 
   defp count(:new_topics, user, since, now) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     from(t in Topic,
+      as: :topic,
       where: t.created_at > ^since and t.created_at <= ^now and t.author_id != ^user.id,
-      where: t.category_id in subquery(viewable) and t.state != "archived"
+      where: t.state != "archived"
     )
+    |> Access.where_topic_allowed(user, :view)
     |> count_all()
   end
 

@@ -77,7 +77,7 @@ defmodule IdejoWeb.InlineCards do
 
   def load("category", slug, viewer, _opts) do
     with %{} = category <- Forum.get_viewable_category(viewer, slug) do
-      {topics, _more?} = Forum.list_topics(category, per_page: @shown)
+      {topics, _more?} = Forum.list_topics(category, per_page: @shown, viewer: viewer)
 
       summary =
         viewer |> Forum.list_category_summaries() |> Enum.find(&(&1.category.id == category.id))

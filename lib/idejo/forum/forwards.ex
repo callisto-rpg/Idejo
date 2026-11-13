@@ -20,7 +20,7 @@ defmodule Idejo.Forum.Forwards do
   alias Idejo.Accounts.User
   alias Idejo.Conversations.Participant
   alias Idejo.Forum
-  alias Idejo.Forum.{Category, Topic}
+  alias Idejo.Forum.Topic
   alias Idejo.Messages.Message
   alias Idejo.Reading.ReadPosition
   alias Idejo.Repo
@@ -67,13 +67,15 @@ defmodule Idejo.Forum.Forwards do
   """
   @spec targets(User.t(), String.t(), Ecto.UUID.t() | nil) :: [target()]
   def targets(%User{id: user_id} = user, query, except \\ nil) do
-    postable =
-      Category
-      |> where([c], not c.archive)
-      |> Access.where_allowed(user, [:view, :post])
-      |> select([c], c.id)
-
     mine = from p in Participant, where: p.user_id == ^user_id, select: p.topic_id
+
+    # Open topics only, so never the Archive's (archived).
+    reachable =
+      dynamic(
+        [topic: t],
+        ^Access.topic_allowed(user, [:view, :post]) or
+          (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine))
+      )
 
     base =
       from t in Topic,
@@ -81,9 +83,7 @@ defmodule Idejo.Forum.Forwards do
         left_join: r in ReadPosition,
         on: r.topic_id == t.id and r.user_id == ^user_id,
         where: t.state == "open",
-        where:
-          t.category_id in subquery(postable) or
-            (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine)),
+        where: ^reachable,
         limit: @limit,
         preload: [:category, participants: :user]
 
@@ -143,16 +143,21 @@ defmodule Idejo.Forum.Forwards do
   def readable_ids(nil, ids), do: Forum.viewable_message_ids(nil, ids)
 
   def readable_ids(%User{id: user_id} = user, ids) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
     mine = from p in Participant, where: p.user_id == ^user_id, select: p.topic_id
+
+    readable =
+      dynamic(
+        [topic: t],
+        ^Access.topic_allowed(user, :view) or
+          (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine))
+      )
 
     from(m in Message,
       join: t in Topic,
+      as: :topic,
       on: t.id == m.topic_id,
       where: m.id in ^ids,
-      where:
-        t.category_id in subquery(viewable) or
-          (t.private and is_nil(t.moved_to_chat_at) and t.id in subquery(mine)),
+      where: ^readable,
       select: m.id
     )
     |> Repo.all()

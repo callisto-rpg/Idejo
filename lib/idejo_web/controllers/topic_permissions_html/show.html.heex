@@ -1,0 +1,53 @@
+<%!--
+  SPDX-FileCopyrightText: 2026 Mariano Pictet and contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+--%>
+<Layouts.app flash={@flash} current_scope={@current_scope} topic={@topic}>
+  <.header>
+    {gettext("Topic permissions")}
+    <:subtitle>
+      {gettext(
+        "What each role may do in “%{topic}”, over what its category gives. Owners and administrators always may do everything.",
+        topic: @topic.title
+      )}
+    </:subtitle>
+  </.header>
+
+  <.form
+    for={%{}}
+    action={~p"/topic-permissions/#{@topic.id}"}
+    method="post"
+    id="topic-permissions-form"
+  >
+    <div class="overflow-x-auto">
+      <table id="topic-permissions" class="table">
+        <thead>
+          <tr>
+            <th scope="col">{gettext("Role")}</th>
+            <th :for={right <- @rights} scope="col">{right_label(right)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={role <- @roles} id={"topic-permissions-#{role.id}"}>
+            <th scope="row"><IdejoWeb.Admin.role_label role={role} /></th>
+            <td :for={right <- @rights}>
+              <.dropdown
+                id={"topic-permission-#{role.id}-#{right}"}
+                name={"permissions[#{role.id}][#{right}]"}
+                options={choices(Map.fetch!(@inherited, {role.id, right}))}
+                value={value(@own, role.id, right)}
+                label={cell_label(right, role)}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <.button class="btn btn-primary">{gettext("Save permissions")}</.button>
+      <.link href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="btn btn-ghost">
+        {gettext("Cancel")}
+      </.link>
+    </div>
+  </.form>
+</Layouts.app>

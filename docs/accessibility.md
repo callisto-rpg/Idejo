@@ -10,7 +10,7 @@ by hand before a release.
 windows (its end with the unread line, a page, around a message) and the live topic in its
 states (composer, message editor in Write and Preview, moderation forms, the inline cards,
 the emoji picker, who reacted, the Moderate card, selecting and moving messages, "N new
-messages", the "too soon" and delete-own dialogs). It audits the HTML with
+messages", the "too soon" and delete-own dialogs, the New topic card). It audits the HTML with
 `IdejoWeb.Accessibility` (`test/support/accessibility.ex`):
 
 - `<html lang>`, exactly one `<main>`, at most one `<footer>` (only Help, Profile and account and the

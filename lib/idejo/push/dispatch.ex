@@ -37,7 +37,6 @@ defmodule Idejo.Push.Dispatch do
   alias Idejo.Access
   alias Idejo.Accounts
   alias Idejo.Accounts.User
-  alias Idejo.Forum.Category
   alias Idejo.Messages.{Authors, Message}
   alias Idejo.Notifications.Notification
   alias Idejo.Push
@@ -110,7 +109,7 @@ defmodule Idejo.Push.Dispatch do
     do: Idejo.Conversations.participant?(user, topic)
 
   defp may_view?(user, message),
-    do: Access.can?(user, :view, Repo.get!(Category, message.topic.category_id))
+    do: Access.can?(user, :view, message.topic)
 
   # Marked before sending, by whoever gets there first: a second job never pushes it again.
   defp mark_pushed(notification) do

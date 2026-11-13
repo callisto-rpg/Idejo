@@ -16,10 +16,10 @@ defmodule Idejo.Access do
   import Ecto.Query, warn: false
   alias Idejo.Repo
 
-  alias Idejo.Access.{CategoryPermission, Role, UserRole}
+  alias Idejo.Access.{CategoryPermission, Role, TopicPermission, UserRole}
   alias Idejo.Accounts.User
   alias Idejo.Audit
-  alias Idejo.Forum.Category
+  alias Idejo.Forum.{Category, Topic}
 
   @type built_in :: :owner | :administrator | :moderator | :member | :guest
 
@@ -661,6 +661,8 @@ defmodule Idejo.Access do
   ## Category rights (RP-04)
 
   @rights [:view, :start, :post, :moderate, :tag]
+  # The rights a topic can set over its category's (steward request, 2026-11-13).
+  @topic_rights [:view, :post, :moderate, :tag]
 
   @doc """
   The rights: `:view`, `:start` (topics), `:post`, `:moderate`, and `:tag` (edit a topic's
@@ -681,8 +683,26 @@ defmodule Idejo.Access do
   any right, owners and administrators included: only its participants read and write there
   (`Idejo.Conversations`), so a call that skips them never opens one.
   """
-  @spec can?(User.t() | nil, atom(), Category.t() | nil) :: boolean()
+  @spec can?(User.t() | nil, atom(), Category.t() | Topic.t() | nil) :: boolean()
   def can?(_user, right, nil) when right in @rights, do: false
+
+  # A topic (steward request, 2026-11-13): its own setting for a role, else its category's.
+  # A private conversation's has no category: nobody's right (above).
+  def can?(_user, right, %Topic{category_id: nil}) when right in @rights, do: false
+
+  def can?(user, :start, %Topic{category_id: category_id}),
+    do: can?(user, :start, %Category{id: category_id})
+
+  def can?(user, right, %Topic{id: topic_id}) when right in @topic_rights do
+    roles = roles_of(user)
+
+    all_rights?(roles) or
+      Idejo.Memo.fetch({:can_topic, Enum.map(roles, & &1.id), right, topic_id}, fn ->
+        topic_query(topic_id)
+        |> where(^topic_role_allows(Enum.map(roles, & &1.id), Atom.to_string(right)))
+        |> Repo.exists?()
+      end)
+  end
 
   def can?(user, right, %Category{id: category_id})
       when right in @rights do
@@ -702,9 +722,31 @@ defmodule Idejo.Access do
   NO-01). Users who act with the same roles get the same answer, so the rule is asked once
   per set of roles.
   """
-  @spec filter_allowed([User.t()], atom(), Category.t() | nil) :: [User.t()]
+  @spec filter_allowed([User.t()], atom(), Category.t() | Topic.t() | nil) :: [User.t()]
   def filter_allowed(_users, right, nil) when right in @rights, do: []
   def filter_allowed([], right, _category) when right in @rights, do: []
+  def filter_allowed(_users, right, %Topic{category_id: nil}) when right in @rights, do: []
+
+  def filter_allowed(users, right, %Topic{id: topic_id}) when right in @topic_rights do
+    roles = roles_of_users(users)
+    role_set = fn held -> Enum.map(held, & &1.id) end
+
+    answers =
+      roles
+      |> Map.values()
+      |> Enum.uniq_by(role_set)
+      |> Map.new(fn held ->
+        allowed =
+          all_rights?(held) or
+            topic_query(topic_id)
+            |> where(^topic_role_allows(role_set.(held), Atom.to_string(right)))
+            |> Repo.exists?()
+
+        {role_set.(held), allowed}
+      end)
+
+    Enum.filter(users, &Map.fetch!(answers, role_set.(roles[&1.id])))
+  end
 
   def filter_allowed(users, right, %Category{id: category_id}) when right in @rights do
     roles = roles_of_users(users)
@@ -762,6 +804,280 @@ defmodule Idejo.Access do
             on: is_nil(server.category_id) and server.role_id == r.id and server.right == ^right,
             where: r.id in ^role_ids and coalesce(own.effect, server.effect) == "allow"
         )
+  end
+
+  ## Topic rights (steward request, 2026-11-13)
+
+  @doc """
+  The rights a topic can set over its category's: `:view`, `:post`, `:moderate` and `:tag`.
+  """
+  @spec topic_rights() :: [atom()]
+  def topic_rights, do: TopicPermission.rights()
+
+  @doc """
+  Narrows a query on topics to those where the visitor or user has `right` (or every right
+  of a list): the same rule as `can?/3` with a topic. The query names its topics `:topic`
+  (`from t in Topic, as: :topic`). Private conversations are never in it.
+
+  For each role, a topic's own setting wins over its category's. Topics without settings
+  for the right are filtered through their categories, as `where_allowed/3` filters them;
+  only topics with settings are checked one by one, so lists cost no more than before
+  until topics set rights.
+  """
+  @spec where_topic_allowed(Ecto.Queryable.t(), User.t() | nil, atom() | [atom(), ...]) ::
+          Ecto.Query.t()
+  def where_topic_allowed(query, user, right) when right in @topic_rights,
+    do: where_topic_allowed(query, user, [right])
+
+  def where_topic_allowed(query, user, [_ | _] = rights),
+    do: where(query, ^topic_allowed(user, rights))
+
+  @doc """
+  The condition of `where_topic_allowed/3` as a dynamic expression on the `:topic` binding,
+  for a query that joins it with others (`or` a private conversation of the user's).
+  """
+  @spec topic_allowed(User.t() | nil, atom() | [atom(), ...]) :: Ecto.Query.dynamic_expr()
+  def topic_allowed(user, right) when right in @topic_rights, do: topic_allowed(user, [right])
+
+  def topic_allowed(user, [_ | _] = rights) do
+    true = Enum.all?(rights, &(&1 in @topic_rights))
+    roles = roles_of(user)
+
+    if all_rights?(roles) do
+      dynamic([topic: t], not is_nil(t.category_id))
+    else
+      Enum.reduce(rights, dynamic(true), &dynamic(^&2 and ^topic_condition(roles, &1)))
+    end
+  end
+
+  # Topics with no setting for `right`: through their category; the others: one by one.
+  defp topic_condition(roles, right) do
+    right = Atom.to_string(right)
+    role_ids = Enum.map(roles, & &1.id)
+
+    by_category =
+      Category |> where_roles(roles, [String.to_existing_atom(right)]) |> select([c], c.id)
+
+    overridden = from p in TopicPermission, where: p.right == ^right, select: p.topic_id
+
+    allowed =
+      from(t in Topic,
+        as: :topic,
+        where: t.id in subquery(overridden) and not is_nil(t.category_id),
+        select: t.id
+      )
+      |> where(^topic_role_allows(role_ids, right))
+
+    dynamic(
+      [topic: t],
+      (t.category_id in subquery(by_category) and t.id not in subquery(overridden)) or
+        t.id in subquery(allowed)
+    )
+  end
+
+  defp topic_query(topic_id), do: from(t in Topic, as: :topic, where: t.id == ^topic_id)
+
+  # One of `role_ids` allows `right` on the topic bound as `:topic`: its own setting, else
+  # its category's, else the server-wide one.
+  defp topic_role_allows(role_ids, right) do
+    dynamic(
+      [],
+      exists(
+        from r in Role,
+          left_join: own in TopicPermission,
+          on:
+            own.topic_id == parent_as(:topic).id and own.role_id == r.id and
+              own.right == ^right,
+          left_join: category in CategoryPermission,
+          on:
+            category.category_id == parent_as(:topic).category_id and
+              category.role_id == r.id and category.right == ^right,
+          left_join: server in CategoryPermission,
+          on: is_nil(server.category_id) and server.role_id == r.id and server.right == ^right,
+          where:
+            r.id in ^role_ids and
+              coalesce(own.effect, coalesce(category.effect, server.effect)) == "allow"
+      )
+    )
+  end
+
+  @doc """
+  Whether one of the user's roles is allowed to moderate some topic by that topic's own
+  setting (steward request, 2026-11-13): for the Moderation link.
+  """
+  @spec moderates_a_topic?(User.t() | nil) :: boolean()
+  def moderates_a_topic?(user) do
+    role_ids = user |> roles_of() |> Enum.map(& &1.id)
+
+    Repo.exists?(
+      from p in TopicPermission,
+        where: p.right == "moderate" and p.effect == "allow" and p.role_id in ^role_ids
+    )
+  end
+
+  @doc "Whether the topic sets `right` for any role (its category's setting does not hold whole)."
+  @spec sets_right?(Topic.t(), atom()) :: boolean()
+  def sets_right?(%Topic{id: id}, right) when right in @topic_rights do
+    Idejo.Memo.fetch({:sets_right, id, right}, fn ->
+      Repo.exists?(
+        from p in TopicPermission, where: p.topic_id == ^id and p.right == ^Atom.to_string(right)
+      )
+    end)
+  end
+
+  @doc """
+  A topic's own settings, as a map from `{role_id, right}` to `:allow` or `:deny`; unset
+  rights (the category's) are missing.
+  """
+  @spec topic_permissions(Topic.t()) :: %{{Ecto.UUID.t(), atom()} => :allow | :deny}
+  def topic_permissions(%Topic{id: id}) do
+    from(p in TopicPermission, where: p.topic_id == ^id)
+    |> Repo.all()
+    |> Map.new(fn p ->
+      {{p.role_id, String.to_existing_atom(p.right)}, String.to_existing_atom(p.effect)}
+    end)
+  end
+
+  @doc """
+  Sets one role's right on a topic, as `moderator` (someone with `:moderate` there; steward
+  request, 2026-11-13): `:allow`, `:deny` or `:unset` (the category's). Owner and
+  administrator take no settings, as on categories; private conversations none at all.
+  Logged `topic.permission` (MO-03); open pages check their rights again.
+  """
+  @spec set_topic_permission(User.t(), Role.t(), Topic.t(), atom(), :allow | :deny | :unset) ::
+          {:ok, :allow | :deny | :unset}
+          | {:error, :forbidden | :always_all_rights | :private | term()}
+  def set_topic_permission(%User{}, %Role{built_in: true, name: name}, _topic, _right, _effect)
+      when name in @all_rights,
+      do: {:error, :always_all_rights}
+
+  def set_topic_permission(%User{}, %Role{}, %Topic{category_id: nil}, _right, _effect),
+    do: {:error, :private}
+
+  def set_topic_permission(%User{} = moderator, %Role{} = role, %Topic{} = topic, right, effect)
+      when right in @topic_rights and effect in [:allow, :deny, :unset] do
+    if can?(moderator, :moderate, topic) do
+      put_topic_permission(moderator, role, topic, right, effect)
+    else
+      {:error, :forbidden}
+    end
+  end
+
+  @doc """
+  What each role gets from the topic's category for each topic right, as a topic without
+  settings would: `%{{role_id, right} => :allow | :deny}` (`:deny`: not allowed).
+  """
+  @spec category_rights(Topic.t()) :: %{{Ecto.UUID.t(), atom()} => :allow | :deny}
+  def category_rights(%Topic{category_id: category_id}) do
+    own = if category_id, do: permissions(%Category{id: category_id}), else: %{}
+    server = permissions(:server)
+
+    for role <- list_roles(), right <- @topic_rights, into: %{} do
+      key = {role.id, right}
+      {key, Map.get(own, key) || Map.get(server, key) || :deny}
+    end
+  end
+
+  @topic_effects %{"allow" => :allow, "deny" => :deny, "unset" => :unset}
+  @topic_right_names Map.new(@topic_rights, &{Atom.to_string(&1), &1})
+
+  @doc """
+  Sets several of a topic's rights at once, as `moderator`, from a form:
+  `%{role_id => %{"view" => "allow" | "deny" | "unset", ...}}`. Roles and rights it does not
+  know, owner and administrator, and unchanged rights are left out; the moderate right goes
+  last, so a moderator who gives it up still sets the others. `:ok` or the first error.
+  """
+  @spec set_topic_permissions(User.t(), Topic.t(), map()) :: :ok | {:error, term()}
+  def set_topic_permissions(%User{} = moderator, %Topic{} = topic, settings)
+      when is_map(settings) do
+    roles = Map.new(list_roles(), &{&1.id, &1})
+    current = topic_permissions(topic)
+
+    changes =
+      for {role_id, rights} when is_map(rights) <- settings,
+          %Role{} = role <- [roles[role_id]],
+          not (role.built_in and role.name in @all_rights),
+          {name, value} <- rights,
+          right when right != nil <- [Map.get(@topic_right_names, name)],
+          effect when effect != nil <- [Map.get(@topic_effects, value)],
+          Map.get(current, {role.id, right}, :unset) != effect,
+          do: {role, right, effect}
+
+    changes
+    |> Enum.sort_by(fn {_role, right, _effect} -> right == :moderate end)
+    |> Enum.reduce_while(:ok, fn {role, right, effect}, :ok ->
+      case set_topic_permission(moderator, role, topic, right, effect) do
+        {:ok, _} -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp put_topic_permission(moderator, role, topic, right, effect) do
+    result =
+      Repo.transact(fn ->
+        existing =
+          Repo.one(
+            from p in TopicPermission,
+              where:
+                p.topic_id == ^topic.id and p.role_id == ^role.id and
+                  p.right == ^Atom.to_string(right),
+              lock: "FOR UPDATE"
+          )
+
+        before = if existing, do: String.to_existing_atom(existing.effect), else: :unset
+
+        with :ok <- write_topic_permission(existing, role, topic, right, effect),
+             {:ok, _} <- log_topic_permission(moderator, role, topic, right, before, effect) do
+          {:ok, {effect, before != effect}}
+        end
+      end)
+
+    case result do
+      {:ok, {effect, changed?}} ->
+        :ok = Idejo.Memo.forget()
+        if changed?, do: Phoenix.PubSub.broadcast(Idejo.PubSub, @grid_topic, :permissions_changed)
+        {:ok, effect}
+
+      error ->
+        error
+    end
+  end
+
+  defp write_topic_permission(nil, _role, _topic, _right, :unset), do: :ok
+
+  defp write_topic_permission(%TopicPermission{} = existing, _role, _topic, _right, :unset) do
+    with {:ok, _} <- Repo.delete(existing), do: :ok
+  end
+
+  defp write_topic_permission(nil, role, topic, right, effect) do
+    with {:ok, _} <-
+           Repo.insert(%TopicPermission{
+             topic_id: topic.id,
+             role_id: role.id,
+             right: Atom.to_string(right),
+             effect: Atom.to_string(effect)
+           }),
+         do: :ok
+  end
+
+  defp write_topic_permission(%TopicPermission{} = existing, _role, _topic, _right, effect) do
+    with {:ok, _} <- Repo.update(Ecto.Changeset.change(existing, effect: Atom.to_string(effect))),
+         do: :ok
+  end
+
+  defp log_topic_permission(_moderator, _role, _topic, _right, same, same),
+    do: {:ok, :unchanged}
+
+  defp log_topic_permission(moderator, role, topic, right, before, effect) do
+    Idejo.Moderation.record(moderator, "topic.permission", topic,
+      details: %{
+        "role" => role.name,
+        "right" => Atom.to_string(right),
+        "from" => Atom.to_string(before),
+        "to" => Atom.to_string(effect)
+      }
+    )
   end
 
   # The same as `administrator?/1`, from roles already loaded (`roles_of/1`).

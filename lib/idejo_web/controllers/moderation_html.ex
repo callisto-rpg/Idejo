@@ -11,6 +11,9 @@ defmodule IdejoWeb.ModerationHTML do
 
   @doc "An action, in words."
   def action_label("message.close"), do: gettext("Closed an open message")
+  def action_label("message.pin"), do: gettext("Pinned a message")
+  def action_label("message.unpin"), do: gettext("Unpinned a message")
+  def action_label("topic.permission"), do: gettext("Changed a topic's permissions")
   def action_label("message.delete"), do: gettext("Deleted a message")
   def action_label("message.edit"), do: gettext("Edited a message")
   def action_label("message.automessage"), do: gettext("Had the server post an automessage")

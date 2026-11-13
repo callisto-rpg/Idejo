@@ -28,7 +28,7 @@ defmodule Idejo.Reading do
 
   alias Idejo.Access
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Tags, Topic}
+  alias Idejo.Forum.{Tags, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Reading.{Follow, ReadPosition}
   alias Idejo.Repo
@@ -290,23 +290,17 @@ defmodule Idejo.Reading do
   """
   @spec list_followed_topics(User.t() | nil) :: [Topic.t()]
   def list_followed_topics(nil) do
-    viewable = Category |> Access.where_allowed(nil, :view) |> select([c], c.id)
-
-    Repo.all(
-      from t in Topic,
-        where: t.autofollow and t.category_id in subquery(viewable),
-        order_by: [asc: t.created_at, asc: t.id]
-    )
+    from(t in Topic, as: :topic, where: t.autofollow, order_by: [asc: t.created_at, asc: t.id])
+    |> Access.where_topic_allowed(nil, :view)
+    |> Repo.all()
   end
 
   def list_followed_topics(%User{} = user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
-    Repo.all(
-      from [t, f] in followed(user),
-        where: t.category_id in subquery(viewable),
-        order_by: [asc: coalesce(f.created_at, t.created_at), asc: t.id]
+    from([t, f] in followed(user),
+      order_by: [asc: coalesce(f.created_at, t.created_at), asc: t.id]
     )
+    |> Access.where_topic_allowed(user, :view)
+    |> Repo.all()
   end
 
   @doc """
@@ -396,6 +390,7 @@ defmodule Idejo.Reading do
   # The topics the user follows, with their `follows` row (nil for one followed by everyone).
   defp followed(%User{id: user_id}) do
     from t in Topic,
+      as: :topic,
       left_join: f in Follow,
       on: f.topic_id == t.id and f.user_id == ^user_id,
       where: f.following or (t.autofollow and is_nil(f.user_id))
@@ -565,13 +560,13 @@ defmodule Idejo.Reading do
   # unread message is enough to know (`limit: 1`, at once in the topic's index range): the
   # counts come after, for the topics shown only.
   defp unread_topics(user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
     any_unread = &(&1 |> select([m], %{count: 1}) |> limit(1))
 
-    from t in with_unread(Topic, user, any_unread),
-      where: t.category_id in subquery(viewable),
+    from(t in with_unread(Topic, user, any_unread),
       order_by: [desc: t.last_activity_at, desc: t.id],
       preload: [:author, :category, tags: ^Tags.ordered()]
+    )
+    |> Access.where_topic_allowed(user, :view)
   end
 
   # Each topic with its unread count; one read meanwhile is left out.
@@ -596,13 +591,11 @@ defmodule Idejo.Reading do
   def for_you(nil), do: %{count: 0, level: nil}
 
   def for_you(%User{id: user_id} = user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     {count, level} =
       user
       |> unread_messages()
       |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
-      |> where([topic: t], t.category_id in subquery(viewable))
+      |> Access.where_topic_allowed(user, :view)
       |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
       |> join(:inner, [m], n in Idejo.Notifications.Notification,
         as: :notification,
@@ -630,13 +623,11 @@ defmodule Idejo.Reading do
           titles: [String.t()]
         }
   def unread_notified(%User{id: user_id} = user, kind, topic_id \\ nil) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     query =
       user
       |> unread_messages()
       |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
-      |> where([topic: t], t.category_id in subquery(viewable))
+      |> Access.where_topic_allowed(user, :view)
       |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
       |> join(:inner, [m], n in Idejo.Notifications.Notification,
         as: :notification,
@@ -664,12 +655,10 @@ defmodule Idejo.Reading do
   """
   @spec unread_followed(User.t()) :: [{Ecto.UUID.t(), DateTime.t()}]
   def unread_followed(%User{id: user_id} = user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
-
     user
     |> unread_messages()
     |> join(:inner, [m], t in Topic, as: :topic, on: t.id == m.topic_id)
-    |> where([topic: t], t.category_id in subquery(viewable))
+    |> Access.where_topic_allowed(user, :view)
     |> where([topic: t], t.id not in subquery(muted_topic_ids(user_id)))
     |> join(:inner, [m], n in Idejo.Notifications.Notification,
       as: :notification,

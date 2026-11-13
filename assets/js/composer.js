@@ -497,8 +497,10 @@ export const Composer = {
     if (caret !== this.input.selectionEnd) return false
     const match = PLUGIN_ARGUMENT.exec(this.input.value.slice(0, caret))
     if (!match) return false
-    const plugin = this.plugin(match[2])
     const arg = match[3].trim()
+    // `!new-topic:Title:` (steward request, 2026-11-13): the New topic card, with that title.
+    if (match[2] === "new-topic") return this.newTopicCard(caret, match[1].length, arg)
+    const plugin = this.plugin(match[2])
     if (!plugin || arg === "" || plugin.argument === "none") return false
     if ((plugin.argument === "link") !== /^https?:\/\//.test(arg)) return false
     const start = caret - match[1].length
@@ -507,6 +509,19 @@ export const Composer = {
     this.input.setSelectionRange(start, start)
     this.paint()
     this.command(match[2], undefined, arg)
+    return true
+  },
+
+  newTopicCard(caret, length, title) {
+    const commands = JSON.parse(this.el.dataset.commands || "[]")
+    if (title === "" || !commands.some(command => command.name === "new-topic")) return false
+    const start = caret - length
+    const value = this.input.value
+    this.input.value = value.slice(0, start) + value.slice(caret).replace(/^ /, "")
+    this.input.setSelectionRange(start, start)
+    this.paint()
+    InlineCard.opener = this.input
+    this.pushEvent("open_new_topic", {title})
     return true
   },
 
@@ -534,6 +549,8 @@ export const Composer = {
       this.imageAtEnd = true
       document.querySelector("#composer-image-form input[type=file]")?.click()
     } else if (name === "new-topic") {
+      // Nothing to start from: the server opens the New topic card instead.
+      InlineCard.opener = this.input
       if (this.unsent().trim() !== "") this.send(false, "new_topic")
       else this.pushEvent("new_topic", {})
     } else if (name === "poll" || name === "spoiler") {

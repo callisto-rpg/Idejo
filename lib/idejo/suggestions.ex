@@ -93,11 +93,13 @@ defmodule Idejo.Suggestions do
     recent = recent_topic_ids(user)
 
     base =
-      from t in Topic,
-        where: t.category_id in subquery(viewable(user)),
+      from(t in Topic,
+        as: :topic,
         order_by: [desc: t.last_activity_at, desc: t.id],
         limit: 50,
         preload: :category
+      )
+      |> Access.where_topic_allowed(user, :view)
 
     matches =
       if query == "" do
@@ -163,15 +165,17 @@ defmodule Idejo.Suggestions do
 
   # The topics the user last opened, most recent first.
   defp recent_topic_ids(%User{id: user_id} = user) do
-    Repo.all(
-      from rp in ReadPosition,
-        join: t in Topic,
-        on: t.id == rp.topic_id,
-        where: rp.user_id == ^user_id and t.category_id in subquery(viewable(user)),
-        order_by: [desc: rp.updated_at],
-        limit: @recent_topics,
-        select: rp.topic_id
+    from(rp in ReadPosition,
+      join: t in Topic,
+      as: :topic,
+      on: t.id == rp.topic_id,
+      where: rp.user_id == ^user_id,
+      order_by: [desc: rp.updated_at],
+      limit: @recent_topics,
+      select: rp.topic_id
     )
+    |> Access.where_topic_allowed(user, :view)
+    |> Repo.all()
   end
 
   defp categories_of([]), do: []

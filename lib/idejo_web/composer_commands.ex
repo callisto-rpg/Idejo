@@ -48,7 +48,7 @@ defmodule IdejoWeb.ComposerCommands do
         detail: gettext("Send, then start a new topic from it"),
         help:
           gettext(
-            "Sends what you wrote, then opens New topic with your message as its first message: give it a title. When you were replying, the new topic continues from the message you replied to; that message gets a Continue topic button."
+            "Sends what you wrote, then opens New topic with your message as its first message: give it a title. When you were replying, the new topic continues from the message you replied to; that message gets a Continue topic button. With nothing written, or typed as !new-topic:Title: (ending with a colon), it opens a card to start a topic: its title, its category (this one to start with), its first message and, for the category's moderators, who may view, post, moderate and edit its tags."
           )
       },
       %{
