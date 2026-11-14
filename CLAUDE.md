@@ -1311,8 +1311,10 @@ The contract (M6; mark each item done here when its PR merges):
   `Forum.create_topic/4` with `forked_from: message` sets `topics.forked_from_message_id`
   (needs view of the source and `:start` in the target), adds `forkedFrom` to the activity and
   broadcasts `{:forked, message_id}` to the source topic. The new topic's page shows
-  "Continued from …"; the source message shows a "Continue topic" button per topic
-  (`Forum.list_forks/2`; its title in the name; steward decision, 2026-10-23). Both only when
+  "Continued from …"; the source message shows a thin banner per topic (steward request,
+  2026-11-14, replacing the bare button): "A new topic continues from this message:", its
+  title and a "Continue topic" button (`Forum.list_forks/2`; `TopicLive`'s
+  `message_banner/1`, shared with moved messages' banners, `.message-banner`). Both only when
   the viewer may view the other topic.
 - **Forward** (steward decision, 2026-11-02; `Idejo.Forum.Forwards`,
   `messages.forwarded_from_id`, nilified when the original is deleted): "Forward" next to
@@ -1689,6 +1691,12 @@ The contract (M6; mark each item done here when its PR merges):
   dialog: close, delete, "Select to be moved"); selecting shows checkboxes and
   `move_banner/1` ("Move all selected messages to": New thread / Existing thread), and
   `move_dialog/1` takes a title and category or searches `Forum.search_move_targets/3`.
+  Its "Leave a banner where the messages were" (steward request, 2026-11-14; ticked, sent
+  as `banner`, `"false"` unticked; the API's `banner: false`) keeps a `MessageMove`
+  (`message_moves`): under the message shown before the oldest one moved (the opening
+  message at the latest), a thin banner ("N messages were moved to a new topic:" or "to
+  another topic:", the title, Open topic), from `Forum.list_moves/2`, only to readers who
+  may view the topic they went to; the API gives it as each message's `moved_after`.
   The card's "Select multiple messages for deletion" (MO-02; steward decision, 2026-10-23)
   uses the same checkboxes (`select_for: :delete`: messages not deleted and not the
   moderator's own) with `delete_banner/1`; `Messages.delete_many_as_moderator/4` deletes them

@@ -186,8 +186,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   - **!new-topic** sends what you wrote, then opens **New topic** with your message as its
     first message: give it a title (and a category, and tags if it has any). When you were
     replying, the new topic continues from the message you replied to. Your message stays
-    where it is too, and the message the topic continues from gets a **Continue topic**
-    button.
+    where it is too, and the message the topic continues from gets a banner with a
+    **Continue topic** button.
   - **!poll** sends what you wrote, then asks for a question, its answers (**Add an answer**
     for more than two, at most ten), whether **several answers** may be chosen, and in how
     many hours it closes (decimals work; at most 168). The poll goes under your message, one
@@ -238,8 +238,8 @@ turn on **Show message controls on mobile** or **Show message controls on deskto
   spoiler show faded.
   Messages have no length limit; a long one shows a **Show all** button.
 - **New Topic**, under a message, turns a side question into its own topic, linked both ways:
-  the new topic says where it continues from, and the message gets a **Continue topic**
-  button.
+  the new topic says where it continues from, and the message gets a thin banner, "A new
+  topic continues from this message", with a **Continue topic** button.
 - When a message's buttons do not fit on one line, **Reply**, **Forward** and **New Topic**
   go under a **Quote** button, and moderators' buttons under **Moderate**: click it to see
   them.

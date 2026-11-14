@@ -455,6 +455,10 @@ least one, and **Save tags**. Logged like the rest, with the tags before and aft
   Messages still being written are closed first. Moved messages keep their time, so in an
   existing thread they sit where their time puts them. Replies keep their links, and old
   links to the messages lead to their new thread. Logged, with the reason you give.
+  **Leave a banner where the messages were** (ticked to start with) puts a thin banner
+  under the message before them: "N messages were moved to a new topic" (or "to another
+  topic"), with the title and **Open topic**. Readers who may not view that topic do not
+  see it. Untick it to move them without a trace.
 
 **Bans.** Server moderators (owners, administrators, and roles allowed to moderate
 server-wide) see **User actions** on a person's card: click an @mention of them in a topic,

@@ -23,7 +23,7 @@ defmodule IdejoWeb.Api.OpenApi do
   @me @card ++
         ~w(email verified welcomed intro_due auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator)
   @topic ~w(id uri title slug url category_id private tags author topical icon created_at last_activity_at messages_count unread_count mention_state followed muted locked archived pinned inactive followed_by_everyone continues_from)
-  @message ~w(id uri topic_id url author state deleted_by body_md mentions images spoiler inline_spoilers replies_to forwarded_from poll plugins reactions edited moderator_edited pinned_at versions_count scheduled held anonymous continues_topic_id continued_in cursor opened_at closed_at updated_at)
+  @message ~w(id uri topic_id url author state deleted_by body_md mentions images spoiler inline_spoilers replies_to forwarded_from poll plugins reactions edited moderator_edited pinned_at versions_count scheduled held anonymous continues_topic_id continued_in moved_after cursor opened_at closed_at updated_at)
 
   @schemas %{
     "Error" => {~w(error), ~w(error)},
@@ -127,7 +127,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "Icon" => {~w(icon_id), []},
     "TopicPermissionsUpdate" => {~w(settings), ~w(settings)},
     "DeleteTopic" => {~w(confirm reason), ~w(confirm)},
-    "MoveMessages" => {~w(message_ids topic_id new reason), ~w(message_ids)},
+    "MoveMessages" => {~w(message_ids topic_id new reason banner), ~w(message_ids)},
     "DeleteMessages" => {~w(topic_id message_ids reason), ~w(topic_id message_ids)},
     "ModeratorEdit" => {~w(body_md reason), ~w(body_md)},
     "Warn" => {~w(message_id reason), ~w(message_id reason)},
@@ -173,6 +173,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "commands" => "array",
     "reactions" => "array",
     "continued_in" => "array",
+    "moved_after" => "array",
     "options" => "array",
     "option_ids" => "array",
     "my_votes" => "array",
@@ -189,7 +190,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "reply_to" => "array"
   }
 
-  @booleans ~w(deleted system ignored_by_me may_message may_ban banned verified welcomed intro_due hide auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator archive private topical followed muted locked archived pinned inactive followed_by_everyone inline_spoilers edited moderator_edited scheduled held anonymous multiple hidden_until_closed closed results_shown mine reply_allowed_early may_post more current this_device enabled break new finish typing hidden confirm forever)
+  @booleans ~w(deleted system ignored_by_me may_message may_ban banned verified welcomed intro_due hide auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator archive private topical followed muted locked archived pinned inactive followed_by_everyone inline_spoilers edited moderator_edited scheduled held anonymous multiple hidden_until_closed closed results_shown mine reply_allowed_early may_post more current this_device enabled break new finish typing hidden confirm forever banner new_topic)
 
   @doc "The whole document."
   @spec document() :: map()

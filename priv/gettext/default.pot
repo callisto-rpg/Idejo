@@ -8035,3 +8035,32 @@ msgstr ""
 
 msgid "Too many requests. Please try again later."
 msgstr ""
+
+#: lib/idejo_web/live/topic_live.ex
+#, elixir-autogen, elixir-format
+msgid "A new topic continues from this message:"
+msgstr ""
+
+#: lib/idejo_web/live/topic_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open topic: %{title}"
+msgstr ""
+
+#: lib/idejo_web/live/topic_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 message was moved to a new topic:"
+msgid_plural "%{count} messages were moved to a new topic:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web/live/topic_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 message was moved to another topic:"
+msgid_plural "%{count} messages were moved to another topic:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/idejo_web/components/message_moderation_components.ex
+#, elixir-autogen, elixir-format
+msgid "Leave a banner where the messages were, linking to their new place"
+msgstr ""

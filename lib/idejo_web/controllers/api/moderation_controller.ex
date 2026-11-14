@@ -305,17 +305,21 @@ defmodule IdejoWeb.Api.ModerationController do
 
   ## Messages (TP-15, MO-02, GM-16)
 
-  @doc "`message_ids`, `topic_id` (an existing topic) or `new` (`{title, category_id}`), `reason`."
+  @doc """
+  `message_ids`, `topic_id` (an existing topic) or `new` (`{title, category_id}`), `reason`,
+  `banner` (false: no banner where they were; steward request, 2026-11-14).
+  """
   def move_messages(conn, params) do
     moderator = user(conn)
     ids = params["message_ids"] |> List.wrap() |> Enum.filter(&is_binary/1)
+    opts = [banner: params["banner"] != false]
 
     with message_id when is_binary(message_id) <- List.first(ids) || {:error, :bad_request},
          {:ok, message} <- readable_message(conn, message_id),
          {:ok, source} <- viewable_topic(conn, message.topic_id),
          {:ok, target} <- move_target(conn, params),
          {:ok, topic} <-
-           Forum.move_messages(moderator, source, ids, target, string(params, "reason")) do
+           Forum.move_messages(moderator, source, ids, target, string(params, "reason"), opts) do
       json(conn, Api.topic(moderator, Forum.get_viewable_topic(moderator, topic.id) || topic))
     end
   end

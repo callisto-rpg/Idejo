@@ -84,8 +84,15 @@ defmodule IdejoWeb.ForkTest do
     assert doc |> LazyHTML.query(~s(#forked-from a[href="/m/#{source.id}"])) |> Enum.count() == 1
     assert page =~ "Continued from Ada in “Tonight”"
 
-    # The source message gets a discreet "continued in" link, live, for everyone who may see it.
+    # The source message gets a thin banner with a "Continue topic" button, live, for everyone
+    # who may see it (steward request, 2026-11-14).
     for view <- [source_view, visitor_view] do
+      assert has_element?(
+               view,
+               "#message-#{source.id}-fork-#{fork.id}",
+               "A new topic continues from this message: Bread recipes"
+             )
+
       assert has_element?(
                view,
                ~s(#message-#{source.id}-forks a[href="/t/#{fork.id}/#{fork.slug}"][aria-label="Continue topic: Bread recipes"]),

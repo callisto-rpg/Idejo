@@ -17,7 +17,7 @@ defmodule Idejo.Forum do
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Federation
-  alias Idejo.Forum.{Category, CategoryGroup, PendingTopic, Tags, Topic, TopicIcons}
+  alias Idejo.Forum.{Category, CategoryGroup, MessageMove, PendingTopic, Tags, Topic, TopicIcons}
   alias Idejo.Messages
   alias Idejo.Messages.Message
   alias Idejo.Moderation
@@ -1100,19 +1100,31 @@ defmodule Idejo.Forum do
   move is logged once (MO-03, `messages.move`, under the source's category) with an
   `update` activity per message, in one transaction. Then both topics' viewers get
   `{:messages_moved, topic_id}` and reload.
+
+  With `banner: true` (the default; steward request, 2026-11-14) a `MessageMove` keeps where
+  they were: under the message before the oldest of them, a banner links to the target.
   """
   @spec move_messages(
           User.t(),
           Topic.t(),
           [String.t()],
           {:new, map()} | {:existing, Topic.t()},
-          String.t() | nil
+          String.t() | nil,
+          keyword()
         ) ::
           {:ok, Topic.t()}
           | {:error,
              :forbidden | :invalid_target | :opening | :not_found | :nothing | Ecto.Changeset.t()}
-  def move_messages(%User{} = moderator, %Topic{} = source, ids, target, reason \\ nil) do
+  def move_messages(
+        %User{} = moderator,
+        %Topic{} = source,
+        ids,
+        target,
+        reason \\ nil,
+        opts \\ []
+      ) do
     ids = ids |> Enum.filter(&match?({:ok, _}, Ecto.UUID.cast(&1))) |> Enum.uniq()
+    banner = Keyword.get(opts, :banner, true) && %{new_topic: match?({:new, _}, target)}
 
     result =
       Repo.transact(fn ->
@@ -1124,6 +1136,7 @@ defmodule Idejo.Forum do
              {:ok, messages} <- messages_to_move(source, ids),
              {:ok, target} <- move_target(moderator, source, target, messages) do
           save_message_move(moderator, source, target, messages, reason)
+          |> leave_banner(source, target, messages, banner)
         end
       end)
 
@@ -1256,6 +1269,44 @@ defmodule Idejo.Forum do
       {:ok, {target, closed, source.id}}
     end
   end
+
+  # TP-15: the banner where the moved messages were (steward request, 2026-11-14), under the
+  # message shown before the oldest of them (the opening message at the latest: it never
+  # moves); none when every message before them is deleted.
+  defp leave_banner({:ok, _} = result, _source, _target, _messages, false), do: result
+
+  defp leave_banner({:ok, _} = result, source, target, [first | _] = messages, banner) do
+    ids = Enum.map(messages, & &1.id)
+
+    after_id =
+      Repo.one(
+        from m in Message,
+          where: m.topic_id == ^source.id and m.id not in ^ids and is_nil(m.deleted_at),
+          where:
+            m.opened_at < ^first.opened_at or
+              (m.opened_at == ^first.opened_at and m.id < ^first.id),
+          order_by: [desc: m.opened_at, desc: m.id],
+          limit: 1,
+          select: m.id
+      )
+
+    if after_id do
+      {:ok, _} =
+        Repo.insert(%MessageMove{
+          id: Federation.generate_id(),
+          source_topic_id: source.id,
+          after_message_id: after_id,
+          target_topic_id: target.id,
+          count: length(ids),
+          new_topic: banner.new_topic,
+          moved_at: DateTime.utc_now()
+        })
+    end
+
+    result
+  end
+
+  defp leave_banner(error, _source, _target, _messages, _banner), do: error
 
   defp move_activities(moderator, messages, source, target) do
     Enum.each(messages, fn message ->
@@ -1562,6 +1613,31 @@ defmodule Idejo.Forum do
   `%{message_id => [topic]}`, oldest first: the source's "continued in" links.
   """
   @spec list_forks(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => [Topic.t()]}
+  @doc """
+  TP-15: the banners under these messages for messages moved away from after them (steward
+  request, 2026-11-14), as `%{message_id => [%{topic, count, new_topic}]}`, oldest move
+  first; only to topics the user may view, and only while the message is still in the topic
+  the messages left.
+  """
+  @spec list_moves(User.t() | nil, [String.t()]) :: %{String.t() => [map()]}
+  def list_moves(_user, []), do: %{}
+
+  def list_moves(user, message_ids) do
+    from(mv in MessageMove,
+      join: m in Message,
+      on: m.id == mv.after_message_id and m.topic_id == mv.source_topic_id,
+      join: t in Topic,
+      as: :topic,
+      on: t.id == mv.target_topic_id,
+      where: mv.after_message_id in ^message_ids,
+      order_by: [asc: mv.moved_at, asc: mv.id],
+      select: {mv.after_message_id, %{topic: t, count: mv.count, new_topic: mv.new_topic}}
+    )
+    |> Access.where_topic_allowed(user, :view)
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
   def list_forks(_user, []), do: %{}
 
   def list_forks(user, message_ids) do
