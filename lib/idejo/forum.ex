@@ -1609,11 +1609,6 @@ defmodule Idejo.Forum do
   end
 
   @doc """
-  The topics started from each of the given messages (TP-09) that the user may view, as
-  `%{message_id => [topic]}`, oldest first: the source's "continued in" links.
-  """
-  @spec list_forks(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => [Topic.t()]}
-  @doc """
   TP-15: the banners under these messages for messages moved away from after them (steward
   request, 2026-11-14), as `%{message_id => [%{topic, count, new_topic}]}`, oldest move
   first; only to topics the user may view, and only while the message is still in the topic
@@ -1638,6 +1633,11 @@ defmodule Idejo.Forum do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
+  @doc """
+  The topics started from each of the given messages (TP-09) that the user may view, as
+  `%{message_id => [topic]}`, oldest first: the source's "continued in" links.
+  """
+  @spec list_forks(User.t() | nil, [Ecto.UUID.t()]) :: %{Ecto.UUID.t() => [Topic.t()]}
   def list_forks(_user, []), do: %{}
 
   def list_forks(user, message_ids) do
