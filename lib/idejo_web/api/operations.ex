@@ -236,6 +236,17 @@ defmodule IdejoWeb.Api.Operations do
         "Marks the welcome card (About, Rules, roles) seen."
       ),
       op(
+        :post,
+        "/me/intro",
+        MeController,
+        :intro,
+        "write",
+        "Me",
+        "Closes the getting-started card (`intro_due`) until the next sign-in; " <>
+          "with `hide: true` for good (Close and hide this in the future).",
+        body: "IntroClose"
+      ),
+      op(
         :get,
         "/me/warnings",
         MeController,
