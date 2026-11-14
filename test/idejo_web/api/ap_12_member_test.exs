@@ -59,6 +59,17 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     assert member_id == ctx.member.id
     assert Enum.find(map["mentions"], &(&1["type"] == "topic"))["id"] == ctx.topic.id
     assert Enum.find(map["mentions"], &(&1["type"] == "category"))["id"] == ctx.general.id
+
+    # Where each stands in the Markdown, as written there, ignoring case.
+    assert Enum.map(map["mentions"], &{&1["type"], &1["source"]}) == [
+             {"user", "@" <> String.downcase(ctx.member.username)},
+             {"topic", "#garden-plans"},
+             {"category", "/general"}
+           ]
+
+    for %{"source" => source} <- map["mentions"],
+        do: assert(String.downcase(body) =~ source)
+
     assert [%{"upload_id" => upload_id, "width" => 40, "height" => 30}] = map["images"]
     assert upload_id == upload.id
     assert map["spoiler"] == %{"overlay" => "Book 3"}

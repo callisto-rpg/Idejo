@@ -495,8 +495,9 @@ defmodule Idejo.Api do
   defp versions_count(%Message{versions: versions}) when is_list(versions), do: length(versions)
   defp versions_count(_message), do: 0
 
-  # What inline links lead to: users and topics by id, roles by slug, and categories and
-  # tags by slug with their id read here (one query each, only when some message has them).
+  # What inline links lead to: users by id, roles by slug, topics by id with their slug read
+  # here (for `source`), categories and tags by slug with their id read here (one query each,
+  # only when some message has them).
   defp slugs(messages) do
     links = Enum.flat_map(messages, &Structure.mentions(&1.body_html))
     wanted = fn type -> for(%{type: ^type, ref: ref} <- links, uniq: true, do: ref) end
@@ -521,7 +522,17 @@ defmodule Idejo.Api do
           |> Map.new()
       end
 
-    %{"category" => categories, "tag" => tags}
+    topics =
+      case wanted.("topic") do
+        [] ->
+          %{}
+
+        ids ->
+          ids = Enum.filter(ids, &match?({:ok, _}, Ecto.UUID.cast(&1)))
+          Repo.all(from t in Topic, where: t.id in ^ids, select: {t.id, t.slug}) |> Map.new()
+      end
+
+    %{"category" => categories, "tag" => tags, "topic" => topics}
   end
 
   defp mentions(nil, _slugs), do: []
@@ -532,18 +543,37 @@ defmodule Idejo.Api do
         case type do
           type when type in ["category", "tag"] -> Map.get(slugs[type], ref, {nil, nil})
           "role" -> {ref, String.trim_leading(text, "+")}
+          "forum" -> {ref, String.trim_leading(text, "&")}
           _other -> {ref, text |> String.trim_leading("@") |> String.trim_leading("#")}
         end
 
       %{
         "type" => type,
         "text" => text,
+        "source" => source(type, ref, text, slugs),
         "id" => id,
-        "slug" => if(type in ["role", "category", "tag"], do: ref),
+        "slug" => mention_slug(type, ref),
         "name" => name
       }
     end
   end
+
+  # How the link is written in the Markdown, lowercased (references are read ignoring case),
+  # so a client places it without reading the signs itself (AP-11).
+  defp source(type, ref, text, slugs) do
+    case type do
+      "user" -> String.downcase(text)
+      "role" -> "+" <> ref
+      "topic" -> slugs["topic"][ref] && "#" <> slugs["topic"][ref]
+      "category" -> "/" <> ref
+      "tag" -> "$" <> ref
+      "forum" -> "&" <> (ref |> String.split(".") |> hd() |> String.downcase())
+    end
+  end
+
+  defp mention_slug(type, ref) when type in ["role", "category", "tag"], do: ref
+  defp mention_slug("forum", host), do: host |> String.split(".") |> hd() |> String.downcase()
+  defp mention_slug(_type, _ref), do: nil
 
   defp uploads(messages) do
     names =

@@ -13,6 +13,7 @@ defmodule Idejo.ForumLinksTest do
   import Idejo.AccountsFixtures
 
   alias Idejo.Accounts.UserIdentity
+  alias Idejo.Api.Structure
   alias Idejo.{Markdown, Suggestions}
   alias Idejo.Messages.Body
 
@@ -91,6 +92,11 @@ defmodule Idejo.ForumLinksTest do
     assert LazyHTML.attribute(link, "href") == ["https://#{garden}/"]
     assert LazyHTML.attribute(link, "title") == ["&#{garden}"]
     assert LazyHTML.text(link) == "&Garden club"
+
+    # The API reads it as an inline link, by its host (AP-11).
+    assert Structure.mentions(html) == [
+             %{type: "forum", ref: garden, text: "&Garden club"}
+           ]
 
     # Not listed in the directory, or not joined: plain text.
     assert html =~ "&amp;kitchen#{n}"
