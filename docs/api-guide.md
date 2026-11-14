@@ -179,7 +179,9 @@ and never gets HTML:
   `&garden`): every match of it there, ignoring case, outside code and links, standing as a
   word of its own, is that link, so a client draws it in place without reading the signs.
   A `forum` link's `id` is the forum's host (it leads to `https://<id>/`), its `slug` the
-  first label of the host.
+  first label of the host. A `role` link's `id` and `slug` are the role's slug, which the
+  roles of `GET /me` and user cards carry too (`{id, name, slug, colour}`): a message
+  mentions the member's role when they match.
 - `images`: `{upload_id, url, alt, width, height}` (width and height for images uploaded
   since the API; GIFs have no `upload_id`).
 - `spoiler`: `{"overlay": …}` for a message hidden behind a cover, or null;

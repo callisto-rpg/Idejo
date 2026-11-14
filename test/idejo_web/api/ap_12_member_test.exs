@@ -125,6 +125,9 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     assert me["display_name"] == "Mia" and me["user_tag"] == "gardener" and
              me["bio_md"] == "I *grow*"
 
+    # Each role's slug, as a +role mention names it (the app's mention glow, Android TV-07).
+    assert %{"slug" => "member"} = Enum.find(me["roles"], &(&1["name"] == "member"))
+
     user = Accounts.get_user!(ctx.member.id)
     assert user.display_name == "Mia"
     assert user.bio_html =~ "<em>grow</em>"
