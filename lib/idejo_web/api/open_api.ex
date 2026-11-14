@@ -47,7 +47,8 @@ defmodule IdejoWeb.Api.OpenApi do
        ~w(open_message_id may_start_new_at held_until window_seconds unanswered_seconds reply_allowed_early now)},
     "CommitResult" => {~w(message composer), ~w(message composer)},
     "MessageWindow" =>
-      {~w(data first_message first_unread next_cursor prev_cursor cursor total earlier later), ~w(data cursor)},
+      {~w(data first_message first_unread next_cursor prev_cursor cursor total earlier later),
+       ~w(data cursor)},
     "Changes" => {~w(data cursor more topic), ~w(data cursor more)},
     "Unread" => {~w(following others counter), ~w(following others counter)},
     "Server" =>
