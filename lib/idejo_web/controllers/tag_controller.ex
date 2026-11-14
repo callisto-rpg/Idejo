@@ -36,10 +36,15 @@ defmodule IdejoWeb.TagController do
     )
   end
 
-  # Server-wide tags first, then each category's, in the categories' order.
+  # Server-wide tags first, then each category's, in the categories' order; a tag of several
+  # categories is under each.
   defp groups(tags) do
     tags
-    |> Enum.group_by(& &1.category)
+    |> Enum.flat_map(fn
+      %{categories: []} = tag -> [{nil, tag}]
+      tag -> Enum.map(tag.categories, &{&1, tag})
+    end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.sort_by(fn
       {nil, _} -> -1
       {category, _} -> category.position

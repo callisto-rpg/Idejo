@@ -28,12 +28,17 @@ defmodule Idejo.ForumTagsTest do
   end
 
   # Tag names are unique across the server: each test's tags have names of their own.
-  defp tag!(admin, name, category \\ nil) do
-    attrs = %{"name" => "#{name} #{System.unique_integer([:positive])}"}
-    attrs = if category, do: Map.put(attrs, "category_id", category.id), else: attrs
+  defp tag!(admin, name, categories \\ []) do
+    ids = categories |> List.wrap() |> Enum.map(& &1.id)
+    attrs = %{"name" => "#{name} #{System.unique_integer([:positive])}", "category_ids" => ids}
     {:ok, tag} = Tags.create_tag(admin, attrs)
     tag
   end
+
+  defp category_ids(tag),
+    do: tag |> Repo.reload!() |> Repo.preload(:categories) |> Map.get(:categories) |> ids()
+
+  defp ids(records), do: records |> Enum.map(& &1.id) |> Enum.sort()
 
   defp topic!(category, title, tags) do
     {:ok, topic} =
@@ -63,8 +68,8 @@ defmodule Idejo.ForumTagsTest do
     everywhere = tag!(admin, "Question")
     seeds = tag!(admin, "Seeds", general)
 
-    assert everywhere.category_id == nil
-    assert seeds.category_id == general.id
+    assert category_ids(everywhere) == []
+    assert category_ids(seeds) == [general.id]
     assert seeds.slug =~ ~r/^seeds-\d+$/
 
     assert Enum.map(Tags.available_tags(general), & &1.id) |> Enum.sort() ==
@@ -80,8 +85,10 @@ defmodule Idejo.ForumTagsTest do
              seeds.name
 
     {:ok, archive} = Forum.archive_category(admin)
-    {:error, changeset} = Tags.create_tag(admin, %{"name" => "Old", "category_id" => archive.id})
-    assert errors_on(changeset).category_id != []
+    {:error, changeset} =
+      Tags.create_tag(admin, %{"name" => "Old", "category_ids" => [archive.id]})
+
+    assert errors_on(changeset).category_ids != []
   end
 
   @tag req: "TP-19"
@@ -185,6 +192,49 @@ defmodule Idejo.ForumTagsTest do
     # Deleting a category deletes its own tags.
     {:ok, _} = Forum.delete_category(admin, general)
     refute Repo.get(Idejo.Forum.Tag, seeds.id)
+  end
+
+  @tag req: "TP-19"
+  test "TP-19 a tag of several categories: offered in each, kept by the others", %{
+    admin: admin,
+    general: general,
+    help: help
+  } do
+    {:ok, garden} = Forum.create_category(admin, %{"name" => "Garden"})
+    shared = tag!(admin, "Seeds", [general, help])
+    assert category_ids(shared) == ids([general, help])
+    assert shared.id in ids(Tags.available_tags(general))
+    assert shared.id in ids(Tags.available_tags(help))
+    refute shared.id in ids(Tags.available_tags(garden))
+    assert [%{change: "tag.create", after: %{"category_ids" => [_, _]}} | _] =
+             Audit.list_entries()
+
+    # Filter by tag lists it once, with both categories.
+    listed = Enum.find(Tags.list_viewable_tags(admin), &(&1.id == shared.id))
+    assert ids(listed.categories) == ids([general, help])
+
+    # A topic moved between them keeps it; moved elsewhere, it drops.
+    topic = topic!(general, "Plans", [shared])
+    {:ok, _} = Forum.move_topic(admin, topic, help)
+    assert tag_names(topic) == [shared.name]
+
+    # Taking a category off the tag takes it off that category's topics.
+    other = topic!(general, "More plans", [shared])
+    {:ok, edited} = Tags.update_tag(admin, shared, %{"category_ids" => [general.id]})
+    assert ids(edited.categories) == [general.id]
+    assert tag_names(topic) == []
+    assert tag_names(other) == [shared.name]
+
+    # Deleting one of its categories keeps a shared tag for the other.
+    {:ok, edited} = Tags.update_tag(admin, edited, %{"category_ids" => [general.id, garden.id]})
+    {:ok, _} = Forum.delete_category(admin, garden)
+    assert category_ids(edited) == [general.id]
+
+    # No category ticked: a tag for every category again.
+    {:ok, everywhere} = Tags.update_tag(admin, edited, %{"category_ids" => [""]})
+    assert everywhere.categories == []
+    assert shared.id in ids(Tags.available_tags(help))
+    assert tag_names(other) == [shared.name]
   end
 
   @tag req: "TP-19"

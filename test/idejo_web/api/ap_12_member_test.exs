@@ -213,7 +213,18 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     plain = api(ctx, :get, "/api/v1/topics/active") |> api_json(200) |> Map.get("data")
     refute Map.has_key?(hd(plain), "preview")
 
-    assert api(ctx, :get, "/api/v1/tags") |> api_json(200)
+    # Filter by tag: each tag with its categories, none for a tag of every category.
+    n = System.unique_integer([:positive])
+    {:ok, ours} =
+      Idejo.Forum.Tags.create_tag(ctx.admin, %{
+        "name" => "Ours #{n}",
+        "category_ids" => [ctx.general.id]
+      })
+
+    {:ok, all} = Idejo.Forum.Tags.create_tag(ctx.admin, %{"name" => "All #{n}"})
+    tags = api(ctx, :get, "/api/v1/tags") |> api_json(200) |> Map.get("data")
+    assert Enum.find(tags, &(&1["id"] == ours.id))["category_ids"] == [ctx.general.id]
+    assert Enum.find(tags, &(&1["id"] == all.id))["category_ids"] == []
 
     unread = api(ctx, :get, "/api/v1/unread") |> api_json(200)
     assert unread["counter"]["count"] == 0

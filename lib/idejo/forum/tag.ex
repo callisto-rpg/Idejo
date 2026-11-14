@@ -3,9 +3,10 @@
 
 defmodule Idejo.Forum.Tag do
   @moduledoc """
-  A topic tag (TP-19): made by administrators, server-wide (`category_id` nil) or belonging
-  to one category. Its name is unique across the server, ignoring case; its slug, made from
-  the name at creation, names it in `/tags` links and never changes.
+  A topic tag (TP-19): made by administrators, server-wide (no categories) or belonging to
+  one or more categories (`tag_categories`; steward decision, 2026-11-14). Its name is unique
+  across the server, ignoring case; its slug, made from the name at creation, names it in
+  `/tags` links and never changes.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -17,22 +18,24 @@ defmodule Idejo.Forum.Tag do
   schema "tags" do
     field :name, :string
     field :slug, :string
-    belongs_to :category, Idejo.Forum.Category
+
+    many_to_many :categories, Idejo.Forum.Category,
+      join_through: "tag_categories",
+      on_replace: :delete
 
     timestamps(type: :utc_datetime, inserted_at: :created_at)
   end
 
-  @doc "A changeset for a new tag: its name and where it belongs. The caller sets the slug."
+  @doc "A changeset for a new tag: its name. The caller sets the slug and the categories."
   def create_changeset(tag, attrs) do
     tag
-    |> cast(attrs, [:name, :category_id])
+    |> cast(attrs, [:name])
     |> validate_name()
     |> validate_required([:slug])
-    |> foreign_key_constraint(:category_id)
     |> unique_constraint(:slug)
   end
 
-  @doc "A changeset for renaming a tag. The slug and the category stay."
+  @doc "A changeset for renaming a tag. The slug stays."
   def update_changeset(tag, attrs), do: tag |> cast(attrs, [:name]) |> validate_name()
 
   defp validate_name(changeset) do

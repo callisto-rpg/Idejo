@@ -34,7 +34,7 @@ defmodule IdejoWeb.Api.OpenApi do
       {~w(id uri title slug url description icon colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
        ~w(id title slug permissions)},
     "Topic" => {@topic ++ ~w(first_message_id preview), @topic},
-    "Tag" => {~w(id name slug), ~w(id name slug)},
+    "Tag" => {~w(id name slug category_ids), ~w(id name slug)},
     "Message" => {@message, @message},
     "Poll" =>
       {~w(id question multiple hidden_until_closed closes_at closed results_shown total my_votes options),
@@ -159,6 +159,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "height" => "integer",
     "queued" => "integer",
     "following" => "array",
+    "category_ids" => "array",
     "days" => "integer",
     "hours" => "number",
     "data" => "array",
