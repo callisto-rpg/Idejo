@@ -12,6 +12,7 @@ defmodule IdejoWeb.Layouts do
   alias Idejo.Forum.CategoryIcons
   alias Idejo.Push
   alias Idejo.Push.Vapid
+  alias IdejoWeb.Plugs.ContinueSignIn
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
@@ -968,7 +969,7 @@ defmodule IdejoWeb.Layouts do
 
   # Conversations with something new: those still here, and those at the chat service
   # (steward request, 2026-11-10; kept a minute, nothing when it cannot be asked).
-  defp signed_in_at(url) when is_binary(url), do: IdejoWeb.Plugs.ContinueSignIn.mark(url)
+  defp signed_in_at(url) when is_binary(url), do: ContinueSignIn.mark(url)
   defp signed_in_at(_url), do: nil
 
   defp conversations_unread(user),

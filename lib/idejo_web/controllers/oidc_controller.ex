@@ -41,7 +41,7 @@ defmodule IdejoWeb.OIDCController do
     user = current_user(conn)
 
     cond do
-      intent != "sign_in" and is_nil(user) ->
+      intent in ["link", "reauth"] and is_nil(user) ->
         redirect(conn, to: ~p"/users/sign-in")
 
       intent in ["sign_in", "continue"] and user ->

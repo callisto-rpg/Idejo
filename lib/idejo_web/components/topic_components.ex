@@ -14,6 +14,7 @@ defmodule IdejoWeb.TopicComponents do
 
   alias Idejo.Forum.CategoryIcons
   alias Idejo.Forum.{TopicIcon, TopicIcons}
+  alias IdejoWeb.Plugs.ContinueSignIn
   alias IdejoWeb.UserComponents
 
   @hues 8
@@ -582,16 +583,16 @@ defmodule IdejoWeb.TopicComponents do
   defp unit(n, :hour, false), do: ngettext("1 hour ago", "%{count} hours ago", n)
   defp unit(n, :day, false), do: ngettext("yesterday", "%{count} days ago", n)
 
+  # A link to another forum's page (the inbox's rows): its visitor is signed in on arrival
+  # (`IdejoWeb.Plugs.ContinueSignIn`). Pictures keep `at/2`.
+  defp link_at("", path), do: path
+  defp link_at(base, path), do: base |> at(path) |> ContinueSignIn.mark()
+
   @doc """
   A path of this server, or of another forum when `base` is its address (the inbox): only
   paths are prefixed, never full addresses.
   """
   @spec at(String.t(), String.t() | nil) :: String.t() | nil
-  # A link to another forum's page (the inbox's rows): its visitor is signed in on arrival
-  # (`IdejoWeb.Plugs.ContinueSignIn`). Pictures keep `at/2`.
-  defp link_at("", path), do: path
-  defp link_at(base, path), do: base |> at(path) |> IdejoWeb.Plugs.ContinueSignIn.mark()
-
   def at(_base, nil), do: nil
   def at("", path), do: path
   def at(base, "/" <> _ = path), do: base <> path
