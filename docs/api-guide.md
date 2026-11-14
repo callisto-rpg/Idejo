@@ -172,8 +172,14 @@ Messages come as their Markdown source (`body_md`, exactly as stored) with struc
 objects beside it, so the app never parses idejo's extensions to know what a message holds,
 and never gets HTML:
 
-- `mentions`: inline links, each `{type, text, id, slug, name}`; `type` is `user`, `role`,
-  `topic`, `category` or `tag`. They were resolved as the author could see them.
+- `mentions`: inline links, each `{type, text, source, id, slug, name}`; `type` is `user`,
+  `role`, `topic`, `category`, `tag` or `forum`. They were resolved as the author could see
+  them. `text` is what readers see (`#Garden plans`, `+Moderator`, `&Garden club`); `source`
+  is how the link is written in `body_md`, lowercased (`#garden-plans`, `+moderator`,
+  `&garden`): every match of it there, ignoring case, outside code and links, standing as a
+  word of its own, is that link, so a client draws it in place without reading the signs.
+  A `forum` link's `id` is the forum's host (it leads to `https://<id>/`), its `slug` the
+  first label of the host.
 - `images`: `{upload_id, url, alt, width, height}` (width and height for images uploaded
   since the API; GIFs have no `upload_id`).
 - `spoiler`: `{"overlay": …}` for a message hidden behind a cover, or null;

@@ -9,7 +9,8 @@ defmodule Idejo.Api.Structure do
     * `mentions/1` reads the inline links (TP-10) from the stored HTML (FD-03), where they
       were resolved as the author could view them when written: `@user` → `/u/{id}`,
       `+role` → `/r/{slug}`, `#topic` → `/t/{id}`, `/category` → `/c/{slug}`, `$tag` →
-      `/tags?tags[]={slug}`. Their text is what readers see (`@robin`, `#Garden plans`).
+      `/tags?tags[]={slug}`, and `&forum` → its own address, titled `&<its host>`. Their
+      text is what readers see (`@robin`, `#Garden plans`, `&Garden club`).
     * `images/1` reads the Markdown's images: uploads (TP-12) by their file name, and
       others (GIFs) by their address.
 
@@ -18,13 +19,22 @@ defmodule Idejo.Api.Structure do
 
   @sigils %{"u" => "user", "r" => "role", "t" => "topic", "c" => "category"}
 
-  @link ~r{<a href="(/(u|r|t|c)/([^"/?#]+)|/tags\?tags(?:%5B%5D|\[\])=([^"&]+))"[^>]*>(.*?)</a>}s
+  # Idejo.Messages.Body's links: this server's paths, or another forum's address with the
+  # title "&<its host>" (the title's "&" may come escaped).
+  @link ~r{
+    <a\shref="(?:
+      /(u|r|t|c)/([^"/?#]+)
+      | /tags\?tags(?:%5B%5D|\[\])=([^"&]+)
+      | (https://[^"]+)
+    )"(?:[^>]*?\stitle="&(?:amp;)?([^"]+)")?[^>]*>(.*?)</a>
+  }sx
 
   @type mention :: %{type: String.t(), ref: String.t(), text: String.t()}
 
   @doc """
   The inline links of a message's HTML, in order, each once: `%{type, ref, text}`, `ref`
-  being the id (users, topics) or the slug (roles, categories, tags).
+  being the id (users, topics), the slug (roles, categories, tags) or the host (forums).
+  Other links are not inline links.
   """
   @spec mentions(String.t() | nil) :: [mention()]
   def mentions(nil), do: []
@@ -32,10 +42,20 @@ defmodule Idejo.Api.Structure do
   def mentions(html) when is_binary(html) do
     @link
     |> Regex.scan(html, capture: :all_but_first)
-    |> Enum.map(fn
-      [_href, kind, ref, "", text] -> %{type: @sigils[kind], ref: ref, text: text(text)}
-      [_href, "", "", slug, text] -> %{type: "tag", ref: URI.decode(slug), text: text(text)}
-      [_href, kind, ref, text] -> %{type: @sigils[kind], ref: ref, text: text(text)}
+    |> Enum.flat_map(fn captures ->
+      case captures do
+        [kind, ref, _, _, _, text] when kind != "" ->
+          [%{type: @sigils[kind], ref: ref, text: text(text)}]
+
+        ["", "", slug, _, _, text] when slug != "" ->
+          [%{type: "tag", ref: URI.decode(slug), text: text(text)}]
+
+        ["", "", "", _url, host, text] when host != "" ->
+          [%{type: "forum", ref: host, text: text(text)}]
+
+        _plain_link ->
+          []
+      end
     end)
     |> Enum.uniq_by(&{&1.type, &1.ref})
   end

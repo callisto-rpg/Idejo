@@ -92,6 +92,11 @@ defmodule Idejo.ForumLinksTest do
     assert LazyHTML.attribute(link, "title") == ["&#{garden}"]
     assert LazyHTML.text(link) == "&Garden club"
 
+    # The API reads it as an inline link, by its host (AP-11).
+    assert Idejo.Api.Structure.mentions(html) == [
+             %{type: "forum", ref: garden, text: "&Garden club"}
+           ]
+
     # Not listed in the directory, or not joined: plain text.
     assert html =~ "&amp;kitchen#{n}"
     assert html =~ "&amp;nowhere"
