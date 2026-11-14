@@ -221,14 +221,14 @@ defmodule IdejoWeb.TagsTest do
 
     html =
       lv
-      |> form("#new-tag-form", tag: %{name: name, category_id: general.id})
+      |> form("#new-tag-form", tag: %{name: name, category_ids: [general.id]})
       |> render_submit()
 
     assert html =~ "Tag “#{name}” created."
-    tag = Repo.get_by!(Idejo.Forum.Tag, name: name)
-    assert tag.category_id == general.id
+    tag = Idejo.Forum.Tag |> Repo.get_by!(name: name) |> Repo.preload(:categories)
+    assert Enum.map(tag.categories, & &1.id) == [general.id]
 
-    lv |> element("#tag-#{tag.id} button", "Rename") |> render_click()
+    lv |> element("#tag-#{tag.id} button", "Edit") |> render_click()
 
     assert lv
            |> form("#edit-tag-#{tag.id}", edit: %{name: name <> "!"})

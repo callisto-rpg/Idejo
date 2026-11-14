@@ -22,7 +22,7 @@ defmodule Idejo.Suggestions do
   alias Idejo.Access.Role
   alias Idejo.Accounts.User
   alias Idejo.Community
-  alias Idejo.Forum.{Category, Tag, Topic}
+  alias Idejo.Forum.{Category, Tag, Tags, Topic}
   alias Idejo.Messages.Message
   alias Idejo.Reading.ReadPosition
   alias Idejo.Repo
@@ -136,10 +136,8 @@ defmodule Idejo.Suggestions do
       )
       |> Enum.uniq()
 
-    from(t in Tag,
-      where: is_nil(t.category_id) or t.category_id in subquery(viewable(user)),
-      order_by: [asc: fragment("lower(?)", t.name)]
-    )
+    from(t in Tag, order_by: [asc: fragment("lower(?)", t.name)])
+    |> Tags.where_offered(viewable(user))
     |> Repo.all()
     |> Enum.filter(&(query == "" or starts?(&1.slug, query) or starts?(&1.name, query)))
     |> ranked(recent)

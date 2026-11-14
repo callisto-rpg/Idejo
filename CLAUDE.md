@@ -1389,11 +1389,16 @@ The contract (M6; mark each item done here when its PR merges):
   who did not unfollow, then filtered by view) all read it.
 - **Tags** (TP-19, `Idejo.Forum.Tags`, `Idejo.Forum.Tag`; steward decision, 2026-10-22:
   built in M5 though the MVP sheet defers tags): administrators make them in **Admin → Tags**
-  (`Admin.TagsLive`), server-wide (`category_id` nil) or for one category (never the Archive),
-  rename and delete them, audited as `tag.create|update|delete`. Names are unique across the
-  server ignoring case; the slug is made at creation and kept. A category offers the
-  server-wide tags and its own (`Tags.available_tags/1`); `Forum.create_topic/4` takes
-  `tag_ids` and needs at least one when the category offers any (`change_new_topic/2`), and
+  (`Admin.TagsLive`), server-wide (no category) or for one or more categories (steward
+  decision, 2026-11-14: `tag_categories`, a checklist; never the Archive), rename them,
+  change their categories (topics in a category that no longer offers one lose it) and
+  delete them, audited as `tag.create|update|delete`. Names are unique across the server
+  ignoring case; the slug is made at creation and kept. A category offers the server-wide
+  tags and its own (`Tags.available_tags/1`; queries use `Tags.where_offered/2`, never a
+  tag's categories by hand); deleting a category deletes the tags only it holds
+  (`Tags.delete_own_tags/1`). Filter by tag shows a tag of several categories under each,
+  and `GET /api/v1/tags` gives its `category_ids` the reader may view. `Forum.create_topic/4`
+  takes `tag_ids` and needs at least one when the category offers any (`change_new_topic/2`), and
   the topic's `create` activity carries `tag`. A topic's tags change through
   `Forum.set_topic_tags/4`, which needs the `:tag` right ("Edit tags" in the grid, allowed
   server-wide for the built-in moderator by the migration), refuses archived topics, and is

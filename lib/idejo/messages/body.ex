@@ -31,7 +31,7 @@ defmodule Idejo.Messages.Body do
   alias Idejo.Access
   alias Idejo.Access.UserRole
   alias Idejo.Accounts.User
-  alias Idejo.Forum.{Category, Tag, Topic}
+  alias Idejo.Forum.{Category, Tag, Tags, Topic}
   alias Idejo.Markdown
   alias Idejo.Messages.Message
   alias Idejo.Plugins
@@ -147,7 +147,7 @@ defmodule Idejo.Messages.Body do
           {{:category, category.slug}, {"/c/" <> category.slug, label}}
         end) ++
         Enum.map(tags(author, slugs(references, :tag)), fn tag ->
-          label = if tag.category_id == nil or visible.(tag.category_id), do: "$" <> tag.name
+          label = if tag_visible?(tag, visible), do: "$" <> tag.name
           {{:tag, tag.slug}, {"/tags?tags[]=" <> tag.slug, label}}
         end) ++
         Enum.map(forums(author, slugs(references, :forum)), fn forum ->
@@ -261,9 +261,16 @@ defmodule Idejo.Messages.Body do
     viewable = Category |> Access.where_allowed(author, :view) |> select([c], c.id)
 
     Repo.all(
-      from t in Tag,
+      from t in Tags.where_offered(Tag, viewable),
         where: t.slug in ^slugs,
-        where: is_nil(t.category_id) or t.category_id in subquery(viewable)
+        preload: :categories
     )
   end
+
+  # A tag's name shows when every reader may see where it belongs: server-wide, or one of its
+  # categories' names is shown.
+  defp tag_visible?(%Tag{categories: []}, _visible), do: true
+
+  defp tag_visible?(%Tag{categories: categories}, visible),
+    do: Enum.any?(categories, &visible.(&1.id))
 end

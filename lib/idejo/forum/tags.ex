@@ -5,11 +5,12 @@ defmodule Idejo.Forum.Tags do
   @moduledoc """
   Topic tags (TP-19; steward decision, 2026-10-22).
 
-  Administrators make tags in **Admin → Tags**, server-wide or for one category, and rename
+  Administrators make tags in **Admin → Tags**, server-wide or for one or more categories
+  (`tag_categories`; steward decision, 2026-11-14), and rename them, change their categories
   or delete them; each change is audited (`tag.create`, `tag.update`, `tag.delete`). A
-  topic's category offers the server-wide tags and its own (`available_tags/1`): starting a
-  topic there takes at least one of them when there are any. Users with the `:tag` right
-  change a topic's tags (`Idejo.Forum.set_topic_tags/4`).
+  topic's category offers the server-wide tags and its own (`available_tags/1`,
+  `where_offered/2`): starting a topic there takes at least one of them when there are any.
+  Users with the `:tag` right change a topic's tags (`Idejo.Forum.set_topic_tags/4`).
 
   "Filter by tag" (`/tags`) lists the topics carrying every chosen tag
   (`list_tagged_topics/3`), only in categories the user may view.
@@ -28,41 +29,68 @@ defmodule Idejo.Forum.Tags do
   def ordered, do: from(t in Tag, order_by: [asc: fragment("lower(?)", t.name), asc: t.id])
 
   @doc """
-  Every tag, with its category: the server-wide ones first, then by category in order, each
-  by name. For the admin page.
+  Limits a query of tags to those offered in a category: the server-wide ones (no
+  categories) and those linked to `category`, a category id or a query selecting ids (every
+  category a user may view, `Access.where_allowed/3`).
+  """
+  @spec where_offered(Ecto.Queryable.t(), Ecto.UUID.t() | Ecto.Query.t()) :: Ecto.Query.t()
+  def where_offered(query, %Ecto.Query{} = category_ids) do
+    offered =
+      from tc in "tag_categories",
+        where: tc.category_id in subquery(category_ids),
+        select: type(tc.tag_id, :binary_id)
+
+    from t in query, where: t.id not in subquery(linked()) or t.id in subquery(offered)
+  end
+
+  def where_offered(query, category_id) when is_binary(category_id) do
+    from t in query,
+      where: t.id not in subquery(linked()) or t.id in subquery(linked_to(category_id))
+  end
+
+  # Tags with at least one category, and those of `category_id`.
+  defp linked, do: from(tc in "tag_categories", select: type(tc.tag_id, :binary_id))
+
+  defp linked_to(category_id),
+    do:
+      from(tc in "tag_categories",
+        where: tc.category_id == type(^category_id, :binary_id),
+        select: type(tc.tag_id, :binary_id)
+      )
+
+  @doc """
+  Every tag, with its categories: the server-wide ones first, then by their first category in
+  order, each by name. For the admin page.
   """
   @spec list_tags() :: [Tag.t()]
   def list_tags do
-    Repo.all(
-      from t in Tag,
-        left_join: c in assoc(t, :category),
-        order_by: [
-          asc: fragment("? IS NOT NULL", t.category_id),
-          asc: c.position,
-          asc: fragment("lower(?)", t.name)
-        ],
-        preload: [category: c]
-    )
+    from(t in Tag, preload: [categories: ^from(c in Category, order_by: c.position)])
+    |> Repo.all()
+    |> Enum.sort_by(fn tag ->
+      case tag.categories do
+        [] -> {0, 0, String.downcase(tag.name)}
+        [first | _] -> {1, first.position, String.downcase(tag.name)}
+      end
+    end)
   end
 
   @doc "The tags a topic in the category may take: the server-wide ones and its own."
   @spec available_tags(Category.t()) :: [Tag.t()]
-  def available_tags(%Category{id: category_id}) do
-    Repo.all(from t in ordered(), where: is_nil(t.category_id) or t.category_id == ^category_id)
-  end
+  def available_tags(%Category{id: category_id}),
+    do: Repo.all(where_offered(ordered(), category_id))
 
   @doc """
   The tags the visitor (`nil`) or user may filter by: the server-wide ones and those of the
-  categories they may view, with their category, by name.
+  categories they may view, by name, each with those of its categories they may view (in
+  order; none for a server-wide tag).
   """
   @spec list_viewable_tags(User.t() | nil) :: [Tag.t()]
   def list_viewable_tags(user) do
-    viewable = Category |> Access.where_allowed(user, :view) |> select([c], c.id)
+    viewable = Category |> Access.where_allowed(user, :view)
 
     Repo.all(
-      from t in ordered(),
-        where: is_nil(t.category_id) or t.category_id in subquery(viewable),
-        preload: :category
+      from t in where_offered(ordered(), select(viewable, [c], c.id)),
+        preload: [categories: ^order_by(viewable, [c], c.position)]
     )
   end
 
@@ -110,55 +138,75 @@ defmodule Idejo.Forum.Tags do
   def change_tag(%Tag{} = tag, attrs), do: Tag.update_changeset(tag, attrs)
 
   @doc """
-  Creates a tag, as `admin`: `name`, and `category_id` for a tag of one category (empty for a
-  server-wide one; never the Archive). The slug is made from the name. Audited as
-  `tag.create`.
+  Creates a tag, as `admin`: `name`, and `category_ids` for a tag of those categories (none
+  for a server-wide one; never the Archive; `category_id` names one). The slug is made from
+  the name. Audited as `tag.create`.
   """
   @spec create_tag(User.t(), map()) :: {:ok, Tag.t()} | {:error, Ecto.Changeset.t()}
   def create_tag(%User{} = admin, attrs),
     do: Idejo.Access.as_administrator(admin, fn -> as_admin_insert_tag(admin, attrs) end)
 
   defp as_admin_insert_tag(%User{} = admin, attrs) do
-    attrs = Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
-    attrs = Map.update(attrs, "category_id", nil, &if(&1 == "", do: nil, else: &1))
+    attrs = string_keys(attrs)
     slug = free_slug(Forum.slugify(attrs["name"] || "", "tag"))
 
     changeset =
-      %Tag{slug: slug}
+      %Tag{slug: slug, categories: []}
       |> Tag.create_changeset(attrs)
-      |> validate_category()
+      |> put_categories(category_ids(attrs) || [])
 
     Repo.transact(fn ->
       with {:ok, tag} <- Repo.insert(changeset),
            {:ok, _} <- Audit.record(admin, "tag.create", nil, snapshot(tag)) do
-        {:ok, Repo.preload(tag, :category)}
+        {:ok, tag}
       end
     end)
   end
 
-  defp validate_category(changeset) do
-    case Ecto.Changeset.get_change(changeset, :category_id) do
-      nil ->
-        changeset
+  defp string_keys(attrs), do: Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 
-      id ->
-        with {:ok, id} <- Ecto.UUID.cast(id),
-             %Category{archive: false} <- Repo.get(Category, id) do
-          changeset
-        else
-          _ -> Ecto.Changeset.add_error(changeset, :category_id, "is not a category")
-        end
+  # The categories asked for: `category_ids` (a list; a form sends "" for none ticked) or
+  # one `category_id`; nil when neither is given.
+  defp category_ids(%{"category_ids" => ids}), do: ids |> List.wrap() |> Enum.reject(&(&1 == ""))
+  defp category_ids(%{"category_id" => id}) when id in [nil, ""], do: []
+  defp category_ids(%{"category_id" => id}), do: [id]
+  defp category_ids(_attrs), do: nil
+
+  defp put_categories(changeset, ids) do
+    ids = Enum.uniq(ids)
+    uuids = for id <- ids, {:ok, uuid} <- [Ecto.UUID.cast(id)], do: uuid
+
+    categories =
+      Repo.all(from c in Category, where: c.id in ^uuids and not c.archive, order_by: c.position)
+
+    if length(categories) == length(ids) do
+      Ecto.Changeset.put_assoc(changeset, :categories, categories)
+    else
+      Ecto.Changeset.add_error(changeset, :category_ids, "is not a category")
     end
   end
 
-  @doc "Renames a tag, as `admin`; its slug and category stay. Audited as `tag.update`."
+  @doc """
+  Renames a tag or changes its categories (`category_ids`), as `admin`; its slug stays.
+  Topics in a category that no longer offers it lose it. Audited as `tag.update`.
+  """
   @spec update_tag(User.t(), Tag.t(), map()) :: {:ok, Tag.t()} | {:error, Ecto.Changeset.t()}
   def update_tag(%User{} = admin, %Tag{} = tag, attrs),
     do: Idejo.Access.as_administrator(admin, fn -> as_admin_save_tag(admin, tag, attrs) end)
 
   defp as_admin_save_tag(%User{} = admin, %Tag{} = tag, attrs) do
-    case Tag.update_changeset(tag, attrs) do
-      %Ecto.Changeset{changes: changes} when changes == %{} ->
+    attrs = string_keys(attrs)
+    tag = Repo.preload(tag, :categories)
+    changeset = Tag.update_changeset(tag, attrs)
+
+    changeset =
+      case category_ids(attrs) do
+        nil -> changeset
+        ids -> put_categories(changeset, ids)
+      end
+
+    case changeset do
+      %Ecto.Changeset{changes: changes, valid?: true} when changes == %{} ->
         {:ok, tag}
 
       changeset ->
@@ -168,9 +216,31 @@ defmodule Idejo.Forum.Tags do
 
   defp save_tag(admin, tag, changeset) do
     with {:ok, updated} <- Repo.update(changeset),
+         _ = drop_unoffered(updated),
          {:ok, _} <- Audit.record(admin, "tag.update", snapshot(tag), snapshot(updated)) do
       {:ok, updated}
     end
+  end
+
+  # Topics whose category no longer offers `tag` lose it; a server-wide tag stays everywhere.
+  defp drop_unoffered(%Tag{categories: []}), do: 0
+
+  defp drop_unoffered(%Tag{id: id, categories: categories}) do
+    category_ids = Enum.map(categories, & &1.id)
+
+    elsewhere =
+      from t in Topic,
+        where: not is_nil(t.category_id) and t.category_id not in ^category_ids,
+        select: t.id
+
+    {count, _} =
+      Repo.delete_all(
+        from tt in "topic_tags",
+          where: tt.tag_id == type(^id, :binary_id),
+          where: tt.topic_id in subquery(elsewhere)
+      )
+
+    count
   end
 
   @doc """
@@ -182,6 +252,8 @@ defmodule Idejo.Forum.Tags do
     do: Idejo.Access.as_administrator(admin, fn -> as_admin_remove_tag(admin, tag) end)
 
   defp as_admin_remove_tag(%User{} = admin, %Tag{} = tag) do
+    tag = Repo.preload(tag, :categories)
+
     Repo.transact(fn ->
       topics =
         Repo.aggregate(
@@ -209,14 +281,14 @@ defmodule Idejo.Forum.Tags do
   end
 
   @doc """
-  Removes from the topics the tags of categories other than `category_id`: a topic moved to
-  another category keeps only the server-wide tags and the new category's (TP-15).
+  Removes from the topics the tags `category_id` does not offer: a topic moved to another
+  category keeps only the server-wide tags and the new category's (TP-15).
   """
   @spec drop_foreign_tags([Ecto.UUID.t()], Ecto.UUID.t()) :: non_neg_integer()
   def drop_foreign_tags(topic_ids, category_id) do
     foreign =
       from t in Tag,
-        where: not is_nil(t.category_id) and t.category_id != ^category_id,
+        where: t.id in subquery(linked()) and t.id not in subquery(linked_to(category_id)),
         select: t.id
 
     {count, _} =
@@ -229,7 +301,31 @@ defmodule Idejo.Forum.Tags do
     count
   end
 
-  defp snapshot(tag), do: Audit.snapshot(tag, [:name, :slug, :category_id])
+  @doc """
+  Deletes the tags only `category_id` holds, as its deletion would leave them server-wide;
+  tags it shares with other categories stay theirs. Called by `Forum.delete_category/3`.
+  """
+  @spec delete_own_tags(Ecto.UUID.t()) :: non_neg_integer()
+  def delete_own_tags(category_id) do
+    shared =
+      from tc in "tag_categories",
+        where: tc.category_id != type(^category_id, :binary_id),
+        select: type(tc.tag_id, :binary_id)
+
+    {count, _} =
+      Repo.delete_all(
+        from t in Tag,
+          where: t.id in subquery(linked_to(category_id)) and t.id not in subquery(shared)
+      )
+
+    count
+  end
+
+  defp snapshot(tag) do
+    tag
+    |> Audit.snapshot([:name, :slug])
+    |> Map.put("category_ids", Enum.map(tag.categories, & &1.id))
+  end
 
   defp free_slug(base) do
     taken = MapSet.new(Repo.all(from t in Tag, where: like(t.slug, ^"#{base}%"), select: t.slug))

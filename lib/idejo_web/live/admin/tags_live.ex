@@ -3,9 +3,10 @@
 
 defmodule IdejoWeb.Admin.TagsLive do
   @moduledoc """
-  Admin panel: topic tags (TP-19). Create tags for every category (server-wide) or for one,
-  rename them, and delete them (topics lose them). Where a tag belongs is set at creation and
-  kept. Who may change a topic's tags is the "Edit tags" right in Permissions.
+  Admin panel: topic tags (TP-19). Create tags for every category (server-wide, no category
+  ticked) or for one or more (steward decision, 2026-11-14), rename them or change their
+  categories (topics in a category that no longer offers one lose it), and delete them
+  (topics lose them). Who may change a topic's tags is the "Edit tags" right in Permissions.
   """
   use IdejoWeb, :live_view
 
@@ -82,8 +83,43 @@ defmodule IdejoWeb.Admin.TagsLive do
     end
   end
 
-  defp where(%Tag{category: nil}), do: gettext("All categories")
-  defp where(%Tag{category: category}), do: category.name
+  defp where(%Tag{categories: []}), do: gettext("All categories")
+  defp where(%Tag{categories: categories}), do: Enum.map_join(categories, ", ", & &1.name)
+
+  # The categories ticked: a tag's own, or what a refused form sent back.
+  defp ticked(%Phoenix.HTML.Form{params: %{"category_ids" => ids}}, _tag), do: List.wrap(ids)
+  defp ticked(_form, %Tag{categories: categories}), do: Enum.map(categories, & &1.id)
+  defp ticked(_form, nil), do: []
+
+  attr :name, :string, required: true
+  attr :id, :string, required: true
+  attr :categories, :list, required: true
+  attr :ticked, :list, required: true
+
+  # A checkbox per category; none ticked is a tag for every category. The hidden empty value
+  # sends the list even when nothing is ticked.
+  defp category_choice(assigns) do
+    ~H"""
+    <fieldset id={@id} class="w-full">
+      <legend class="text-sm">
+        {gettext("Categories (none ticked: all categories)")}
+      </legend>
+      <input type="hidden" name={@name} value="" />
+      <div class="flex flex-wrap gap-x-4 gap-y-1">
+        <label :for={category <- @categories} class="flex items-center gap-1 text-sm">
+          <input
+            type="checkbox"
+            name={@name}
+            value={category.id}
+            checked={category.id in @ticked}
+            class="checkbox checkbox-xs"
+          />
+          {category.name}
+        </label>
+      </div>
+    </fieldset>
+    """
+  end
 
   defp delete_question(tag, 0), do: gettext("Delete the tag “%{name}”?", name: tag.name)
 
@@ -129,6 +165,12 @@ defmodule IdejoWeb.Admin.TagsLive do
                 class="flex flex-wrap items-end gap-3 w-full"
               >
                 <.input field={form[:name]} type="text" label={gettext("Name")} required />
+                <.category_choice
+                  id={"edit-tag-#{tag.id}-categories"}
+                  name="edit[category_ids][]"
+                  categories={@categories}
+                  ticked={ticked(form, tag)}
+                />
                 <.button class="btn btn-primary btn-sm">{gettext("Save")}</.button>
                 <button type="button" class="btn btn-sm" phx-click="cancel_edit">
                   {gettext("Cancel")}
@@ -146,9 +188,9 @@ defmodule IdejoWeb.Admin.TagsLive do
                 class="btn btn-xs"
                 phx-click="edit"
                 phx-value-id={tag.id}
-                aria-label={gettext("Rename %{name}", name: tag.name)}
+                aria-label={gettext("Edit %{name}", name: tag.name)}
               >
-                {gettext("Rename")}
+                {gettext("Edit")}
               </button>
               <button
                 type="button"
@@ -173,11 +215,11 @@ defmodule IdejoWeb.Admin.TagsLive do
           class="flex flex-wrap items-end gap-3"
         >
           <.input field={@new_form[:name]} type="text" label={gettext("Name")} required />
-          <.input
-            field={@new_form[:category_id]}
-            type="select"
-            label={gettext("For")}
-            options={[{gettext("All categories"), ""} | Enum.map(@categories, &{&1.name, &1.id})]}
+          <.category_choice
+            id="new-tag-categories"
+            name="tag[category_ids][]"
+            categories={@categories}
+            ticked={ticked(@new_form, nil)}
           />
           <.button class="btn btn-primary">{gettext("Create tag")}</.button>
         </.form>

@@ -211,17 +211,27 @@ defmodule Idejo.Api do
 
   # The tags each category offers (`Tags.available_tags/1`): the server-wide ones and its own.
   defp category_tags(category_ids) do
-    tags = Repo.all(from t in Tag, order_by: [asc: t.name])
-    server_wide = Enum.filter(tags, &is_nil(&1.category_id))
+    tags = Repo.all(from t in Tag, order_by: [asc: t.name], preload: :categories)
+    server_wide = Enum.filter(tags, &(&1.categories == []))
 
     Map.new(category_ids, fn id ->
-      {id, server_wide ++ Enum.filter(tags, &(&1.category_id == id))}
+      {id, server_wide ++ Enum.filter(tags, &in_category?(&1, id))}
     end)
   end
+
+  defp in_category?(tag, category_id), do: Enum.any?(tag.categories, &(&1.id == category_id))
 
   @doc "A tag: id, name and slug."
   @spec tag(Tag.t()) :: map()
   def tag(%Tag{} = tag), do: %{"id" => tag.id, "name" => tag.name, "slug" => tag.slug}
+
+  @doc """
+  A tag for Filter by tag (`GET /tags`): as `tag/1`, with `category_ids`, the categories it
+  belongs to that the reader may view (preloaded so), empty for a server-wide tag.
+  """
+  @spec listed_tag(Tag.t()) :: map()
+  def listed_tag(%Tag{} = tag),
+    do: Map.put(tag(tag), "category_ids", Enum.map(tag.categories, & &1.id))
 
   ## Topics
 

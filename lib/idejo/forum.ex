@@ -379,6 +379,9 @@ defmodule Idejo.Forum do
     * `:archive` - to the Archive category, archived and read-only (TP-14). The Archive is
       made the first time something is archived (`archive_category/1`).
 
+  Tags only this category holds are deleted with it (TP-19); tags it shares stay with the
+  other categories.
+
   Each topic gets an `update` activity with its new category, and the audit entry records
   where the topics went. Without `topics:` the category is kept (`{:error, :has_topics}`).
   The Archive itself is never deleted (`{:error, :archive}`).
@@ -400,6 +403,7 @@ defmodule Idejo.Forum do
         with :ok <- check_deletable(category),
              {:ok, moved} <- move_topics_away(admin, category, topic_ids, opts[:topics]),
              closed = close_if_archived(topic_ids, opts[:topics]),
+             _ = Tags.delete_own_tags(category.id),
              {:ok, deleted} <- Repo.delete(category),
              {_, _} <-
                Repo.update_all(from(c in Category, where: c.position > ^category.position),
@@ -441,7 +445,8 @@ defmodule Idejo.Forum do
 
     if target && target.id != category.id && !target.archive do
       move_topics(admin, ids, target, %{})
-      # TP-19: the deleted category's own tags go with it; nothing else to drop.
+      # TP-19: tags the target does not offer drop (one the category shared with a third).
+      _ = Tags.drop_foreign_tags(ids, target.id)
       {:ok, %{"topics" => %{"count" => length(ids), "moved_to" => target.slug}}}
     else
       {:error, :invalid_target}

@@ -46,7 +46,7 @@ defmodule IdejoWeb.Api.TopicController do
   end
 
   def tags(conn, _params),
-    do: send_list(conn, Enum.map(Tags.list_viewable_tags(user(conn)), &Api.tag/1))
+    do: send_list(conn, Enum.map(Tags.list_viewable_tags(user(conn)), &Api.listed_tag/1))
 
   def unread(conn, params) do
     user = user(conn)

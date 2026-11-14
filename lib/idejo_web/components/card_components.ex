@@ -112,9 +112,12 @@ defmodule IdejoWeb.CardComponents do
       <span class="inline-card-sign" aria-hidden="true">$</span>{@card.tag.name}
     </h2>
     <p class="inline-card-meta">
-      {if @card.tag.category,
-        do: gettext("A tag of %{category}", category: @card.tag.category.name),
-        else: gettext("A tag for every category")}
+      {if @card.tag.categories == [],
+        do: gettext("A tag for every category"),
+        else:
+          gettext("A tag of %{category}",
+            category: Enum.map_join(@card.tag.categories, ", ", & &1.name)
+          )}
     </p>
     <.topic_links topics={@card.topics} label={gettext("Latest topics")} />
     <p :if={@card.topics == []} class="inline-card-meta">{gettext("No topics carry it yet.")}</p>
