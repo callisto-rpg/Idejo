@@ -236,8 +236,9 @@ defmodule IdejoWeb.Layouts do
         dot?: member? and Chat.for?(assigns.user),
         conversations_unread: if(member?, do: conversations_unread(assigns.user), else: 0),
         # The chat service (steward request, 2026-11-10): the same button leads there.
-        conversations_url: (Chat.for?(assigns.user) && Chat.url()) || ~p"/p",
-        topics_url: member? && Chat.topics_url(assigns.user)
+        # On the group's inbox, signed in on arrival (steward request, 2026-11-14).
+        conversations_url: (Chat.for?(assigns.user) && signed_in_at(Chat.url())) || ~p"/p",
+        topics_url: member? && signed_in_at(Chat.topics_url(assigns.user))
       )
 
     ~H"""
@@ -967,6 +968,9 @@ defmodule IdejoWeb.Layouts do
 
   # Conversations with something new: those still here, and those at the chat service
   # (steward request, 2026-11-10; kept a minute, nothing when it cannot be asked).
+  defp signed_in_at(url) when is_binary(url), do: IdejoWeb.Plugs.ContinueSignIn.mark(url)
+  defp signed_in_at(_url), do: nil
+
   defp conversations_unread(user),
     do: Idejo.Conversations.unread_count(user) + Chat.unread(user)
 

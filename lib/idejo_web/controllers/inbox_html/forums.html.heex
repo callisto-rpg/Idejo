@@ -25,7 +25,12 @@
           loading="lazy"
         />
         <h2 class="category-card-name">
-          <a href={forum.url} class="category-card-link">{forum.name}</a>
+          <a
+            href={IdejoWeb.Plugs.ContinueSignIn.mark(forum.url)}
+            class="category-card-link"
+          >
+            {forum.name}
+          </a>
         </h2>
       </div>
       <p class="category-card-stats">{URI.parse(forum.url).host}</p>

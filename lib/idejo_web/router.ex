@@ -21,6 +21,7 @@ defmodule IdejoWeb.Router do
     plug :fetch_current_scope_for_user
     plug IdejoWeb.Plugs.ContentSecurityPolicy
     plug IdejoWeb.Plugs.RequireSetup
+    plug IdejoWeb.Plugs.ContinueSignIn
   end
 
   pipeline :api do

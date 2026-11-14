@@ -245,7 +245,11 @@ defmodule IdejoWeb.TopicComponents do
 
   def topic_row(assigns) do
     assigns =
-      assign(assigns, :href, at(assigns.base, ~p"/t/#{assigns.topic.id}/#{assigns.topic.slug}"))
+      assign(
+        assigns,
+        :href,
+        link_at(assigns.base, ~p"/t/#{assigns.topic.id}/#{assigns.topic.slug}")
+      )
 
     # With a forum logo (the inbox; steward request, 2026-11-13): the logo at the left and
     # what is new at the right, both outside the card, which is the row's middle.
@@ -330,14 +334,14 @@ defmodule IdejoWeb.TopicComponents do
       <span :if={@forum} aria-hidden="true">›</span>
       <a
         :if={@lead == :category}
-        href={at(@base, ~p"/c/#{@topic.category.slug}")}
+        href={link_at(@base, ~p"/c/#{@topic.category.slug}")}
         class="topic-category"
       >
         {@topic.category.name}
       </a>
       <a
         :if={@lead == :author && @category}
-        href={at(@base, ~p"/c/#{@topic.category.slug}")}
+        href={link_at(@base, ~p"/c/#{@topic.category.slug}")}
         class="topic-category"
       >
         <.category_mark category={@topic.category} />
@@ -437,7 +441,7 @@ defmodule IdejoWeb.TopicComponents do
               size={:small}
               base={@base}
             />
-            <a href={at(@base, ~p"/m/#{message.id}")} class="topic-preview-message-link">
+            <a href={link_at(@base, ~p"/m/#{message.id}")} class="topic-preview-message-link">
               <span class="font-medium">{Idejo.Messages.author_name(message)}</span>
               <span class="topic-preview-message-text">
                 <.segments segments={Idejo.Forum.excerpt_segments(message, 200)} base={@base} />
@@ -583,6 +587,11 @@ defmodule IdejoWeb.TopicComponents do
   paths are prefixed, never full addresses.
   """
   @spec at(String.t(), String.t() | nil) :: String.t() | nil
+  # A link to another forum's page (the inbox's rows): its visitor is signed in on arrival
+  # (`IdejoWeb.Plugs.ContinueSignIn`). Pictures keep `at/2`.
+  defp link_at("", path), do: path
+  defp link_at(base, path), do: base |> at(path) |> IdejoWeb.Plugs.ContinueSignIn.mark()
+
   def at(_base, nil), do: nil
   def at("", path), do: path
   def at(base, "/" <> _ = path), do: base <> path

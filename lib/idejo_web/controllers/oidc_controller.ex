@@ -8,8 +8,10 @@ defmodule IdejoWeb.OIDCController do
   `GET /users/oidc` starts it: `intent` `sign_in` (the default; an `invite` code is carried
   through the provider), `link` (a signed-in member links their account from the profile)
   or `reauth` (a signed-in member confirms deleting their account, or with `for=username`
-  changing their username: steward request, 2026-11-13). The request's `state`,
-  `nonce` and PKCE verifier wait in the encrypted session, used once.
+  changing their username: steward request, 2026-11-13), or `continue` (a visitor arriving
+  from another forum of the group, `IdejoWeb.Plugs.ContinueSignIn`: asked silently,
+  `prompt=none`; signed in, or back to the page as a visitor, with no message). The
+  request's `state`, `nonce` and PKCE verifier wait in the encrypted session, used once.
   `GET /users/oidc/callback` is where the provider sends the browser back. Someone not yet
   a member is then asked at `GET /users/oidc/consent` whether to join, seeing what this
   server receives from the provider (their email and display name); `POST` there joins or
@@ -32,7 +34,7 @@ defmodule IdejoWeb.OIDCController do
   @session_key "oidc_request"
   @consent_key "oidc_consent"
   @consent_seconds 600
-  @intents ~w(sign_in link reauth)
+  @intents ~w(sign_in link reauth continue)
 
   def start(conn, params) do
     intent = if params["intent"] in @intents, do: params["intent"], else: "sign_in"
@@ -42,7 +44,7 @@ defmodule IdejoWeb.OIDCController do
       intent != "sign_in" and is_nil(user) ->
         redirect(conn, to: ~p"/users/sign-in")
 
-      intent == "sign_in" and user ->
+      intent in ["sign_in", "continue"] and user ->
         redirect(conn, to: ~p"/")
 
       true ->
@@ -76,24 +78,40 @@ defmodule IdejoWeb.OIDCController do
       {:ok, claims} ->
         finish(conn, intent, claims, request)
 
+      # Arriving from another forum, not signed in at the provider: expected, not logged.
+      {:error, {:provider, _}} when intent == "continue" ->
+        refused(conn, intent)
+
       {:error, reason} ->
         # The reason is for the operator; the person only learns it did not work.
         Logger.warning("OpenID Connect: sign-in refused: #{reason_tag(reason)}")
-
-        conn
-        |> put_flash(
-          :error,
-          gettext("Signing in with %{provider} did not work. Please try again.",
-            provider: OIDC.label()
-          )
-        )
-        |> redirect(to: back(intent))
+        refused(conn, intent)
     end
+  end
+
+  # Arriving from another forum: not signed in at the provider (any longer), the page
+  # loads for a visitor, as it would have without the mark.
+  defp refused(conn, "continue") do
+    path = get_session(conn, :user_return_to) || ~p"/"
+    conn |> delete_session(:user_return_to) |> redirect(to: path)
+  end
+
+  defp refused(conn, intent) do
+    conn
+    |> put_flash(
+      :error,
+      gettext("Signing in with %{provider} did not work. Please try again.",
+        provider: OIDC.label()
+      )
+    )
+    |> redirect(to: back(intent))
   end
 
   # A linked member signs in. Someone new is first asked whether to join, and told what
   # this server receives from the provider (consent on first join; steward decision,
   # 2026-11-04): the claims wait in the encrypted session for ten minutes.
+  defp finish(conn, "continue", claims, request), do: finish(conn, "sign_in", claims, request)
+
   defp finish(conn, "sign_in", claims, request) do
     with nil <- OIDC.find_user(claims),
          :ok <- OIDC.precheck(claims) do

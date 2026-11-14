@@ -85,6 +85,53 @@ defmodule IdejoWeb.AC09OpenIDConnectTest do
   end
 
   @tag req: "AC-09"
+  test "AC-09 from another forum of the group, signed in on arrival, silently", %{
+    provider: provider
+  } do
+    # Ada joined here before (linked); she follows a link from another forum's menu.
+    through(provider, @ada)
+
+    conn = get(build_conn(), ~p"/rules?sso=1&tab=roles")
+    assert redirected_to(conn) == "/users/oidc?intent=continue"
+
+    conn = get(conn, "/users/oidc?intent=continue")
+    request = FakeOIDCProvider.authorization(redirected_to(conn, 302))
+    assert request["prompt"] == "none"
+
+    code = FakeOIDCProvider.code(provider, request, @ada)
+    conn = get(conn, ~p"/users/oidc/callback?#{%{"code" => code, "state" => request["state"]}}")
+    assert signed_in?(conn)
+    assert redirected_to(conn) == "/rules?tab=roles"
+
+    # Signed in already: the page, without the mark.
+    assert redirected_to(get(conn, ~p"/rules?sso=1")) == "/rules"
+  end
+
+  @tag req: "AC-09"
+  test "AC-09 arriving while signed out at the provider: the page, as a visitor, no message",
+       %{provider: _provider} do
+    conn = get(build_conn(), ~p"/rules?sso=1")
+    conn = get(conn, "/users/oidc?intent=continue")
+    request = FakeOIDCProvider.authorization(redirected_to(conn, 302))
+    query = %{"error" => "login_required", "state" => request["state"]}
+
+    log =
+      capture_log(fn ->
+        conn = get(conn, ~p"/users/oidc/callback?#{query}")
+
+        refute signed_in?(conn)
+        assert redirected_to(conn) == "/rules"
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) == nil
+
+        # Back on the page, no second round: the mark is gone.
+        assert html_response(get(conn, ~p"/rules"), 200)
+      end)
+
+    # Expected, so not logged as a refusal.
+    refute log =~ "sign-in refused"
+  end
+
+  @tag req: "AC-09"
   test "AC-09 a wrong or reused state, and a provider error, are refused", %{provider: provider} do
     log =
       capture_log(fn ->

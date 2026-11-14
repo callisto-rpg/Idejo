@@ -120,15 +120,15 @@ defmodule IdejoWeb.ChatServiceTest do
     refute html =~ "private-message"
 
     # The forums menu's button (steward request, 2026-11-13: out of the sidebar) leads to
-    # the service, with its count.
+    # the service, with its count, signed in on arrival (steward request, 2026-11-14).
     html = conn |> get(~p"/") |> html_response(200)
-    assert html =~ ~s(href="#{@chat}" class="community-link" id="community-conversations")
+    assert html =~ ~s(href="#{@chat}?sso=1" class="community-link" id="community-conversations")
     assert Chat.unread(ada) == 2
     refute html =~ "sidebar-pinned"
 
     # "All my topics" (steward request, 2026-11-10), above Private Conversations.
     assert html =~
-             ~s(href="https://my.example.test/topics" class="community-link" id="community-all-topics")
+             ~s(href="https://my.example.test/topics?sso=1" class="community-link" id="community-all-topics")
 
     [_, after_topics] = String.split(html, "community-all-topics", parts: 2)
     assert after_topics =~ "community-conversations"

@@ -187,8 +187,9 @@ defmodule IdejoWeb.InboxTest do
 
     conn = log_in_user(conn, ada)
     html = conn |> get(~p"/topics?view=compact") |> html_response(200)
-    assert html =~ ~s(href="https://garden.example.test/t/#{@topic["id"]}/garden-plans")
-    assert html =~ ~s(href="https://garden.example.test/c/general")
+    # Signed in on arrival (steward request, 2026-11-14).
+    assert html =~ ~s(href="https://garden.example.test/t/#{@topic["id"]}/garden-plans?sso=1")
+    assert html =~ ~s(href="https://garden.example.test/c/general?sso=1")
     assert html =~ "Garden club" and html =~ "2 new"
     refute html =~ "data-topic-menu=\"#{@topic["id"]}\""
     refute html =~ "Latest messages"

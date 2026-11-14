@@ -414,7 +414,15 @@ The contract (M6; mark each item done here when its PR merges):
   `authenticate/2`, `reset_user_password/2`, `update_user_password/3` and
   `register_with_password/1` ask themselves), so the
   command line can always let the owner in (AD-09); a reset link works for them too
-  (AD-14's owner). Sign-out is local. Only the kind of a failure is logged, never a token,
+  (AD-14's owner). Signed in from forum to forum (steward request, 2026-11-14;
+  `IdejoWeb.Plugs.ContinueSignIn`, last in `:browser`): links to another forum of the
+  group (the forums menu's list, "All my topics" and "Private Conversations" on the inbox,
+  the inbox's forum cards and topic rows, `ContinueSignIn.mark/1`, `TopicComponents`'
+  `link_at/2`; never pictures) carry `sso=1`; a visitor arriving with it is sent to
+  `GET /users/oidc?intent=continue` (`:user_return_to` the page without the mark), asked
+  with `prompt=none`, and comes back signed in, or as a visitor with no message and nothing
+  logged when the provider answers an error; signed in already, or without a provider,
+  the page without the mark. Sign-out is local. Only the kind of a failure is logged, never a token,
   claim or the secret. Tests use `Idejo.FakeOIDCProvider` (Bandit, a test key, plain http
   allowed only there).
 - **Deleting an account** (AC-07): `Accounts.delete_user/2`, from the profile with the
