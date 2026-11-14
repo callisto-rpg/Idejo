@@ -81,7 +81,8 @@ defmodule Idejo.Api do
   end
 
   @doc """
-  The user card (`/u/{id}`): the person, their bio's Markdown, their roles (guest left out),
+  The user card (`/u/{id}`): the person, their bio's Markdown, their roles (guest left out;
+  each with its `slug`, as `+role` mentions name it: steward decision, 2026-11-14),
   when they joined, and what the viewer may do: ignore them (`ignored_by_me`, nil when they
   may not, AC-06), write to them (`may_message`), ban them (server moderators).
   """
@@ -94,7 +95,7 @@ defmodule Idejo.Api do
     |> person(roles)
     |> Map.merge(%{
       "bio_md" => user.bio_md,
-      "roles" => Enum.map(shown, &%{"id" => &1.id, "name" => &1.name, "colour" => &1.colour}),
+      "roles" => Enum.map(shown, &card_role/1),
       "joined_at" => time(user.created_at),
       "ignored_by_me" =>
         if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
@@ -103,6 +104,14 @@ defmodule Idejo.Api do
       "banned" => if(viewer && Access.server_moderator?(viewer), do: Accounts.banned?(user))
     })
   end
+
+  defp card_role(role),
+    do: %{
+      "id" => role.id,
+      "name" => role.name,
+      "slug" => Access.role_slug(role),
+      "colour" => role.colour
+    }
 
   @doc "The signed-in user's own account: the card, their email (only here) and their choices."
   @spec me(User.t()) :: map()
