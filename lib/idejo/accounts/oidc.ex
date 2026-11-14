@@ -131,12 +131,18 @@ defmodule Idejo.Accounts.OIDC do
 
   @doc """
   The provider's address to send the browser to. A `"reauth"` request asks the provider to
-  sign the person in again (`prompt=login`, `max_age=0`).
+  sign the person in again (`prompt=login`, `max_age=0`); a `"continue"` one asks it not to
+  show anything (`prompt=none`): the person is signed in there already, or it answers
+  `login_required`.
   """
   @spec authorize_url(request(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def authorize_url(request, redirect_uri) do
     extension =
-      if request["intent"] == "reauth", do: [{"prompt", "login"}, {"max_age", "0"}], else: []
+      case request["intent"] do
+        "reauth" -> [{"prompt", "login"}, {"max_age", "0"}]
+        "continue" -> [{"prompt", "none"}]
+        _ -> []
+      end
 
     with {:ok, url} <-
            Oidcc.create_redirect_url(@provider, config(:client_id), config(:client_secret), %{

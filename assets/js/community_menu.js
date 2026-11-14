@@ -15,6 +15,14 @@ const secure = (url) => {
   }
 }
 
+// Another forum of the group, signed in on arrival (IdejoWeb.Plugs.ContinueSignIn; steward
+// request, 2026-11-14): the visitor is asked of the provider silently, never twice.
+const signedIn = (url) => {
+  const address = new URL(url)
+  address.searchParams.set("sso", "1")
+  return address.href
+}
+
 const load = (list) => {
   if (list.dataset.loaded) return
   list.dataset.loaded = "true"
@@ -25,7 +33,7 @@ const load = (list) => {
       for (const {name, url} of communities || []) {
         const item = document.createElement("li")
         const link = document.createElement("a")
-        link.href = url
+        link.href = secure(url) ? signedIn(url) : url
         // Each forum's logo at idejo's fixed address (`/logo`, 0.2.9), drawn like this
         // forum's; a forum that has none to give (older) shows its name alone.
         if (secure(url)) {
