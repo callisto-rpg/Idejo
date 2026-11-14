@@ -202,7 +202,9 @@ and never gets HTML:
 - `pinned_at`: when a moderator pinned it to the topic's navigator, or null. `GET
   /topics/{id}/pins` lists a topic's pinned messages, oldest pin first; with `moderate`,
   `PUT` and `DELETE /messages/{id}/pin` pin and unpin (logged; never in private
-  conversations).
+  conversations). `GET /topics/{id}` gives `first_message_id` and `my_last_message_id`,
+  the reader's last message in the topic that is not deleted (null when there is none or
+  without a member): the navigator's First message and My last message.
 - `author`: name, user tag, pictures (`avatar_dark_url` for the dark theme), the role shown
   beside the name, `ignored_by_me` (collapse it, as the web does). An opening message of a
   topical topic has no author: `{"id": null, "display_name": "the topic", "topical": true}`.

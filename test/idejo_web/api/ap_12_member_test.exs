@@ -354,6 +354,19 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   end
 
   @tag req: "AP-12"
+  test "AP-12 a topic gives the reader's last message there, deleted ones skipped", ctx do
+    path = "/api/v1/topics/#{ctx.topic.id}"
+    {:ok, earlier} = Forum.post_message(ctx.member, ctx.topic, %{"body" => "Mine"})
+    {:ok, last} = Forum.post_message(ctx.member, ctx.topic, %{"body" => "Mine again"})
+    {:ok, _} = Forum.post_message(ctx.other, ctx.topic, %{"body" => "Theirs"})
+
+    assert api(ctx, :get, path) |> api_json(200) |> Map.get("my_last_message_id") == last.id
+
+    {:ok, _} = Messages.delete_own(ctx.member, last)
+    assert api(ctx, :get, path) |> api_json(200) |> Map.get("my_last_message_id") == earlier.id
+  end
+
+  @tag req: "AP-12"
   test "AP-12 around messages: spoilers, polls, reactions, reports, forwards, new topics", ctx do
     %{"message" => %{"id" => mine}} =
       api(ctx, :post, "/api/v1/topics/#{ctx.topic.id}/composer/commit", %{"body_md" => "My plan"})
