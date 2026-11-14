@@ -85,6 +85,7 @@ defmodule Idejo.ForumTagsTest do
              seeds.name
 
     {:ok, archive} = Forum.archive_category(admin)
+
     {:error, changeset} =
       Tags.create_tag(admin, %{"name" => "Old", "category_ids" => [archive.id]})
 
@@ -206,6 +207,7 @@ defmodule Idejo.ForumTagsTest do
     assert shared.id in ids(Tags.available_tags(general))
     assert shared.id in ids(Tags.available_tags(help))
     refute shared.id in ids(Tags.available_tags(garden))
+
     assert [%{change: "tag.create", after: %{"category_ids" => [_, _]}} | _] =
              Audit.list_entries()
 

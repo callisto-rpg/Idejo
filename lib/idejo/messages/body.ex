@@ -270,6 +270,7 @@ defmodule Idejo.Messages.Body do
   # A tag's name shows when every reader may see where it belongs: server-wide, or one of its
   # categories' names is shown.
   defp tag_visible?(%Tag{categories: []}, _visible), do: true
+
   defp tag_visible?(%Tag{categories: categories}, visible),
     do: Enum.any?(categories, &visible.(&1.id))
 end

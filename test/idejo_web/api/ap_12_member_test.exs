@@ -215,6 +215,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
 
     # Filter by tag: each tag with its categories, none for a tag of every category.
     n = System.unique_integer([:positive])
+
     {:ok, ours} =
       Idejo.Forum.Tags.create_tag(ctx.admin, %{
         "name" => "Ours #{n}",
