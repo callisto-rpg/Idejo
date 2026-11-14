@@ -144,6 +144,8 @@ defmodule IdejoWeb.Api.TopicController do
   A window of a topic's or conversation's messages: the end; `around` a message; the first
   unread one (`first_unread=true`); or a page from a cursor. `first_message` is the topic's
   opening message, always there (none in a private conversation), as the web pins it.
+  `earlier` and `later` count the messages before and after the window, `first_message`
+  left out, as the web's "N earlier messages" links do.
   """
   def window(conn, topic, params) do
     user = user(conn)
@@ -152,6 +154,8 @@ defmodule IdejoWeb.Api.TopicController do
     with {:ok, messages} <- messages_at(topic, params, first_unread) do
       first = TopicWindow.first(topic)
       latest = TopicWindow.latest(topic)
+      total = TopicWindow.count(topic)
+      {earlier, later} = counts(topic, messages, first, total)
 
       json(conn, %{
         "data" => Api.messages(user, topic, messages),
@@ -160,7 +164,9 @@ defmodule IdejoWeb.Api.TopicController do
         "next_cursor" => edge_cursor(topic, :after, List.last(messages), latest && latest.id),
         "prev_cursor" => edge_cursor(topic, :before, List.first(messages), first && first.id),
         "cursor" => Changes.cursor(topic),
-        "total" => TopicWindow.count(topic)
+        "total" => total,
+        "earlier" => earlier,
+        "later" => later
       })
     end
   end
@@ -174,6 +180,16 @@ defmodule IdejoWeb.Api.TopicController do
       :error -> {:error, :bad_request}
       :none -> landing(nil, topic, params, first_unread, TopicWindow.sizes(), limit)
     end
+  end
+
+  # Messages before and after the window; the opening message, shown on its own, is not
+  # counted before it (the web's `put_bounds/1`).
+  defp counts(_topic, [], _first, _total), do: {0, 0}
+
+  defp counts(topic, [head | _] = messages, first, total) do
+    position = TopicWindow.position(topic, head)
+    earlier = if first && !topic.private, do: max(position - 1, 0), else: position
+    {earlier, max(total - position - length(messages), 0)}
   end
 
   # The opening message, pinned on top as the web does; none in a private conversation.

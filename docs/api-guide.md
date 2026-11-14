@@ -298,6 +298,12 @@ who loses the right gets `forbidden` and is left. Message events carry the whole
 object and its `cursor`. Typing is never broadcast. While a topic channel is joined, the
 member gets no push about that topic.
 
+**The message window**: `GET /topics/{id}/messages` answers the end of the topic, the
+messages `around` one, the first unread (`first_unread=true`), or a page from a cursor.
+`first_message` is the opening message, shown on top as the web pins it; `earlier` and
+`later` count the messages before and after the window (`first_message` not counted), for
+"N earlier messages" and "N later messages".
+
 **Catch-up**: a topic's join reply, its message window and every message carry a change
 `cursor`. After a disconnect, `GET /topics/{id}/changes?since={last cursor}` returns every
 message created, appended, edited, closed or deleted since (reactions and votes too), the

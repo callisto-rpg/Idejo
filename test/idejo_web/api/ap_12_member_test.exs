@@ -307,9 +307,12 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     assert Enum.map(window["data"], & &1["id"]) == [ctx.opening.id, ctx.message.id, later.id]
     assert window["first_message"]["id"] == ctx.opening.id
     assert window["first_unread"]["message_id"] == later.id
+    assert {window["earlier"], window["later"]} == {0, 0}
 
     small = api(ctx, :get, "/api/v1/topics/#{ctx.topic.id}/messages?limit=1") |> api_json(200)
     assert Enum.map(small["data"], & &1["id"]) == [later.id]
+    # The opening message is not counted: it comes as `first_message`.
+    assert {small["earlier"], small["later"]} == {1, 0}
 
     earlier =
       api(
@@ -320,6 +323,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
       |> api_json(200)
 
     assert Enum.map(earlier["data"], & &1["id"]) == [ctx.message.id]
+    assert {earlier["earlier"], earlier["later"]} == {0, 1}
 
     around =
       api(ctx, :get, "/api/v1/topics/#{ctx.topic.id}/messages?around=#{ctx.message.id}")
