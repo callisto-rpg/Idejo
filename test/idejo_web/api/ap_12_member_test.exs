@@ -199,6 +199,14 @@ defmodule IdejoWeb.Api.AP12MemberTest do
            |> Map.get("data")
            |> Enum.map(& &1["id"]) == [ctx.topic.id]
 
+    # The home page's Expanded view, as the category's (BR-03 of the app).
+    expanded =
+      api(ctx, :get, "/api/v1/topics/active?expanded=true") |> api_json(200) |> Map.get("data")
+
+    assert [%{"preview" => %{"first_excerpt" => "Hello"}}] = expanded
+    plain = api(ctx, :get, "/api/v1/topics/active") |> api_json(200) |> Map.get("data")
+    refute Map.has_key?(hd(plain), "preview")
+
     assert api(ctx, :get, "/api/v1/tags") |> api_json(200)
 
     unread = api(ctx, :get, "/api/v1/unread") |> api_json(200)

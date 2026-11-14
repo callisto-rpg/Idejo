@@ -361,7 +361,8 @@ defmodule IdejoWeb.Api.Operations do
         :active,
         "read",
         {:list, "Topic"},
-        "The most recently active topics."
+        "The most recently active topics.",
+        query: [{"expanded", "boolean", "Adds each topic's preview."}]
       ),
       op(
         :get,
