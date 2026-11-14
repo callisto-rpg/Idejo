@@ -9,6 +9,7 @@ defmodule Idejo.Repo.Migrations.CreateMessageMoves do
   def change do
     create table(:message_moves, primary_key: false) do
       add :id, :binary_id, primary_key: true
+
       add :source_topic_id, references(:topics, type: :binary_id, on_delete: :delete_all),
         null: false
 
