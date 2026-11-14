@@ -106,6 +106,11 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     server = api(ctx, :get, "/api/v1/server") |> api_json(200)
     assert server["settings"]["gm_window_seconds"] == 15
     assert server["settings"]["gm_early_reply"] == true
+    # Every `!` command as the Help page words it (Android BR-08).
+    assert Enum.map(server["commands"], & &1["name"]) ==
+             Enum.map(IdejoWeb.ComposerCommands.all(), & &1.name)
+
+    assert Enum.all?(server["commands"], &(&1["detail"] != "" and &1["help"] != ""))
 
     me =
       api(ctx, :patch, "/api/v1/me", %{
