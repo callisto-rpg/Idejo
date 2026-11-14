@@ -21,11 +21,16 @@ defmodule IdejoWeb.Endpoint do
     longpoll: [connect_info: [session: @session_options]]
 
   # AP-15: the official app's socket, apart from LiveView's. No session and no cookie: its
-  # only credential is the device token in the connect params, which a page on another
-  # origin cannot have, so there is nothing for an origin check to protect (AD-13's check
-  # stays on /live). Refused while the API is off (404) or without a valid token (403).
+  # only credential is the device token, sent as Phoenix's auth_token (Sec-WebSocket-Protocol,
+  # steward decision 2026-11-14) so it is never in the address. A page on another origin
+  # cannot have it, so there is nothing for an origin check to protect (AD-13's check stays
+  # on /live). Refused while the API is off (404) or without a valid token (403).
   socket "/api/v1/socket", IdejoWeb.ApiSocket,
-    websocket: [check_origin: false, error_handler: {IdejoWeb.ApiSocket, :refused, []}],
+    websocket: [
+      check_origin: false,
+      auth_token: true,
+      error_handler: {IdejoWeb.ApiSocket, :refused, []}
+    ],
     longpoll: false
 
   # SP-05, AD-16: what a trusted proxy says about the request (visitor's address, https, host),

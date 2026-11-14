@@ -272,9 +272,13 @@ mode: `window_seconds` and `unanswered_seconds` are 0.
 
 ## 7. Events and catch-up
 
-Connect a Phoenix Channels client (protocol 2.0.0) to `wss://<forum>/api/v1/socket/websocket`
-with the params `{"token": "idj_…"}` (never in the address). The socket answers 403 to a bad
-token and 404 while the API is off.
+Connect a Phoenix Channels client (protocol 2.0.0) to
+`wss://<forum>/api/v1/socket/websocket?vsn=2.0.0` with the token as Phoenix's `auth_token`,
+in the `Sec-WebSocket-Protocol` header: `phoenix, base64url.bearer.phx.<token>`, the token
+in standard Base64 without padding (as Phoenix decodes it, despite the prefix's name; the
+JavaScript client's `authToken` option sends the same). Never put it in the address: a token
+in the connect params is refused. The socket answers 403 to a bad token and 404 while the
+API is off.
 
 | Channel | Events |
 | --- | --- |

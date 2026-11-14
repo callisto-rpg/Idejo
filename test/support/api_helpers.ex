@@ -8,14 +8,27 @@ defmodule IdejoWeb.ApiHelpers do
     * `api_token_fixture/2` signs a user in to the app through the real code path (a code
       for a PKCE challenge, then the exchange), and returns the token and its row;
     * `api_conn/2` puts the token on a connection;
+    * `connect_app/2` connects the app's socket with the token as a real WebSocket sends it;
     * `api_json/2` asserts the status, then checks the body against the operation's
       documented schema (exactly its top-level keys: none undocumented, every required one)
       and that it holds no email but the user's own (privacy, SP-03).
   """
   import ExUnit.Assertions
+  require Phoenix.ChannelTest
 
   alias Idejo.Accounts.ApiTokens
   alias IdejoWeb.Api.{OpenApi, Operations}
+
+  @endpoint IdejoWeb.Endpoint
+
+  @doc """
+  Connects `IdejoWeb.ApiSocket` with `token` as Phoenix's `auth_token`, where the
+  WebSocket transport puts what it reads from `Sec-WebSocket-Protocol` (AP-15): the
+  connect info, never the params.
+  """
+  def connect_app(token, params \\ %{}) do
+    Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, params, connect_info: %{auth_token: token})
+  end
 
   @doc "A PKCE pair: `{verifier, challenge}`."
   def pkce do

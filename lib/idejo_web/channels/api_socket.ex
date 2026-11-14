@@ -6,10 +6,13 @@ defmodule IdejoWeb.ApiSocket do
   The official app's event stream (AP-15; steward decision, 2026-11-10): Phoenix Channels
   over a WebSocket at `/api/v1/socket`, apart from LiveView's socket.
 
-  The device token comes in the connect params (`{"token": "idj_…"}`), never in the
-  address; `token` is filtered from logs (`config :phoenix, :filter_parameters`) and this
-  socket logs no connections. No cookie is read. Its id is `api_token:{token id}`, so
-  revoking the token (or turning the API off) closes it (`IdejoWeb.Api.Revocations`).
+  The device token comes as Phoenix's `auth_token` (steward decision, 2026-11-14): the
+  `Sec-WebSocket-Protocol` header `phoenix, base64url.bearer.phx.<token>`, the token in
+  standard Base64 without padding (Phoenix's own encoding, despite the prefix's name). It
+  is never in the address: a token in the connect params, which a real WebSocket can only
+  carry in its query string, is refused. This socket logs no connections. No cookie is
+  read. Its id is `api_token:{token id}`, so revoking the token (or turning the API off)
+  closes it (`IdejoWeb.Api.Revocations`).
 
   Channels: `user:me`, `topic:<id>`, `conversation:<id>` (scope `private`), `category:<id>`.
 
@@ -26,7 +29,7 @@ defmodule IdejoWeb.ApiSocket do
   channel "category:*", IdejoWeb.CategoryChannel
 
   @impl true
-  def connect(%{"token" => token}, socket, _connect_info) when is_binary(token) do
+  def connect(_params, socket, %{auth_token: token}) when is_binary(token) do
     case Accounts.get_user_by_api_token(token) do
       {:ok, user, row} -> {:ok, socket |> assign(:user, user) |> assign(:token, row)}
       {:error, :disabled} -> {:error, :disabled}

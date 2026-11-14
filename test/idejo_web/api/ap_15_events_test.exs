@@ -34,18 +34,30 @@ defmodule IdejoWeb.Api.AP15EventsTest do
   end
 
   defp socket!(token) do
-    {:ok, socket} = Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
+    {:ok, socket} = connect_app(token)
     socket
   end
 
   @tag req: "AP-15"
-  test "AP-15 the socket takes a valid token in its params, nothing else", %{member_token: token} do
-    assert {:ok, _socket} = Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
-
-    assert {:error, :unauthenticated} =
-             Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => "idj_nope"})
-
+  test "AP-15 the socket takes a valid token as auth_token, never in the address", ctx do
+    token = ctx.member_token
+    assert {:ok, _socket} = connect_app(token)
+    assert {:error, :unauthenticated} = connect_app("idj_nope")
     assert {:error, :unauthenticated} = Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{})
+
+    # Connect params come from the query string over a real WebSocket: a token there is
+    # refused, even a valid one.
+    assert {:error, :unauthenticated} =
+             Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
+  end
+
+  @tag req: "AP-15"
+  test "AP-15 the endpoint reads auth_token from Sec-WebSocket-Protocol" do
+    {_path, IdejoWeb.ApiSocket, opts} =
+      Enum.find(IdejoWeb.Endpoint.__sockets__(), &match?({_, IdejoWeb.ApiSocket, _}, &1))
+
+    assert opts[:websocket][:auth_token] == true
+    assert opts[:longpoll] == false
   end
 
   @tag req: "AP-15"

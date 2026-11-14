@@ -146,7 +146,7 @@ defmodule IdejoWeb.Api.AP19UnifiedPushTest do
     {:ok, topic} =
       Forum.create_topic(ada, general, %{"title" => "Garden plans", "body" => "Saturday?"})
 
-    {:ok, socket} = Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
+    {:ok, socket} = connect_app(token)
     {:ok, _, _} = subscribe_and_join(socket, IdejoWeb.TopicChannel, "topic:" <> topic.id)
 
     {:ok, _} = Forum.post_message(ada, topic, %{"body" => "Hey @#{user.username}"})
