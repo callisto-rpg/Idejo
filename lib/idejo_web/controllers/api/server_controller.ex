@@ -33,7 +33,9 @@ defmodule IdejoWeb.Api.ServerController do
       },
       "emoji" => server_emoji(),
       "default_reactions" => Enum.map(Emoji.defaults(), &emoji/1),
-      "plugins" => Enum.map(Plugins.active(), fn {_command, plugin} -> plugin(plugin) end)
+      "plugins" => Enum.map(Plugins.active(), fn {_command, plugin} -> plugin(plugin) end),
+      # The `!` commands as the Help page words them, whoever may use them where.
+      "commands" => Enum.map(IdejoWeb.ComposerCommands.all(), &help_command/1)
     })
   end
 
@@ -61,9 +63,13 @@ defmodule IdejoWeb.Api.ServerController do
       "name" => definition.name,
       "description" => definition.description,
       "argument" => definition.argument,
-      "block" => definition.block
+      "block" => definition.block,
+      "help" => if(definition.help != "", do: definition.help, else: definition.description)
     }
   end
+
+  defp help_command(command),
+    do: %{"name" => command.name, "detail" => command.detail, "help" => command.help}
 
   def emoji(conn, params) do
     emoji =
