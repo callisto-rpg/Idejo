@@ -13,8 +13,8 @@ defmodule Idejo.ForumLinksTest do
   import Idejo.AccountsFixtures
 
   alias Idejo.Accounts.UserIdentity
-  alias Idejo.{Markdown, Suggestions}
   alias Idejo.Api.Structure
+  alias Idejo.{Markdown, Suggestions}
   alias Idejo.Messages.Body
 
   @issuer "https://id.example.test"
