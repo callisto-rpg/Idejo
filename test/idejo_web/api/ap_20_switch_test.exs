@@ -12,7 +12,6 @@ defmodule IdejoWeb.Api.AP20SwitchTest do
   import Idejo.AccountsFixtures
   import IdejoWeb.ApiHelpers
   import Phoenix.LiveViewTest
-  require Phoenix.ChannelTest
 
   alias Idejo.Settings
   alias IdejoWeb.Api.{Controller, Revocations}
