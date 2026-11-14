@@ -14,6 +14,7 @@ defmodule Idejo.ForumLinksTest do
 
   alias Idejo.Accounts.UserIdentity
   alias Idejo.{Markdown, Suggestions}
+  alias Idejo.Api.Structure
   alias Idejo.Messages.Body
 
   @issuer "https://id.example.test"
@@ -93,7 +94,7 @@ defmodule Idejo.ForumLinksTest do
     assert LazyHTML.text(link) == "&Garden club"
 
     # The API reads it as an inline link, by its host (AP-11).
-    assert Idejo.Api.Structure.mentions(html) == [
+    assert Structure.mentions(html) == [
              %{type: "forum", ref: garden, text: "&Garden club"}
            ]
 
