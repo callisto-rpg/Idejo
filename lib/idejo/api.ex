@@ -113,6 +113,7 @@ defmodule Idejo.Api do
       "email" => user.email,
       "verified" => Accounts.confirmed?(user),
       "welcomed" => user.welcomed_at != nil,
+      "intro_due" => Accounts.intro_due?(user),
       "auto_punctuation" => user.auto_punctuation,
       "accepts_private_messages" => user.accepts_private_messages,
       "warning_pending" => user.warning_pending,
