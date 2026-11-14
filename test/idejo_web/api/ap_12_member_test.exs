@@ -600,5 +600,4 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     {:ok, _user} = Idejo.Accounts.intro_on_sign_in(Idejo.Accounts.get_user!(user.id))
     refute due?.()
   end
-
 end
