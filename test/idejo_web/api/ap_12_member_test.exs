@@ -14,6 +14,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   import IdejoWeb.ApiHelpers
 
   alias Idejo.{Accounts, Conversations, Forum, Messages, Plugins, Reactions, Reading, Repo}
+  alias Idejo.Forum.Tags
   alias Idejo.Messages.{Message, Polls, ScheduledMessage}
   alias Idejo.Moderation.Report
 
@@ -217,12 +218,12 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     n = System.unique_integer([:positive])
 
     {:ok, ours} =
-      Idejo.Forum.Tags.create_tag(ctx.admin, %{
+      Tags.create_tag(ctx.admin, %{
         "name" => "Ours #{n}",
         "category_ids" => [ctx.general.id]
       })
 
-    {:ok, all} = Idejo.Forum.Tags.create_tag(ctx.admin, %{"name" => "All #{n}"})
+    {:ok, all} = Tags.create_tag(ctx.admin, %{"name" => "All #{n}"})
     tags = api(ctx, :get, "/api/v1/tags") |> api_json(200) |> Map.get("data")
     assert Enum.find(tags, &(&1["id"] == ours.id))["category_ids"] == [ctx.general.id]
     assert Enum.find(tags, &(&1["id"] == all.id))["category_ids"] == []
