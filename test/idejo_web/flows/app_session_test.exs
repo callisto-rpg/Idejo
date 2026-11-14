@@ -108,12 +108,12 @@ defmodule IdejoWeb.Flows.AppSessionTest do
     {other_token, _} = api_token_fixture(other)
 
     {:ok, other_socket} =
-      Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => other_token})
+      connect_app(other_token)
 
     {:ok, _, _} = subscribe_and_join(other_socket, IdejoWeb.TopicChannel, "topic:" <> topic.id)
 
     # 6. Mia's app joins, types, and grows a message: Enter three times, then Ctrl+Enter.
-    {:ok, socket} = Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
+    {:ok, socket} = connect_app(token)
     {:ok, _, channel} = subscribe_and_join(socket, IdejoWeb.TopicChannel, "topic:" <> topic.id)
     ref = Phoenix.ChannelTest.push(channel, "typing", %{"typing" => true})
     assert_reply ref, :ok

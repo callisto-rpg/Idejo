@@ -12,7 +12,6 @@ defmodule IdejoWeb.Api.AP20SwitchTest do
   import Idejo.AccountsFixtures
   import IdejoWeb.ApiHelpers
   import Phoenix.LiveViewTest
-  require Phoenix.ChannelTest
 
   alias Idejo.Settings
   alias IdejoWeb.Api.{Controller, Revocations}
@@ -57,7 +56,7 @@ defmodule IdejoWeb.Api.AP20SwitchTest do
     assert page.status == 404
 
     assert {:error, :disabled} =
-             Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, %{"token" => token})
+             connect_app(token)
 
     assert get(build_conn(), ~p"/.well-known/idejo") |> json_response(200) |> Map.take(["api"]) ==
              %{"api" => nil}
