@@ -21,7 +21,7 @@ defmodule IdejoWeb.Api.TopicController do
 
   def active(conn, params) do
     topics = Forum.list_active_topics(user(conn), limit(params))
-    send_list(conn, Api.topics(user(conn), topics))
+    send_list(conn, Api.topics(user(conn), topics, expanded: boolean(params, "expanded")))
   end
 
   def tagged(conn, params) do
