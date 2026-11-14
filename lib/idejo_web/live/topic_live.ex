@@ -114,6 +114,7 @@ defmodule IdejoWeb.TopicLive do
            now: DateTime.utc_now(),
            tick: nil,
            forks: %{},
+           moves: %{},
            can_fork?: false,
            automessages: [],
            plugins: [],
@@ -413,6 +414,7 @@ defmodule IdejoWeb.TopicLive do
       deleted_runs: assigns.deleted_runs,
       mention_glows: assigns.mention_glows,
       forks: assigns.forks,
+      moves: assigns.moves,
       reactions: assigns.reactions,
       polls: assigns.polls,
       roles: assigns.roles,
@@ -435,6 +437,7 @@ defmodule IdejoWeb.TopicLive do
     |> changed_keys(old.deleted_runs, new.deleted_runs)
     |> changed_keys(old.mention_glows, new.mention_glows)
     |> changed_keys(old.forks, new.forks)
+    |> changed_keys(old.moves, new.moves)
     |> changed_keys(old.reactions, new.reactions)
     |> changed_keys(old.polls, new.polls)
     |> changed_members(old.selected, new.selected)
@@ -660,10 +663,12 @@ defmodule IdejoWeb.TopicLive do
     assign(socket, :polls, Polls.summaries(ids))
   end
 
-  # TP-09: each message's "continued in" topics that the viewer may see.
+  # TP-09: each message's "continued in" topics that the viewer may see; TP-15: the topics
+  # messages after it were moved to (steward request, 2026-11-14). Both are banners under it.
   defp put_forks(socket) do
     ids = Enum.map(socket.assigns.messages, & &1.id)
-    assign(socket, :forks, Forum.list_forks(user(socket), ids))
+    user = user(socket)
+    assign(socket, forks: Forum.list_forks(user, ids), moves: Forum.list_moves(user, ids))
   end
 
   # Long topics, a window at a time (steward decision, 2026-11-01). Never every message of
@@ -2534,7 +2539,8 @@ defmodule IdejoWeb.TopicLive do
           socket.assigns.topic,
           MapSet.to_list(selected),
           target,
-          params["reason"]
+          params["reason"],
+          banner: params["banner"] != "false"
         )
 
     case result do
@@ -3395,6 +3401,7 @@ defmodule IdejoWeb.TopicLive do
       forward: forward_view(assigns, message),
       may_forward?: assigns.live? and Forum.Forwards.may_forward?(viewer, message),
       forks: Map.get(assigns.forks, id, []),
+      moves: Map.get(assigns.moves, id, []),
       reactions: Map.get(assigns.reactions, id, []),
       poll: assigns.polls[id],
       embeds: Plugins.shown(message.embeds, assigns.active_plugins),
@@ -3986,19 +3993,28 @@ defmodule IdejoWeb.TopicLive do
         viewer={@viewer}
         can_react?={@can_react? and is_nil(@message.deleted_at)}
       />
-      <%!-- TP-09: a "Continue topic" button to each topic started from this message (steward
-           decision, 2026-10-23); its title is in the name, and on hover. --%>
-      <p :if={@entry.forks != []} id={"message-#{@message.id}-forks"} class="message-forks">
-        <.link
+      <%!-- TP-09, TP-15: thin banners under the message (steward request, 2026-11-14): each
+           topic started from it, and each topic messages after it were moved to. --%>
+      <div :if={@entry.forks != []} id={"message-#{@message.id}-forks"} class="message-banners">
+        <.message_banner
           :for={fork <- @entry.forks}
-          href={~p"/t/#{fork.id}/#{fork.slug}"}
-          class="btn btn-xs"
-          title={fork.title}
-          aria-label={gettext("Continue topic: %{title}", title: fork.title)}
-        >
-          <.icon name="hero-arrow-turn-down-right-micro" class="size-4" />{gettext("Continue topic")}
-        </.link>
-      </p>
+          id={"message-#{@message.id}-fork-#{fork.id}"}
+          topic={fork}
+          text={gettext("A new topic continues from this message:")}
+          action={gettext("Continue topic")}
+          label={gettext("Continue topic: %{title}", title: fork.title)}
+        />
+      </div>
+      <div :if={@entry.moves != []} id={"message-#{@message.id}-moves"} class="message-banners">
+        <.message_banner
+          :for={move <- @entry.moves}
+          id={"message-#{@message.id}-move-#{move.topic.id}"}
+          topic={move.topic}
+          text={moved_text(move)}
+          action={gettext("Open topic")}
+          label={gettext("Open topic: %{title}", title: move.topic.title)}
+        />
+      </div>
       <div
         id={"message-#{@message.id}-actions"}
         class="message-actions"
@@ -4926,5 +4942,42 @@ defmodule IdejoWeb.TopicLive do
       </section>
     </section>
     """
+  end
+
+  attr :id, :string, required: true
+  attr :topic, :map, required: true
+  attr :text, :string, required: true
+  attr :action, :string, required: true
+  attr :label, :string, required: true
+
+  # TP-09, TP-15: a thin banner under a message, its words, the topic's title and a button.
+  defp message_banner(assigns) do
+    ~H"""
+    <p id={@id} class="message-banner">
+      <.icon name="hero-arrow-turn-down-right-micro" class="size-4 shrink-0" />
+      <span class="message-banner-text">
+        {@text} <span class="message-banner-title">{@topic.title}</span>
+      </span>
+      <.link href={~p"/t/#{@topic.id}/#{@topic.slug}"} class="btn btn-xs" aria-label={@label}>
+        {@action}
+      </.link>
+    </p>
+    """
+  end
+
+  defp moved_text(%{count: count, new_topic: true}) do
+    ngettext(
+      "1 message was moved to a new topic:",
+      "%{count} messages were moved to a new topic:",
+      count
+    )
+  end
+
+  defp moved_text(%{count: count}) do
+    ngettext(
+      "1 message was moved to another topic:",
+      "%{count} messages were moved to another topic:",
+      count
+    )
   end
 end

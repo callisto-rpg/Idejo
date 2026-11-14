@@ -122,6 +122,57 @@ defmodule Idejo.ForumMoveMessagesTest do
   end
 
   @tag req: "TP-15"
+  test "TP-15 a banner stays where the oldest moved message was, unless left out", %{
+    admin: admin,
+    general: general,
+    staff: staff,
+    topic: topic,
+    opening: opening,
+    a: a,
+    b: b,
+    c: c,
+    moderator: moderator
+  } do
+    new = {:new, %{"title" => "Off topic", "category_id" => general.id}}
+    {:ok, split} = Forum.move_messages(moderator, topic, [c.id, b.id], new)
+
+    # Under a, the message before the oldest of them: how many went, and where.
+    assert [move] = Forum.list_moves(nil, [opening.id, a.id])[a.id]
+    assert move.topic.id == split.id
+    assert move.count == 2
+    assert move.new_topic
+    refute Map.has_key?(Forum.list_moves(nil, [opening.id]), opening.id)
+
+    # Into an existing topic, from right after the opening message.
+    {:ok, other} =
+      Forum.create_topic(user_fixture(), general, %{"title" => "Weather", "body" => "Rain?"})
+
+    {:ok, _} = Forum.move_messages(moderator, topic, [a.id], {:existing, other})
+    assert [moved] = Forum.list_moves(nil, [opening.id])[opening.id]
+    assert moved.topic.id == other.id
+    assert moved.count == 1
+    refute moved.new_topic
+
+    # Unticked: no banner.
+    {:ok, d} = Forum.post_message(user_fixture(), other, %{"body" => "Off again"})
+    {:ok, _} = Forum.move_messages(moderator, other, [d.id], new, nil, banner: false)
+    assert Forum.list_moves(nil, other |> Forum.list_messages() |> Enum.map(& &1.id)) == %{}
+
+    # Only for readers who may view the topic the messages went to.
+    for name <- [:guest, :member] do
+      role = Access.built_in_role!(name)
+      {:ok, _} = Access.set_permission(admin, role, staff, :view, :deny)
+    end
+
+    {:ok, e} = Forum.post_message(user_fixture(), topic, %{"body" => "For staff"})
+    hidden = {:new, %{"title" => "Staff only", "category_id" => staff.id}}
+    {:ok, _} = Forum.move_messages(admin, topic, [e.id], hidden)
+    assert [_, _] = Forum.list_moves(admin, [opening.id])[opening.id]
+    assert [%{topic: shown}] = Forum.list_moves(user_fixture(), [opening.id])[opening.id]
+    assert shown.id == other.id
+  end
+
+  @tag req: "TP-15"
   test "TP-15 an open message closes first; replies keep their link across threads", %{
     general: general,
     topic: topic,

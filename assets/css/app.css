@@ -1828,8 +1828,7 @@
   .message-ignored > summary:hover {
     color: var(--ink-soft);
   }
-  .message-versions,
-  .message-forks {
+  .message-versions {
     margin-top: 0.375rem;
     color: var(--ink-faint);
     font-size: 0.75rem;
@@ -1837,12 +1836,34 @@
     & summary:hover, & a:hover { color: var(--color-base-content); }
     & a { text-decoration: underline; }
   }
-  /* TP-09: "Continue topic" buttons (steward decision, 2026-10-23). */
-  .message-forks {
+  /* TP-09, TP-15: thin banners under a message (steward request, 2026-11-14): a topic
+     started from it, or messages after it moved away, with a button to that topic. */
+  .message-banners {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+  }
+  .message-banner {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.125rem 0.25rem 0.125rem 0.5rem;
+    border-left: 2px solid var(--color-primary);
+    border-radius: var(--radius-field);
+    background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    & .message-banner-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    & .message-banner-title { color: var(--color-base-content); font-weight: 500; }
     & a.btn { text-decoration: none; color: var(--color-base-content); }
+  }
+  .move-banner-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
   }
   /* The "scheduled message" label sits with "view earlier version" (steward decision,
      2026-10-23); the details open below both. */

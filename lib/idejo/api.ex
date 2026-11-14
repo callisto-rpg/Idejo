@@ -363,6 +363,7 @@ defmodule Idejo.Api do
       reactions: Reactions.summaries(ids),
       polls: Polls.summaries(ids),
       forks: Forum.list_forks(viewer, ids),
+      moves: Forum.list_moves(viewer, ids),
       quotes: quotes(viewer, messages),
       forwards:
         Forwards.readable_ids(
@@ -410,6 +411,17 @@ defmodule Idejo.Api do
     %{"topic_id" => topic.id, "roles" => roles}
   end
 
+  defp moved_after(moves) do
+    Enum.map(moves, fn move ->
+      %{
+        "topic_id" => move.topic.id,
+        "title" => move.topic.title,
+        "count" => move.count,
+        "new_topic" => move.new_topic
+      }
+    end)
+  end
+
   defp effect(nil), do: "unset"
   defp effect(effect), do: Atom.to_string(effect)
 
@@ -447,6 +459,8 @@ defmodule Idejo.Api do
       "anonymous" => message.anonymous,
       "continues_topic_id" => forks |> List.first() |> then(&(&1 && &1.id)),
       "continued_in" => Enum.map(forks, &%{"topic_id" => &1.id, "title" => &1.title}),
+      # Steward request, 2026-11-14: messages moved away from below this one (TP-15).
+      "moved_after" => moved_after(Map.get(context.moves, message.id, [])),
       "cursor" => message.change_seq,
       "opened_at" => time(message.opened_at),
       "closed_at" => time(message.closed_at),

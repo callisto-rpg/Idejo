@@ -74,9 +74,10 @@ defmodule IdejoWeb.MoveMessagesLiveTest do
   end
 
   @tag req: "TP-15"
-  test "TP-15 moving to a new thread, live for every viewer", %{
+  test "TP-15 moving to a new thread, live for every viewer, with a banner where they were", %{
     general: general,
     topic: topic,
+    opening: opening,
     a: a,
     b: b
   } do
@@ -100,6 +101,24 @@ defmodule IdejoWeb.MoveMessagesLiveTest do
     refute has_element?(lv, "#message-#{a.id}")
     refute has_element?(reader, "#message-#{b.id}")
     assert Forum.get_viewable_message(nil, a.id).topic.title == "Off topic"
+
+    # The banner under the message before them, for every viewer, linking to the new thread.
+    new = Forum.get_viewable_message(nil, a.id).topic
+
+    for view <- [lv, reader] do
+      assert has_element?(
+               view,
+               "#message-#{opening.id}-moves",
+               "2 messages were moved to a new topic: Off topic"
+             )
+
+      assert has_element?(
+               view,
+               ~s(#message-#{opening.id}-moves a[href="/t/#{new.id}/#{new.slug}"]) <>
+                 ~s([aria-label="Open topic: Off topic"]),
+               "Open topic"
+             )
+    end
   end
 
   @tag req: "TP-15"
@@ -120,8 +139,12 @@ defmodule IdejoWeb.MoveMessagesLiveTest do
     lv |> form("#move-existing-form", %{q: "weath"}) |> render_change()
     assert has_element?(lv, "#move-existing-form label", "Weather talk")
 
-    lv |> form("#move-existing-form", %{topic_id: other.id}) |> render_submit()
+    assert has_element?(lv, "#move-existing-form input[name=banner][checked]")
+    lv |> form("#move-existing-form", %{topic_id: other.id, banner: "false"}) |> render_submit()
     assert Idejo.Repo.reload!(a).topic_id == other.id
+
+    # "Leave a banner" unticked: none.
+    refute has_element?(lv, ".message-banner")
   end
 
   @tag req: "TP-15"

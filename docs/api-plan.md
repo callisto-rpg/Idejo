@@ -121,7 +121,7 @@ All under `/api/v1`. Scope `-` means no token needed. Full detail is in the Open
 | POST /topics/:id/lock, unlock, pin, unpin, archive, unarchive, move, mark-inactive, make-topical; PUT /topics/:id/icon; DELETE /topics/:id | moderate | `Forum` |
 | PUT, DELETE /topics/:id/followed-by-everyone | moderate | `Forum.set_autofollow/3` |
 | GET /topic-icons, GET /moderation/move-targets | moderate | `TopicIcons`, `Forum.search_move_targets/3` |
-| POST /moderation/messages/move, /moderation/messages/delete; DELETE, PUT /moderation/messages/:id; POST /moderation/messages/:id/close | moderate | `Forum.move_messages/5`, `Messages` |
+| POST /moderation/messages/move, /moderation/messages/delete; DELETE, PUT /moderation/messages/:id; POST /moderation/messages/:id/close | moderate | `Forum.move_messages/6`, `Messages` |
 | POST /users/:id/warn, GET /users/:id/warnings, POST, DELETE /users/:id/ban | moderate | `Warnings`, `Accounts` |
 
 Outside `/api/v1`: `GET /.well-known/idejo` (AP-07), `GET|POST /app/authorize` (AP-08),

@@ -242,6 +242,32 @@ defmodule IdejoWeb.Api.AP13ModerationTest do
     assert moved["title"] == "Split off"
     assert Repo.get!(Message, b.id).topic_id == moved["id"]
 
+    # A banner where it was, under the message shown before it (steward request, 2026-11-14);
+    # none with `banner: false`.
+    {:ok, c} = Forum.post_message(ctx.other, ctx.topic, %{"body" => "C"})
+
+    api(ctx.mod, :post, "/api/v1/moderation/messages/move", %{
+      "message_ids" => [c.id],
+      "topic_id" => moved["id"],
+      "banner" => false
+    })
+    |> api_json(200)
+
+    banners =
+      api(ctx.mod, :get, "/api/v1/topics/#{ctx.topic.id}/messages")
+      |> api_json(200)
+      |> Map.get("data")
+      |> Enum.flat_map(& &1["moved_after"])
+
+    assert banners == [
+             %{
+               "topic_id" => moved["id"],
+               "title" => "Split off",
+               "count" => 1,
+               "new_topic" => true
+             }
+           ]
+
     assert [%{"id" => _}] =
              api(ctx.mod, :get, "/api/v1/moderation/move-targets?q=Split")
              |> api_json(200)

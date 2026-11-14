@@ -246,6 +246,7 @@ defmodule IdejoWeb.MessageModerationComponents do
             />
           </div>
           <.reason />
+          <.banner_choice />
           <div class="inline-card-actions">
             <button class="btn btn-sm btn-primary">{gettext("Move to the new thread")}</button>
           </div>
@@ -282,6 +283,7 @@ defmodule IdejoWeb.MessageModerationComponents do
             </div>
           </fieldset>
           <.reason />
+          <.banner_choice />
           <div class="inline-card-actions">
             <button class="btn btn-sm btn-primary">{gettext("Move to this thread")}</button>
           </div>
@@ -294,6 +296,17 @@ defmodule IdejoWeb.MessageModerationComponents do
         </div>
       </div>
     </dialog>
+    """
+  end
+
+  # TP-15: "Leave a banner" (steward request, 2026-11-14), ticked to start with.
+  defp banner_choice(assigns) do
+    ~H"""
+    <label class="move-banner-choice">
+      <input type="hidden" name="banner" value="false" />
+      <input type="checkbox" name="banner" value="true" checked class="checkbox checkbox-sm" />
+      <span>{gettext("Leave a banner where the messages were, linking to their new place")}</span>
+    </label>
     """
   end
 
