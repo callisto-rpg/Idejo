@@ -14,7 +14,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   import IdejoWeb.ApiHelpers
 
   alias Idejo.{Accounts, Conversations, Forum, Messages, Plugins, Reactions, Reading, Repo}
-  alias Idejo.Forum.Tags
+  alias Idejo.Forum.{CategoryIcons, Tags}
   alias Idejo.Messages.{Message, Polls, ScheduledMessage}
   alias Idejo.Moderation.Report
 
@@ -414,7 +414,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
       |> Map.new(&{&1["id"], &1["mark_colour"]})
     end
 
-    assert marks.()[ctx.general.id] == Idejo.Forum.CategoryIcons.tint(ctx.general.id)
+    assert marks.()[ctx.general.id] == CategoryIcons.tint(ctx.general.id)
 
     {:ok, _} = Forum.update_category(ctx.admin, ctx.general, %{"colour" => "#0fa05c"})
     assert marks.()[ctx.general.id] == "#0fa05c"
