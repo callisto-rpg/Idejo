@@ -31,7 +31,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "UserCard" => {@card, @card},
     "Me" => {@me, @me},
     "Category" =>
-      {~w(id uri title slug url description icon colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
+      {~w(id uri title slug url description icon colour mark_colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
        ~w(id title slug permissions)},
     "Topic" =>
       {@topic ++ ~w(first_message_id my_last_message_id preview mentions_count reactions_count),

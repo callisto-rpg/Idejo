@@ -14,7 +14,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   import IdejoWeb.ApiHelpers
 
   alias Idejo.{Accounts, Conversations, Forum, Messages, Plugins, Reactions, Reading, Repo}
-  alias Idejo.Forum.Tags
+  alias Idejo.Forum.{CategoryIcons, Tags}
   alias Idejo.Messages.{Message, Polls, ScheduledMessage}
   alias Idejo.Moderation.Report
 
@@ -403,6 +403,21 @@ defmodule IdejoWeb.Api.AP12MemberTest do
       api(ctx, :get, "/api/v1/me/followed?limit=1&cursor=#{next}") |> api_json(200)
 
     assert {second["id"], second["mentions_count"], second["reactions_count"]} == {later.id, 0, 1}
+  end
+
+  @tag req: "AP-12"
+  test "AP-12 a category gives the colour of its mark, the tint without one of its own", ctx do
+    marks = fn ->
+      api(ctx, :get, "/api/v1/categories")
+      |> api_json(200)
+      |> Map.fetch!("data")
+      |> Map.new(&{&1["id"], &1["mark_colour"]})
+    end
+
+    assert marks.()[ctx.general.id] == CategoryIcons.tint(ctx.general.id)
+
+    {:ok, _} = Forum.update_category(ctx.admin, ctx.general, %{"colour" => "#0fa05c"})
+    assert marks.()[ctx.general.id] == "#0fa05c"
   end
 
   @tag req: "AP-12"

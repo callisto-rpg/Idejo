@@ -1571,8 +1571,10 @@ The contract (M6; mark each item done here when its PR merges):
   decision, 2026-10-23: `categories.icon` and `colour` `#rrggbb`, set in **Admin →
   Categories** with an icon picker, a hex field filled by a colour picker, and a preview;
   audited), its initial on its colour, or its initial on one of eight tints from its id
-  (`CategoryIcons.tint/1` when only an icon is set). The 63 icons (the steward's, AGPL) live
-  in `Idejo.Forum.CategoryIcons`, parsed into shapes at compile time and drawn as SVG elements
+  (`CategoryIcons.tint/1` when only an icon is set). The 63 icons (the steward's, CC-BY-4.0
+  since 2026-11-15, steward decision) are `graphics/category-icons/<id>.svg`, which
+  `Idejo.Forum.CategoryIcons` reads and parses into shapes at compile time (its README gives
+  the drawing rules) and drawn as SVG elements
   (`TopicComponents.icon_shapes/1`), never raw HTML; shapes take white or near-black,
   whichever contrasts better (`contrast/1`); names via `IdejoWeb.CategoryIconNames`. Colours
   are SVG `fill` attributes or classes, never `style`. Elements that belong to a category

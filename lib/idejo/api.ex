@@ -23,7 +23,7 @@ defmodule Idejo.Api do
   alias Idejo.Api.Structure
   alias Idejo.Emoji
   alias Idejo.Forum
-  alias Idejo.Forum.{Category, Forwards, Tag, Tags, Topic, TopicIcons}
+  alias Idejo.Forum.{Category, CategoryIcons, Forwards, Tag, Tags, Topic, TopicIcons}
   alias Idejo.Markdown
   alias Idejo.Messages
   alias Idejo.Messages.{Message, Polls}
@@ -178,6 +178,9 @@ defmodule Idejo.Api do
       "description" => category.description,
       "icon" => category.icon,
       "colour" => category.colour,
+      # The colour the web draws its mark in (steward decision, 2026-11-15): its own, else
+      # one of the eight tints picked from its id.
+      "mark_colour" => category.colour || CategoryIcons.tint(category.id),
       "group" => group && %{"id" => group.id, "name" => group.name, "position" => group.position},
       "position" => category.position,
       "archive" => category.archive,
