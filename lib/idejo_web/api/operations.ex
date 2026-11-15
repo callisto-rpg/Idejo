@@ -266,6 +266,16 @@ defmodule IdejoWeb.Api.Operations do
       ),
       op(
         :get,
+        "/me/followed",
+        MeController,
+        :followed,
+        "read",
+        {:page, "Topic"},
+        "The topics the user follows, in the order followed, with mention and reaction counts.",
+        query: @page
+      ),
+      op(
+        :get,
         "/me/ignored",
         MeController,
         :ignored,
