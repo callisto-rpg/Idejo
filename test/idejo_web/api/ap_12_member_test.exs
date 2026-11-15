@@ -118,12 +118,20 @@ defmodule IdejoWeb.Api.AP12MemberTest do
         "display_name" => "Mia",
         "user_tag" => "gardener",
         "bio_md" => "I *grow*",
-        "accepts_private_messages" => false
+        "accepts_private_messages" => false,
+        "graphical_composer" => false,
+        "controls_on_mobile" => true
       })
       |> api_json(200)
 
     assert me["display_name"] == "Mia" and me["user_tag"] == "gardener" and
              me["bio_md"] == "I *grow*"
+
+    # The composer and message controls the member chose (Android CO-10, MA-01, IX-15);
+    # the field left out keeps its value.
+    refute me["graphical_composer"]
+    assert me["auto_punctuation"]
+    assert me["controls_on_mobile"] and me["controls_on_desktop"] == false
 
     # Each role's slug, as a +role mention names it (the app's mention glow, Android TV-07).
     assert %{"slug" => "member"} = Enum.find(me["roles"], &(&1["name"] == "member"))

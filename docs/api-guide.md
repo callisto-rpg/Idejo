@@ -279,6 +279,10 @@ the web's, and the server keeps every rule:
 - **Edit** a closed message of one's own: `PUT /messages/{id}` with the whole text;
   `"finish": true` is Ctrl+Enter. One earlier version is kept per edit, however many
   Enters. Delete with `DELETE /messages/{id}` (not a topic's first message).
+- **The member's choices**: `GET /me` gives `auto_punctuation`, `graphical_composer` (the
+  composer's toolbar and its drawing of the message) and `controls_on_mobile` /
+  `controls_on_desktop` (a message's actions always shown, not on a tap); `PATCH /me`
+  changes any of them, the others kept.
 - Keep the topic channel joined while writing: if the author has no page or channel open
   on the topic for 30 seconds, their open message closes, as when a browser tab closes.
 
