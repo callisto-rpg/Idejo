@@ -33,7 +33,9 @@ defmodule IdejoWeb.Api.OpenApi do
     "Category" =>
       {~w(id uri title slug url description icon colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
        ~w(id title slug permissions)},
-    "Topic" => {@topic ++ ~w(first_message_id my_last_message_id preview mentions_count reactions_count), @topic},
+    "Topic" =>
+      {@topic ++ ~w(first_message_id my_last_message_id preview mentions_count reactions_count),
+       @topic},
     "Tag" => {~w(id name slug category_ids), ~w(id name slug)},
     "Message" => {@message, @message},
     "Poll" =>
