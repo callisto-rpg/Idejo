@@ -406,6 +406,21 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   end
 
   @tag req: "AP-12"
+  test "AP-12 a category gives the colour of its mark, the tint without one of its own", ctx do
+    marks = fn ->
+      api(ctx, :get, "/api/v1/categories")
+      |> api_json(200)
+      |> Map.fetch!("data")
+      |> Map.new(&{&1["id"], &1["mark_colour"]})
+    end
+
+    assert marks.()[ctx.general.id] == Idejo.Forum.CategoryIcons.tint(ctx.general.id)
+
+    {:ok, _} = Forum.update_category(ctx.admin, ctx.general, %{"colour" => "#0fa05c"})
+    assert marks.()[ctx.general.id] == "#0fa05c"
+  end
+
+  @tag req: "AP-12"
   test "AP-12 around messages: spoilers, polls, reactions, reports, forwards, new topics", ctx do
     %{"message" => %{"id" => mine}} =
       api(ctx, :post, "/api/v1/topics/#{ctx.topic.id}/composer/commit", %{"body_md" => "My plan"})

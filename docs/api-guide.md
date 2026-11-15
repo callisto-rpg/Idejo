@@ -226,6 +226,14 @@ idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plu
 Raw HTML is never rendered. Inline reply quotes are block quotes whose first line links to
 the quoted message's permalink: `> [Replying to Ada:](/m/{id}) [excerpt](/m/{id})`.
 
+### Category marks
+
+A category's mark is a 32 × 32 tile in `mark_colour` (its `colour`, else one of eight tints
+picked from its id, as the web draws it). With an `icon`, the tile is that icon's drawing,
+`graphics/category-icons/{icon}.svg` in idejo's repository (CC-BY-4.0, Mariano Pictet): the
+tile's `#6567e7` becomes `mark_colour`, the shapes' `#ffffff` white or `#111111`, whichever
+has the higher WCAG contrast with it. Without one, the category's initial on that colour.
+
 ### Topic permissions
 
 A topic can override its category's rights for each role (`view`, `post`, `moderate`, and
