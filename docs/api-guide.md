@@ -236,6 +236,15 @@ or false). `PUT` the same path with `{"settings": {role_id: {right: "allow" | "d
 "unset"}}}`; roles and rights it does not know are left out, `moderate` is set last, and
 each change is logged.
 
+### Followed topics
+
+`GET /me/followed` pages through the topics the member follows, in the order they followed
+them (topics followed by everyone, at their creation), as any topic list, for the sidebar
+and the inbox. Each topic also gives `mentions_count`, its unread @ and + mentions of the
+member, and `reactions_count`, others' reactions to the member's messages since they last
+read it: what the group's inbox cards show. Topics the member may no longer view are left
+out.
+
 ## 6. The growing message
 
 A topic is a live chat whose lines grow into one message. The app's composer behaves like

@@ -91,6 +91,7 @@ All under `/api/v1`. Scope `-` means no token needed. Full detail is in the Open
 | PUT, DELETE /me/roles/:role_id | write | `Access.set_self_roles/2` |
 | POST /me/welcome | write | `Accounts.mark_welcomed/1` |
 | GET /me/warnings, POST /me/warnings/acknowledge | read, write | `Warnings.pending/1`, `acknowledge/1` |
+| GET /me/followed | read | `Reading.list_followed_topics/1`, `mention_counts/2`, `new_reaction_counts/2` |
 | GET /me/ignored | read | `Accounts.list_ignored/1` |
 | GET /me/communities | read | `Community.communities/1` |
 | GET /me/push, POST /me/push/unifiedpush, DELETE /me/push/unifiedpush/:id, POST /me/push/test | read, push | `Push` |

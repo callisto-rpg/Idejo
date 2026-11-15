@@ -367,6 +367,45 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   end
 
   @tag req: "AP-12"
+  test "AP-12 the followed topics, in the order followed, with their counts, by pages", ctx do
+    {:ok, later} =
+      Forum.create_topic(ctx.other, ctx.general, %{"title" => "Seed swap", "body" => "Hi"})
+
+    {:ok, mine} = Forum.post_message(ctx.member, later, %{"body" => "Count me in"})
+    {:ok, _} = Reactions.toggle(ctx.other, mine, "tada")
+    :ok = Reading.follow(ctx.member, ctx.topic)
+    :ok = Reading.follow(ctx.member, later)
+    # One the member may not view is left out.
+    :ok = Reading.follow(ctx.member, ctx.secret)
+
+    followed_at = [{ctx.topic, ~U[2026-01-01 00:00:00Z]}, {later, ~U[2026-02-01 00:00:00Z]}]
+
+    for {topic, at} <- followed_at do
+      Repo.update_all(
+        from(f in Idejo.Reading.Follow,
+          where: f.user_id == ^ctx.member.id and f.topic_id == ^topic.id
+        ),
+        set: [created_at: at]
+      )
+    end
+
+    {:ok, _} = Forum.post_message(ctx.other, ctx.topic, %{"body" => "Hi @#{ctx.member.username}"})
+
+    %{"data" => [first], "next_cursor" => next} =
+      api(ctx, :get, "/api/v1/me/followed?limit=1") |> api_json(200)
+
+    assert {first["id"], first["mentions_count"], first["reactions_count"]} ==
+             {ctx.topic.id, 1, 0}
+
+    assert first["unread_count"] > 0
+
+    %{"data" => [second], "next_cursor" => nil} =
+      api(ctx, :get, "/api/v1/me/followed?limit=1&cursor=#{next}") |> api_json(200)
+
+    assert {second["id"], second["mentions_count"], second["reactions_count"]} == {later.id, 0, 1}
+  end
+
+  @tag req: "AP-12"
   test "AP-12 around messages: spoilers, polls, reactions, reports, forwards, new topics", ctx do
     %{"message" => %{"id" => mine}} =
       api(ctx, :post, "/api/v1/topics/#{ctx.topic.id}/composer/commit", %{"body_md" => "My plan"})

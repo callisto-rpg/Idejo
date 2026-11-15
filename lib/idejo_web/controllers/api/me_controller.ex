@@ -6,11 +6,11 @@ defmodule IdejoWeb.Api.MeController do
   The signed-in user's own account (AP-09, AP-12): what Profile and account does, through
   the same context functions: display name, user tag, bio, Writing, private messages,
   password, pictures, email summary and push choices, signed-in devices, self-select roles,
-  the welcome card, warnings, ignored users and the community menu.
+  the welcome card, warnings, followed topics, ignored users and the community menu.
   """
   use IdejoWeb.Api.Controller
 
-  alias Idejo.{Access, Accounts, Community, Push}
+  alias Idejo.{Access, Accounts, Community, Push, Reading}
   alias Idejo.Accounts.ApiTokens
   alias Idejo.Moderation.Warnings
   alias Idejo.Notifications.Digest
@@ -177,6 +177,40 @@ defmodule IdejoWeb.Api.MeController do
   def acknowledge_warnings(conn, _params) do
     :ok = Warnings.acknowledge(user(conn))
     no_content(conn)
+  end
+
+  @doc """
+  The topics the user follows (IX-02, the app's sidebar and inbox; steward decision,
+  2026-11-15), in the order they followed them, a page at a time: as every topic list, with
+  `mentions_count` (unread @ and + mentions) and `reactions_count` (others' reactions to the
+  user's messages since they last read it), as the group's inbox cards count them.
+  """
+  def followed(conn, params) do
+    user = user(conn)
+
+    with page when is_integer(page) <- page_number(params, :followed) || {:error, :bad_request} do
+      per_page = limit(params)
+
+      {topics, rest} =
+        user
+        |> Reading.list_followed_topics()
+        |> Enum.drop((page - 1) * per_page)
+        |> Enum.split(per_page)
+
+      ids = Enum.map(topics, & &1.id)
+      mentions = Reading.mention_counts(user, ids)
+      reactions = Reading.new_reaction_counts(user, ids)
+
+      data =
+        for topic <- Api.topics(user, topics) do
+          topic
+          |> Map.put("mentions_count", Map.get(mentions, topic["id"], 0))
+          |> Map.put("reactions_count", Map.get(reactions, topic["id"], 0))
+        end
+
+      {next, prev} = page_cursors(:followed, page, rest != [])
+      send_page(conn, data, next, prev)
+    end
   end
 
   def ignored(conn, _params),
