@@ -272,7 +272,11 @@ defmodule Idejo.Api do
   def topic(viewer, %Topic{} = topic) do
     [map] = topics(viewer, [topic])
     first = Forum.TopicWindow.first(topic)
-    Map.put(map, "first_message_id", first && first.id)
+
+    map
+    |> Map.put("first_message_id", first && first.id)
+    # The navigator's "My last message" (steward request, 2026-11-15): not deleted, or nil.
+    |> Map.put("my_last_message_id", Forum.TopicWindow.last_by(topic, viewer))
   end
 
   defp topic_map(topic, viewer, unread, levels, follows, inactive) do
