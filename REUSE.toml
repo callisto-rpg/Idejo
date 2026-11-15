@@ -46,6 +46,13 @@ precedence = "override"
 SPDX-FileCopyrightText = ["2014-2021 Twitter, Inc and other contributors", "2022-present Jason Sofonia & Justine De Caires", "Mariano Pictet"]
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# The category icons (steward decision, 2026-11-15), README included.
+[[annotations]]
+path = "graphics/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Mariano Pictet"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # The idejo logos (steward decision, 2026-10-23).
 [[annotations]]
 path = ["priv/static/images/logo*", "priv/static/images/favicon.png", "priv/static/images/icon-*", "priv/static/images/idejo-pfp.png", "priv/static/favicon.ico"]

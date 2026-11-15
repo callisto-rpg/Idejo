@@ -60,6 +60,8 @@ RUN mix assets.setup
 COPY priv priv
 
 COPY lib lib
+# The category icons, read when Idejo.Forum.CategoryIcons compiles.
+COPY graphics graphics
 # Only .git/HEAD and .git/refs pass .dockerignore: enough for Idejo.Source to record the
 # commit this release is built from (LI-03).
 COPY .git .git

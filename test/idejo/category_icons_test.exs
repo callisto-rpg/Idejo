@@ -45,6 +45,24 @@ defmodule Idejo.CategoryIconsTest do
   end
 
   @tag req: "RP-03"
+  test "RP-03 the drawings are graphics/category-icons, in the tile's and the shapes' colours" do
+    names = Enum.map(Path.wildcard("graphics/category-icons/*.svg"), &Path.basename(&1, ".svg"))
+    assert Enum.sort(names) == Enum.sort(CategoryIcons.ids())
+
+    for id <- CategoryIcons.ids() do
+      colours =
+        for {_, attrs} <- flatten(CategoryIcons.shapes(id, "#3366ff")),
+            {name, value} <- attrs,
+            name in [:fill, :stroke],
+            uniq: true,
+            do: value
+
+      allowed = ["#3366ff", CategoryIcons.contrast("#3366ff"), "none"]
+      assert colours -- allowed == [], "#{id}: #{inspect(colours)}"
+    end
+  end
+
+  @tag req: "RP-03"
   test "RP-03 administrators give a category an icon and a colour, audited" do
     admin = user_with_role_fixture(:administrator)
 
