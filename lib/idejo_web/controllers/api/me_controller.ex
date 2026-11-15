@@ -19,16 +19,19 @@ defmodule IdejoWeb.Api.MeController do
 
   @doc """
   `display_name` and `user_tag` (`Accounts.update_user_profile/2`), `bio_md`
-  (`update_user_bio/2`), `auto_punctuation` (`update_user_writing/2`),
-  `accepts_private_messages` (`update_user_private_messages/2`): each saved by its own
-  function, in that order; the first refusal stops.
+  (`update_user_bio/2`), `auto_punctuation` and `graphical_composer`
+  (`update_user_writing/2`), `controls_on_mobile` and `controls_on_desktop`
+  (`update_user_controls/2`), `accepts_private_messages`
+  (`update_user_private_messages/2`): each saved by its own function, in that order; the
+  first refusal stops.
   """
   def update(conn, params) do
     steps = [
       {~w(display_name user_tag), &Accounts.update_user_profile/2},
       {~w(bio_md),
        fn user, attrs -> Accounts.update_user_bio(user, %{"bio_md" => attrs["bio_md"] || ""}) end},
-      {~w(auto_punctuation), &Accounts.update_user_writing/2},
+      {~w(auto_punctuation graphical_composer), &writing/2},
+      {~w(controls_on_mobile controls_on_desktop), &controls/2},
       {~w(accepts_private_messages), &Accounts.update_user_private_messages/2}
     ]
 
@@ -41,6 +44,24 @@ defmodule IdejoWeb.Api.MeController do
       end)
 
     with {:ok, user} <- result, do: json(conn, Api.me(Accounts.get_user!(user.id)))
+  end
+
+  # Each form saves its fields together: a client may send one of them, the other is kept.
+  defp writing(user, attrs) do
+    current = %{
+      "auto_punctuation" => user.auto_punctuation,
+      "graphical_composer" => user.graphical_composer
+    }
+    Accounts.update_user_writing(user, Map.merge(current, attrs))
+  end
+
+  defp controls(user, attrs) do
+    current = %{
+      "controls_on_mobile" => user.controls_on_mobile,
+      "controls_on_desktop" => user.controls_on_desktop
+    }
+
+    Accounts.update_user_controls(user, Map.merge(current, attrs))
   end
 
   defp continue({:ok, user}), do: {:cont, {:ok, user}}

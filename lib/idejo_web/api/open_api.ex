@@ -21,7 +21,7 @@ defmodule IdejoWeb.Api.OpenApi do
   @person ~w(id uri username display_name user_tag avatar_url avatar_dark_url role colour deleted system)
   @card @person ++ ~w(bio_md roles joined_at ignored_by_me may_message may_ban banned)
   @me @card ++
-        ~w(email verified welcomed intro_due auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator)
+        ~w(email verified welcomed intro_due auto_punctuation graphical_composer controls_on_mobile controls_on_desktop accepts_private_messages warning_pending administrator moderator server_moderator)
   @topic ~w(id uri title slug url category_id private tags author topical icon created_at last_activity_at messages_count unread_count mention_state followed muted locked archived pinned inactive followed_by_everyone continues_from)
   @message ~w(id uri topic_id url author state deleted_by body_md mentions images spoiler inline_spoilers replies_to forwarded_from poll plugins reactions edited moderator_edited pinned_at versions_count scheduled held anonymous continues_topic_id continued_in moved_after cursor opened_at closed_at updated_at)
 
@@ -104,7 +104,8 @@ defmodule IdejoWeb.Api.OpenApi do
     "RevokeRequest" => {~w(token), []},
     "IntroClose" => {~w(hide), []},
     "MeUpdate" =>
-      {~w(display_name user_tag bio_md auto_punctuation accepts_private_messages), []},
+      {~w(display_name user_tag bio_md auto_punctuation graphical_composer controls_on_mobile controls_on_desktop accepts_private_messages),
+       []},
     "PasswordChange" =>
       {~w(current_password password password_confirmation), ~w(current_password password)},
     "UnifiedPushRequest" => {~w(endpoint p256dh auth device_name), ~w(endpoint p256dh auth)},
@@ -192,7 +193,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "reply_to" => "array"
   }
 
-  @booleans ~w(deleted system ignored_by_me may_message may_ban banned verified welcomed intro_due hide auto_punctuation accepts_private_messages warning_pending administrator moderator server_moderator archive private topical followed muted locked archived pinned inactive followed_by_everyone inline_spoilers edited moderator_edited scheduled held anonymous multiple hidden_until_closed closed results_shown mine reply_allowed_early may_post more current this_device enabled break new finish typing hidden confirm forever banner new_topic)
+  @booleans ~w(deleted system ignored_by_me may_message may_ban banned verified welcomed intro_due hide auto_punctuation graphical_composer controls_on_mobile controls_on_desktop accepts_private_messages warning_pending administrator moderator server_moderator archive private topical followed muted locked archived pinned inactive followed_by_everyone inline_spoilers edited moderator_edited scheduled held anonymous multiple hidden_until_closed closed results_shown mine reply_allowed_early may_post more current this_device enabled break new finish typing hidden confirm forever banner new_topic)
 
   @doc "The whole document."
   @spec document() :: map()
