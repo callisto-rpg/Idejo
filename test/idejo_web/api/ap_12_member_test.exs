@@ -103,10 +103,23 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   end
 
   @tag req: "AP-12"
+  test "AP-12 without push, no push key", ctx do
+    admin = user_with_role_fixture(:administrator)
+    {:ok, _} = Idejo.Settings.update_settings(admin, %{"push_enabled" => "off"})
+
+    server = api(ctx, :get, "/api/v1/server") |> api_json(200)
+    assert server["settings"]["push"] == false
+    assert server["settings"]["push_vapid_key"] == nil
+  end
+
+  @tag req: "AP-12"
   test "AP-12 the server, the account and its choices", ctx do
     server = api(ctx, :get, "/api/v1/server") |> api_json(200)
     assert server["settings"]["gm_window_seconds"] == 15
     assert server["settings"]["gm_early_reply"] == true
+    # The key pushes are signed with, as browsers take it (Android NT-06).
+    assert server["settings"]["push_vapid_key"] == Idejo.Push.Vapid.public_key()
+    assert byte_size(server["settings"]["push_vapid_key"]) == 87
     # Every `!` command as the Help page words it (Android BR-08).
     assert Enum.map(server["commands"], & &1["name"]) ==
              Enum.map(IdejoWeb.ComposerCommands.all(), & &1.name)

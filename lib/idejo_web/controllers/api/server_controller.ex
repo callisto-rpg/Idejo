@@ -4,7 +4,8 @@
 defmodule IdejoWeb.Api.ServerController do
   @moduledoc """
   The server as the app needs it (AP-12): name, About and Rules, self-select roles, the
-  settings that change how a client behaves, the server's own emoji and active plugins;
+  settings that change how a client behaves (with the push key, `push_vapid_key`), the
+  server's own emoji and active plugins;
   search, suggestions, emoji and GIFs.
   """
   use IdejoWeb.Api.Controller
@@ -27,6 +28,8 @@ defmodule IdejoWeb.Api.ServerController do
         "gm_early_reply" => Messages.early_reply_allowed?(),
         "gifs" => Gifs.enabled?(),
         "push" => Idejo.Push.enabled?(),
+        # The key that signs pushes (RFC 8292), for distributors that ask for it (FCM).
+        "push_vapid_key" => if(Idejo.Push.enabled?(), do: Idejo.Push.Vapid.public_key()),
         "upload_types" => Enum.map(Uploads.extensions(), &String.trim_leading(&1, ".")),
         "upload_max_bytes" => Uploads.max_bytes(),
         "registration" => Settings.get(:registration_mode)
