@@ -357,7 +357,9 @@ Pushes are standard Web Push (RFC 8291 `aes128gcm`, VAPID RFC 8292), the same as
 (PN-01 to PN-16): decrypt with the keys you registered. `GET /server`'s
 `settings.push_vapid_key` is the public key that signs them (uncompressed P-256, URL-safe
 Base64, as browsers take it; null while push is off), for distributors that need it, such as
-FCM. `bin/idejo-admin rotate-push-keys` changes it: register again when it differs. The payload is declarative JSON:
+FCM. `bin/idejo-admin rotate-push-keys` changes it: register again when it differs.
+
+The payload is declarative JSON:
 
 ```json
 {"web_push": 8030,
