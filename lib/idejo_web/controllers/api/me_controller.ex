@@ -6,11 +6,12 @@ defmodule IdejoWeb.Api.MeController do
   The signed-in user's own account (AP-09, AP-12): what Profile and account does, through
   the same context functions: display name, user tag, bio, Writing, private messages,
   password, pictures, email summary and push choices, signed-in devices, self-select roles,
-  the welcome card, warnings, followed topics, ignored users and the community menu.
+  the welcome card, warnings, followed topics, ignored users and the community menu; on a
+  group's inbox, settings for all forums.
   """
   use IdejoWeb.Api.Controller
 
-  alias Idejo.{Access, Accounts, Community, Push, Reading}
+  alias Idejo.{Access, Accounts, Community, Inbox, Push, Reading}
   alias Idejo.Accounts.ApiTokens
   alias Idejo.Moderation.Warnings
   alias Idejo.Notifications.Digest
@@ -131,6 +132,43 @@ defmodule IdejoWeb.Api.MeController do
         )
     }
   end
+
+  # The sections an app may save for all forums: the username needs the web's password.
+  @everywhere ~w(profile bio avatar writing controls private email push)
+
+  @doc """
+  Settings for all forums (steward request, 2026-11-19), as the inbox's "Save for all
+  forums": `sections` of `#{Enum.join(@everywhere, ", ")}`, saved as they are here on every
+  forum the user joined (`Idejo.Inbox.save_everywhere/3`); email and push carry whether
+  they are shared, as on the web. `{saved, missed}`: the forums' names. `forbidden` where
+  `GET /me` says `everywhere: false`; `unavailable` when the group's service did not answer.
+  """
+  def everywhere(conn, params) do
+    user = user(conn)
+
+    with true <- Inbox.everywhere?(user) || {:error, :forbidden},
+         {:ok, sections} <- everywhere_sections(params["sections"]) do
+      opts =
+        if Enum.any?(sections, &(&1 in ~w(email push))),
+          do: [shared: user.notifications_shared],
+          else: []
+
+      case Inbox.save_everywhere(user, sections, opts) do
+        {:ok, %{done: done, missed: missed}} ->
+          json(conn, %{"saved" => done, "missed" => missed})
+        :error ->
+          {:error, :unavailable}
+      end
+    end
+  end
+
+  defp everywhere_sections([_ | _] = sections) do
+    if Enum.all?(sections, &(&1 in @everywhere)),
+      do: {:ok, Enum.uniq(sections)},
+      else: {:error, :bad_request}
+  end
+
+  defp everywhere_sections(_sections), do: {:error, :bad_request}
 
   def tokens(conn, _params) do
     current = conn.assigns.api_token.id

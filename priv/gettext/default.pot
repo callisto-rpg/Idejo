@@ -7374,6 +7374,11 @@ msgstr ""
 msgid "Push notifications are off on this server."
 msgstr ""
 
+#: lib/idejo_web/api/errors.ex
+#, elixir-autogen, elixir-format
+msgid "Your forums could not be reached. Try again later."
+msgstr ""
+
 #: lib/idejo_web/live/user_settings_live.ex:690
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"

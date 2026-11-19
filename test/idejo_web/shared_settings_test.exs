@@ -12,6 +12,7 @@ defmodule IdejoWeb.SharedSettingsTest do
 
   import Idejo.AccountsFixtures
   import Idejo.ImageFixtures
+  import IdejoWeb.ApiHelpers
   import Phoenix.LiveViewTest
 
   alias Idejo.Accounts
@@ -314,5 +315,76 @@ defmodule IdejoWeb.SharedSettingsTest do
     refute has_element?(view, ~s(button[name="everywhere"]))
     refute has_element?(view, "#avatar-everywhere")
     refute has_element?(view, "#shared-notifications-section")
+  end
+
+  ## The inbox's API (steward request, 2026-11-19): the app's "Save for all forums"
+
+  defp everywhere(token, body) do
+    build_conn()
+    |> api_conn(token)
+    |> put_req_header("content-type", "application/json")
+    |> post(~p"/api/v1/me/everywhere", JSON.encode!(body))
+  end
+
+  defp me(token), do: build_conn() |> api_conn(token) |> get(~p"/api/v1/me")
+
+  test "the inbox's API saves sections on every forum, naming those missed" do
+    group(inbox: true)
+    ada = link(user_fixture(), "sub-ada")
+    {token, _row} = api_token_fixture(ada)
+    assert %{"everywhere" => true} = api_json(me(token), 200)
+
+    service(fn ->
+      %{"forums" => [forum("Garden"), forum("Kitchen", %{"answered" => false})]}
+    end)
+
+    conn = everywhere(token, %{sections: ["writing", "controls"]})
+    assert %{"saved" => ["Garden"], "missed" => ["Kitchen"]} = api_json(conn, 200)
+
+    assert_received {:sent, %{"subject" => "sub-ada", "settings" => settings}}
+    assert settings |> Map.keys() |> Enum.sort() == ~w(controls writing)
+
+    # Email and push say whether they are shared, as the web's saves do.
+    service(fn -> %{"forums" => [forum("Garden")]} end)
+    assert %{"saved" => ["Garden"]} = api_json(everywhere(token, %{sections: ["email"]}), 200)
+    assert_received {:sent, %{"settings" => %{"email" => _, "notifications_shared" => false}}}
+  end
+
+  test "the inbox's API refuses unknown sections and says when the forums are out of reach" do
+    group(inbox: true)
+    ada = link(user_fixture(), "sub-ada")
+    {token, _row} = api_token_fixture(ada)
+
+    assert api_json(everywhere(token, %{sections: ["username"]}), 400)
+    assert api_json(everywhere(token, %{sections: []}), 400)
+    assert api_json(everywhere(token, %{}), 400)
+
+    Req.Test.stub(Idejo.Community, &(&1 |> Plug.Conn.put_status(500) |> Req.Test.json(%{})))
+
+    assert %{"error" => %{"code" => "unavailable"}} =
+             api_json(everywhere(token, %{sections: ["bio"]}), 503)
+  end
+
+  test "settings for all forums are the inbox's, for members linked to idejo ID" do
+    group(inbox: true)
+    {token, _row} = api_token_fixture(user_fixture())
+    assert %{"everywhere" => false} = api_json(me(token), 200)
+
+    assert %{"error" => %{"code" => "forbidden"}} =
+             api_json(everywhere(token, %{sections: ["bio"]}), 403)
+
+    # A forum of the group, even for a linked member.
+    group(chat_url: "https://my.example.test/chat")
+    {token, _row} = api_token_fixture(link(user_fixture(), "sub-bo"))
+    assert %{"everywhere" => false} = api_json(me(token), 200)
+    assert api_json(everywhere(token, %{sections: ["bio"]}), 403)
+  end
+
+  test "the app's token needs the write scope to save for all forums" do
+    group(inbox: true)
+    {token, _row} = api_token_fixture(link(user_fixture(), "sub-ada"), ["read"])
+
+    assert %{"error" => %{"code" => "insufficient_scope"}} =
+             api_json(everywhere(token, %{sections: ["bio"]}), 403)
   end
 end

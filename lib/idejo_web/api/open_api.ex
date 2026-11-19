@@ -30,7 +30,9 @@ defmodule IdejoWeb.Api.OpenApi do
     "Person" => {@person, @person},
     # `idejo_id` only with a chat service (steward request, 2026-11-19).
     "UserCard" => {@card ++ ~w(idejo_id), @card},
-    "Me" => {@me ++ ~w(idejo_id), @me},
+    # `everywhere`: settings for all forums, on a group's inbox (steward request, 2026-11-19).
+    "Me" => {@me ++ ~w(idejo_id everywhere), @me},
+    "EverywhereResult" => {~w(saved missed), ~w(saved missed)},
     "Category" =>
       {~w(id uri title slug url description icon colour mark_colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
        ~w(id title slug permissions)},
@@ -125,6 +127,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "Report" => {~w(reason), ~w(reason)},
     # `subject` (an idejo ID) on a group's inbox only (steward request, 2026-11-19).
     "ConversationCreate" => {~w(user_id subject), []},
+    "EverywhereRequest" => {~w(sections), ~w(sections)},
     "ReportOutcome" => {~w(outcome note), ~w(outcome)},
     "Reason" => {~w(reason), []},
     "Unarchive" => {~w(category_id reason), []},
@@ -334,7 +337,7 @@ defmodule IdejoWeb.Api.OpenApi do
 
   defp responses(op) do
     errors =
-      for status <- [400, 401, 403, 404, 409, 410, 413, 422, 429], into: %{} do
+      for status <- [400, 401, 403, 404, 409, 410, 413, 422, 429, 503], into: %{} do
         {Integer.to_string(status),
          %{
            "description" => error_description(status),

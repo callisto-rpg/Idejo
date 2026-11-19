@@ -284,6 +284,16 @@ defmodule IdejoWeb.Api.Operations do
         "The users the user ignores (AC-06)."
       ),
       op(
+        :post,
+        "/me/everywhere",
+        MeController,
+        :everywhere,
+        "write",
+        "EverywhereResult",
+        "On the group's inbox, saves the user's settings sections on every forum they joined.",
+        body: "EverywhereRequest"
+      ),
+      op(
         :get,
         "/me/communities",
         MeController,
