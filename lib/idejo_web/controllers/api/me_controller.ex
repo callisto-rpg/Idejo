@@ -156,6 +156,7 @@ defmodule IdejoWeb.Api.MeController do
       case Inbox.save_everywhere(user, sections, opts) do
         {:ok, %{done: done, missed: missed}} ->
           json(conn, %{"saved" => done, "missed" => missed})
+
         :error ->
           {:error, :unavailable}
       end
