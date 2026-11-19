@@ -12,6 +12,7 @@ defmodule IdejoWeb.Api.ServerController do
 
   alias Idejo.{Access, Emoji, Gifs, Plugins, Search, Settings, Suggestions, Uploads}
   alias Idejo.Messages
+  alias Idejo.Push.Vapid
 
   def show(conn, _params) do
     json(conn, %{
@@ -29,7 +30,7 @@ defmodule IdejoWeb.Api.ServerController do
         "gifs" => Gifs.enabled?(),
         "push" => Idejo.Push.enabled?(),
         # The key that signs pushes (RFC 8292), for distributors that ask for it (FCM).
-        "push_vapid_key" => if(Idejo.Push.enabled?(), do: Idejo.Push.Vapid.public_key()),
+        "push_vapid_key" => if(Idejo.Push.enabled?(), do: Vapid.public_key()),
         "upload_types" => Enum.map(Uploads.extensions(), &String.trim_leading(&1, ".")),
         "upload_max_bytes" => Uploads.max_bytes(),
         "registration" => Settings.get(:registration_mode)
