@@ -52,6 +52,7 @@ defmodule IdejoWeb.Api.MeController do
       "auto_punctuation" => user.auto_punctuation,
       "graphical_composer" => user.graphical_composer
     }
+
     Accounts.update_user_writing(user, Map.merge(current, attrs))
   end
 
