@@ -159,6 +159,8 @@ defmodule IdejoWeb.Router do
   # AP-07: discovery, before sign-in, no session; AP-20 answers `api: null` while off.
   scope "/", IdejoWeb.Api do
     get "/.well-known/idejo", DiscoveryController, :show
+    # IX-03: the official app opens this forum's links (Android App Links).
+    get "/.well-known/assetlinks.json", AssetLinksController, :show
   end
 
   # AP-08: the official app's sign-in, in the browser with the normal session (HTML).

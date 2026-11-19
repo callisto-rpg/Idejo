@@ -48,6 +48,27 @@ if pg_bin_dir = System.get_env("IDEJO_PG_BIN_DIR") do
   config :idejo, :pg_bin_dir, pg_bin_dir
 end
 
+# IX-03: the fingerprints of Android apps signed by others (`AA:BB:…`, comma-separated),
+# verified to open this forum's links as the official app is. A malformed one stops the boot.
+case System.get_env("IDEJO_ANDROID_FINGERPRINTS", "") |> String.trim() do
+  "" ->
+    :ok
+
+  prints ->
+    prints =
+      prints
+      |> String.split(",", trim: true)
+      |> Enum.map(&(&1 |> String.trim() |> String.upcase()))
+
+    Enum.each(prints, fn print ->
+      unless print =~ ~r/\A[0-9A-F]{2}(:[0-9A-F]{2}){31}\z/ do
+        raise "IDEJO_ANDROID_FINGERPRINTS: not a SHA-256 fingerprint: #{print}"
+      end
+    end)
+
+    config :idejo, :extra_android_fingerprints, prints
+end
+
 # LI-03: where a modified server publishes its own source code.
 if source_url = System.get_env("IDEJO_SOURCE_URL") do
   config :idejo, :source_url, source_url

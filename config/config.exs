@@ -37,6 +37,10 @@ config :idejo, Idejo.Repo, parameters: [jit: "off"]
 # once a server has content, since URIs are stored at creation.
 config :idejo, :base_uri, "http://localhost:4000"
 
+# IX-03: the SHA-256 fingerprints of the official Android app's release keys (Google Play,
+# F-Droid, GitHub), served at /.well-known/assetlinks.json.
+config :idejo, :android_fingerprints, []
+
 # TP-12: where uploaded images are stored on local disk (production: IDEJO_UPLOADS_DIR, the
 # Compose volume /data/uploads by default).
 config :idejo, :uploads_dir, Path.expand("../tmp/uploads", __DIR__)
