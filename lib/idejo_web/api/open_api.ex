@@ -28,8 +28,9 @@ defmodule IdejoWeb.Api.OpenApi do
   @schemas %{
     "Error" => {~w(error), ~w(error)},
     "Person" => {@person, @person},
-    "UserCard" => {@card, @card},
-    "Me" => {@me, @me},
+    # `idejo_id` only with a chat service (steward request, 2026-11-19).
+    "UserCard" => {@card ++ ~w(idejo_id), @card},
+    "Me" => {@me ++ ~w(idejo_id), @me},
     "Category" =>
       {~w(id uri title slug url description icon colour mark_colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
        ~w(id title slug permissions)},
@@ -122,7 +123,8 @@ defmodule IdejoWeb.Api.OpenApi do
     "Vote" => {~w(option_ids), ~w(option_ids)},
     "PluginRun" => {~w(params message_id reply_to), []},
     "Report" => {~w(reason), ~w(reason)},
-    "ConversationCreate" => {~w(user_id), ~w(user_id)},
+    # `subject` (an idejo ID) on a group's inbox only (steward request, 2026-11-19).
+    "ConversationCreate" => {~w(user_id subject), []},
     "ReportOutcome" => {~w(outcome note), ~w(outcome)},
     "Reason" => {~w(reason), []},
     "Unarchive" => {~w(category_id reason), []},

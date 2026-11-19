@@ -17,6 +17,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
   alias Idejo.Forum.{CategoryIcons, Tags}
   alias Idejo.Messages.{Message, Polls, ScheduledMessage}
   alias Idejo.Moderation.Report
+  alias Idejo.Push.Vapid
 
   setup do
     world = IdejoWeb.ApiWorld.build()
@@ -118,7 +119,7 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     assert server["settings"]["gm_window_seconds"] == 15
     assert server["settings"]["gm_early_reply"] == true
     # The key pushes are signed with, as browsers take it (Android NT-06).
-    assert server["settings"]["push_vapid_key"] == Idejo.Push.Vapid.public_key()
+    assert server["settings"]["push_vapid_key"] == Vapid.public_key()
     assert byte_size(server["settings"]["push_vapid_key"]) == 87
     # Every `!` command as the Help page words it (Android BR-08).
     assert Enum.map(server["commands"], & &1["name"]) ==
