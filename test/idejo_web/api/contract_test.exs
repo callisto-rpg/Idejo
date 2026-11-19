@@ -66,7 +66,7 @@ defmodule IdejoWeb.Api.ContractTest do
     documented = OpenApi.document()["x-idejo-error-codes"]
 
     for {code, status} <- Errors.codes() do
-      assert status in [400, 401, 403, 404, 409, 410, 413, 422, 429, 500]
+      assert status in [400, 401, 403, 404, 409, 410, 413, 422, 429, 500, 503]
       assert is_binary(Errors.message(code)) and Errors.message(code) != ""
       assert documented[Atom.to_string(code)]["status"] == status
     end

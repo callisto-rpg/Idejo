@@ -158,6 +158,7 @@ A user keeps at most 20 devices: a 21st sign-in revokes the oldest. A revoked to
   | 413 | `too_large` (an image) |
   | 422 | `validation` and other refused values |
   | 429 | `rate_limited`, with `Retry-After` |
+  | 503 | `unavailable`: the group's forums could not be reached (settings for all forums) |
 
   Every code, with its status and text, is in the OpenAPI document under
   `x-idejo-error-codes`.
@@ -392,6 +393,15 @@ that ignore VAPID still work.
   conversation on the inbox: `POST /conversations` `{"subject": "<idejo_id>"}` with the
   inbox's token, which answers as with `user_id` (`forbidden` for an idejo ID it cannot
   find, and on servers that are not an inbox).
+- **Settings for all forums**, as the inbox's web page offers them beside each Save: on a
+  group's inbox, `GET /me` gives `everywhere: true` for a member linked to its provider
+  (absent or false elsewhere). After saving a section on the inbox, `POST /me/everywhere`
+  `{"sections": [...]}` with the inbox's token (scope `write`) saves those sections, as they
+  now are on the inbox, on every forum of the group the member joined: `profile`, `bio`,
+  `avatar`, `writing`, `controls`, `private`, `email`, `push` (not the username, which
+  needs the web's password). It answers `{"saved": [name], "missed": [name]}`, a forum
+  missed when it did not answer or did not take a section; `forbidden` where `everywhere`
+  is false, `unavailable` (503) when the group's service did not answer.
 
 ## 10. Versioning
 

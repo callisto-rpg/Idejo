@@ -25,6 +25,7 @@ defmodule Idejo.Api do
   alias Idejo.Emoji
   alias Idejo.Forum
   alias Idejo.Forum.{Category, CategoryIcons, Forwards, Tag, Tags, Topic, TopicIcons}
+  alias Idejo.Inbox
   alias Idejo.Markdown
   alias Idejo.Messages
   alias Idejo.Messages.{Message, Polls}
@@ -135,7 +136,9 @@ defmodule Idejo.Api do
       "warning_pending" => user.warning_pending,
       "administrator" => Access.administrator?(user),
       "moderator" => Idejo.Moderation.moderator?(user),
-      "server_moderator" => Access.server_moderator?(user)
+      "server_moderator" => Access.server_moderator?(user),
+      # Settings for all forums: on a group's inbox, for a member linked to its provider.
+      "everywhere" => Inbox.everywhere?(user)
     })
   end
 

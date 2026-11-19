@@ -100,7 +100,9 @@ defmodule IdejoWeb.Api.Errors do
     not_allowed: 422,
     unresolvable: 422,
     private_address: 422,
-    push_disabled: 409
+    push_disabled: 409,
+    # Settings for all forums: the group's service did not answer
+    unavailable: 503
   }
 
   @doc "Every error code the API answers, with its status."
@@ -240,4 +242,7 @@ defmodule IdejoWeb.Api.Errors do
     do: gettext("The push endpoint is on a private network.")
 
   def message(:push_disabled), do: gettext("Push notifications are off on this server.")
+
+  def message(:unavailable),
+    do: gettext("Your forums could not be reached. Try again later.")
 end
