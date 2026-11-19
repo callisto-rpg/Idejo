@@ -12,6 +12,7 @@ defmodule IdejoWeb.InboxTest do
 
   import Ecto.Query
   import Idejo.AccountsFixtures
+  import IdejoWeb.ApiHelpers
 
   alias Idejo.Accounts.UserIdentity
   alias Idejo.{Conversations, Inbox, Repo}
@@ -476,5 +477,49 @@ defmodule IdejoWeb.InboxTest do
       |> get("/community/inbox-unread?subject=ada-sub")
 
     assert json_response(refused, 401)
+  end
+
+  test "the app: Private Message from a forum starts the conversation by idejo ID" do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+    {token, _} = api_token_fixture(ada)
+    service(%{"/profile" => %{"username" => "bo_garden", "picture" => nil}})
+
+    body =
+      build_conn()
+      |> api_conn(token)
+      |> post("/api/v1/conversations", %{"subject" => "bo-sub"})
+      |> api_json(200)
+
+    bo = Inbox.find_member("bo-sub")
+    assert bo.username == "bo_garden"
+    assert Conversations.participant?(bo, Conversations.get(ada, body["id"]))
+
+    # The same one again.
+    again =
+      build_conn()
+      |> api_conn(token)
+      |> post("/api/v1/conversations", %{"subject" => "bo-sub"})
+      |> api_json(200)
+
+    assert again["id"] == body["id"]
+
+    # An idejo ID the provider does not know: refused.
+    service(%{})
+
+    build_conn()
+    |> api_conn(token)
+    |> post("/api/v1/conversations", %{"subject" => "nobody"})
+    |> api_json(403)
+  end
+
+  test "the app: a forum not in inbox mode takes no idejo ID" do
+    ada = user_fixture()
+    {token, _} = api_token_fixture(ada)
+
+    build_conn()
+    |> api_conn(token)
+    |> post("/api/v1/conversations", %{"subject" => "bo-sub"})
+    |> api_json(403)
   end
 end

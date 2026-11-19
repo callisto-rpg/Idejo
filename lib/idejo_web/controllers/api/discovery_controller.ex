@@ -15,6 +15,7 @@ defmodule IdejoWeb.Api.DiscoveryController do
   alias Idejo.Accounts
   alias Idejo.Accounts.ApiTokens
   alias Idejo.{Api, Community, Gifs, Plugins, Push, Settings}
+  alias Idejo.Community.Chat
 
   def show(conn, _params) do
     base = %{"name" => Settings.get(:server_name), "url" => Api.base() <> "/"}
@@ -48,7 +49,11 @@ defmodule IdejoWeb.Api.DiscoveryController do
         "scopes" => ApiTokens.scopes(),
         "code_challenge_methods" => ["S256"]
       },
-      "community" => %{"directory_url" => Community.directory_url()},
+      "community" => %{
+        "directory_url" => Community.directory_url(),
+        "chat_url" => Chat.url(),
+        "inbox_url" => Chat.inbox_url()
+      },
       "account" => %{
         "deletion_url" =>
           Api.base() <> IdejoWeb.UserSettingsLive.path("account", "delete-heading"),

@@ -38,7 +38,9 @@ curl https://garden.example.org/.well-known/idejo
             "redirect_uri": "org.idejo.app:/oauth/callback",
             "scopes": ["read", "write", "private", "moderate", "push"],
             "code_challenge_methods": ["S256"]},
-  "community": {"directory_url": "https://forums.example.org/ or null"},
+  "community": {"directory_url": "https://forums.example.org/ or null",
+                "chat_url": "https://my.example.org/chat or null",
+                "inbox_url": "https://my.example.org/ or null"},
   "account": {"deletion_url": "https://garden.example.org/users/settings?tab=account#delete-heading",
               "sign_up_url": "https://garden.example.org/users/sign-up or null"},
   "features": ["unifiedpush", "gifs", "private_messages", "polls", "scheduled_messages"],
@@ -381,6 +383,15 @@ that ignore VAPID still work.
 - Discovery's `community.directory_url` is the group's public directory page, or null. Its
   JSON is at `<directory_url>api/v1/forums?q=&page=`: listed forums with name, url,
   description, logo and member count, 20 a page.
+- Discovery's `community.chat_url` is the group's chat service, where members linked to
+  idejo ID keep their private conversations, or null; `community.inbox_url` is the inbox it
+  belongs to, the server to sign in to for them. With a chat service, a user card
+  (`GET /users/{id}`) gives `idejo_id`, the person's idejo ID, when the member may write to
+  them there (both linked, and they take private messages); else null, and the forum's own
+  **Private Message** stays off for linked members, as on the web. Start or open the
+  conversation on the inbox: `POST /conversations` `{"subject": "<idejo_id>"}` with the
+  inbox's token, which answers as with `user_id` (`forbidden` for an idejo ID it cannot
+  find, and on servers that are not an inbox).
 
 ## 10. Versioning
 

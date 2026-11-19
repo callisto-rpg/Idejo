@@ -11,7 +11,7 @@ defmodule IdejoWeb.Api.ConversationController do
   """
   use IdejoWeb.Api.Controller
 
-  alias Idejo.{Conversations, Forum}
+  alias Idejo.{Conversations, Forum, Inbox}
   alias IdejoWeb.Api.{ComposerController, TopicController}
 
   def index(conn, _params) do
@@ -19,8 +19,27 @@ defmodule IdejoWeb.Api.ConversationController do
   end
 
   def create(conn, params) do
-    with {:ok, topic} <- Conversations.start(user(conn), string(params, "user_id") || ""),
+    with {:ok, recipient} <- recipient(params),
+         {:ok, topic} <- Conversations.start(user(conn), recipient),
          do: show_topic(conn, topic)
+  end
+
+  # A group's inbox also takes the other person's idejo ID (`subject`), as the web's
+  # `/chat/new?with=` (steward request, 2026-11-19): the account linked to it, made from the
+  # provider's profile when there is none (`Inbox.member/1`). Unknown: refused as an
+  # unknown id.
+  defp recipient(params) do
+    case string(params, "subject") do
+      subject when is_binary(subject) and subject != "" ->
+        if Inbox.on?() do
+          with {:error, _} <- Inbox.member(subject), do: {:error, :forbidden}
+        else
+          {:error, :forbidden}
+        end
+
+      _ ->
+        {:ok, string(params, "user_id") || ""}
+    end
   end
 
   def show(conn, %{"id" => id}) do

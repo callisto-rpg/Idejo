@@ -12,6 +12,7 @@ defmodule IdejoWeb.ChatServiceTest do
   use IdejoWeb.ConnCase, async: false
 
   import Idejo.AccountsFixtures
+  import IdejoWeb.ApiHelpers
 
   alias Idejo.Accounts.UserIdentity
   alias Idejo.Community.Chat
@@ -281,5 +282,37 @@ defmodule IdejoWeb.ChatServiceTest do
     # Nothing left to copy.
     body = build_conn() |> get("/community/conversations?ticket=#{@ticket}") |> json_response(200)
     assert body["conversations"] == [] and body["remaining"] == 1
+  end
+
+  test "the app: discovery names the chat service and its inbox, a card the idejo ID" do
+    body = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    assert body["community"]["chat_url"] == nil and body["community"]["inbox_url"] == nil
+
+    chat_on()
+    ada = user_fixture() |> link("ada-sub")
+    bo = user_fixture() |> link("bo-sub")
+    cy = user_fixture()
+    {token, _} = api_token_fixture(ada)
+
+    body = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    assert body["community"]["chat_url"] == @chat
+    assert body["community"]["inbox_url"] == "https://my.example.test/"
+
+    card = build_conn() |> api_conn(token) |> get("/api/v1/users/#{bo.id}") |> api_json(200)
+    assert card["idejo_id"] == "bo-sub"
+
+    # Not linked: no idejo ID, as the web gives no button.
+    card = build_conn() |> api_conn(token) |> get("/api/v1/users/#{cy.id}") |> api_json(200)
+    assert card["idejo_id"] == nil
+
+    # Taking no private messages: none either.
+    {:ok, _} = Idejo.Accounts.update_user_private_messages(bo, %{accepts_private_messages: false})
+    card = build_conn() |> api_conn(token) |> get("/api/v1/users/#{bo.id}") |> api_json(200)
+    assert card["idejo_id"] == nil
+
+    # The viewer not linked: none.
+    {token, _} = api_token_fixture(cy)
+    card = build_conn() |> api_conn(token) |> get("/api/v1/users/#{ada.id}") |> api_json(200)
+    assert card["idejo_id"] == nil
   end
 end

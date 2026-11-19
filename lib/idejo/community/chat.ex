@@ -121,13 +121,41 @@ defmodule Idejo.Community.Chat do
   """
   @spec start_url(User.t() | nil, User.t()) :: String.t() | nil
   def start_url(viewer, %User{} = user) do
-    with base when is_binary(base) <- url(),
+    case start_subject(viewer, user) do
+      theirs when is_binary(theirs) -> url() <> "/new?" <> URI.encode_query(%{"with" => theirs})
+      nil -> nil
+    end
+  end
+
+  @doc """
+  `user`'s subject at the provider, for `viewer` to start a conversation with them at the
+  chat service: on the same conditions as `start_url/2`, else nil. The API's user card gives
+  it as `idejo_id` (steward request, 2026-11-19), so the app starts it on the inbox.
+  """
+  @spec start_subject(User.t() | nil, User.t()) :: String.t() | nil
+  def start_subject(viewer, %User{} = user) do
+    with true <- url() != nil,
          true <- Idejo.Conversations.may_message?(viewer, user),
-         mine when is_binary(mine) <- subject(viewer),
-         theirs when is_binary(theirs) <- subject(user) do
-      base <> "/new?" <> URI.encode_query(%{"with" => theirs})
+         true <- subject(viewer) != nil do
+      subject(user)
     else
       _ -> nil
+    end
+  end
+
+  @doc """
+  The inbox the chat service belongs to: the origin of `url/0` (`https://my.example.org/`
+  for `https://my.example.org/chat`), or nil. The app signs in there (discovery's
+  `community.inbox_url`).
+  """
+  @spec inbox_url() :: String.t() | nil
+  def inbox_url do
+    case url() && URI.parse(url()) do
+      %URI{scheme: scheme, host: host} = uri when scheme in ~w(http https) and is_binary(host) ->
+        URI.to_string(%URI{scheme: scheme, host: host, port: uri.port, path: "/"})
+
+      _ ->
+        nil
     end
   end
 

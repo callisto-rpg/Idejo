@@ -84,7 +84,9 @@ defmodule Idejo.Api do
   The user card (`/u/{id}`): the person, their bio's Markdown, their roles (guest left out;
   each with its `slug`, as `+role` mentions name it: steward decision, 2026-11-14),
   when they joined, and what the viewer may do: ignore them (`ignored_by_me`, nil when they
-  may not, AC-06), write to them (`may_message`), ban them (server moderators).
+  may not, AC-06), write to them (`may_message`; with a chat service, `idejo_id`, their
+  subject at the provider, to start it on the inbox: `Chat.start_subject/2`), ban them
+  (server moderators).
   """
   @spec user_card(User.t() | nil, User.t()) :: map()
   def user_card(viewer, %User{} = user) do
@@ -100,6 +102,7 @@ defmodule Idejo.Api do
       "ignored_by_me" =>
         if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
       "may_message" => Idejo.Conversations.may_message?(viewer, user),
+      "idejo_id" => Idejo.Community.Chat.start_subject(viewer, user),
       "may_ban" => viewer != nil and Accounts.may_ban?(viewer, user),
       "banned" => if(viewer && Access.server_moderator?(viewer), do: Accounts.banned?(user))
     })

@@ -52,7 +52,7 @@ defmodule IdejoWeb.Api.AP08SignInTest do
     assert body["oauth"]["client_id"] == "org.idejo.app"
     assert body["oauth"]["scopes"] == ~w(read write private moderate push)
     assert body["idejo_version"] == Idejo.Health.version()
-    assert body["community"] == %{"directory_url" => nil}
+    assert body["community"] == %{"directory_url" => nil, "chat_url" => nil, "inbox_url" => nil}
     assert body["limits"]["page_size"] == 100
     assert get_resp_header(conn, "set-cookie") == []
     check(body, "Discovery")
