@@ -21,6 +21,7 @@ defmodule Idejo.Api do
   alias Idejo.Accounts
   alias Idejo.Accounts.User
   alias Idejo.Api.Structure
+  alias Idejo.Community.Chat
   alias Idejo.Emoji
   alias Idejo.Forum
   alias Idejo.Forum.{Category, CategoryIcons, Forwards, Tag, Tags, Topic, TopicIcons}
@@ -102,7 +103,7 @@ defmodule Idejo.Api do
       "ignored_by_me" =>
         if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
       "may_message" => Idejo.Conversations.may_message?(viewer, user),
-      "idejo_id" => Idejo.Community.Chat.start_subject(viewer, user),
+      "idejo_id" => Chat.start_subject(viewer, user),
       "may_ban" => viewer != nil and Accounts.may_ban?(viewer, user),
       "banned" => if(viewer && Access.server_moderator?(viewer), do: Accounts.banned?(user))
     })

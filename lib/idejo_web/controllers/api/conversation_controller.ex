@@ -30,15 +30,17 @@ defmodule IdejoWeb.Api.ConversationController do
   # unknown id.
   defp recipient(params) do
     case string(params, "subject") do
-      subject when is_binary(subject) and subject != "" ->
-        if Inbox.on?() do
-          with {:error, _} <- Inbox.member(subject), do: {:error, :forbidden}
-        else
-          {:error, :forbidden}
-        end
+      subject when is_binary(subject) and subject != "" -> member(subject)
+      _ -> {:ok, string(params, "user_id") || ""}
+    end
+  end
 
-      _ ->
-        {:ok, string(params, "user_id") || ""}
+  defp member(subject) do
+    with true <- Inbox.on?(),
+         {:ok, user} <- Inbox.member(subject) do
+      {:ok, user}
+    else
+      _ -> {:error, :forbidden}
     end
   end
 
