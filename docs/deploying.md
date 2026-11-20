@@ -671,6 +671,7 @@ message naming it.
 | `IDEJO_PLUGINS_DIR` | no | `plugins` in `IDEJO_UPLOADS_DIR` | Where plugin files are kept (Admin → Plugins). Deleting a file removes that plugin. |
 | `IDEJO_PG_BIN_DIR` | no | the `PATH` | Where `pg_dump` and `pg_restore` are; they must match the database's major version. |
 | `IDEJO_SOURCE_URL` | no | upstream at the built commit | The footer's "Source code" link. Required by the AGPL if you run modified code. |
+| `IDEJO_ANDROID_FINGERPRINTS` | no | none | SHA-256 fingerprints (`AA:BB:…`, comma-separated) of Android apps you built and signed yourself, served at `/.well-known/assetlinks.json` after the official app's so they open this forum's links too (IX-03). A malformed one stops the boot. |
 | `IDEJO_SMTP_HOST` | no | none | SMTP server used while **Admin → Email** has no host. |
 | `IDEJO_SMTP_PORT` | no | `587` | Its port. |
 | `IDEJO_SMTP_SECURITY` | no | `tls` on port 465, else `starttls` | `starttls`, `tls` (TLS from the start) or `none` (a relay on the same machine or network only). Certificates are always checked. |
