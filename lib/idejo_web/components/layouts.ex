@@ -8,6 +8,7 @@ defmodule IdejoWeb.Layouts do
   """
   use IdejoWeb, :html
 
+  alias Idejo.Accounts.OIDC
   alias Idejo.Community.Chat
   alias Idejo.Forum.CategoryIcons
   alias Idejo.Push
@@ -244,9 +245,7 @@ defmodule IdejoWeb.Layouts do
         conversations?: member? and Chat.url() != nil,
         conversations_linked?: Chat.for?(assigns.user),
         connect_label:
-          gettext("Connect %{provider} for private conversations",
-            provider: Idejo.Accounts.OIDC.label()
-          ),
+          gettext("Connect %{provider} for private conversations", provider: OIDC.label()),
         # At the chat service (kept a minute, nothing when it cannot be asked).
         conversations_unread: if(member?, do: Chat.unread(assigns.user), else: 0),
         conversations_url: Chat.for?(assigns.user) && signed_in_at(Chat.url()),
