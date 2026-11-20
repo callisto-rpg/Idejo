@@ -43,8 +43,10 @@ defmodule IdejoWeb.ApiHelpers do
         do: "phoenix, base64url.bearer.phx." <> Base.encode64(token, padding: false),
         else: "phoenix"
 
-    Phoenix.ConnTest.build_conn()
-    |> Plug.Conn.put_req_header("host", "localhost")
+    # The upgrade checks a host header, which put_req_header/3 refuses to set.
+    conn = Phoenix.ConnTest.build_conn()
+
+    %{conn | req_headers: [{"host", "localhost"} | conn.req_headers]}
     |> Plug.Conn.put_req_header("connection", "upgrade")
     |> Plug.Conn.put_req_header("upgrade", "websocket")
     |> Plug.Conn.put_req_header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
