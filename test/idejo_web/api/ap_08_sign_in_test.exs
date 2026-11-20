@@ -99,6 +99,19 @@ defmodule IdejoWeb.Api.AP08SignInTest do
   end
 
   @tag req: "AP-08"
+  test "AP-08 the confirmation page lets its form redirect to the app", %{conn: conn} do
+    {_verifier, challenge} = pkce()
+    conn = conn |> log_in_user(user_fixture()) |> authorize(authorize_params(challenge))
+    assert html_response(conn, 200)
+    [policy] = get_resp_header(conn, "content-security-policy")
+    assert policy =~ "form-action 'self' org.idejo.app:;"
+
+    # Every other page keeps `'self'` alone.
+    [home] = conn |> recycle() |> get(~p"/") |> get_resp_header("content-security-policy")
+    assert home =~ "form-action 'self';"
+  end
+
+  @tag req: "AP-08"
   test "AP-08 Cancel goes back to the app with access_denied", %{conn: conn} do
     user = user_fixture()
     {_verifier, challenge} = pkce()

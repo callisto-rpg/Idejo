@@ -71,12 +71,32 @@ defmodule IdejoWeb.AppAuthorizeController do
   defp render_confirmation(conn, user, request, params) do
     conn
     |> put_resp_header("cache-control", "no-store")
+    |> allow_app_redirect()
     |> render(:new,
       page_title: gettext("Sign in to the idejo app"),
       user: user,
       request: request,
       hidden: Map.take(params, @fields)
     )
+  end
+
+  # Allow and Cancel answer with a redirect to the app's scheme, and browsers hold a form's
+  # redirects to the page's `form-action` too: with `'self'` alone, Chrome (the app's Custom
+  # Tab) drops it and the button does nothing. This page alone also allows that scheme.
+  defp allow_app_redirect(conn) do
+    scheme = URI.parse(ApiTokens.redirect_uri()).scheme
+
+    case get_resp_header(conn, "content-security-policy") do
+      [policy] ->
+        put_resp_header(
+          conn,
+          "content-security-policy",
+          String.replace(policy, "form-action 'self'", "form-action 'self' #{scheme}:")
+        )
+
+      _none ->
+        conn
+    end
   end
 
   defp refuse(conn, reason) do
