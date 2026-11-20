@@ -7,7 +7,7 @@ defmodule IdejoWeb.Api.ConversationController do
   starting one (refused when the other person takes no private messages), one
   conversation, its messages and changes, and its composer, which has no slow mode. Only
   participants ever get one (`Idejo.Conversations.get/2`); search, categories and Unread
-  never include them.
+  never include them. Since 0.3.21 only a group's inbox starts them (`Conversations.hosted?/0`).
   """
   use IdejoWeb.Api.Controller
 
@@ -18,8 +18,10 @@ defmodule IdejoWeb.Api.ConversationController do
     send_list(conn, Enum.map(Conversations.list(user(conn)), &card(conn, &1)))
   end
 
+  # Only the group's inbox hosts them (steward decision, 2026-11-20): elsewhere, not found.
   def create(conn, params) do
-    with {:ok, recipient} <- recipient(params),
+    with true <- Conversations.hosted?() || {:error, :not_found},
+         {:ok, recipient} <- recipient(params),
          {:ok, topic} <- Conversations.start(user(conn), recipient),
          do: show_topic(conn, topic)
   end

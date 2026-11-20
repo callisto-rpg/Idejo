@@ -81,15 +81,15 @@ defmodule IdejoWeb.ChatServiceTest do
 
   @ticket String.duplicate("t", 32)
 
-  test "standalone: the sidebar and the card keep the forum's own conversations", %{conn: conn} do
+  test "standalone: no private conversations at all (only the inbox hosts them)", %{conn: conn} do
     ada = user_fixture()
     bo = user_fixture()
     conn = log_in_user(conn, ada)
 
     html = conn |> get(~p"/u/#{bo.id}") |> html_response(200)
-    assert html =~ ~s(action="/u/#{bo.id}/message")
+    refute html =~ "private-message"
     home = conn |> get(~p"/") |> html_response(200)
-    assert home =~ ~s(href="/p")
+    refute home =~ "community-conversations"
     refute home =~ "community-all-topics"
     # No chat service: no dot on the logo, and nothing to show at /community/activity.
     refute home =~ "community-dot"
@@ -137,9 +137,20 @@ defmodule IdejoWeb.ChatServiceTest do
     # The dot on the logo, filled by community_menu.js from /community/activity.
     assert html =~ ~s(id="community-dot")
 
-    # A member not linked keeps the forum's own, and gets no dot.
+    # A member not linked has none (steward decision, 2026-11-20): the entry greyed, with
+    # Connect at its right, to Profile and account's idejo ID section; no dot.
     html = build_conn() |> log_in_user(cy) |> get(~p"/") |> html_response(200)
-    assert html =~ ~s(href="/p" class="community-link")
+    doc = LazyHTML.from_document(html)
+    entry = LazyHTML.query(doc, "#community-menu div#community-conversations.is-unavailable")
+    assert LazyHTML.text(entry) =~ "Private Conversations"
+    assert entry |> LazyHTML.query("[aria-disabled=true]") |> Enum.count() == 1
+    connect = LazyHTML.query(entry, "a#community-conversations-connect")
+    assert LazyHTML.text(connect) =~ "Connect"
+    assert [href] = LazyHTML.attribute(connect, "href")
+    assert href =~ "tab=account"
+    assert href =~ "#oidc-section"
+    refute html =~ ~s(href="/p")
+    assert build_conn() |> log_in_user(cy) |> get(~p"/p") |> response(404)
     refute html =~ "community-all-topics"
     refute html =~ "community-dot"
   end

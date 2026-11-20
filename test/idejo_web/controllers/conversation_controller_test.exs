@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 defmodule IdejoWeb.ConversationControllerTest do
-  # Private conversations (steward decision, 2026-10-27).
-  use IdejoWeb.ConnCase, async: true
+  # Private conversations (steward decision, 2026-10-27), hosted only by a group's inbox
+  # since 0.3.21 (steward decision, 2026-11-20): not async, as tests turn inbox mode on.
+  use IdejoWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Idejo.AccountsFixtures
@@ -25,9 +26,16 @@ defmodule IdejoWeb.ConversationControllerTest do
     %{conn: log_in_user(conn, ada), ada: ada, bo: bo}
   end
 
+  defp inbox_on do
+    inbox = Application.get_env(:idejo, :inbox)
+    Application.put_env(:idejo, :inbox, true)
+    on_exit(fn -> Application.put_env(:idejo, :inbox, inbox) end)
+  end
+
   defp doc(conn, path), do: conn |> get(path) |> html_response(200) |> LazyHTML.from_document()
 
   test "the user card's Private Message opens the conversation", %{conn: conn, ada: ada, bo: bo} do
+    inbox_on()
     card = doc(conn, ~p"/u/#{bo.id}")
 
     assert [_] =
@@ -52,6 +60,7 @@ defmodule IdejoWeb.ConversationControllerTest do
   end
 
   test "no button, and no conversation, for someone who turned them off", %{conn: conn, bo: bo} do
+    inbox_on()
     {:ok, _} = Accounts.update_user_private_messages(bo, %{"accepts_private_messages" => "false"})
     refute conn |> get(~p"/u/#{bo.id}") |> html_response(200) =~ "private-message-form"
 
@@ -83,34 +92,32 @@ defmodule IdejoWeb.ConversationControllerTest do
     assert redirected_to(get(build_conn(), ~p"/p/#{topic.id}")) == ~p"/users/sign-in"
   end
 
-  test "the list shows a card per conversation, and the forums menu links it", %{
+  test "a forum hosts none: no Private Message, no list, nothing to start", %{
     conn: conn,
     ada: ada,
     bo: bo
   } do
-    page = doc(conn, ~p"/p")
-    assert [_] = page |> LazyHTML.query("#no-conversations") |> Enum.to_list()
+    refute conn |> get(~p"/u/#{bo.id}") |> html_response(200) =~ "private-message-form"
+    assert conn |> post(~p"/u/#{bo.id}/message") |> response(404)
+    assert conn |> get(~p"/p") |> response(404)
+    assert Conversations.list(ada) == []
 
-    assert [_] =
-             page
-             |> LazyHTML.query("#community-menu a#community-conversations[href='/p']")
-             |> Enum.to_list()
+    # No chat service: no Private Conversations in the forums menu either.
+    refute conn |> get(~p"/") |> html_response(200) =~ "community-conversations"
+  end
 
-    {:ok, topic} = Conversations.start(bo, ada)
-    {:ok, _} = Forum.post_message(bo, topic, %{"body" => "Are you there?"})
+  test "a forum's are deleted at boot; the inbox keeps its own", %{ada: ada, bo: bo} do
+    {:ok, topic} = Conversations.start(ada, bo)
+    {:ok, _} = Forum.post_message(bo, topic, %{"body" => "Hello"})
 
-    page = doc(conn, ~p"/p")
-    card = LazyHTML.query(page, "#conversation-#{topic.id}")
-    assert LazyHTML.text(card) =~ "Bo"
-    assert LazyHTML.text(card) =~ "Are you there?"
-    assert LazyHTML.text(card) =~ "1 new"
+    inbox_on()
+    assert Conversations.retire() == 0
+    assert [_] = Conversations.list(ada)
 
-    assert page |> LazyHTML.query("#community-conversations .sidebar-count") |> LazyHTML.text() =~
-             "1"
-
-    # Opening it reads it.
-    get(conn, ~p"/p/#{topic.id}")
-    refute doc(conn, ~p"/p") |> LazyHTML.query(".sidebar-count") |> Enum.any?()
+    Application.put_env(:idejo, :inbox, false)
+    assert Conversations.retire() == 1
+    assert Conversations.list(ada) == []
+    assert Forum.list_messages(topic) == []
   end
 
   test "writing in it from the live page, with no slow mode", %{conn: conn, ada: ada, bo: bo} do
@@ -137,6 +144,7 @@ defmodule IdejoWeb.ConversationControllerTest do
   end
 
   test "the profile turns receiving private messages off and on", %{conn: conn, ada: ada} do
+    inbox_on()
     {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
     lv

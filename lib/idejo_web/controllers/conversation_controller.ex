@@ -8,6 +8,10 @@ defmodule IdejoWeb.ConversationController do
   its messages and composer from `IdejoWeb.TopicLive` as on a topic page; and
   `POST /u/{id}/message`, the user card's "Private Message", which opens the conversation
   with that user (started on first use). All work without JavaScript.
+
+  Only the group's inbox hosts them (steward decision, 2026-11-20; `Conversations.hosted?/0`):
+  on a forum, `/p` leads a member linked to idejo ID to the chat service, and is otherwise
+  not found, as is starting one.
   """
   use IdejoWeb, :controller
 
@@ -17,15 +21,15 @@ defmodule IdejoWeb.ConversationController do
 
   def index(conn, _params) do
     # In the inbox (steward request, 2026-11-10) the list is the Chats tab.
-    if Idejo.Inbox.on?(), do: redirect(conn, to: ~p"/chat"), else: list(conn)
+    # Elsewhere, at the chat service (steward decision, 2026-11-20).
+    cond do
+      Conversations.hosted?() -> redirect(conn, to: ~p"/chat")
+      Chat.for?(conn.assigns.current_scope.user) -> redirect(conn, external: Chat.url())
+      true -> not_found(conn)
+    end
   end
 
-  defp list(conn) do
-    render(conn, :index,
-      page_title: gettext("Private Conversations"),
-      conversations: Conversations.list(conn.assigns.current_scope.user)
-    )
-  end
+  defp not_found(conn), do: conn |> send_resp(404, "Not found") |> halt()
 
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns.current_scope.user
@@ -56,6 +60,10 @@ defmodule IdejoWeb.ConversationController do
   end
 
   def create(conn, %{"id" => id}) do
+    if Conversations.hosted?(), do: start(conn, id), else: not_found(conn)
+  end
+
+  defp start(conn, id) do
     user = conn.assigns.current_scope.user
 
     # `Conversations.start/2` loads the recipient and checks `may_message?/2`.

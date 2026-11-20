@@ -61,12 +61,13 @@ defmodule IdejoWeb.CommunityMenuTest do
     refute html =~ "community-menu"
     assert Community.communities(user_fixture()) == []
 
-    # A member's menu still opens (steward request, 2026-11-13): it holds Private
-    # Conversations, out of the sidebar; no other forums, no dot.
+    # A member's menu still opens (steward request, 2026-11-13); without a chat service it
+    # has no Private Conversations (steward decision, 2026-11-20: only the inbox hosts them),
+    # no other forums, no dot.
     html = build_conn() |> log_in_user(user_fixture()) |> get(~p"/") |> html_response(200)
     doc = LazyHTML.from_document(html)
-    assert doc |> LazyHTML.query("#community-menu a#community-conversations") |> Enum.count() == 1
-    assert doc |> LazyHTML.query("#sidebar #community-conversations") |> Enum.count() == 0
+    assert doc |> LazyHTML.query("#community-menu") |> Enum.count() == 1
+    assert doc |> LazyHTML.query("#community-conversations") |> Enum.count() == 0
     refute html =~ "community-dot"
   end
 

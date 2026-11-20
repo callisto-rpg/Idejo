@@ -659,6 +659,20 @@ defmodule IdejoWeb.Api.AP12MemberTest do
 
   @tag req: "AP-12"
   test "AP-12 private conversations: start, list, write, read; refused when turned off", ctx do
+    features = fn ->
+      build_conn() |> get("/.well-known/idejo") |> json_response(200) |> Map.get("features")
+    end
+
+    # A forum hosts none (steward decision, 2026-11-20): discovery says so, nothing starts.
+    refute "private_messages" in features.()
+    assert api(ctx, :post, "/api/v1/conversations", %{"user_id" => ctx.other.id}) |> api_json(404)
+
+    # The group's inbox does.
+    inbox = Application.get_env(:idejo, :inbox)
+    Application.put_env(:idejo, :inbox, true)
+    on_exit(fn -> Application.put_env(:idejo, :inbox, inbox) end)
+    assert "private_messages" in features.()
+
     {:ok, _} =
       Accounts.update_user_private_messages(ctx.admin, %{"accepts_private_messages" => false})
 

@@ -366,6 +366,16 @@
     /* "All my topics" and "Private Conversations" (steward request, 2026-11-13). */
     & .community-links { border-top: 1px solid var(--hairline); margin-top: 0.25rem; padding-top: 0.25rem; }
     & .community-link { display: flex; align-items: center; gap: 0.5rem; }
+    /* Private Conversations without idejo ID (steward decision, 2026-11-20): greyed, with
+       Connect at the right. */
+    & .community-link.is-unavailable { justify-content: space-between; }
+    & .community-link.is-unavailable .community-link-label {
+      display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.625rem; opacity: 0.5;
+    }
+    & .community-link.is-unavailable a {
+      width: auto; flex: none; padding: 0.125rem 0.5rem;
+      color: var(--color-primary); border: 1px solid currentColor; font-size: 0.75rem;
+    }
   }
   /* The dot on the forum's logo (steward request, 2026-11-13): white when the member's other
      forums have new messages in topics they follow, red when one mentions them. A ring in

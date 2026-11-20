@@ -983,7 +983,13 @@ defmodule IdejoWeb.UserSettingsLive do
         hidden={@tab != "messages"}
       >
         <%!-- Steward decision, 2026-10-27. --%>
-        <section class="settings-section" aria-labelledby="private-heading">
+        <%!-- Only where private conversations are hosted: the group's inbox (steward
+             decision, 2026-11-20). --%>
+        <section
+          :if={Idejo.Conversations.hosted?()}
+          class="settings-section"
+          aria-labelledby="private-heading"
+        >
           <h2 id="private-heading" class="font-semibold mb-2">{gettext("Private messages")}</h2>
           <.form for={@private_form} id="private-form" phx-submit="save_private">
             <.input
@@ -1202,6 +1208,7 @@ defmodule IdejoWeb.UserSettingsLive do
                   label={gettext("New messages in topics I follow")}
                 />
                 <.input
+                  :if={Idejo.Conversations.hosted?()}
                   field={@push_form[:private]}
                   type="checkbox"
                   label={gettext("Private messages")}

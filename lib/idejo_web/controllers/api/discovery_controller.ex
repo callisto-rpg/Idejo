@@ -74,7 +74,7 @@ defmodule IdejoWeb.Api.DiscoveryController do
       {"unifiedpush", Push.enabled?()},
       {"gifs", Gifs.enabled?()},
       {"plugins", Plugins.active() != %{}},
-      {"private_messages", true},
+      {"private_messages", Idejo.Conversations.hosted?()},
       {"polls", true},
       {"scheduled_messages", true},
       {"community_menu", Community.menu?()}
