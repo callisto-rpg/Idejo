@@ -45,8 +45,7 @@ defmodule IdejoWeb.UserComponents do
       actions: actions(viewer, user, opts[:return_to]),
       # Steward decision, 2026-10-27: "Private Message", when the viewer may write to them;
       # only on the group's inbox (steward decision, 2026-11-20), the chat service elsewhere.
-      message?:
-        Idejo.Conversations.hosted?() and Idejo.Conversations.may_message?(viewer, user),
+      message?: Idejo.Conversations.hosted?() and Idejo.Conversations.may_message?(viewer, user),
       # The chat service (steward request, 2026-11-10): there instead, and only between
       # members linked to the provider; others get no button.
       chat_url: Chat.start_url(viewer, user),

@@ -517,9 +517,10 @@ defmodule IdejoWeb.InboxTest do
     ada = user_fixture()
     {token, _} = api_token_fixture(ada)
 
+    # Since 0.3.21 a forum starts no conversation at all (steward decision, 2026-11-20).
     build_conn()
     |> api_conn(token)
     |> post("/api/v1/conversations", %{"subject" => "bo-sub"})
-    |> api_json(403)
+    |> api_json(404)
   end
 end
