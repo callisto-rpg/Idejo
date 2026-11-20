@@ -58,6 +58,8 @@ defmodule IdejoWeb.Api.AP20SwitchTest do
     assert {:error, :disabled} =
              connect_app(token)
 
+    assert socket_upgrade(token).status == 404
+
     assert get(build_conn(), ~p"/.well-known/idejo") |> json_response(200) |> Map.take(["api"]) ==
              %{"api" => nil}
 

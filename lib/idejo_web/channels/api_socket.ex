@@ -42,7 +42,11 @@ defmodule IdejoWeb.ApiSocket do
   @impl true
   def id(socket), do: Revocations.socket_id(socket.assigns.token.id)
 
-  @doc "A refused connection: 404 while the API is off (AP-20), else 403."
-  def refused(conn, :disabled, _args), do: Plug.Conn.send_resp(conn, 404, "Not Found")
-  def refused(conn, _reason, _args), do: Plug.Conn.send_resp(conn, 403, "Forbidden")
+  @doc """
+  A refused connection: 404 while the API is off (AP-20), else 403. Phoenix calls the
+  endpoint's `error_handler` with the connection, the reason and the handler's arguments,
+  of which there are none, so this takes two.
+  """
+  def refused(conn, :disabled), do: Plug.Conn.send_resp(conn, 404, "Not Found")
+  def refused(conn, _reason), do: Plug.Conn.send_resp(conn, 403, "Forbidden")
 end

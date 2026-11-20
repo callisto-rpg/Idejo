@@ -52,6 +52,19 @@ defmodule IdejoWeb.Api.AP15EventsTest do
   end
 
   @tag req: "AP-15"
+  test "AP-15 over HTTP, a valid token upgrades and anything else is refused with 403", ctx do
+    conn = socket_upgrade(ctx.member_token)
+    assert [{:websocket, _}] = Plug.Test.sent_upgrades(conn)
+    assert get_resp_header(conn, "sec-websocket-protocol") == ["phoenix"]
+
+    for token <- ["idj_nope", nil] do
+      conn = socket_upgrade(token)
+      assert conn.status == 403
+      assert Plug.Test.sent_upgrades(conn) == []
+    end
+  end
+
+  @tag req: "AP-15"
   test "AP-15 the endpoint reads auth_token from Sec-WebSocket-Protocol" do
     {_path, IdejoWeb.ApiSocket, opts} =
       Enum.find(IdejoWeb.Endpoint.__sockets__(), &match?({_, IdejoWeb.ApiSocket, _}, &1))
