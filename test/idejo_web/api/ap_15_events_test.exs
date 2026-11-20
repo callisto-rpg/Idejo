@@ -69,7 +69,9 @@ defmodule IdejoWeb.Api.AP15EventsTest do
     {_path, IdejoWeb.ApiSocket, opts} =
       Enum.find(IdejoWeb.Endpoint.__sockets__(), &match?({_, IdejoWeb.ApiSocket, _}, &1))
 
-    assert opts[:websocket][:auth_token] == true
+    # A socket option: Phoenix puts it into websocket: and overwrites one set there.
+    assert opts[:auth_token] == true
+    refute Keyword.has_key?(opts[:websocket], :auth_token)
     assert opts[:longpoll] == false
   end
 
