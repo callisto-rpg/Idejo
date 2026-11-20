@@ -9,6 +9,7 @@ defmodule IdejoWeb.ApiHelpers do
       for a PKCE challenge, then the exchange), and returns the token and its row;
     * `api_conn/2` puts the token on a connection;
     * `connect_app/2` connects the app's socket with the token as a real WebSocket sends it;
+    * `socket_upgrade/1` asks the endpoint for the app's socket over HTTP, as the app does;
     * `api_json/2` asserts the status, then checks the body against the operation's
       documented schema (exactly its top-level keys: none undocumented, every required one)
       and that it holds no email but the user's own (privacy, SP-03).
@@ -28,6 +29,30 @@ defmodule IdejoWeb.ApiHelpers do
   """
   def connect_app(token, params \\ %{}) do
     Phoenix.ChannelTest.connect(IdejoWeb.ApiSocket, params, connect_info: %{auth_token: token})
+  end
+
+  @doc """
+  Asks the endpoint to upgrade `GET /api/v1/socket/websocket` to a WebSocket, the token (if
+  any) in `Sec-WebSocket-Protocol` as the app sends it: `phoenix, base64url.bearer.phx.`
+  and the token in standard Base64 without padding. Goes through Phoenix's transport and
+  the endpoint's `error_handler`, which `connect_app/2` skips.
+  """
+  def socket_upgrade(token) do
+    protocols =
+      if token,
+        do: "phoenix, base64url.bearer.phx." <> Base.encode64(token, padding: false),
+        else: "phoenix"
+
+    # The upgrade checks a host header, which put_req_header/3 refuses to set.
+    conn = Phoenix.ConnTest.build_conn()
+
+    %{conn | req_headers: [{"host", "localhost"} | conn.req_headers]}
+    |> Plug.Conn.put_req_header("connection", "upgrade")
+    |> Plug.Conn.put_req_header("upgrade", "websocket")
+    |> Plug.Conn.put_req_header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+    |> Plug.Conn.put_req_header("sec-websocket-version", "13")
+    |> Plug.Conn.put_req_header("sec-websocket-protocol", protocols)
+    |> Phoenix.ConnTest.dispatch(@endpoint, :get, "/api/v1/socket/websocket?vsn=2.0.0")
   end
 
   @doc "A PKCE pair: `{verifier, challenge}`."
