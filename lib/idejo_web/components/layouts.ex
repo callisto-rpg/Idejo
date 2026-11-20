@@ -214,6 +214,8 @@ defmodule IdejoWeb.Layouts do
 
   Outside inbox mode, a member's menu also holds "All my topics" (`Chat.topics_url/1`) and
   "Private Conversations" with its count, out of the sidebar (steward request, 2026-11-13).
+  Only with a chat service (steward decision, 2026-11-20: the inbox alone hosts them): a link
+  there for a member linked to idejo ID; greyed, with "Connect" at its right, otherwise.
   For a member linked to the group's chat service, `#community-dot` on the logo shows what is
   new in the topics they follow in their other forums (`/community/activity`, asked by
   `community_menu.js`): white for new messages, red when one mentions them.
@@ -235,10 +237,19 @@ defmodule IdejoWeb.Layouts do
         unlinked?: Idejo.Community.unlinked?(assigns.user),
         member?: member?,
         dot?: member? and Chat.for?(assigns.user),
-        conversations_unread: if(member?, do: conversations_unread(assigns.user), else: 0),
-        # The chat service (steward request, 2026-11-10): the same button leads there.
-        # On the group's inbox, signed in on arrival (steward request, 2026-11-14).
-        conversations_url: (Chat.for?(assigns.user) && signed_in_at(Chat.url())) || ~p"/p",
+        # Private conversations live on the group's inbox only (steward decision,
+        # 2026-11-20): the entry shows with a chat service, leading there signed in (steward
+        # request, 2026-11-14) for a member linked to idejo ID; greyed with "Connect" for
+        # the others; none without a chat service.
+        conversations?: member? and Chat.url() != nil,
+        conversations_linked?: Chat.for?(assigns.user),
+        connect_label:
+          gettext("Connect %{provider} for private conversations",
+            provider: Idejo.Accounts.OIDC.label()
+          ),
+        # At the chat service (kept a minute, nothing when it cannot be asked).
+        conversations_unread: if(member?, do: Chat.unread(assigns.user), else: 0),
+        conversations_url: Chat.for?(assigns.user) && signed_in_at(Chat.url()),
         topics_url: member? && signed_in_at(Chat.topics_url(assigns.user))
       )
 
@@ -320,13 +331,18 @@ defmodule IdejoWeb.Layouts do
           {gettext("Find more forums")}
         </a>
         <%!-- Out of the sidebar (steward request, 2026-11-13). --%>
-        <div :if={@member?} class="community-links">
+        <div :if={@member? and (@topics_url || @conversations?)} class="community-links">
           <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
           <a :if={@topics_url} href={@topics_url} class="community-link" id="community-all-topics">
             <.icon name="hero-rectangle-stack" class="size-4" />
             {gettext("All my topics")}
           </a>
-          <a href={@conversations_url} class="community-link" id="community-conversations">
+          <a
+            :if={@conversations? and @conversations_linked?}
+            href={@conversations_url}
+            class="community-link"
+            id="community-conversations"
+          >
             <.icon name="hero-chat-bubble-left-right" class="size-4" />
             {gettext("Private Conversations")}
             <span :if={@conversations_unread > 0} class="sidebar-count">
@@ -337,6 +353,25 @@ defmodule IdejoWeb.Layouts do
               )}</span>
             </span>
           </a>
+          <%!-- Not linked to idejo ID: no private conversations (steward decision,
+               2026-11-20), the entry greyed, and Connect at its right. --%>
+          <div
+            :if={@conversations? and not @conversations_linked?}
+            class="community-link is-unavailable"
+            id="community-conversations"
+          >
+            <span class="community-link-label" aria-disabled="true">
+              <.icon name="hero-chat-bubble-left-right" class="size-4" />
+              {gettext("Private Conversations")}
+            </span>
+            <a
+              href={IdejoWeb.UserSettingsLive.path("account", "oidc-section")}
+              id="community-conversations-connect"
+              aria-label={@connect_label}
+            >
+              {gettext("Connect")}
+            </a>
+          </div>
         </div>
       </div>
     </details>
@@ -967,13 +1002,8 @@ defmodule IdejoWeb.Layouts do
     """
   end
 
-  # Conversations with something new: those still here, and those at the chat service
-  # (steward request, 2026-11-10; kept a minute, nothing when it cannot be asked).
   defp signed_in_at(url) when is_binary(url), do: ContinueSignIn.mark(url)
   defp signed_in_at(_url), do: nil
-
-  defp conversations_unread(user),
-    do: Idejo.Conversations.unread_count(user) + Chat.unread(user)
 
   attr :summaries, :list, required: true
   attr :current, :any, required: true

@@ -302,7 +302,11 @@ App                        Server                         Other members
 ```
 
 Private conversations work the same under `/conversations/{id}/composer/…`, with no slow
-mode: `window_seconds` and `unanswered_seconds` are 0.
+mode: `window_seconds` and `unanswered_seconds` are 0. Since 0.3.21 only a group's inbox
+hosts them: a forum's discovery has no `private_messages` feature, its user cards say
+`may_message: false`, and `POST /conversations` answers `not_found`. Members talk privately
+on the inbox, with their idejo ID (`community.chat_url`, below); members without one have no
+private conversations.
 
 ## 7. Events and catch-up
 

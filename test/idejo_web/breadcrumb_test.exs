@@ -95,12 +95,5 @@ defmodule IdejoWeb.BreadcrumbTest do
     refute LazyHTML.text(other) =~ "Ada"
     assert LazyHTML.attribute(other, "href") == ["/p/#{topic.id}"]
     assert LazyHTML.attribute(other, "aria-current") == ["page"]
-
-    # The list of conversations: its name, the current page.
-    doc = conn |> get(~p"/p") |> html_response(200) |> LazyHTML.from_document()
-    list = LazyHTML.query(doc, "#breadcrumb a#breadcrumb-conversations")
-    assert LazyHTML.attribute(list, "aria-current") == ["page"]
-    assert list |> LazyHTML.query(".header-crumb-icon") |> Enum.count() == 0
-    assert doc |> LazyHTML.query("#breadcrumb-conversation") |> Enum.count() == 0
   end
 end

@@ -103,7 +103,8 @@ defmodule Idejo.Api do
       "joined_at" => time(user.created_at),
       "ignored_by_me" =>
         if(Accounts.may_ignore?(viewer, user), do: Accounts.ignoring?(viewer, user)),
-      "may_message" => Idejo.Conversations.may_message?(viewer, user),
+      "may_message" =>
+          Idejo.Conversations.hosted?() and Idejo.Conversations.may_message?(viewer, user),
       "idejo_id" => Chat.start_subject(viewer, user),
       "may_ban" => viewer != nil and Accounts.may_ban?(viewer, user),
       "banned" => if(viewer && Access.server_moderator?(viewer), do: Accounts.banned?(user))

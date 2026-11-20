@@ -899,7 +899,7 @@ defmodule IdejoWeb.Api.Operations do
         :create,
         "private",
         "Conversation",
-        "Starts or finds the conversation with someone.",
+        "Starts or finds the conversation with someone (a group's inbox only).",
         body: "ConversationCreate"
       ),
       op(

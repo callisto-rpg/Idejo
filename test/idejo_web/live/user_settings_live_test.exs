@@ -44,7 +44,7 @@ defmodule IdejoWeb.UserSettingsLiveTest do
     for {tab, ids} <- [
           profile: ~w(profile-form bio-form avatar-form),
           interface: ~w(writing-form controls-form),
-          messages: ~w(private-form ignored-section email-notifications-form),
+          messages: ~w(ignored-section email-notifications-form),
           account: ~w(apps-section delete-account-form)
         ],
         id <- ids do

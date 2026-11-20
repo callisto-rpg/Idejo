@@ -44,6 +44,14 @@ defmodule Idejo.Application do
       if(Application.get_env(:idejo, :seed_plugins, true),
         do: Supervisor.child_spec({Task, &Idejo.Plugins.seed/0}, id: :seed_plugins)
       ),
+      # Forums host no private conversations any more: those left go (steward decision,
+      # 2026-11-20; Idejo.Conversations.retire/0, nothing on the inbox).
+      if(Application.get_env(:idejo, :retire_conversations, true),
+        do:
+          Supervisor.child_spec({Task, &Idejo.Conversations.retire/0},
+            id: :retire_conversations
+          )
+      ),
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),

@@ -32,6 +32,30 @@ defmodule Idejo.Conversations do
   @title "Private conversation"
 
   @doc """
+  Whether this install hosts private conversations: only a group's inbox does (steward
+  decision, 2026-11-20). A forum's members talk privately on the inbox, through their idejo
+  ID ("Private Conversations" in the forums menu); members without one have none.
+  """
+  @spec hosted?() :: boolean()
+  def hosted?, do: Idejo.Inbox.on?()
+
+  @doc """
+  Deletes every private conversation outside the inbox (steward decision, 2026-11-20): run at
+  boot, where the install's own configuration is known (a migration could not tell an inbox),
+  so it does nothing once they are gone. Messages, participants, reactions, reports and
+  notifications go with them (the database's cascades). Returns how many were deleted.
+  """
+  @spec retire() :: non_neg_integer()
+  def retire do
+    if hosted?() do
+      0
+    else
+      {count, _} = Repo.delete_all(from t in Topic, where: t.private)
+      count
+    end
+  end
+
+  @doc """
   Whether `sender` may start a private conversation with `recipient`, or write in theirs:
   a verified member (AC-01) who is not banned, writing to someone else whose account is
   active, not banned, and accepts private messages.
