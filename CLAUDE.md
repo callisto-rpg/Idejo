@@ -315,6 +315,9 @@ The contract (M6; mark each item done here when its PR merges):
   (SP-05, `IdejoWeb.Plugs.ContentSecurityPolicy`). Put code in `assets/js/` and styles in
   `assets/css/`; a dependency that needs inline code gets the per-request nonce from
   `conn.assigns.script_csp_nonce` / `style_csp_nonce`.
+  One page widens it: the app's sign-in confirmation (`/app/authorize`,
+  `AppAuthorizeController`) allows `form-action` to the app's scheme (`org.idejo.app:`), as
+  browsers hold a form's redirect to it and Allow would do nothing otherwise.
 - **Accessibility** (AX-01, `docs/accessibility.md`): every page has a skip link to
   `<main id="main">` first, one `<h1>`, no skipped heading level, named `<nav>`s, labels and
   names on every control, and a visible `:focus-visible` outline (never `outline: none`
