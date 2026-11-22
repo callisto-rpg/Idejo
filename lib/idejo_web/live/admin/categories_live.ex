@@ -232,6 +232,13 @@ defmodule IdejoWeb.Admin.CategoriesLive do
     do: gettext("Choose another category to move the topics to.")
 
   defp delete_error(:archive, _category), do: gettext("The Archive cannot be deleted.")
+
+  defp delete_error(:onboarding, category),
+    do:
+      gettext(
+        "“%{name}” holds the onboarding topic, which is never archived: move the topics, or choose another onboarding topic first.",
+        name: category.name
+      )
   defp delete_error(_reason, _category), do: gettext("The category could not be deleted.")
 
   @impl true

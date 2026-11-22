@@ -39,6 +39,13 @@ precedence = "override"
 SPDX-FileCopyrightText = "Mariano Pictet"
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# The onboarding topic's default icon (steward request, 2026-11-22): Twemoji's waving hand.
+[[annotations]]
+path = "priv/onboarding/waving_hand.png"
+precedence = "override"
+SPDX-FileCopyrightText = ["2014-2021 Twitter, Inc and other contributors", "2022-present Jason Sofonia & Justine De Caires"]
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # The + picker's sprite sheet: Twemoji and the server's reactions in one image.
 [[annotations]]
 path = "priv/static/emoji/sprite.webp"

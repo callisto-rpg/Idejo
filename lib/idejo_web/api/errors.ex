@@ -84,6 +84,7 @@ defmodule IdejoWeb.Api.Errors do
     open: 409,
     not_warnable: 403,
     not_archived: 409,
+    onboarding: 409,
     inactive: 403,
     archive: 409,
     video: 422,
@@ -223,6 +224,10 @@ defmodule IdejoWeb.Api.Errors do
   def message(:open), do: gettext("This message is still being written.")
   def message(:not_warnable), do: gettext("This member cannot be warned for this message.")
   def message(:not_archived), do: gettext("This topic is not archived.")
+
+  def message(:onboarding),
+    do: gettext("This is the onboarding topic: an administrator must choose another first.")
+
   def message(:inactive), do: gettext("This account cannot sign in.")
   def message(:archive), do: gettext("The Archive takes no new topics.")
   def message(:video), do: gettext("Paste a link to a video of this site.")

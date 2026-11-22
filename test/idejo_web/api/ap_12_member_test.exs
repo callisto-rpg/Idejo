@@ -718,18 +718,12 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     assert api(ctx, :get, "/api/v1/conversations/#{ctx.conversation.id}") |> api_json(404)
   end
 
-  # Getting started: due after a sign-in once welcomed; closed until the next one, or for good.
-  defp assert_intro(ctx, user) do
-    due? = fn -> api(ctx, :get, "/api/v1/me") |> api_json(200) |> Map.fetch!("intro_due") end
-
-    {:ok, _user} = Idejo.Accounts.intro_on_sign_in(Idejo.Accounts.get_user!(user.id))
-    assert due?.()
+  # The getting-started card is gone: `intro_due` stays false and `POST /me/intro` changes
+  # nothing, for older apps.
+  defp assert_intro(ctx, _user) do
+    refute api(ctx, :get, "/api/v1/me") |> api_json(200) |> Map.fetch!("intro_due")
     refute api(ctx, :post, "/api/v1/me/intro") |> api_json(200) |> Map.get("intro_due")
-
-    {:ok, _user} = Idejo.Accounts.intro_on_sign_in(Idejo.Accounts.get_user!(user.id))
-    assert due?.()
-    api(ctx, :post, "/api/v1/me/intro", %{"hide" => true}) |> api_json(200)
-    {:ok, _user} = Idejo.Accounts.intro_on_sign_in(Idejo.Accounts.get_user!(user.id))
-    refute due?.()
+    hidden = api(ctx, :post, "/api/v1/me/intro", %{"hide" => true}) |> api_json(200)
+    refute hidden["intro_due"]
   end
 end

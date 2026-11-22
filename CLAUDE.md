@@ -84,7 +84,7 @@ The engine is `Idejo.Messages`: the composer sends the author's whole message af
 and `commit/4` stores it (`break: true` for Ctrl+Enter), adding `.` after unpunctuated text
 (not after code) while the author's "Automatic punctuation" (`users.auto_punctuation`, on by
 default, under "Writing" in Profile and account, `Accounts.update_user_writing/2`; steward
-decision, 2026-10-26, moved from Admin → Settings; "Use the graphical composer" sits beside it,
+decision, 2026-10-26, moved from Admin → Technical; "Use the graphical composer" sits beside it,
 see Graphical composer) is on; off, the text is stored as typed
 (the composer's `finishSentence/2` reads it from `data-punctuate`; `TopicLive` reads it at
 mount, so an open page picks up a change when reloaded). Each commit overwrites `body_md`/`body_html`; one that changes text already
@@ -92,7 +92,7 @@ sent first keeps the old text in `message_versions` (GM-11). History is kept onl
 (TP-05): a message that only received appends keeps just its final text, with no versions and
 no per-commit rows. Events go to `"topic:{id}"` on `Idejo.PubSub`: `{:message, message}` and
 `{:window_ended, id}`. The window length is the `gm_window_seconds` setting, "Patience timer (active thread)"
-(default 15, 0–600 s; steward decisions, 2026-10-23 and 2026-10-31), set in **Admin → Settings** (GM-15, AD-04; server-wide
+(default 15, 0–600 s; steward decisions, 2026-10-23 and 2026-10-31), set in **Admin → Technical** (GM-15, AD-04; server-wide
 only in v0.1, no per-category override); a change applies to messages opened after it. The
 **unanswered message time** (`gm_unanswered_minutes`, "Patience timer (unanswered message)",
 default 10, 0.1–1440 with decimals (`type: :float`, `min:`/`max_value:` in `Settings`; steward
@@ -232,7 +232,7 @@ The contract (M6; mark each item done here when its PR merges):
 
 | Interface | Requirement | Contract | Status |
 | --- | --- | --- | --- |
-| Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_SECURITY` (added: `starttls`, `tls`, `none`; by default `tls` on 465, else `starttls`), `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Settings has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | Done (`config/runtime.exs`, `Idejo.Mailer.smtp_settings/2`; `test/idejo_web/ad_13_environment_test.exs`) |
+| Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_SECURITY` (added: `starttls`, `tls`, `none`; by default `tls` on 465, else `starttls`), `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Technical has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | Done (`config/runtime.exs`, `Idejo.Mailer.smtp_settings/2`; `test/idejo_web/ad_13_environment_test.exs`) |
 | Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | Done (`Idejo.Setup.complete_headless/1`, `Idejo.Release.setup/1`; `test/idejo_web/ad_14_headless_setup_test.exs`) |
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output. Added (for the Hub's forum list): `stats`, one line of JSON `{"members", "topics", "messages", "database_bytes", "uploads_bytes"}` (active accounts without server accounts; topics without private conversations; messages not deleted), counts and sizes only | Done (M5); `stats` added 2026-11-03 (`Release.stats/0`) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
@@ -286,7 +286,7 @@ The contract (M6; mark each item done here when its PR merges):
   title-like classes) and Rubik for text (`--font-body`), WOFF2 subsets from Fontsource in
   `priv/static/fonts/` with their `@font-face` rules at the top of `app.css` (OFL-1.1,
   credited in `NOTICE` and `REUSE.toml`). Small uppercase labels stay in Rubik.
-- **Website theme** (steward decision, 2026-10-24): five settings in **Admin → Settings**
+- **Website theme** (steward decision, 2026-10-24): five settings in **Admin → Technical**
   (`theme_primary`, `theme_secondary`, `theme_tertiary`, `theme_light_bg`, `theme_dark_bg`;
   `#rrggbb` or `#rrggbbaa`; defaults gold `#daa304ff`, `#f2c94c`, `#b8860b`, `#fdfcf6`,
   `#000000`; until 2026-11-12 `#1d1a00`), read in one query by `Settings.theme/0`.
@@ -820,8 +820,8 @@ The contract (M6; mark each item done here when its PR merges):
   `closes_at`. Votes are rate-limited (`:vote`).
 - **Spoilers** (steward decision, 2026-10-23; `messages.spoiler`,
   `Messages.set_spoiler/3`, author only, open messages too, broadcast as `{:message, m}`):
-  `TopicLive` covers the body and poll with `.spoiler-cover` (50% opacity, 4px blur) and a
-  "Reveal spoiler" button (80%, 6px; the variables are in `priv/theme/default.css`), the
+  `TopicLive` covers the body and poll with `.spoiler-cover` (50% opacity, 32px blur) and a
+  "Reveal spoiler" button (80%, 32px; the variables are in `priv/theme/default.css`), the
   content `inert` until the viewer reveals it (`"reveal_spoiler"`, per view). Only once
   connected: without JavaScript there is no cover and no `inert`. `Forum.excerpt/2` and
   search excerpts read "(spoiler)". `!spoiler:overlay text:` (steward decision, 2026-10-28;
@@ -935,17 +935,39 @@ The contract (M6; mark each item done here when its PR merges):
   address public by `Push.Endpoint.public?/1`, connecting to the checked address, no
   redirects, short timeouts, size caps; tests: `:plugins_req_options` with `Req.Test`,
   `Idejo.FakeDNS` hosts `forums.`/`garden.`/`inside.idejo.test`).
-- **Getting started card** (steward request, 2026-11-09): after each sign-in (`UserAuth.log_in_user/3`
-  calls `Accounts.intro_on_sign_in/1`, which sets `users.intro_pending` unless
-  `users.intro_hidden`), `Layouts.app` shows `#intro-card` over the page while
-  `Accounts.intro_due?/1` (due, not hidden, `welcomed_at` set: a new member sees the welcome
-  card first): Help's "Sending" (`IdejoWeb.HelpComponents.sending/1`, the one markup the Help
-  page uses too, ids by its `id`; the card passes `brief`: Enter and Ctrl+Enter only, without
-  the intro line, Shift+Enter or the delay note, which stay on `/help`) and "The sidebar" (topics written in are followed and listed
-  there, the × unfollows, a swipe right shows it on phones). A plain form to `POST /intro`
-  (`IntroController`, back through `ReturnBack`): "Close" (`close_intro/2`, until the next
-  sign-in) and "Close and hide this in the future" (`hide: true`, for good: stored with the
-  account, so no update shows it again). A change to Help's "Sending" changes the card.
+- **Getting started card**: removed (steward request, 2026-11-22; it showed Help's
+  "Sending" and the sidebar after each sign-in). The API keeps `GET /me`'s `intro_due`,
+  always false, and `POST /api/v1/me/intro`, which changes nothing, for older apps (API v1
+  is additive); the `users.intro_*` columns are dropped.
+- **Onboarding** (steward request, 2026-11-22; `Idejo.Onboarding`), first on **Admin →
+  Onboarding and information**: the onboarding topic (setting `onboarding_topic_id`),
+  chosen by searching topics (`search/1`, `choose/2`), its category, icon and title changed
+  through `move_topic`/`set_topic_icon`/`rename_topic` (`update/2`); always topical and
+  autofollowed. `Forum.delete_topic/3`, `archive_topic/3` and `delete_category/3` with
+  `topics: :archive` refuse it with `{:error, :onboarding}` (API 409).
+  None set or its topic gone → `ensure/0` starts **Welcome** in the first non-Archive
+  category (`position`, `name`) as the server account `idejo`
+  (`Automessages.server_account/1`, `Forum.create_server_topic/3`), body "Welcome to
+  {server name}! Introduce yourself here.", icon "Waving hand" (`priv/onboarding/
+  waving_hand.png`, Twemoji 1f44b at 128 px, CC-BY 4.0; added by
+  `TopicIcons.add_bundled/3` when no icon has that name, deletable like any). It runs at
+  boot, after `create_category`, and when the admin page mounts; `:onboarding_auto` off
+  in tests (only the mount and explicit calls). The new user presentation question is the
+  setting `onboarding_question`, read as `Onboarding.string(1)` (`{onboarding.string.1}`).
+  **The tour** (steward request, 2026-11-22; `IdejoWeb.OnboardingComponents`,
+  `assets/js/onboarding_tour.js`): for `Onboarding.touring?/1` (active, `welcomed_at` set,
+  `users.onboarded_at` nil; the migration set it for everyone already there, server
+  accounts get it at creation) when `tour_topic/1` (they may post there). A hidden
+  `#onboarding-tour` per step (`data-step`, `data-target` selector, `data-place`); the JS
+  copies its text into a `.tour-card` on `<body>`, draws `.tour-shade` (a hole over the
+  target whose 200vmax shadow is `--color-base-200` at 50%, glowing ring) and stops clicks,
+  pointer-downs and keys outside the target and the card (capture phase; not touchstart, so
+  the page scrolls). Step 1 in `Layouts.app/1` (not on the topic's page, not in inbox mode):
+  the sidebar link (the × excluded). Steps in `TopicLive` (`tour` assign, `tour_step/3`,
+  `advance_tour/2` after a commit; `Onboarding.topic_step/2`): 2 no message of theirs, 3
+  open, 4 closed → `Accounts.mark_onboarded/1` (at the commit, or the connected mount, never
+  the first render's); step 4 points at `.sidebar-all`, its Close only hides the card.
+  The texts' typos fixed from the request; "your message." dropped from step 4.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (Ctrl+Enter
   in plain words, without this server's timers: steward request, 2026-11-09), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`
@@ -1030,7 +1052,7 @@ The contract (M6; mark each item done here when its PR merges):
 - **Info boxes** (steward decision, 2026-10-25; `Idejo.Settings.InfoBoxes`, `info_boxes`):
   cards of the administrators' own Markdown (`body_md` and its `body_html`, FD-03, rendered
   with `Body.to_html/2` as the admin), each with a title, an icon and a `#rrggbb` colour,
-  ordered, made in **Admin → Info boxes** (`Admin.InfoBoxesLive`: one form for new or
+  ordered, made in **Admin → Onboarding and information** (`Admin.InfoBoxesLive`: one form for new or
   edited, the message editor with Write / Preview; audited `info_box.create|update|reorder|
   delete`). The home page shows them to everyone (`PageHTML.info_box/1`) where each is placed
   (steward request, 2026-11-13; `placement`, `group_id`, `at_end`, set in the form as `place`
@@ -1060,7 +1082,7 @@ The contract (M6; mark each item done here when its PR merges):
   `topic.inactive`) with no message since (`marked_inactive_at > last_activity_at`, so any
   message sent clears it) gets `topic.inactive` (virtual) from `Reading.put_inactive/1`, one
   query per list, called by every controller that renders `topic_row/1` (none while the
-  `inactive_topics` setting, "Allow inactive topics" in **Admin → Settings**, on by
+  `inactive_topics` setting, "Allow inactive topics" in **Admin → Technical**, on by
   default, is off); the row takes `.is-inactive` (80% desaturated, 50% opacity) and an
   `sr-only` "Inactive".
   **View** (steward decision, 2026-10-23): the home page (beside its "Active topics" title)
@@ -1132,7 +1154,7 @@ The contract (M6; mark each item done here when its PR merges):
 - **Images** (TP-12, `Idejo.Uploads`, extra review: DV-06): JPEG, PNG, GIF and WebP only,
   decided by libvips from the content (`image` + `vix`, precompiled libvips; LI-06 checked),
   re-encoded in the same format without metadata (SP-05), animated frames kept, JPEGs turned
-  upright, at most 40 megapixels and `upload_max_mb` (default 3, **Admin → Settings**).
+  upright, at most 40 megapixels and `upload_max_mb` (default 3, **Admin → Technical**).
   Stored in `:uploads_dir` (`IDEJO_UPLOADS_DIR`, the `/data/uploads` volume in production;
   `tmp/test_uploads`, emptied by `test_helper.exs`, in tests) as `<id>.<ext>`, with an
   `uploads` row; served by `UploadController` at `/uploads/<id>.<ext>` without a session, to
@@ -1607,7 +1629,7 @@ The contract (M6; mark each item done here when its PR merges):
   "Source code" link from `Idejo.Source.url/0` (upstream at the built commit, or
   `IDEJO_SOURCE_URL`). It also links the privacy notice (AD-02): `/privacy`
   (`PrivacyController`, public, no JavaScript), the `privacy_notice` setting, Markdown written
-  in **Admin → Settings**. New pages must use `Layouts.app` (a new settings page passes
+  in **Admin → Technical**. New pages must use `Layouts.app` (a new settings page passes
   `footer`). The accessibility audit allows no footer, never two.
 - **First run** (AD-01): while no owner exists, `IdejoWeb.Plugs.RequireSetup` sends every page
   to `/setup`; once a page finds an owner it stops asking the database until the server
@@ -1642,7 +1664,7 @@ The contract (M6; mark each item done here when its PR merges):
   (`Layouts.full_logo/1`, `/images/logo.svg`; `/images/logo.png` as a raster copy) above the
   sign-in, sign-up and setup pages and on the visitors' card, in colour in both themes
   (steward decision, 2026-10-24). The forum's own logo (AD-11, `Idejo.Settings.Logo`) replaces the small one in the
-  header: **Admin → Settings** → Logo uploads it at once (`Uploads.store_logo/2`: fitted
+  header: **Admin → Technical** → Logo uploads it at once (`Uploads.store_logo/2`: fitted
   inside 256 px, shape and transparency kept, WebP) and keeps its address in the
   `brand_logo` setting (only `/uploads/<uuid>.webp` or empty; audited as `settings.update`;
   `Uploads.delete_unused/1` keeps it, a replaced one is deleted; `GET /logo`, public and
@@ -1867,7 +1889,7 @@ The contract (M6; mark each item done here when its PR merges):
   confirmation. Usage: `docs/deploying.md`.
 - **Push keys and switch** (PN-14, PN-19; steward decision, 2026-10-24; extra review:
   DV-06): web push lives in `Idejo.Push` (`lib/idejo/push/`). `Push.enabled?/0` is the "Push
-  notifications" setting (`push_enabled`, `"on"`/`"off"`, **Admin → Settings**): off means
+  notifications" setting (`push_enabled`, `"on"`/`"off"`, **Admin → Technical**): off means
   no banner, no subscribing, no sending. The VAPID keys (`Idejo.Push.Vapid`) are two
   `settings` rows outside `Settings`'s definitions (no form changes them), the private one
   encrypted by `Settings.Secret`; a migration makes them on every install (it runs before
@@ -1886,7 +1908,7 @@ The contract (M6; mark each item done here when its PR merges):
   ending sessions (AC-08) must do the same. Rotating the VAPID keys calls
   `Push.delete_all/0`. `Idejo.Push.Endpoint.check/1` (PN-16) is asked before saving and
   must be asked before every send: `https`, no userinfo, the host in the `push_services`
-  setting (one per line, `*.` for any name under a domain; **Admin → Settings**), and every
+  setting (one per line, `*.` for any name under a domain; **Admin → Technical**), and every
   address it resolves to public (`public?/1`: no loopback, private, link-local, CGNAT, ULA,
   multicast, reserved or documentation range; mapped and NAT64 IPv6 checked as their IPv4).
   It returns the addresses so the sender connects to one of them (no DNS rebinding). Tests
@@ -1926,7 +1948,7 @@ The contract (M6; mark each item done here when its PR merges):
 - **Followed activity** (PN-04; extra review: DV-06): a `follow` row makes `Push.dispatch/1`
   queue one `Idejo.Push.FollowedWorker` per user (unique while waiting), `scheduled_at`
   `Push.followed_due/2`: the last one's `push_preferences.followed_sent_at` plus
-  `push_followed_interval_minutes` (default 30, 1–1440, **Admin → Settings**), or now; run
+  `push_followed_interval_minutes` (default 30, 1–1440, **Admin → Technical**), or now; run
   early it snoozes. N = `Reading.unread_followed/1` (topics with unread `follow`-kind
   notifications, so mentions and replies never count again, PN-05; viewable, not muted)
   minus topics on screen (PN-08); sent only when one has a notification newer than the last
@@ -2054,7 +2076,7 @@ The contract (M6; mark each item done here when its PR merges):
     `IdejoWeb.Api.Revocations` (started by the application) disconnects its sockets
     (`api_token:{id}`). "Apps and devices" in Profile and account
     (`AppDeviceController`, a plain form).
-  - **Switch** (AP-20): `api_enabled` in Admin → Settings ("API and mobile app"), on by
+  - **Switch** (AP-20): `api_enabled` in Admin → Technical ("API and mobile app"), on by
     default; off, `IdejoWeb.Plugs.ApiEnabled` answers 404 under `/api` and on
     `/app/authorize`, the socket refuses with 404, and `Settings` broadcasts
     `{:settings_changed, keys}` on `"settings"` so live sockets close.

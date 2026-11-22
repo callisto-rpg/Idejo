@@ -86,6 +86,10 @@ defmodule IdejoWeb.Layouts do
       # Inbox mode (steward request, 2026-11-10): no sidebar, no categories, no Unread.
       |> assign(:inbox?, Idejo.Inbox.on?())
 
+    # The onboarding tour's first step (steward request, 2026-11-22): the sidebar's link to
+    # the onboarding topic, anywhere but on its page (IdejoWeb.TopicLive has the others).
+    assigns = assign(assigns, :tour_topic, tour_start(assigns))
+
     # A signed-in member's menu holds "All my topics" and "Private Conversations" (steward
     # request, 2026-11-13), so it opens on a standalone forum too.
     assigns =
@@ -200,9 +204,18 @@ defmodule IdejoWeb.Layouts do
 
     <.flash_group flash={@flash} />
     <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
-    <.intro_card :if={Idejo.Accounts.intro_due?(@user)} />
+    <IdejoWeb.OnboardingComponents.tour :if={@tour_topic} step={1} topic={@tour_topic} />
     <.topic_menu :if={@user} user={@user} />
     """
+  end
+
+  # The onboarding topic, when the tour's first step shows on this page: never in inbox mode
+  # (no sidebar), nor on the onboarding topic's own page.
+  defp tour_start(%{inbox?: true}), do: nil
+
+  defp tour_start(%{user: user, topic: on_screen}) do
+    topic = Idejo.Onboarding.tour_topic(user)
+    if topic && on_screen && on_screen.id == topic.id, do: nil, else: topic
   end
 
   @doc """
@@ -702,53 +715,6 @@ defmodule IdejoWeb.Layouts do
           heading="h3"
           submit={gettext("Continue")}
         />
-      </div>
-    </div>
-    """
-  end
-
-  # The getting-started card (steward request, 2026-11-09): after each sign-in, once the
-  # welcome card is done, until closed; never again after "Close and hide this in the
-  # future" (`Idejo.Accounts.close_intro/2`). Plain forms, so it works without JavaScript.
-  defp intro_card(assigns) do
-    ~H"""
-    <div
-      id="intro-card"
-      class="welcome-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="intro-title"
-    >
-      <div class="welcome-card intro-card">
-        <h2 id="intro-title" class="welcome-title">{gettext("Getting started")}</h2>
-        <IdejoWeb.HelpComponents.sending
-          id="intro-send"
-          heading="h3"
-          class="intro-section"
-          brief
-        />
-        <section id="intro-sidebar" aria-labelledby="intro-sidebar-title" class="intro-section">
-          <h3 id="intro-sidebar-title">{gettext("The sidebar")}</h3>
-          <ul class="intro-list">
-            <li>
-              {gettext("Topics you write in are followed automatically and appear in the sidebar.")}
-            </li>
-            <li>
-              {gettext("To stop following a topic, click the ×.")}
-            </li>
-            <li>{gettext("On a phone, swipe right to reveal the sidebar.")}</li>
-          </ul>
-        </section>
-        <form id="intro-form" action={~p"/intro"} method="post" class="intro-actions">
-          <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-          <input type="hidden" name="return" value="back" />
-          <button type="submit" name="choice" value="close" id="intro-close" class="btn btn-primary">
-            {gettext("Close")}
-          </button>
-          <button type="submit" name="choice" value="hide" id="intro-hide" class="btn btn-ghost">
-            {gettext("Close and hide this in the future")}
-          </button>
-        </form>
       </div>
     </div>
     """
@@ -1553,14 +1519,14 @@ defmodule IdejoWeb.Layouts do
           class={["tab", @section == :settings && "tab-active"]}
           aria-current={@section == :settings && "page"}
         >
-          {gettext("Settings")}
+          {gettext("Technical")}
         </.link>
         <.link
           navigate={~p"/admin/info-boxes"}
           class={["tab", @section == :info_boxes && "tab-active"]}
           aria-current={@section == :info_boxes && "page"}
         >
-          {gettext("Info boxes")}
+          {gettext("Onboarding and information")}
         </.link>
         <.link
           navigate={~p"/admin/automessages"}

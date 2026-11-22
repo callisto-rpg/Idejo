@@ -56,6 +56,7 @@ import {PushSettings} from "./push_settings"
 import "./message_actions"
 import {MessageActions} from "./message_action_menus"
 import "./open_dialogs"
+import "./onboarding_tour"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

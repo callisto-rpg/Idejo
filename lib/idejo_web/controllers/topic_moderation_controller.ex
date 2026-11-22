@@ -104,6 +104,12 @@ defmodule IdejoWeb.TopicModerationController do
         |> put_flash(:error, gettext("This topic is archived already."))
         |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
 
+      # Steward request, 2026-11-22.
+      {:error, :onboarding} ->
+        conn
+        |> put_flash(:error, IdejoWeb.Api.Errors.message(:onboarding))
+        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+
       {:error, _} ->
         conn
         |> put_flash(:error, gettext("You cannot moderate this topic."))
@@ -118,21 +124,30 @@ defmodule IdejoWeb.TopicModerationController do
       Forum.get_viewable_topic(user, id) ||
         raise Ecto.NoResultsError, queryable: Idejo.Forum.Topic
 
-    cond do
-      params["confirm"] != "yes" ->
-        conn
-        |> put_flash(:error, gettext("Tick the box to confirm, then delete the topic."))
-        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+    if params["confirm"] != "yes" do
+      conn
+      |> put_flash(:error, gettext("Tick the box to confirm, then delete the topic."))
+      |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+    else
+      case Forum.delete_topic(user, topic, params["reason"]) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, gettext("Topic deleted for good."))
+          |> redirect(
+            to: back_after_leaving(conn, params, topic) || ~p"/c/#{topic.category.slug}"
+          )
 
-      match?({:ok, _}, Forum.delete_topic(user, topic, params["reason"])) ->
-        conn
-        |> put_flash(:info, gettext("Topic deleted for good."))
-        |> redirect(to: back_after_leaving(conn, params, topic) || ~p"/c/#{topic.category.slug}")
+        # Steward request, 2026-11-22.
+        {:error, :onboarding} ->
+          conn
+          |> put_flash(:error, IdejoWeb.Api.Errors.message(:onboarding))
+          |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
 
-      true ->
-        conn
-        |> put_flash(:error, gettext("You cannot moderate this topic."))
-        |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+        {:error, _} ->
+          conn
+          |> put_flash(:error, gettext("You cannot moderate this topic."))
+          |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
+      end
     end
   end
 

@@ -137,7 +137,16 @@ defmodule Idejo.Settings do
     theme_dark_bg: %{type: :string, default: "#000000", required: true, format: :colour},
     # AD-11: the forum's own logo in the header, an upload's address
     # (`Idejo.Settings.Logo`); empty for idejo's small logo.
-    brand_logo: %{type: :string, default: "", max: 100, format: :logo}
+    brand_logo: %{type: :string, default: "", max: 100, format: :logo},
+    # Onboarding (steward request, 2026-11-22; Idejo.Onboarding): the onboarding topic's id
+    # and the new user presentation question, {onboarding.string.1}.
+    onboarding_topic_id: %{type: :string, default: "", max: 36},
+    onboarding_question: %{
+      type: :string,
+      default: "Now tell us a bit about yourself and why you joined this forum",
+      required: true,
+      max: 2000
+    }
   }
 
   @theme_names [
@@ -181,6 +190,8 @@ defmodule Idejo.Settings do
           | :theme_light_bg
           | :theme_dark_bg
           | :brand_logo
+          | :onboarding_topic_id
+          | :onboarding_question
 
   @doc """
   The allowed values of `:registration_mode`: open, invite-only (AC-02), or closed: nobody

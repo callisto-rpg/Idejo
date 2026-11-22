@@ -14,7 +14,7 @@ The exact reference is the OpenAPI document every forum serves at
 `/api/v1/openapi.json` (OpenAPI 3.1, no token needed). This guide explains how the pieces
 fit together.
 
-Server administrators can turn the API off in **Admin → Settings → API and mobile app**
+Server administrators can turn the API off in **Admin → Technical → API and mobile app**
 (on by default). Off, everything below answers 404, and the app should say so.
 
 ## 1. Discovery and adding a forum by address

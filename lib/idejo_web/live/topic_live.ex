@@ -161,7 +161,8 @@ defmodule IdejoWeb.TopicLive do
            composing_edit: nil,
            edit_versioned?: false,
            images?: false,
-           gifs: nil
+           gifs: nil,
+           tour: nil
          )
          |> assign(:listed, nil)
          |> sync_entries()}
@@ -204,6 +205,8 @@ defmodule IdejoWeb.TopicLive do
          |> assign(sizes: TopicWindow.sizes(), new_below: 0)
          |> assign(:mine_last, TopicWindow.last_by(topic, user))
          |> assign(:own_open, open_id(can_post? && user, topic))
+         # The onboarding tour's steps on its topic (steward request, 2026-11-22).
+         |> assign(:tour, tour_step(can_post? && user, topic, connected?(socket)))
          |> put_window(landing(session))
          |> put_poster_role()
          |> put_draft()
@@ -1691,6 +1694,31 @@ defmodule IdejoWeb.TopicLive do
 
   defp track_open(socket, _viewer, _message), do: socket
 
+  # The onboarding tour on its topic (steward request, 2026-11-22; Idejo.Onboarding): 2
+  # before the member's first message, 3 while it is open, 4 once it closed, which finishes
+  # the tour (the card stays until Close, or the page is left). Finished by the connected
+  # mount, not the first render's, which would leave the connected one without the card.
+  defp tour_step(user, topic, connected?) when is_struct(user) do
+    if Idejo.Onboarding.touring?(user) and Idejo.Onboarding.onboarding_topic?(topic) do
+      step = Idejo.Onboarding.topic_step(user, topic)
+      if step == 4 and connected?, do: {:ok, _} = Idejo.Accounts.mark_onboarded(user)
+      step
+    end
+  end
+
+  defp tour_step(_user, _topic, _connected?), do: nil
+
+  defp advance_tour(%{assigns: %{tour: step}} = socket, message) when step in [2, 3] do
+    if message.state == "closed" do
+      {:ok, _} = Idejo.Accounts.mark_onboarded(user(socket))
+      assign(socket, :tour, 4)
+    else
+      assign(socket, :tour, 3)
+    end
+  end
+
+  defp advance_tour(socket, _message), do: socket
+
   # Before the window loads, which needs it (`load_window/5`).
   defp open_id(user, topic) when is_struct(user) do
     case Messages.open_message(user, topic) do
@@ -1737,6 +1765,7 @@ defmodule IdejoWeb.TopicLive do
          socket
          |> assign(:typing_at, nil)
          |> put_committed(completed(socket, message, opts))
+         |> advance_tour(message)
          |> after_send(then, message, params)}
 
       # A new message before the open one may end: the text stays, unsent.
@@ -2875,6 +2904,12 @@ defmodule IdejoWeb.TopicLive do
       data-emoji-index={@can_react? && ReactionComponents.picker_index()}
       data-emoji-labels={@can_react? && ReactionComponents.picker_labels()}
     >
+      <IdejoWeb.OnboardingComponents.tour
+        :if={@tour}
+        step={@tour}
+        topic={@topic}
+        user={@current_scope.user}
+      />
       <dialog
         :if={@card}
         id="inline-card"
