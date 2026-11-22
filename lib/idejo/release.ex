@@ -60,13 +60,12 @@ defmodule Idejo.Release do
       Map.get(@registration_modes, opts[:registration] || "open") ||
         fail("--registration must be open, invite or closed.")
 
-    category =
-      case opts[:category] do
-        nil -> nil
-        given -> blank_to_nil(given) || fail("The category name (--category) is empty.")
-      end
-
-    attrs = %{name: name, owner_email: email, registration_mode: mode, category: category}
+    attrs = %{
+      name: name,
+      owner_email: email,
+      registration_mode: mode,
+      category: category_option(opts[:category])
+    }
 
     case with_repo(fn -> Idejo.Setup.complete_headless(attrs) end) do
       {:ok, %{owner: owner, delivered: :ok}} ->
@@ -93,6 +92,12 @@ defmodule Idejo.Release do
         fail("Nothing changed: " <> changeset_errors(changeset))
     end
   end
+
+  # `--category`: left out, no category; given, never blank.
+  defp category_option(nil), do: nil
+
+  defp category_option(given),
+    do: blank_to_nil(given) || fail("The category name (--category) is empty.")
 
   defp delivery_error(:smtp_not_configured),
     do: "no SMTP server is set: Admin → Email, or IDEJO_SMTP_HOST"
