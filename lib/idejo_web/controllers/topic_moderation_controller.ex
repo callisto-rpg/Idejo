@@ -16,6 +16,7 @@ defmodule IdejoWeb.TopicModerationController do
   use IdejoWeb, :controller
 
   alias Idejo.Forum
+  alias IdejoWeb.Api.Errors
 
   @actions %{"lock" => :lock, "unlock" => :unlock, "pin" => :pin, "unpin" => :unpin}
 
@@ -107,7 +108,7 @@ defmodule IdejoWeb.TopicModerationController do
       # Steward request, 2026-11-22.
       {:error, :onboarding} ->
         conn
-        |> put_flash(:error, IdejoWeb.Api.Errors.message(:onboarding))
+        |> put_flash(:error, Errors.message(:onboarding))
         |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
 
       {:error, _} ->
@@ -140,7 +141,7 @@ defmodule IdejoWeb.TopicModerationController do
         # Steward request, 2026-11-22.
         {:error, :onboarding} ->
           conn
-          |> put_flash(:error, IdejoWeb.Api.Errors.message(:onboarding))
+          |> put_flash(:error, Errors.message(:onboarding))
           |> redirect(to: ~p"/t/#{topic.id}/#{topic.slug}")
 
         {:error, _} ->

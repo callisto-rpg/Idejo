@@ -206,7 +206,7 @@ defmodule IdejoWeb.TopicLive do
          |> assign(:mine_last, TopicWindow.last_by(topic, user))
          |> assign(:own_open, open_id(can_post? && user, topic))
          # The onboarding tour's steps on its topic (steward request, 2026-11-22).
-         |> assign(:tour, tour_step(can_post? && user, topic, connected?(socket)))
+         |> assign(:tour, tour_step(user, topic, can_post?, connected?(socket)))
          |> put_window(landing(session))
          |> put_poster_role()
          |> put_draft()
@@ -1698,7 +1698,7 @@ defmodule IdejoWeb.TopicLive do
   # before the member's first message, 3 while it is open, 4 once it closed, which finishes
   # the tour (the card stays until Close, or the page is left). Finished by the connected
   # mount, not the first render's, which would leave the connected one without the card.
-  defp tour_step(user, topic, connected?) when is_struct(user) do
+  defp tour_step(user, topic, true = _can_post?, connected?) when is_struct(user) do
     if Idejo.Onboarding.touring?(user) and Idejo.Onboarding.onboarding_topic?(topic) do
       step = Idejo.Onboarding.topic_step(user, topic)
       if step == 4 and connected?, do: {:ok, _} = Idejo.Accounts.mark_onboarded(user)
@@ -1706,7 +1706,7 @@ defmodule IdejoWeb.TopicLive do
     end
   end
 
-  defp tour_step(_user, _topic, _connected?), do: nil
+  defp tour_step(_user, _topic, _can_post?, _connected?), do: nil
 
   defp advance_tour(%{assigns: %{tour: step}} = socket, message) when step in [2, 3] do
     if message.state == "closed" do

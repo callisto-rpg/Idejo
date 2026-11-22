@@ -32,8 +32,8 @@ defmodule Idejo.Onboarding do
   alias Idejo.Accounts.User
   alias Idejo.Forum
   alias Idejo.Forum.{Category, Topic, TopicIcon, TopicIcons}
-  alias Idejo.Messages.Message
   alias Idejo.Messages.Automessages
+  alias Idejo.Messages.Message
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -180,9 +180,7 @@ defmodule Idejo.Onboarding do
   # Topical, with an icon, and followed by everyone.
   defp onboarding_shape(admin, %Topic{} = topic) do
     with {:ok, topic} <- topical(admin, topic),
-         {:ok, topic} <- Forum.set_autofollow(admin, topic, true) do
-      {:ok, topic}
-    end
+         do: Forum.set_autofollow(admin, topic, true)
   end
 
   defp topical(_admin, %Topic{topical: true} = topic), do: {:ok, topic}
