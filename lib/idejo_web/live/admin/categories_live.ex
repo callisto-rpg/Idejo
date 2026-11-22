@@ -239,6 +239,7 @@ defmodule IdejoWeb.Admin.CategoriesLive do
         "“%{name}” holds the onboarding topic, which is never archived: move the topics, or choose another onboarding topic first.",
         name: category.name
       )
+
   defp delete_error(_reason, _category), do: gettext("The category could not be deleted.")
 
   @impl true

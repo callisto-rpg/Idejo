@@ -240,7 +240,7 @@ defmodule IdejoWeb.OnboardingTest do
 
     # Not before the welcome card is closed, nor for members who joined before (or finished
     # it), nor for visitors.
-    refute tour(home(user_fixture()))
+    refute tour(home(user_fixture(%{welcome: true})))
     {:ok, earlier} = Idejo.Accounts.mark_onboarded(newcomer())
     refute tour(home(earlier))
     refute tour(home(nil))
