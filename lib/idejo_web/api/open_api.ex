@@ -57,7 +57,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "Changes" => {~w(data cursor more topic), ~w(data cursor more)},
     "Unread" => {~w(following others counter), ~w(following others counter)},
     "Server" =>
-      {~w(name url logo_url about_md rules_md privacy_md roles settings emoji default_reactions plugins commands),
+      {~w(name url logo_url about_md rules_md privacy_md theme roles settings emoji default_reactions plugins commands),
        ~w(name url settings)},
     "NotificationSettings" => {~w(email push), ~w(email push)},
     "Token" => {~w(id name scopes signed_in_at last_used_at current), ~w(id name scopes)},
