@@ -127,7 +127,7 @@ defmodule IdejoWeb.Api.AP08SignInTest do
     assert %{"code" => _} = signed_in |> allow(params) |> code_from()
 
     # Still shown on the forum's own pages.
-    assert signed_in |> recycle() |> get(~p"/") |> html_response(200) =~ ~s(id="welcome-card")
+    assert signed_in |> get(~p"/") |> html_response(200) =~ ~s(id="welcome-card")
   end
 
   @tag req: "AP-08"

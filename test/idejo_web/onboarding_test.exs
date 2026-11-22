@@ -261,7 +261,7 @@ defmodule IdejoWeb.OnboardingTest do
     html = signed_in |> get(~p"/app/authorize?#{params}") |> html_response(200)
     assert html =~ "app-authorize-allow"
     refute tour(html)
-    assert tour(signed_in |> recycle() |> get(~p"/") |> html_response(200))
+    assert tour(signed_in |> get(~p"/") |> html_response(200))
   end
 
   test "on the onboarding topic: the composer, then the question, then the end", %{
