@@ -143,7 +143,7 @@ Self-select roles (steward decision, 2026-10-23): owners and administrators mark
 gives such a role go to whoever picks it, which the role editor warns about). Members set
 theirs with `Access.set_self_roles/2`, which only adds or removes self-select roles (audited
 as `role.self_grant` / `role.self_revoke`, by the member). A new member sees the welcome
-card once (`Layouts.app`, while `users.welcomed_at` is nil; existing members, the setup
+card once (`Layouts.app`, while `users.welcomed_at` is nil; never on the app's sign-in page, `/app/authorize`, whose `guides={false}` also leaves out the onboarding tour: covering Allow, its Continue led to the home page in the app's Custom Tab and the app got no code; existing members, the setup
 wizard's owner and test fixtures are marked welcomed; `user_fixture(%{welcome: true})` is
 not): About and Rules (`server_about`, `server_rules` settings, Markdown, through
 `MessageComponents.body/1`) and the roles, a plain form to `POST /welcome`
@@ -233,7 +233,7 @@ The contract (M6; mark each item done here when its PR merges):
 | Interface | Requirement | Contract | Status |
 | --- | --- | --- | --- |
 | Environment | AD-13 | `PHX_HOST` (required in production, no `example.com` fallback), `PORT`, `DATABASE_URL`, `SECRET_KEY_BASE`, `IDEJO_UPLOADS_DIR`, `IDEJO_BACKUP_DIR`, `IDEJO_SOURCE_URL` (LI-03; the Hub sets it to the exact release), `IDEJO_PG_BIN_DIR`, optional `IDEJO_SMTP_HOST`, `_PORT`, `_SECURITY` (added: `starttls`, `tls`, `none`; by default `tls` on 465, else `starttls`), `_USERNAME`, `_PASSWORD`, `_FROM` (used only while Admin → Technical has no SMTP; the panel always wins). WebSocket `check_origin` follows `PHX_HOST`. All in `deploy/.env.example` | Done (`config/runtime.exs`, `Idejo.Mailer.smtp_settings/2`; `test/idejo_web/ad_13_environment_test.exs`) |
-| Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed | Done (`Idejo.Setup.complete_headless/1`, `Idejo.Release.setup/1`; `test/idejo_web/ad_14_headless_setup_test.exs`) |
+| Headless setup | AD-14 | `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open\|invite\|closed]` → `Idejo.Release.setup/1`, through `Idejo.Setup` (does nothing the wizard would not). Owner created as an invite, never a password on the command line. Already set up → non-zero exit, nothing changed. Added (steward request, 2026-11-22): `--category NAME`, a first category made by the owner (`Forum.create_category/2`) in the setup's transaction; refused, nothing is set up | Done (`Idejo.Setup.complete_headless/1`, `Idejo.Release.setup/1`; `test/idejo_web/ad_14_headless_setup_test.exs`) |
 | Recovery CLI | AD-09 | `backup`, `restore FILE --yes`, `health`: non-interactive with `--yes`, exit 0 on success and non-zero on failure (`exit({:shutdown, 1})`), output on standard output. Added (for the Hub's forum list): `stats`, one line of JSON `{"members", "topics", "messages", "database_bytes", "uploads_bytes"}` (active accounts without server accounts; topics without private conversations; messages not deleted), counts and sizes only | Done (M5); `stats` added 2026-11-03 (`Release.stats/0`) |
 | Health | AD-15 | `GET /health`, no sign-in, outside the browser pipeline's session: `{"status", "version", "checks": {"database", "migrations"}}`, 200 when all ok, else 503. No personal data (do not reuse `health`'s owner detail). Rate-limited (SP-05) for one request a minute plus container checks. The `app` service's Compose health check | Done (`IdejoWeb.HealthController`, `Idejo.Health`; `test/idejo_web/ad_15_health_test.exs`) |
 | Proxy | AD-16 | Bundled Caddy stays the default install. A documented way to run without it (Compose profile or second Compose file). `X-Forwarded-Proto` / `X-Forwarded-Host` trusted only from `IDEJO_TRUSTED_PROXIES`, consistent with `IdejoWeb.Plugs.ClientIp` | Done (`deploy/docker-compose.external-proxy.yml`, `ClientIp.trusted?/1`; `test/idejo_web/ad_16_proxy_test.exs`) |
@@ -968,6 +968,9 @@ The contract (M6; mark each item done here when its PR merges):
   open, 4 closed → `Accounts.mark_onboarded/1` (at the commit, or the connected mount, never
   the first render's); step 4 points at `.sidebar-all`, its Close only hides the card.
   The texts' typos fixed from the request; "your message." dropped from step 4.
+  The app's tour (steward request, 2026-11-22): `GET /me` gives `onboarding` (`Api.me/1`,
+  `{topic_id, topic_title, question}` from `tour_topic/1`, else null) and
+  `POST /me/onboarded` (`MeController.onboarded/2`) finishes it.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (Ctrl+Enter
   in plain words, without this server's timers: steward request, 2026-11-09), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`

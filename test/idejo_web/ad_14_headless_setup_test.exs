@@ -6,6 +6,7 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
   AD-14: `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration
   open|invite|closed]`, an alternative to the first-run wizard through the same code. The
   owner is created as an invite and chooses a password from a link; a second run refuses.
+  `--category NAME` adds a first category, made by the owner.
   With it, the closed registration mode (steward decision, 2026-11-02): nobody signs up.
   """
   # Writes the settings rows every test shares, and switches the mailer in one test.
@@ -21,6 +22,7 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
   alias Idejo.Accounts
   alias Idejo.Accounts.User
   alias Idejo.Audit
+  alias Idejo.Forum.Category
   alias Idejo.Release
   alias Idejo.Repo
   alias Idejo.Settings
@@ -155,6 +157,31 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
   end
 
   @tag req: "AD-14"
+  test "AD-14 --category makes a first category, by the owner" do
+    setup!(name: "Garden Club", owner_email: "olga@idejo.test", category: "General")
+
+    owner = owner_by_email("olga@idejo.test")
+    assert [%Category{name: "General", slug: "general", position: 0}] = Repo.all(Category)
+    assert [entry] = Enum.filter(Audit.list_entries(), &(&1.change == "category.create"))
+    assert entry.admin_id == owner.id
+  end
+
+  @tag req: "AD-14"
+  test "AD-14 a category refused leaves the server not set up" do
+    output =
+      refused(
+        name: "Club",
+        owner_email: "olga@idejo.test",
+        category: String.duplicate("x", 81)
+      )
+
+    assert output =~ "the category name should be at most 80 character(s)"
+    assert Setup.needed?()
+    refute Repo.exists?(Category)
+    refute Repo.exists?(from u in User, where: u.status != "system")
+  end
+
+  @tag req: "AD-14"
   test "AD-14 a second run refuses and changes nothing" do
     setup!(name: "Garden Club", owner_email: "olga@idejo.test", registration: "closed")
     before = {Repo.aggregate(User, :count), Audit.list_entries(), Settings.all()}
@@ -177,7 +204,9 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
           {[name: "Club", owner_email: "olga@idejo.test", registration: "sometimes"],
            "--registration must be open, invite or closed."},
           {[name: String.duplicate("x", 81), owner_email: "olga@idejo.test"],
-           "the server name should be at most 80 character(s)"}
+           "the server name should be at most 80 character(s)"},
+          {[name: "Club", owner_email: "olga@idejo.test", category: " "],
+           "The category name (--category) is empty."}
         ] do
       assert refused(opts) =~ message
     end
@@ -227,9 +256,25 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
              registration: "invite"
            ]
 
-    # Without --registration, open.
+    # Without --registration, open; without --category, none.
     assert {_, 0} = run.(["setup", "--name", "Club", "--owner-email", "olga@idejo.test"])
     assert File.read!(Path.join(dir, "evaluated")) =~ ~s(registration: "open")
+    refute File.read!(Path.join(dir, "evaluated")) =~ "category"
+
+    assert {_, 0} =
+             run.([
+               "setup",
+               "--name",
+               "Club",
+               "--owner-email",
+               "olga@idejo.test",
+               "--category",
+               ~s(The "General" room)
+             ])
+
+    code = File.read!(Path.join(dir, "evaluated"))
+    {:ok, {{:., _, [_release, :setup]}, _, [args]}} = Code.string_to_quoted(code)
+    assert args[:category] == ~s(The "General" room)
 
     for args <- [
           ["setup"],
@@ -238,13 +283,15 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
           ["setup", "--name", "Club", "--owner-email", "olga"],
           ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--registration", "x"],
           ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--yes", "now"],
-          ["setup", "--name", "Club", "--owner-email"]
+          ["setup", "--name", "Club", "--owner-email"],
+          ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--category", " "]
         ] do
       assert {_, 64} = run.(args), inspect(args)
     end
 
     {usage, 0} = run.(["help"])
     assert usage =~ "setup --name NAME --owner-email EMAIL [--registration open|invite|closed]"
+    assert usage =~ "[--category NAME]"
   end
 
   describe "closed registration" do

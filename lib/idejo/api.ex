@@ -140,8 +140,20 @@ defmodule Idejo.Api do
       "moderator" => Idejo.Moderation.moderator?(user),
       "server_moderator" => Access.server_moderator?(user),
       # Settings for all forums: on a group's inbox, for a member linked to its provider.
-      "everywhere" => Inbox.everywhere?(user)
+      "everywhere" => Inbox.everywhere?(user),
+      # The onboarding tour (steward request, 2026-11-22): while the member is on it.
+      "onboarding" => onboarding(user)
     })
+  end
+
+  defp onboarding(user) do
+    with %{} = topic <- Idejo.Onboarding.tour_topic(user) do
+      %{
+        "topic_id" => topic.id,
+        "topic_title" => topic.title,
+        "question" => Idejo.Onboarding.string(1)
+      }
+    end
   end
 
   ## Categories

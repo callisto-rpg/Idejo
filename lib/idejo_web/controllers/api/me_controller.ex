@@ -213,6 +213,12 @@ defmodule IdejoWeb.Api.MeController do
     json(conn, Api.me(user))
   end
 
+  # The onboarding tour (steward request, 2026-11-22): the app's last step.
+  def onboarded(conn, _params) do
+    {:ok, user} = Accounts.mark_onboarded(user(conn))
+    json(conn, Api.me(user))
+  end
+
   # The getting-started card is gone (steward request, 2026-11-22): nothing to close, kept so
   # older apps' calls still succeed (API v1 is additive).
   def intro(conn, _params), do: json(conn, Api.me(user(conn)))

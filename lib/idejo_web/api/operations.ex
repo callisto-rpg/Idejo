@@ -237,6 +237,15 @@ defmodule IdejoWeb.Api.Operations do
       ),
       op(
         :post,
+        "/me/onboarded",
+        MeController,
+        :onboarded,
+        "write",
+        "Me",
+        "Marks the onboarding tour finished: `onboarding` is null from then on."
+      ),
+      op(
+        :post,
         "/me/intro",
         MeController,
         :intro,

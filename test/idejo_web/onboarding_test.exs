@@ -12,6 +12,7 @@ defmodule IdejoWeb.OnboardingTest do
 
   import Idejo.AccountsFixtures
   import Idejo.ImageFixtures
+  import IdejoWeb.ApiHelpers, only: [pkce: 0, authorize_params: 1]
   import Phoenix.LiveViewTest
 
   alias Idejo.Audit
@@ -246,6 +247,23 @@ defmodule IdejoWeb.OnboardingTest do
     refute tour(home(nil))
   end
 
+  test "the app's sign-in page draws no tour, which would stop Allow", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, _} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, _welcome} = Onboarding.ensure()
+    member = newcomer()
+    {_verifier, challenge} = pkce()
+    params = authorize_params(challenge)
+
+    signed_in = log_in_user(conn, member)
+    html = signed_in |> get(~p"/app/authorize?#{params}") |> html_response(200)
+    assert html =~ "app-authorize-allow"
+    refute tour(html)
+    assert tour(signed_in |> recycle() |> get(~p"/") |> html_response(200))
+  end
+
   test "on the onboarding topic: the composer, then the question, then the end", %{
     conn: conn,
     admin: admin
@@ -297,5 +315,29 @@ defmodule IdejoWeb.OnboardingTest do
 
     {:ok, _} = Forum.moderate_topic(admin, welcome, :lock)
     refute conn |> log_in_user(member) |> get(~p"/") |> html_response(200) |> tour()
+  end
+
+  test "the API tells the app about the tour, and the app finishes it", %{admin: admin} do
+    {:ok, _} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, welcome} = Onboarding.ensure()
+    member = newcomer()
+    {token, _row} = IdejoWeb.ApiHelpers.api_token_fixture(member)
+
+    api = fn method, path ->
+      build_conn()
+      |> IdejoWeb.ApiHelpers.api_conn(token)
+      |> Phoenix.ConnTest.dispatch(@endpoint, method, path, %{})
+      |> IdejoWeb.ApiHelpers.api_json(200)
+    end
+
+    assert api.(:get, "/api/v1/me")["onboarding"] == %{
+             "topic_id" => welcome.id,
+             "topic_title" => "Welcome",
+             "question" => "Now tell us a bit about yourself and why you joined this forum"
+           }
+
+    assert api.(:post, "/api/v1/me/onboarded")["onboarding"] == nil
+    assert Idejo.Repo.reload!(member).onboarded_at
+    assert api.(:get, "/api/v1/me")["onboarding"] == nil
   end
 end

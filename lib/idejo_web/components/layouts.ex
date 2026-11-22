@@ -73,6 +73,12 @@ defmodule IdejoWeb.Layouts do
     default: false,
     doc: "offer browser notifications (PN-20: category and topic pages, `Push.banner?/1`)"
 
+  attr :guides, :boolean,
+    default: true,
+    doc:
+      "the welcome card and the onboarding tour, which cover the page: never on the app's " <>
+        "sign-in page, where they would hide Allow (the app shows its own)"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -203,14 +209,15 @@ defmodule IdejoWeb.Layouts do
     </div>
 
     <.flash_group flash={@flash} />
-    <.welcome_card :if={@user && is_nil(@user.welcomed_at)} user={@user} />
+    <.welcome_card :if={@guides && @user && is_nil(@user.welcomed_at)} user={@user} />
     <IdejoWeb.OnboardingComponents.tour :if={@tour_topic} step={1} topic={@tour_topic} />
     <.topic_menu :if={@user} user={@user} />
     """
   end
 
   # The onboarding topic, when the tour's first step shows on this page: never in inbox mode
-  # (no sidebar), nor on the onboarding topic's own page.
+  # (no sidebar), on the onboarding topic's own page, or without `guides` (the app's sign-in).
+  defp tour_start(%{guides: false}), do: nil
   defp tour_start(%{inbox?: true}), do: nil
 
   defp tour_start(%{user: user, topic: on_screen}) do
