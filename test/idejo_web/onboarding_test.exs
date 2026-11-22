@@ -12,6 +12,7 @@ defmodule IdejoWeb.OnboardingTest do
 
   import Idejo.AccountsFixtures
   import Idejo.ImageFixtures
+  import IdejoWeb.ApiHelpers, only: [pkce: 0, authorize_params: 1]
   import Phoenix.LiveViewTest
 
   alias Idejo.Audit
@@ -244,6 +245,23 @@ defmodule IdejoWeb.OnboardingTest do
     {:ok, earlier} = Idejo.Accounts.mark_onboarded(newcomer())
     refute tour(home(earlier))
     refute tour(home(nil))
+  end
+
+  test "the app's sign-in page draws no tour, which would stop Allow", %{
+    conn: conn,
+    admin: admin
+  } do
+    {:ok, _} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, _welcome} = Onboarding.ensure()
+    member = newcomer()
+    {_verifier, challenge} = pkce()
+    params = authorize_params(challenge)
+
+    signed_in = log_in_user(conn, member)
+    html = signed_in |> get(~p"/app/authorize?#{params}") |> html_response(200)
+    assert html =~ "app-authorize-allow"
+    refute tour(html)
+    assert tour(signed_in |> recycle() |> get(~p"/") |> html_response(200))
   end
 
   test "on the onboarding topic: the composer, then the question, then the end", %{

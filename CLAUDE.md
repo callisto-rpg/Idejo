@@ -143,7 +143,7 @@ Self-select roles (steward decision, 2026-10-23): owners and administrators mark
 gives such a role go to whoever picks it, which the role editor warns about). Members set
 theirs with `Access.set_self_roles/2`, which only adds or removes self-select roles (audited
 as `role.self_grant` / `role.self_revoke`, by the member). A new member sees the welcome
-card once (`Layouts.app`, while `users.welcomed_at` is nil; existing members, the setup
+card once (`Layouts.app`, while `users.welcomed_at` is nil; never on the app's sign-in page, `/app/authorize`, whose `guides={false}` also leaves out the onboarding tour: covering Allow, its Continue led to the home page in the app's Custom Tab and the app got no code; existing members, the setup
 wizard's owner and test fixtures are marked welcomed; `user_fixture(%{welcome: true})` is
 not): About and Rules (`server_about`, `server_rules` settings, Markdown, through
 `MessageComponents.body/1`) and the roles, a plain form to `POST /welcome`

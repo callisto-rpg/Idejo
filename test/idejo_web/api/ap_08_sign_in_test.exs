@@ -112,6 +112,25 @@ defmodule IdejoWeb.Api.AP08SignInTest do
   end
 
   @tag req: "AP-08"
+  test "AP-08 a new member's welcome card never covers Allow", %{conn: conn} do
+    # Joining from the app: the card's Continue led to the forum's home page in the Custom
+    # Tab, and the app never got its code. The app shows its own welcome card.
+    newcomer = user_fixture(%{welcome: true})
+    assert newcomer.welcomed_at == nil
+    {_verifier, challenge} = pkce()
+    params = authorize_params(challenge)
+
+    signed_in = log_in_user(conn, newcomer)
+    page = signed_in |> authorize(params) |> html_response(200)
+    assert page =~ "app-authorize-allow"
+    refute page =~ ~s(id="welcome-card")
+    assert %{"code" => _} = signed_in |> allow(params) |> code_from()
+
+    # Still shown on the forum's own pages.
+    assert signed_in |> recycle() |> get(~p"/") |> html_response(200) =~ ~s(id="welcome-card")
+  end
+
+  @tag req: "AP-08"
   test "AP-08 Cancel goes back to the app with access_denied", %{conn: conn} do
     user = user_fixture()
     {_verifier, challenge} = pkce()
