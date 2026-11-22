@@ -7,7 +7,7 @@ defmodule Idejo.MixProject do
   def project do
     [
       app: :idejo,
-      version: "0.3.22",
+      version: "0.3.23",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,

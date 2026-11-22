@@ -118,6 +118,10 @@ defmodule IdejoWeb.Api.AP12MemberTest do
     server = api(ctx, :get, "/api/v1/server") |> api_json(200)
     assert server["settings"]["gm_window_seconds"] == 15
     assert server["settings"]["gm_early_reply"] == true
+    # The website theme's colours, so the app opens the forum in them (Android TH-01).
+    assert server["theme"]["primary"] == Idejo.Settings.theme().primary
+    keys = ~w(dark_bg light_bg primary secondary tertiary)
+    assert Enum.sort(Map.keys(server["theme"])) == keys
     # The key pushes are signed with, as browsers take it (Android NT-06).
     assert server["settings"]["push_vapid_key"] == Vapid.public_key()
     assert byte_size(server["settings"]["push_vapid_key"]) == 87

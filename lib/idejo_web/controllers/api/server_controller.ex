@@ -3,9 +3,9 @@
 
 defmodule IdejoWeb.Api.ServerController do
   @moduledoc """
-  The server as the app needs it (AP-12): name, About and Rules, self-select roles, the
-  settings that change how a client behaves (with the push key, `push_vapid_key`), the
-  server's own emoji and active plugins;
+  The server as the app needs it (AP-12): name, About and Rules, the website theme's colours,
+  self-select roles, the settings that change how a client behaves (with the push key,
+  `push_vapid_key`), the server's own emoji and active plugins;
   search, suggestions, emoji and GIFs.
   """
   use IdejoWeb.Api.Controller
@@ -22,6 +22,8 @@ defmodule IdejoWeb.Api.ServerController do
       "about_md" => Settings.get(:server_about),
       "rules_md" => Settings.get(:server_rules),
       "privacy_md" => Settings.get(:privacy_notice),
+      # The website theme's colours (IX-01), so the app opens the forum in them (TH-01).
+      "theme" => Map.new(Settings.theme(), fn {key, value} -> {Atom.to_string(key), value} end),
       "roles" => Enum.map(Access.self_select_roles(), &role/1),
       "settings" => %{
         "gm_window_seconds" => Settings.get(:gm_window_seconds),
