@@ -286,6 +286,11 @@ the web's, and the server keeps every rule:
   composer's toolbar and its drawing of the message) and `controls_on_mobile` /
   `controls_on_desktop` (a message's actions always shown, not on a tap); `PATCH /me`
   changes any of them, the others kept.
+- **The onboarding tour** (steward request, 2026-11-22): while a new member is on it,
+  `GET /me` gives `onboarding: {topic_id, topic_title, question}` (the onboarding topic, and
+  the presentation question to ask once their first message is sent); otherwise `null`.
+  The member's first message closing there does not end it: the app ends it with
+  `POST /me/onboarded`, which answers the member with `onboarding: null`.
 - Keep the topic channel joined while writing: if the author has no page or channel open
   on the topic for 30 seconds, their open message closes, as when a browser tab closes.
 

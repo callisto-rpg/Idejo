@@ -968,6 +968,9 @@ The contract (M6; mark each item done here when its PR merges):
   open, 4 closed → `Accounts.mark_onboarded/1` (at the commit, or the connected mount, never
   the first render's); step 4 points at `.sidebar-all`, its Close only hides the card.
   The texts' typos fixed from the request; "your message." dropped from step 4.
+  The app's tour (steward request, 2026-11-22): `GET /me` gives `onboarding` (`Api.me/1`,
+  `{topic_id, topic_title, question}` from `tour_topic/1`, else null) and
+  `POST /me/onboarded` (`MeController.onboarded/2`) finishes it.
 - **Help** (steward decision, 2026-10-23): `/help` (`HelpController`, public, no JavaScript),
   linked in the sidebar under Rules & Roles (`#help-link`): the keys that send (Ctrl+Enter
   in plain words, without this server's timers: steward request, 2026-11-09), the signs `@ + # / $ !`, every command from `ComposerCommands.all/0` (also listed by the `!tutorial-commands`

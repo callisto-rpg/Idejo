@@ -298,4 +298,28 @@ defmodule IdejoWeb.OnboardingTest do
     {:ok, _} = Forum.moderate_topic(admin, welcome, :lock)
     refute conn |> log_in_user(member) |> get(~p"/") |> html_response(200) |> tour()
   end
+
+  test "the API tells the app about the tour, and the app finishes it", %{admin: admin} do
+    {:ok, _} = Forum.create_category(admin, %{"name" => "General"})
+    {:ok, welcome} = Onboarding.ensure()
+    member = newcomer()
+    {token, _row} = IdejoWeb.ApiHelpers.api_token_fixture(member)
+
+    api = fn method, path ->
+      build_conn()
+      |> IdejoWeb.ApiHelpers.api_conn(token)
+      |> Phoenix.ConnTest.dispatch(@endpoint, method, path, %{})
+      |> IdejoWeb.ApiHelpers.api_json(200)
+    end
+
+    assert api.(:get, "/api/v1/me")["onboarding"] == %{
+             "topic_id" => welcome.id,
+             "topic_title" => "Welcome",
+             "question" => "Now tell us a bit about yourself and why you joined this forum"
+           }
+
+    assert api.(:post, "/api/v1/me/onboarded")["onboarding"] == nil
+    assert Idejo.Repo.reload!(member).onboarded_at
+    assert api.(:get, "/api/v1/me")["onboarding"] == nil
+  end
 end

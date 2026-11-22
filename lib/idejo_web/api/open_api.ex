@@ -31,7 +31,7 @@ defmodule IdejoWeb.Api.OpenApi do
     # `idejo_id` only with a chat service (steward request, 2026-11-19).
     "UserCard" => {@card ++ ~w(idejo_id), @card},
     # `everywhere`: settings for all forums, on a group's inbox (steward request, 2026-11-19).
-    "Me" => {@me ++ ~w(idejo_id everywhere), @me},
+    "Me" => {@me ++ ~w(idejo_id everywhere onboarding), @me},
     "EverywhereResult" => {~w(saved missed), ~w(saved missed)},
     "Category" =>
       {~w(id uri title slug url description icon colour mark_colour group position archive topic_type new_topics topics_count last_activity_at tags permissions),
