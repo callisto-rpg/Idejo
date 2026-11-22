@@ -34,10 +34,9 @@ defmodule Idejo.Accounts.User do
     field :confirmed_at, :utc_datetime
     # The welcome card (roles, Rules, About) shows until this is set.
     field :welcomed_at, :utc_datetime
-    # The getting-started card (steward request, 2026-11-09): due after a sign-in, until
-    # closed; never again once hidden (`Idejo.Accounts.intro_on_sign_in/1`, `close_intro/2`).
-    field :intro_pending, :boolean, default: false
-    field :intro_hidden, :boolean, default: false
+    # The onboarding tour (steward request, 2026-11-22; Idejo.Onboarding) shows until this
+    # is set, after the welcome card.
+    field :onboarded_at, :utc_datetime
     # AC-04: the avatar, an upload stored as `<avatar_id>.webp` (Idejo.Uploads.avatar_url/1).
     field :avatar_id, :binary_id
     # The avatar for the dark theme, optional (steward decision, 2026-10-23).

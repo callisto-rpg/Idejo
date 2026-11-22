@@ -242,8 +242,8 @@ defmodule IdejoWeb.Api.Operations do
         :intro,
         "write",
         "Me",
-        "Closes the getting-started card (`intro_due`) until the next sign-in; " <>
-          "with `hide: true` for good (Close and hide this in the future).",
+        "Deprecated: the getting-started card is gone and `intro_due` is always false; " <>
+          "this answers the member and changes nothing.",
         body: "IntroClose"
       ),
       op(

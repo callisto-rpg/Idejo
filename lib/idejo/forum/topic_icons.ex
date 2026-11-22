@@ -77,6 +77,22 @@ defmodule Idejo.Forum.TopicIcons do
     end
   end
 
+  @doc """
+  Adds an icon the server ships (the onboarding topic's waving hand, `Idejo.Onboarding`):
+  the image at `path`, named `name`, last in the order, stored as `user`'s (an administrator
+  or a server account). Audited as `topic_icon.create`; afterwards it is like any other.
+  """
+  @spec add_bundled(User.t(), Path.t(), String.t()) ::
+          {:ok, TopicIcon.t()} | {:error, Ecto.Changeset.t() | atom()}
+  def add_bundled(%User{} = user, path, name) do
+    changeset = change(%{"name" => name})
+
+    with true <- changeset.valid? || {:error, %{changeset | action: :insert}},
+         {:ok, upload} <- Uploads.store_icon(user, path) do
+      Repo.transact(fn -> insert(user, changeset, upload) end)
+    end
+  end
+
   @doc "Deletes an icon; its topics show none. Audited as `topic_icon.delete`."
   @spec delete(User.t(), TopicIcon.t()) :: {:ok, TopicIcon.t()} | {:error, Ecto.Changeset.t()}
   def delete(%User{} = admin, %TopicIcon{} = icon),

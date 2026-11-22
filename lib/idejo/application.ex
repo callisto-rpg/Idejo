@@ -52,6 +52,10 @@ defmodule Idejo.Application do
             id: :retire_conversations
           )
       ),
+      # The onboarding topic: the default "Welcome" when there is none (Idejo.Onboarding).
+      if(Application.get_env(:idejo, :onboarding_auto, true),
+        do: Supervisor.child_spec({Task, &Idejo.Onboarding.ensure_auto/0}, id: :onboarding)
+      ),
       if(Application.get_env(:idejo, :recover_open_messages, true),
         do: Idejo.Messages.Recovery
       ),

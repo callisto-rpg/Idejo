@@ -54,6 +54,9 @@ config :idejo, announce_setup: false, setup_redirect: false
 # Idejo.Conversations.retire/0 themselves.
 config :idejo, recover_open_messages: false, retire_conversations: false
 
+# The onboarding topic's default starts only where a test asks (Idejo.Onboarding.ensure/0).
+config :idejo, onboarding_auto: false
+
 # SP-05: no rate limits in the suite (thousands of requests from 127.0.0.1); the rate limit
 # tests turn them on.
 config :idejo, :rate_limits, enabled: false

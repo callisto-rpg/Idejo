@@ -24,7 +24,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, gettext("Settings"))
+     |> assign(:page_title, gettext("Technical"))
      |> assign(:form, to_form(Settings.change_settings(), as: :settings))
      |> assign(:logo, Settings.get(:brand_logo))
      |> assign(:image_error, nil)
@@ -111,7 +111,7 @@ defmodule IdejoWeb.Admin.SettingsLive do
   def render(assigns) do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope} section={:settings}>
-      <.header>{gettext("Settings")}</.header>
+      <.header>{gettext("Technical")}</.header>
 
       <.form for={@form} id="settings-form" phx-change="validate" phx-submit="save">
         <.input field={@form[:server_name]} type="text" label={gettext("Server name")} required />

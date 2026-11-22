@@ -269,7 +269,6 @@ defmodule IdejoWeb.Router do
     post "/welcome", WelcomeController, :update
     # The getting-started card's Close / "Close and hide this in the future" (steward
     # request, 2026-11-09).
-    post "/intro", IntroController, :update
     # MO-02: the warned member's "I understand", without JavaScript.
     post "/warnings/seen", WarningController, :seen
     post "/t/:id/follow", FollowController, :create

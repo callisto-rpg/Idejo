@@ -288,6 +288,11 @@ defmodule Idejo.Forum do
         {:ok, category}
       end
     end)
+    |> tap(fn
+      # The onboarding topic waits for a first category (Idejo.Onboarding).
+      {:ok, _category} -> Idejo.Onboarding.ensure_auto()
+      _ -> :ok
+    end)
   end
 
   @doc """
@@ -382,12 +387,16 @@ defmodule Idejo.Forum do
   Tags only this category holds are deleted with it (TP-19); tags it shares stay with the
   other categories.
 
+  The onboarding topic is never archived this way (`{:error, :onboarding}`; steward request,
+  2026-11-22): move the topics, or choose another onboarding topic first.
+
   Each topic gets an `update` activity with its new category, and the audit entry records
   where the topics went. Without `topics:` the category is kept (`{:error, :has_topics}`).
   The Archive itself is never deleted (`{:error, :archive}`).
   """
   @spec delete_category(User.t(), Category.t(), keyword()) ::
-          {:ok, Category.t()} | {:error, :archive | :has_topics | :invalid_target | term()}
+          {:ok, Category.t()}
+          | {:error, :archive | :has_topics | :invalid_target | :onboarding | term()}
   def delete_category(%User{} = admin, %Category{} = category, opts \\ []),
     do:
       Idejo.Access.as_administrator(admin, fn ->
@@ -454,7 +463,9 @@ defmodule Idejo.Forum do
   end
 
   defp move_topics_away(admin, _category, ids, :archive) do
-    with {:ok, archive} <- archive_category(admin) do
+    # Steward request, 2026-11-22: the onboarding topic is never archived while it is one.
+    with false <- Idejo.Onboarding.topic_id() in ids && {:error, :onboarding},
+         {:ok, archive} <- archive_category(admin) do
       move_topics(admin, ids, archive, %{state: "archived"})
       {:ok, %{"topics" => %{"count" => length(ids), "archived_in" => archive.slug}}}
     end
@@ -757,19 +768,21 @@ defmodule Idejo.Forum do
   `{:error, :forbidden}` otherwise): like a category deleted with `topics: :archive`
   (TP-14), it goes read only to the Archive (made on first use, `archive_category/1`), its
   open messages close (GM-12) and its category's own tags drop. Already archived:
-  `{:error, :archived}`.
+  `{:error, :archived}`. The onboarding topic stays where it is while it is one
+  (`{:error, :onboarding}`, steward request, 2026-11-22; `Idejo.Onboarding`).
 
   Logged (MO-03) as `topic.archive` under the category it left, with an `update` activity,
   in one transaction; then `{:topic_changed, topic_id}`, so viewers who may not view the
   Archive lose it.
   """
   @spec archive_topic(User.t(), Topic.t(), String.t() | nil) ::
-          {:ok, Topic.t()} | {:error, :forbidden | :archived | term()}
+          {:ok, Topic.t()} | {:error, :forbidden | :archived | :onboarding | term()}
   def archive_topic(%User{} = moderator, %Topic{} = topic, reason \\ nil) do
     topic = Repo.preload(topic, :category)
 
     # Checked before the Archive may be made; again under the lock.
     with true <- Access.can?(moderator, :moderate, topic) || {:error, :forbidden},
+         false <- Idejo.Onboarding.onboarding_topic?(topic) && {:error, :onboarding},
          {:ok, archive} <- archive_category(moderator),
          {:ok, {topic, closed}} <-
            Repo.transact(fn -> archive_locked(moderator, topic, archive, reason) end) do
@@ -807,6 +820,7 @@ defmodule Idejo.Forum do
     cond do
       not Access.can?(moderator, :moderate, topic) -> {:error, :forbidden}
       topic.state == "archived" -> {:error, :archived}
+      Idejo.Onboarding.onboarding_topic?(topic) -> {:error, :onboarding}
       true -> save_archive(moderator, topic, archive, reason)
     end
   end
@@ -902,14 +916,15 @@ defmodule Idejo.Forum do
   versions, reactions, polls, reports, notifications, follows, read positions, tags,
   scheduled messages) go; topics started from its messages (TP-09) and replies moved
   elsewhere (TP-15) stay, without the link. Uploads only it used are deleted by the nightly
-  cleanup (`Idejo.Uploads.CleanupWorker`).
+  cleanup (`Idejo.Uploads.CleanupWorker`). The onboarding topic is not deleted while it is
+  one (`{:error, :onboarding}`, steward request, 2026-11-22; `Idejo.Onboarding`).
 
   Logged (MO-03) as `topic.delete` with its title and category (the log keeps plain ids),
   with a `delete` activity (FD-02), in one transaction; then its open messages' timers stop
   and its viewers get `{:topic_changed, topic_id}`, which finds nothing.
   """
   @spec delete_topic(User.t(), Topic.t(), String.t() | nil) ::
-          {:ok, Topic.t()} | {:error, :forbidden | term()}
+          {:ok, Topic.t()} | {:error, :forbidden | :onboarding | term()}
   def delete_topic(%User{} = moderator, %Topic{} = topic, reason \\ nil) do
     result =
       Repo.transact(fn ->
@@ -917,9 +932,12 @@ defmodule Idejo.Forum do
           Repo.one!(from t in Topic, where: t.id == ^topic.id, lock: "FOR UPDATE")
           |> Repo.preload(:category)
 
-        if Access.can?(moderator, :moderate, topic),
-          do: save_delete(moderator, topic, reason),
-          else: {:error, :forbidden}
+        cond do
+          not Access.can?(moderator, :moderate, topic) -> {:error, :forbidden}
+          # Steward request, 2026-11-22: the onboarding topic stays while it is one.
+          Idejo.Onboarding.onboarding_topic?(topic) -> {:error, :onboarding}
+          true -> save_delete(moderator, topic, reason)
+        end
       end)
 
     with {:ok, {topic, open_ids}} <- result do
@@ -1567,6 +1585,34 @@ defmodule Idejo.Forum do
     # The source topic's viewers get its new "continued in" link (TP-04).
     with {:ok, _topic} when source != nil <- result,
          do: Messages.broadcast(source.topic_id, {:forked, source.id})
+
+    result
+  end
+
+  @doc """
+  Starts a topic as a server account (`status: "system"`), past the rights and checks a
+  member's topic goes through: the onboarding topic's default (`Idejo.Onboarding`), topical
+  with `attrs.icon_id` and followed by everyone. Its viewers hear of it as of any topic.
+  """
+  @spec create_server_topic(User.t(), Category.t(), %{
+          title: String.t(),
+          body: String.t(),
+          icon_id: String.t() | nil
+        }) :: {:ok, Topic.t()} | {:error, term()}
+  def create_server_topic(%User{status: "system"} = sender, %Category{} = category, attrs) do
+    form = %{title: attrs.title, body: attrs.body, topical: true, icon_id: attrs.icon_id}
+
+    result =
+      Repo.transact(fn ->
+        with {:ok, topic} <- insert_topic(sender, category, form, nil) do
+          topic |> Ecto.Changeset.change(autofollow: true) |> Repo.update()
+        end
+      end)
+
+    with {:ok, topic} <- result do
+      Idejo.Notifications.announce(topic)
+      broadcast_category(topic.category_id, {:topic_created, topic.id})
+    end
 
     result
   end

@@ -209,6 +209,20 @@ defmodule Idejo.Messages.Automessages do
   defp valid(%Changeset{valid?: true} = changeset), do: {:ok, changeset}
   defp valid(changeset), do: {:error, Map.put(changeset, :action, :validate)}
 
+  @doc """
+  The server account `username` (`status: "system"`): the one already there, or a new one;
+  `{:error, :taken}` when a member holds the name. Also the onboarding topic's starter
+  (`Idejo.Onboarding`).
+  """
+  @spec server_account(String.t()) :: {:ok, User.t()} | {:error, :taken}
+  def server_account(username) do
+    case Repo.one(from u in User, where: u.username == ^username) do
+      %User{status: "system"} = user -> {:ok, user}
+      %User{} -> {:error, :taken}
+      nil -> create_sender(username)
+    end
+  end
+
   # The server account named in the form: the one already there, or a new one.
   defp sender(changeset) do
     username = Changeset.get_field(changeset, :sender_username)
@@ -243,7 +257,8 @@ defmodule Idejo.Messages.Automessages do
         display_name: username,
         password_hash: Argon2.hash_pwd_salt(:crypto.strong_rand_bytes(32)),
         status: "system",
-        welcomed_at: now
+        welcomed_at: now,
+        onboarded_at: now
       })
 
     Repo.insert!(

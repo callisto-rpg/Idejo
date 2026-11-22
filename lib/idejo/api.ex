@@ -128,7 +128,8 @@ defmodule Idejo.Api do
       "email" => user.email,
       "verified" => Accounts.confirmed?(user),
       "welcomed" => user.welcomed_at != nil,
-      "intro_due" => Accounts.intro_due?(user),
+      # The getting-started card is gone (steward request, 2026-11-22): kept for older apps.
+      "intro_due" => false,
       "auto_punctuation" => user.auto_punctuation,
       "graphical_composer" => user.graphical_composer,
       "controls_on_mobile" => user.controls_on_mobile,

@@ -213,11 +213,9 @@ defmodule IdejoWeb.Api.MeController do
     json(conn, Api.me(user))
   end
 
-  # The getting-started card, as the web's `POST /intro` (`Accounts.close_intro/2`).
-  def intro(conn, params) do
-    {:ok, user} = Accounts.close_intro(user(conn), hide: params["hide"] == true)
-    json(conn, Api.me(user))
-  end
+  # The getting-started card is gone (steward request, 2026-11-22): nothing to close, kept so
+  # older apps' calls still succeed (API v1 is additive).
+  def intro(conn, _params), do: json(conn, Api.me(user(conn)))
 
   def warnings(conn, _params) do
     send_list(

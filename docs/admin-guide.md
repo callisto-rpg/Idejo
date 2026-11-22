@@ -50,7 +50,7 @@ have every right, whatever the settings say.
 Owners and administrators find **Admin** in the menu under their name, in the top right
 corner. It has ten tabs.
 
-### Settings
+### Technical
 
 - **Server name**: shown in the header, in page titles and in emails.
 - **Who can sign up**: **Anyone**, **Only people with an invite** (see [Invites](#invites)),
@@ -125,9 +125,30 @@ corner. It has ten tabs.
   the first frame of an animation) and the page loads again to show it. **Use the idejo
   logo** goes back. The browser tab's icon and the app icon stay idejo's.
 
-### Info boxes
+### Onboarding and information
 
-Your own text shown to everyone on the home page, before the categories and in their grid,
+**Onboarding** comes first. The **onboarding topic** is where new members introduce
+themselves: always topical (it shows an icon, not its starter) and followed by everyone.
+Moderators cannot delete or archive it while it is the onboarding topic, and deleting its
+category cannot send it to the Archive: move that category's topics elsewhere, or choose
+another onboarding topic first. When there is none, the
+server starts one: **Welcome**, in the first category on the home page, with the waving
+hand icon (added to **Topic icons** if it is missing), started by the `idejo` account. To
+use another topic, search for it under **Choose another topic** and pick it. **Category**,
+**Topic icon** and **Topic title** change the onboarding topic; **Save onboarding topic**
+applies them, each logged as a moderator's change would be. The **New user presentation
+question** is the text new members are asked (`{onboarding.string.1}`); by default, "Now
+tell us a bit about yourself and why you joined this forum".
+
+New members take a short tour once they close the welcome card, if they may post in the
+onboarding topic. The page dims to its background colour, except for one thing at a time,
+outlined, with a card pointing at it; nothing else can be clicked. First the onboarding
+topic's link in the sidebar ("Open a topic to get started."); there, the message box ("Type
+“Hi, I'm …” then press Enter"); once that is sent, your question, to finish with Ctrl+Enter;
+then a last card pointing at **All**, with **Close**. Members who joined before the tour
+existed never see it.
+
+Under **Information**: your own text shown to everyone on the home page, before the categories and in their grid,
 without a card around it: a welcome, links, the next event. **Create info box** takes a
 **Title**, an **Icon** and **Colour** (the same choices as a category's), **Show title and
 icon** (on by default; off, only the text shows) and a **Text (Markdown)** written in the
@@ -324,7 +345,7 @@ their Team role allows. Changes apply at once, also to pages people have open.
 
 ### Invites
 
-With **Only people with an invite** in [Settings](#settings), press **Create an invite
+With **Only people with an invite** in [Technical](#technical), press **Create an invite
 link** and send the link to one person. Each link works once, for 7 days. The list shows
 which links are unused, used (and by whom) or expired. While sign-ups are closed, the page
 warns that invite links do not work.
@@ -367,8 +388,8 @@ account menu, a topic's menu and the dropdowns: `--menu-opacity`, `--menu-blur`:
 follow the menus (`--card-opacity`, `--card-blur`: give them values of their own to set
 them apart), the welcome card (`--overlay-opacity`, `--overlay-blur`: 80% and 6px),
 and the cover over a **!spoiler** message
-(`--spoiler-opacity`, `--spoiler-blur`: 50% and 4px) with its **Reveal spoiler** button
-(`--spoiler-button-opacity`, `--spoiler-button-blur`: 80% and 6px). A stylesheet saved before
+(`--spoiler-opacity`, `--spoiler-blur`: 50% and 32px) with its **Reveal spoiler** button
+(`--spoiler-button-opacity`, `--spoiler-button-blur`: 80% and 32px). A stylesheet saved before
 these existed keeps working: menus and the cover then use those values anyway, and cards
 keep the values it saved (**Reset to default** brings the menus' look to them). Each change is in the
 audit log.

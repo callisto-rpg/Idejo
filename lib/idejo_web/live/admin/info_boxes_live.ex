@@ -11,9 +11,16 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
 
   Each box's place (steward request, 2026-11-13): before the categories, or in a section of
   them (the first, a category group's, or "Other"), at the start or the end of its cards.
+
+  First, the Onboarding section (steward request, 2026-11-22; `Idejo.Onboarding`): the
+  onboarding topic, chosen by searching the forum's topics, with its category, icon and
+  title; and the new user presentation question (`{onboarding.string.1}`). Opening the page
+  starts the default onboarding topic when there is none.
   """
   use IdejoWeb, :live_view
 
+  alias Idejo.Forum.TopicIcons
+  alias Idejo.Onboarding
   alias Idejo.Settings.{InfoBox, InfoBoxes}
   alias IdejoWeb.Admin
 
@@ -21,11 +28,46 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, gettext("Info boxes"))
+     |> assign(:page_title, gettext("Onboarding and information"))
      |> assign(:boxes, InfoBoxes.list())
      |> assign(:groups, Idejo.Forum.list_groups())
+     |> start_onboarding()
      |> start_form(nil)}
   end
+
+  # Onboarding: the topic (started as the default when there is none and a category exists),
+  # its form, the topic search and the question's form.
+  defp start_onboarding(socket) do
+    topic =
+      case Onboarding.ensure() do
+        {:ok, topic} -> topic
+        {:error, _} -> nil
+      end
+
+    socket
+    |> assign(:onboarding_topic, topic)
+    |> assign(:onboarding_form, to_form(onboarding_params(topic), as: :onboarding))
+    |> assign(:onboarding_icons, TopicIcons.list())
+    |> assign(:onboarding_categories, onboarding_categories())
+    |> assign(:topic_query, "")
+    |> assign(:topic_results, [])
+    |> assign(:question_form, to_form(%{"text" => Onboarding.string(1)}, as: :question))
+  end
+
+  defp onboarding_params(nil), do: %{}
+
+  defp onboarding_params(topic),
+    do: Map.new([:category_id, :icon_id, :title], &{Atom.to_string(&1), Map.fetch!(topic, &1)})
+
+  defp onboarding_categories do
+    Idejo.Forum.list_categories()
+    |> Enum.reject(& &1.archive)
+    |> Enum.map(&{&1.name, &1.id})
+  end
+
+  defp onboarding_error(:onboarding_topic), do: gettext("Choose a topic first.")
+  defp onboarding_error(%Ecto.Changeset{}), do: gettext("The title cannot be blank.")
+  defp onboarding_error(_), do: gettext("The onboarding topic could not be changed.")
 
   # The form for a new box (`nil`) or for `box`.
   defp start_form(socket, box) do
@@ -66,6 +108,51 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
   defp reload(socket), do: assign(socket, :boxes, InfoBoxes.list())
 
   @impl true
+  def handle_event("onboarding_search", %{"query" => query}, socket) do
+    {:noreply, assign(socket, topic_query: query, topic_results: Onboarding.search(query))}
+  end
+
+  def handle_event("onboarding_choose", %{"id" => id}, socket) do
+    with %{} = topic <- Enum.find(socket.assigns.topic_results, &(&1.id == id)),
+         {:ok, topic} <- Onboarding.choose(admin(socket), topic) do
+      {:noreply,
+       socket
+       |> start_onboarding()
+       |> put_flash(:info, gettext("“%{title}” is the onboarding topic.", title: topic.title))}
+    else
+      error ->
+        reason = with {:error, reason} <- error, do: reason
+        {:noreply, put_flash(socket, :error, onboarding_error(reason))}
+    end
+  end
+
+  def handle_event("onboarding_save", %{"onboarding" => params}, socket) do
+    case Onboarding.update(admin(socket), params) do
+      {:ok, _topic} ->
+        {:noreply,
+         socket
+         |> start_onboarding()
+         |> put_flash(:info, gettext("Onboarding topic saved."))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, onboarding_error(reason))}
+    end
+  end
+
+  def handle_event("question_save", %{"question" => %{"text" => text}}, socket) do
+    case Onboarding.save_question(admin(socket), text) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:question_form, to_form(%{"text" => Onboarding.string(1)}, as: :question))
+         |> put_flash(:info, gettext("New user presentation question saved."))}
+
+      {:error, _} ->
+        {:noreply,
+         put_flash(socket, :error, gettext("The question cannot be blank or that long."))}
+    end
+  end
+
   # The preview follows the form; the colour picker fills in the hex field.
   def handle_event("validate", %{"box" => params} = all, socket) do
     params = Admin.picked_colour(params, all)
@@ -155,13 +242,126 @@ defmodule IdejoWeb.Admin.InfoBoxesLive do
     ~H"""
     <Layouts.admin flash={@flash} current_scope={@current_scope} section={:info_boxes}>
       <.header>
-        {gettext("Info boxes")}
+        {gettext("Onboarding and information")}
         <:subtitle>
           {gettext(
             "Cards shown to everyone on the home page, before the categories or in a section of them, in this order, with your own text."
           )}
         </:subtitle>
       </.header>
+
+      <%!-- Steward request, 2026-11-22. --%>
+      <section id="onboarding" class="mb-10" aria-labelledby="onboarding-heading">
+        <h2 id="onboarding-heading" class="text-lg font-semibold mb-2">
+          {gettext("Onboarding")}
+        </h2>
+
+        <h3 class="font-semibold">{gettext("Onboarding topic")}</h3>
+        <p class="text-sm opacity-70 mb-2">
+          {gettext(
+            "Always topical and followed by everyone. Moderators cannot delete or archive it while it is the onboarding topic."
+          )}
+        </p>
+        <p :if={!@onboarding_topic} id="onboarding-none" class="text-sm">
+          {gettext(
+            "There is no onboarding topic yet: “Welcome” starts in the first category once there is one, or choose a topic below."
+          )}
+        </p>
+        <p :if={@onboarding_topic} id="onboarding-current" class="flex items-center gap-2 mb-2">
+          <TopicComponents.topic_icon topic={@onboarding_topic} size={:small} />
+          <.link navigate={~p"/t/#{@onboarding_topic.id}/#{@onboarding_topic.slug}"}>
+            {@onboarding_topic.title}
+          </.link>
+          <span class="text-sm opacity-70">{@onboarding_topic.category.name}</span>
+        </p>
+
+        <form
+          id="onboarding-search"
+          phx-change="onboarding_search"
+          phx-submit="onboarding_search"
+        >
+          <label class="label mb-1" for="onboarding-search-query">
+            {gettext("Choose another topic")}
+          </label>
+          <input
+            id="onboarding-search-query"
+            type="search"
+            name="query"
+            value={@topic_query}
+            placeholder={gettext("Search the topics by title")}
+            phx-debounce="300"
+            autocomplete="off"
+            class="input w-full"
+          />
+        </form>
+        <ul :if={@topic_results != []} id="onboarding-results" class="mt-2 space-y-1">
+          <li :for={topic <- @topic_results}>
+            <button
+              type="button"
+              id={"onboarding-choose-#{topic.id}"}
+              class="btn btn-sm btn-ghost"
+              phx-click="onboarding_choose"
+              phx-value-id={topic.id}
+            >
+              {topic.title}
+              <span class="text-xs opacity-70">{topic.category.name}</span>
+            </button>
+          </li>
+        </ul>
+        <p
+          :if={@topic_query != "" and @topic_results == []}
+          id="onboarding-no-results"
+          class="text-sm mt-2"
+        >
+          {gettext("No topic matches.")}
+        </p>
+
+        <.form
+          :if={@onboarding_topic}
+          for={@onboarding_form}
+          id="onboarding-form"
+          phx-submit="onboarding_save"
+          class="mt-4"
+        >
+          <.input
+            field={@onboarding_form[:category_id]}
+            type="select"
+            label={gettext("Category")}
+            options={@onboarding_categories}
+          />
+          <.input
+            field={@onboarding_form[:icon_id]}
+            type="select"
+            label={gettext("Topic icon")}
+            options={Enum.map(@onboarding_icons, &{&1.name, &1.id})}
+          />
+          <.input
+            field={@onboarding_form[:title]}
+            type="text"
+            label={gettext("Topic title")}
+            required
+          />
+          <.button class="btn btn-primary">{gettext("Save onboarding topic")}</.button>
+        </.form>
+
+        <.form
+          for={@question_form}
+          id="onboarding-question-form"
+          phx-submit="question_save"
+          class="mt-6"
+        >
+          <.input
+            field={@question_form[:text]}
+            type="textarea"
+            label={gettext("New user presentation question")}
+            maxlength="2000"
+            required
+          />
+          <.button class="btn btn-primary">{gettext("Save question")}</.button>
+        </.form>
+      </section>
+
+      <h2 class="text-lg font-semibold mb-2">{gettext("Information")}</h2>
 
       <p :if={@boxes == []} id="no-info-boxes">{gettext("No info boxes yet.")}</p>
 

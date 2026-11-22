@@ -8,9 +8,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 idejo looks like a forum (categories, topics, messages) and every topic is a live chat.
 What is different is how you write: **your message grows as you go.**
 
-After you sign in, a **Getting started** card sums up the keys and the sidebar. **Close**
-hides it until you sign in again; **Close and hide this in the future** hides it for good.
-
 ## The keys
 
 | Key | What it does |
