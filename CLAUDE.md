@@ -963,7 +963,7 @@ The contract (M6; mark each item done here when its PR merges):
   target whose 200vmax shadow is `--color-base-200` at 50%, glowing ring) and stops clicks,
   pointer-downs and keys outside the target and the card (capture phase; not touchstart, so
   the page scrolls). Step 1 in `Layouts.app/1` (not on the topic's page, not in inbox mode):
-  the sidebar link (the × excluded). Steps in `TopicLive` (`tour` assign, `tour_step/3`,
+  the sidebar link (the × excluded). Steps in `TopicLive` (`tour` assign, `tour_step/4`,
   `advance_tour/2` after a commit; `Onboarding.topic_step/2`): 2 no message of theirs, 3
   open, 4 closed → `Accounts.mark_onboarded/1` (at the commit, or the connected mount, never
   the first render's); step 4 points at `.sidebar-all`, its Close only hides the card.
