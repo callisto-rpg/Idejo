@@ -276,6 +276,7 @@ idejo exec app bin/idejo-admin setup --name "Garden Club" --owner-email you@exam
 | `--name NAME` | The server name (required, at most 80 characters). |
 | `--owner-email EMAIL` | The owner's email (required). Their username is made from the part before `@` (`you`; letters, digits and `_`) and can never change; the display name, the same at first, can be changed in the profile. |
 | `--registration open\|invite\|closed` | Who can sign up: anyone (the default, as with the wizard), only people with an invite, or nobody. Changeable later in **Admin → Technical**. |
+| `--category NAME` | Optional: a first category of that name, made by the owner (as if they made it in **Admin → Categories**). Without it the server starts with none. |
 
 The owner is created as an invite: an email takes them to a page where they choose their
 password, within 7 days. While no SMTP server is set (neither **Admin → Email** nor

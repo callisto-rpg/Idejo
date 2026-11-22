@@ -26,6 +26,7 @@ defmodule Idejo.Setup do
   alias Idejo.Accounts
   alias Idejo.Accounts.{User, UserNotifier}
   alias Idejo.Audit
+  alias Idejo.Forum
   alias Idejo.Repo
   alias Idejo.Settings
 
@@ -170,8 +171,10 @@ defmodule Idejo.Setup do
   @doc """
   Sets the server up from the command line (AD-14): `name` (the server name), `owner_email`
   and, optionally, `registration_mode` (a value of `Settings.registration_modes/0`; left as
-  it is, open, without it). The owner's username and display name come from the email
-  address (the part before `@`); the display name can be changed later, the username not.
+  it is, open, without it) and `category`, the name of a first category, made by the owner
+  in the same transaction (`Forum.create_category/2`). The owner's username and display
+  name come from the email address (the part before `@`); the display name can be changed
+  later, the username not.
 
   Returns the owner and their link to choose a password, after trying to email it:
   `delivered` is `:ok` or the mailer's `{:error, reason}`, when the operator must hand the
@@ -190,7 +193,8 @@ defmodule Idejo.Setup do
     settings = Settings.change_settings(settings_attrs) |> Map.put(:action, :insert)
 
     with true <- settings.valid? || {:error, settings},
-         {:ok, {owner, token}} <- headless_in_transaction(email, settings_attrs) do
+         {:ok, {owner, token}} <-
+           headless_in_transaction(email, settings_attrs, attrs[:category]) do
       url = Application.fetch_env!(:idejo, :base_uri) <> "/users/reset-password/" <> token
       {:ok, %{owner: owner, url: url, delivered: deliver_invite(owner, url)}}
     end
@@ -203,15 +207,26 @@ defmodule Idejo.Setup do
     end
   end
 
-  defp headless_in_transaction(email, settings_attrs) do
+  defp headless_in_transaction(email, settings_attrs, category) do
     Repo.transact(fn ->
-      with {:ok, owner} <- set_up(headless_owner(email), settings_attrs, :nobody) do
+      with {:ok, owner} <- set_up(headless_owner(email), settings_attrs, :nobody),
+           :ok <- first_category(owner, category) do
         {:ok, {owner, Accounts.create_set_password_token(owner)}}
       end
     end)
     |> case do
       {:error, {:owner, changeset}} -> {:error, changeset}
       result -> result
+    end
+  end
+
+  # `--category`: the forum's first category, made by its owner (audited as theirs).
+  defp first_category(_owner, nil), do: :ok
+
+  defp first_category(owner, name) do
+    case Forum.create_category(owner, %{name: name}) do
+      {:ok, _category} -> :ok
+      error -> error
     end
   end
 

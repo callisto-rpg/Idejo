@@ -42,8 +42,9 @@ defmodule Idejo.Release do
   @registration_modes %{"open" => "open", "invite" => "invite_only", "closed" => "closed"}
 
   @doc """
-  `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]`:
-  sets the server up like the first-run wizard, through the same code (`Idejo.Setup`). The
+  `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
+  [--category NAME]`: sets the server up like the first-run wizard, through the same code
+  (`Idejo.Setup`), with `--category` also a first category (made by the owner). The
   owner is created as an invite and chooses a password from a link, emailed to them; when it
   cannot be sent (no SMTP server set yet) the link is printed for the operator to hand over.
   Fails, changing nothing, once the server is set up or on a wrong value.
@@ -59,7 +60,13 @@ defmodule Idejo.Release do
       Map.get(@registration_modes, opts[:registration] || "open") ||
         fail("--registration must be open, invite or closed.")
 
-    attrs = %{name: name, owner_email: email, registration_mode: mode}
+    category =
+      case opts[:category] do
+        nil -> nil
+        given -> blank_to_nil(given) || fail("The category name (--category) is empty.")
+      end
+
+    attrs = %{name: name, owner_email: email, registration_mode: mode, category: category}
 
     case with_repo(fn -> Idejo.Setup.complete_headless(attrs) end) do
       {:ok, %{owner: owner, delivered: :ok}} ->
@@ -107,6 +114,8 @@ defmodule Idejo.Release do
   defp setup_field(:email), do: "the owner's email"
   defp setup_field(:username), do: "the username made from the email"
   defp setup_field(:server_name), do: "the server name"
+  defp setup_field(:name), do: "the category name"
+  defp setup_field(:slug), do: "the category's address made from its name"
   defp setup_field(field), do: to_string(field)
 
   ## Owner password (AD-09)
