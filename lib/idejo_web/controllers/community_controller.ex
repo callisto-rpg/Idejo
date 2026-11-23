@@ -5,8 +5,9 @@ defmodule IdejoWeb.CommunityController do
   @moduledoc """
   The community menu (steward decision, 2026-11-06): the signed-in member's other
   communities as JSON, `{"communities": [{"name", "url"}]}`, for `assets/js/community_menu.js`
-  (`Idejo.Community.communities/1`). Empty for visitors and on a standalone install. Never
-  cached by the browser: it is about the person.
+  (`Idejo.Community.communities/1`): only their favourites (steward request, 2026-11-23;
+  marked in the inbox's Forums tab, which "All my Forums" leads to). Empty for visitors and
+  on a standalone install. Never cached by the browser: it is about the person.
 
   `activity/2` (`/community/activity`, steward request, 2026-11-13): what is new for them in
   the topics they follow in their other forums, `{"unread", "mentions"}`
@@ -22,7 +23,13 @@ defmodule IdejoWeb.CommunityController do
     conn
     |> put_resp_header("cache-control", "private, no-store")
     |> put_resp_header("x-content-type-options", "nosniff")
-    |> json(%{communities: Idejo.Community.communities(user)})
+    |> json(%{communities: favourites(user)})
+  end
+
+  defp favourites(user) do
+    for community <- Idejo.Community.communities(user),
+        community.favourite,
+        do: Map.delete(community, :favourite)
   end
 
   def activity(conn, _params) do
