@@ -43,11 +43,15 @@ defmodule Idejo.Release do
 
   @doc """
   `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
-  [--category NAME]`: sets the server up like the first-run wizard, through the same code
-  (`Idejo.Setup`), with `--category` also a first category (made by the owner). The
-  owner is created as an invite and chooses a password from a link, emailed to them; when it
-  cannot be sent (no SMTP server set yet) the link is printed for the operator to hand over.
-  Fails, changing nothing, once the server is set up or on a wrong value.
+  [--category NAME] [--owner-oidc-subject SUB] [--owner-name NAME] [--owner-username NAME]`:
+  sets the server up like the first-run wizard, through the same code (`Idejo.Setup`), with
+  `--category` also a first category (made by the owner). The owner is created as an invite
+  and chooses a password from a link, emailed to them; when it cannot be sent (no SMTP
+  server set yet) the link is printed for the operator to hand over. With
+  `--owner-oidc-subject` (steward request, 2026-11-23) the owner is linked to that person at
+  the OpenID Connect provider instead and signs in through it: no link to hand over.
+  `--owner-name` and `--owner-username` name the owner. Fails, changing nothing, once the
+  server is set up or on a wrong value.
   """
   @spec setup(keyword()) :: :ok
   def setup(opts) do
@@ -64,10 +68,26 @@ defmodule Idejo.Release do
       name: name,
       owner_email: email,
       registration_mode: mode,
-      category: category_option(opts[:category])
+      category: category_option(opts[:category]),
+      owner_subject: option(opts[:owner_oidc_subject], "--owner-oidc-subject"),
+      owner_name: option(opts[:owner_name], "--owner-name"),
+      owner_username: option(opts[:owner_username], "--owner-username")
     }
 
-    case with_repo(fn -> Idejo.Setup.complete_headless(attrs) end) do
+    setup_outcome(with_repo(fn -> Idejo.Setup.complete_headless(attrs) end), name)
+  end
+
+  defp setup_outcome(result, name) do
+    case result do
+      {:ok, %{owner: owner, linked: true, url: url, delivered: delivered}} ->
+        told = if delivered == :ok, do: " An email told them.", else: ""
+
+        IO.puts("""
+        #{name} is set up. Its owner is #{owner.email} (username #{owner.username}), linked to \
+        their #{Accounts.OIDC.label() || "provider"} account: they sign in with it at #{url}.\
+        #{told}\
+        """)
+
       {:ok, %{owner: owner, delivered: :ok}} ->
         IO.puts("""
         #{name} is set up. Its owner is #{owner.email} (username #{owner.username}).
@@ -88,10 +108,20 @@ defmodule Idejo.Release do
       {:error, :already_set_up} ->
         fail("idejo is already set up: nothing changed.")
 
+      {:error, :no_provider} ->
+        fail(
+          "Nothing changed: --owner-oidc-subject needs sign-in through OpenID Connect " <>
+            "(IDEJO_OIDC_* or Admin → idejo ID)."
+        )
+
       {:error, %Ecto.Changeset{} = changeset} ->
         fail("Nothing changed: " <> changeset_errors(changeset))
     end
   end
+
+  # An optional value: left out, nil; given, never blank.
+  defp option(nil, _flag), do: nil
+  defp option(given, flag), do: blank_to_nil(given) || fail("#{flag} is empty.")
 
   # `--category`: left out, no category; given, never blank.
   defp category_option(nil), do: nil
@@ -117,7 +147,9 @@ defmodule Idejo.Release do
   end
 
   defp setup_field(:email), do: "the owner's email"
-  defp setup_field(:username), do: "the username made from the email"
+  defp setup_field(:username), do: "the owner's username"
+  defp setup_field(:display_name), do: "the owner's name"
+  defp setup_field(:subject), do: "the owner's subject at the provider"
   defp setup_field(:server_name), do: "the server name"
   defp setup_field(:name), do: "the category name"
   defp setup_field(:slug), do: "the category's address made from its name"

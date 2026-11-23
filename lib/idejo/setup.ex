@@ -13,8 +13,11 @@ defmodule Idejo.Setup do
   `complete_headless/1` is the same setup from the command line (`bin/idejo-admin setup`,
   AD-14), through the same steps (`set_up/4`): the owner is made as an invite, with no
   password anyone knows, and chooses one from a link (`Accounts.create_set_password_token/1`)
-  that is emailed, or handed back for the operator when email cannot go out. Its audit
-  entries have no admin, as the command line's do.
+  that is emailed, or handed back for the operator when email cannot go out. Or, given an
+  `owner_subject` (`--owner-oidc-subject`, steward request 2026-11-23), the owner is made
+  already linked to that person at the OpenID Connect provider (AC-09), signs in through it
+  and gets no password link, only an email saying the server is theirs. Its audit entries
+  have no admin, as the command line's do.
   """
 
   require Logger
@@ -24,7 +27,7 @@ defmodule Idejo.Setup do
   alias Idejo.Access
   alias Idejo.Access.{Role, UserRole}
   alias Idejo.Accounts
-  alias Idejo.Accounts.{User, UserNotifier}
+  alias Idejo.Accounts.{OIDC, User, UserIdentity, UserNotifier}
   alias Idejo.Audit
   alias Idejo.Forum
   alias Idejo.Repo
@@ -172,17 +175,30 @@ defmodule Idejo.Setup do
   Sets the server up from the command line (AD-14): `name` (the server name), `owner_email`
   and, optionally, `registration_mode` (a value of `Settings.registration_modes/0`; left as
   it is, open, without it) and `category`, the name of a first category, made by the owner
-  in the same transaction (`Forum.create_category/2`). The owner's username and display
-  name come from the email address (the part before `@`); the display name can be changed
-  later, the username not.
+  in the same transaction (`Forum.create_category/2`). The owner's display name is
+  `owner_name`, else the part of the email before `@`; their username `owner_username`,
+  else made from the display name (`Accounts.free_username/2`).
 
-  Returns the owner and their link to choose a password, after trying to email it:
-  `delivered` is `:ok` or the mailer's `{:error, reason}`, when the operator must hand the
-  link over. `{:error, :already_set_up}` once an owner exists, changing nothing.
+  Without `owner_subject`, returns the owner and their link to choose a password, after
+  trying to email it: `delivered` is `:ok` or the mailer's `{:error, reason}`, when the
+  operator must hand the link over. With `owner_subject`, the person's subject at the
+  OpenID Connect provider, the owner is linked to them (`user_identities`, the provider's
+  issuer), so they sign in through it: no password link (`url` is the sign-in page,
+  `linked` true), and the email only tells them. Then their display name and username never
+  come from the email (steward decision, 2026-11-06), but from `owner_name` and
+  `owner_username`, else "Owner". `{:error, :no_provider}` when no provider is set up.
+
+  `{:error, :already_set_up}` once an owner exists, changing nothing.
   """
   @spec complete_headless(map()) ::
-          {:ok, %{owner: User.t(), url: String.t(), delivered: :ok | {:error, term()}}}
-          | {:error, :already_set_up | Ecto.Changeset.t()}
+          {:ok,
+           %{
+             owner: User.t(),
+             url: String.t(),
+             linked: boolean(),
+             delivered: :ok | {:error, term()}
+           }}
+          | {:error, :already_set_up | :no_provider | Ecto.Changeset.t()}
   def complete_headless(%{name: name, owner_email: email} = attrs) do
     settings_attrs =
       Map.reject(
@@ -193,30 +209,71 @@ defmodule Idejo.Setup do
     settings = Settings.change_settings(settings_attrs) |> Map.put(:action, :insert)
 
     with true <- settings.valid? || {:error, settings},
+         {:ok, link} <- owner_link(attrs[:owner_subject]),
+         owner_attrs = headless_owner(email, attrs, link),
          {:ok, {owner, token}} <-
-           headless_in_transaction(email, settings_attrs, attrs[:category]) do
-      url = Application.fetch_env!(:idejo, :base_uri) <> "/users/reset-password/" <> token
-      {:ok, %{owner: owner, url: url, delivered: deliver_invite(owner, url)}}
+           headless_in_transaction(owner_attrs, settings_attrs, attrs[:category], link) do
+      {kind, url} = owner_url(token)
+      delivered = deliver(owner, url, kind)
+      {:ok, %{owner: owner, url: url, linked: kind == :linked, delivered: delivered}}
     end
   end
 
-  defp deliver_invite(owner, url) do
-    case UserNotifier.deliver_owner_invite(owner, url) do
+  # A linked owner signs in through the provider; anyone else chooses a password first.
+  defp owner_url(token) do
+    base = Application.fetch_env!(:idejo, :base_uri)
+
+    if token,
+      do: {:invite, base <> "/users/reset-password/" <> token},
+      else: {:linked, base <> "/sign-in"}
+  end
+
+  # `--owner-oidc-subject`: the provider set up (environment or Admin → idejo ID), its issuer.
+  defp owner_link(nil), do: {:ok, nil}
+
+  defp owner_link(subject) do
+    case OIDC.config() do
+      nil -> {:error, :no_provider}
+      oidc -> {:ok, %{issuer: oidc[:issuer], subject: subject}}
+    end
+  end
+
+  defp deliver(owner, url, kind) do
+    sent =
+      case kind do
+        :invite -> UserNotifier.deliver_owner_invite(owner, url)
+        :linked -> UserNotifier.deliver_owner_linked(owner, url, OIDC.label())
+      end
+
+    case sent do
       {:ok, _email} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp headless_in_transaction(email, settings_attrs, category) do
+  defp headless_in_transaction(owner_attrs, settings_attrs, category, link) do
     Repo.transact(fn ->
-      with {:ok, owner} <- set_up(headless_owner(email), settings_attrs, :nobody),
+      with {:ok, owner} <- set_up(owner_attrs, settings_attrs, :nobody),
+           :ok <- link_owner(owner, link),
            :ok <- first_category(owner, category) do
-        {:ok, {owner, Accounts.create_set_password_token(owner)}}
+        {:ok, {owner, if(link, do: nil, else: Accounts.create_set_password_token(owner))}}
       end
     end)
     |> case do
       {:error, {:owner, changeset}} -> {:error, changeset}
       result -> result
+    end
+  end
+
+  defp link_owner(_owner, nil), do: :ok
+
+  defp link_owner(owner, %{issuer: issuer, subject: subject}) do
+    %{user_id: owner.id, issuer: issuer, subject: subject}
+    |> UserIdentity.changeset()
+    |> Repo.insert()
+    |> case do
+      {:ok, _identity} -> :ok
+      error -> error
     end
   end
 
@@ -230,19 +287,27 @@ defmodule Idejo.Setup do
     end
   end
 
-  # No password anyone knows: a random one, never shown, replaced from the link.
-  defp headless_owner(email) do
+  # No password anyone knows: a random one, never shown, replaced from the link (or never
+  # needed: the provider signs a linked owner in).
+  defp headless_owner(email, attrs, link) do
     email = String.trim(email)
     local = email |> String.split("@") |> hd() |> String.trim()
+    # A linked owner's names never come from their email (steward decision, 2026-11-06).
+    name = blank_to_nil(attrs[:owner_name]) || if(link, do: "Owner", else: local)
+    name = name |> String.slice(0, 60) |> then(&if(&1 == "", do: "Owner", else: &1))
 
     %{
       "email" => email,
-      "username" => Accounts.free_username(local, "owner"),
-      "display_name" =>
-        local |> String.slice(0, 60) |> then(&if(&1 == "", do: "Owner", else: &1)),
+      "username" => Accounts.free_username(blank_to_nil(attrs[:owner_username]) || name, "owner"),
+      "display_name" => name,
       "password" => Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
     }
   end
+
+  defp blank_to_nil(value) when is_binary(value),
+    do: if(String.trim(value) == "", do: nil, else: String.trim(value))
+
+  defp blank_to_nil(_value), do: nil
 
   defp ensure_needed, do: if(needed?(), do: :ok, else: {:error, :already_set_up})
 

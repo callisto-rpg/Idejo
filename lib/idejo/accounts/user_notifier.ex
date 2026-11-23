@@ -79,6 +79,35 @@ defmodule Idejo.Accounts.UserNotifier do
   end
 
   @doc """
+  Tells an owner linked at setup to their account at the OpenID Connect provider
+  (`bin/idejo-admin setup --owner-oidc-subject`, AD-14) that the server is theirs: no
+  password to choose, they sign in at `url` through the provider (`label`).
+  """
+  def deliver_owner_linked(user, url, label) do
+    deliver(
+      user.email,
+      gettext("You are the owner of %{name}", name: Settings.get(:server_name)),
+      gettext(
+        """
+        Hi,
+
+        %{name} is set up, and you are its owner. Sign in with %{provider}, as you do
+        elsewhere:
+
+        %{url}
+
+        Your username on %{name} is %{username}; you can change it, and your display
+        name, in your profile.
+        """,
+        name: Settings.get(:server_name),
+        provider: label || gettext("your sign-in provider"),
+        url: url,
+        username: user.username
+      )
+    )
+  end
+
+  @doc """
   Delivers the link to set a new password (AC-02).
   """
   def deliver_reset_password_instructions(user, url) do
