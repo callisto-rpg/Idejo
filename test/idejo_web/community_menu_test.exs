@@ -91,7 +91,7 @@ defmodule IdejoWeb.CommunityMenuTest do
     end)
 
     assert Community.communities(member) == [
-             %{name: "Chess club", url: "https://chess.example.test/"}
+             %{name: "Chess club", url: "https://chess.example.test/", favourite: false}
            ]
 
     # Members not linked to the provider have no subject: nothing is asked.
@@ -149,7 +149,13 @@ defmodule IdejoWeb.CommunityMenuTest do
            |> json_response(200) == json
 
     assert json == %{
-             "communities" => [%{"name" => "Chess club", "url" => "https://chess.example.test/"}]
+             "communities" => [
+               %{
+                 "name" => "Chess club",
+                 "url" => "https://chess.example.test/",
+                 "favourite" => false
+               }
+             ]
            }
 
     # Visitors: the menu, without a personal list.

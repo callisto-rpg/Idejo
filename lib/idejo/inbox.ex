@@ -32,8 +32,9 @@ defmodule Idejo.Inbox do
 
   alias Idejo.Accounts
   alias Idejo.Accounts.{OIDC, User, UserIdentity}
+  alias Idejo.Community
   alias Idejo.Community.{Profile, SharedSettings}
-  alias Idejo.{Community, Conversations, Federation, Repo}
+  alias Idejo.{Conversations, Federation, Repo}
   alias Idejo.Forum.Topic
   alias Idejo.Inbox.RemoteTopic
   alias Idejo.Messages.{Message, Reaction}
