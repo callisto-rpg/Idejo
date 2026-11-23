@@ -5,8 +5,11 @@ idejo is a forum application, which attempts to provide all the best parts of in
 Forums can be self-hosted on a VPS, or hosted on idejo.org per request.
 
 ## Learn more
+### Some example forums you can join to try out idejo:
 
-* **Example server** and **meta-discussions**: https://forum.idejo.org/
+* **Example forum** and **meta-discussions**: https://meta.idejo.org/
+* **Role Playing Games**: https://rpg.idejo.org/
+* **SSC Napoli** (football team): https://napoli.idejo.org/
 
 ## What it does
 
