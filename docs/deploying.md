@@ -274,15 +274,20 @@ idejo exec app bin/idejo-admin setup --name "Garden Club" --owner-email you@exam
 | Option | Meaning |
 | --- | --- |
 | `--name NAME` | The server name (required, at most 80 characters). |
-| `--owner-email EMAIL` | The owner's email (required). Their username is made from the part before `@` (`you`; letters, digits and `_`) and can never change; the display name, the same at first, can be changed in the profile. |
+| `--owner-email EMAIL` | The owner's email (required). Unless `--owner-name` or `--owner-username` say otherwise, their username is made from the part before `@` (`you`; letters, digits and `_`) and the display name is the same; both can be changed in the profile. |
 | `--registration open\|invite\|closed` | Who can sign up: anyone (the default, as with the wizard), only people with an invite, or nobody. Changeable later in **Admin → Technical**. |
 | `--category NAME` | Optional: a first category of that name, made by the owner (as if they made it in **Admin → Categories**). Without it the server starts with none. |
+| `--owner-oidc-subject SUB` | Optional, with sign-in through OpenID Connect set up (`IDEJO_OIDC_*`): the owner is that person at the provider (their `sub`), already linked, so they sign in there and get no password link. Give their email at the provider as `--owner-email`. |
+| `--owner-name NAME` | Optional: the owner's display name. Without it, the part of the email before `@`, or "Owner" with `--owner-oidc-subject`. |
+| `--owner-username NAME` | Optional: the owner's username (letters, digits and `_`; a number is added when taken). Without it, made from the display name. |
 
 The owner is created as an invite: an email takes them to a page where they choose their
 password, within 7 days. While no SMTP server is set (neither **Admin → Email** nor
 `IDEJO_SMTP_HOST`, see [Environment variables](#environment-variables)), the command prints
 that link instead: give it to the owner yourself. If it expires unused, run
-`bin/idejo-admin reset-owner-password` ([Recovery](#recovery-from-the-command-line)).
+`bin/idejo-admin reset-owner-password` ([Recovery](#recovery-from-the-command-line)). With
+`--owner-oidc-subject` there is no link: the email (and the command's output) tells the owner
+to sign in with the provider.
 
 It exits with status 0 once the server is set up. On an already set-up server it changes
 nothing and exits with 1; a missing or wrong option exits with 64. Audit entries of a

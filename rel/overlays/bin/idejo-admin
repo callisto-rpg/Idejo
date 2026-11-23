@@ -18,11 +18,17 @@ Usage: bin/idejo-admin COMMAND
 
 Commands:
   setup --name NAME --owner-email EMAIL [--registration open|invite|closed]
-        [--category NAME]           set up a new server instead of the setup wizard;
+        [--category NAME] [--owner-oidc-subject SUB]
+        [--owner-name NAME] [--owner-username NAME]
+                                    set up a new server instead of the setup wizard;
                                     the owner gets an email with a link to choose a
                                     password (printed here when email cannot go out).
                                     Registration is open unless given; --category
-                                    makes a first category, by the owner
+                                    makes a first category, by the owner;
+                                    --owner-oidc-subject links the owner to that person
+                                    at the OpenID Connect provider (IDEJO_OIDC_*), who
+                                    signs in there: no password link. --owner-name and
+                                    --owner-username name the owner
   reset-owner-password [USERNAME]   give an owner a new password and end their sessions
   backup                            make a backup now, in the backup directory
   restore FILE [--yes]              replace the database and uploads with a backup's
@@ -61,7 +67,7 @@ quote() {
 case "${1:-}" in
   setup)
     shift
-    name="" email="" registration="open" category=""
+    name="" email="" registration="open" category="" owner=""
     while [ $# -gt 0 ]; do
       if [ $# -lt 2 ]; then usage >&2; exit 64; fi
       case $1 in
@@ -69,6 +75,13 @@ case "${1:-}" in
         --owner-email) email=$2 ;;
         --registration) registration=$2 ;;
         --category) category=$2 ;;
+        --owner-oidc-subject | --owner-name | --owner-username)
+          if [ -z "$(printf '%s' "$2" | tr -d '[:space:]')" ]; then
+            echo "setup: $1 must not be blank." >&2
+            exit 64
+          fi
+          key=$(printf '%s' "${1#--}" | tr '-' '_')
+          owner="$owner, $key: $(quote "$2")" ;;
         *) usage >&2; exit 64 ;;
       esac
       shift 2
@@ -93,7 +106,7 @@ case "${1:-}" in
       fi
       first=", category: $(quote "$category")"
     fi
-    run "Idejo.Release.setup(name: $(quote "$name"), owner_email: $(quote "$email"), registration: $(quote "$registration")$first)"
+    run "Idejo.Release.setup(name: $(quote "$name"), owner_email: $(quote "$email"), registration: $(quote "$registration")$first$owner)"
     ;;
   reset-owner-password)
     if [ $# -gt 2 ]; then usage >&2; exit 64; fi

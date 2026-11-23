@@ -6,7 +6,10 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
   AD-14: `bin/idejo-admin setup --name NAME --owner-email EMAIL [--registration
   open|invite|closed]`, an alternative to the first-run wizard through the same code. The
   owner is created as an invite and chooses a password from a link; a second run refuses.
-  `--category NAME` adds a first category, made by the owner.
+  `--category NAME` adds a first category, made by the owner. `--owner-oidc-subject SUB`
+  (steward request, 2026-11-23) makes the owner already linked to that person at the
+  OpenID Connect provider, with no password link; `--owner-name` and `--owner-username`
+  name the owner.
   With it, the closed registration mode (steward decision, 2026-11-02): nobody signs up.
   """
   # Writes the settings rows every test shares, and switches the mailer in one test.
@@ -20,6 +23,7 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
 
   alias Idejo.Access
   alias Idejo.Accounts
+  alias Idejo.Accounts.OIDC
   alias Idejo.Accounts.User
   alias Idejo.Audit
   alias Idejo.Forum.Category
@@ -156,6 +160,99 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
     refute Setup.needed?()
   end
 
+  describe "an owner linked to the provider" do
+    @issuer "https://id.idejo.test"
+
+    setup do
+      oidc = Application.get_env(:idejo, :oidc)
+
+      on_exit(fn ->
+        if oidc,
+          do: Application.put_env(:idejo, :oidc, oidc),
+          else: Application.delete_env(:idejo, :oidc)
+      end)
+
+      Application.put_env(:idejo, :oidc,
+        issuer: @issuer,
+        client_id: "forum-client",
+        client_secret: "forum-secret",
+        label: "idejo ID"
+      )
+
+      :ok
+    end
+
+    @tag req: "AD-14"
+    test "AD-14 --owner-oidc-subject: the owner signs in with the provider, no password link" do
+      output =
+        setup!(
+          name: "Garden Club",
+          owner_email: "ada@idejo.test",
+          owner_oidc_subject: "3012345",
+          owner_name: "Ada Lovelace",
+          owner_username: "ada"
+        )
+
+      owner = owner_by_email("ada@idejo.test")
+      assert {owner.username, owner.display_name} == {"ada", "Ada Lovelace"}
+      assert "owner" in (owner |> Access.roles_of() |> Enum.map(& &1.name))
+      assert owner.confirmed_at
+      refute Setup.needed?()
+
+      # Their first sign-in through the provider is this account: nothing to link.
+      claims = %{"iss" => @issuer, "sub" => "3012345", "email" => "ada@idejo.test"}
+      assert {:ok, %User{id: id}, :existing} = OIDC.sign_in(claims)
+      assert id == owner.id
+
+      base = Application.fetch_env!(:idejo, :base_uri)
+
+      assert output =~
+               "Its owner is ada@idejo.test (username ada), linked to their idejo ID account: " <>
+                 "they sign in with it at #{base}/sign-in."
+
+      refute output =~ "/users/reset-password/"
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"", "ada@idejo.test"}]
+        assert email.subject == "You are the owner of Garden Club"
+        assert email.text_body =~ "Sign in with idejo ID"
+        assert email.text_body =~ "#{base}/sign-in"
+        refute email.text_body =~ "reset-password"
+      end)
+    end
+
+    @tag req: "AD-14"
+    test "AD-14 a linked owner is never named after their email" do
+      setup!(name: "Club", owner_email: "ada.private@idejo.test", owner_oidc_subject: "3012345")
+
+      owner = owner_by_email("ada.private@idejo.test")
+      assert owner.display_name == "Owner"
+      refute owner.username =~ "ada"
+    end
+
+    @tag req: "AD-14"
+    test "AD-14 --owner-name names an owner set up by email too" do
+      setup!(name: "Club", owner_email: "olga@idejo.test", owner_name: "Olga Owner")
+
+      owner = owner_by_email("olga@idejo.test")
+      assert {owner.username, owner.display_name} == {"Olga_Owner", "Olga Owner"}
+    end
+
+    @tag req: "AD-14"
+    test "AD-14 --owner-oidc-subject without a provider is refused, changing nothing" do
+      Application.delete_env(:idejo, :oidc)
+
+      opts = [name: "Club", owner_email: "ada@idejo.test", owner_oidc_subject: "3012345"]
+      assert refused(opts) =~ "--owner-oidc-subject needs sign-in through OpenID Connect"
+
+      opts = Keyword.put(opts, :owner_oidc_subject, " ")
+      assert refused(opts) =~ "--owner-oidc-subject is empty."
+
+      assert Setup.needed?()
+      refute Repo.get_by(User, email: "ada@idejo.test")
+    end
+  end
+
   @tag req: "AD-14"
   test "AD-14 --category makes a first category, by the owner" do
     setup!(name: "Garden Club", owner_email: "olga@idejo.test", category: "General")
@@ -276,6 +373,30 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
     {:ok, {{:., _, [_release, :setup]}, _, [args]}} = Code.string_to_quoted(code)
     assert args[:category] == ~s(The "General" room)
 
+    assert {_, 0} =
+             run.([
+               "setup",
+               "--name",
+               "Club",
+               "--owner-email",
+               "ada@idejo.test",
+               "--owner-oidc-subject",
+               "3012345",
+               "--owner-name",
+               ~s(Ada "Countess" Lovelace),
+               "--owner-username",
+               "ada"
+             ])
+
+    code = File.read!(Path.join(dir, "evaluated"))
+    {:ok, {{:., _, [_release, :setup]}, _, [args]}} = Code.string_to_quoted(code)
+
+    assert Keyword.take(args, [:owner_oidc_subject, :owner_name, :owner_username]) == [
+             owner_oidc_subject: "3012345",
+             owner_name: ~s(Ada "Countess" Lovelace),
+             owner_username: "ada"
+           ]
+
     for args <- [
           ["setup"],
           ["setup", "--owner-email", "olga@idejo.test"],
@@ -284,7 +405,9 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
           ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--registration", "x"],
           ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--yes", "now"],
           ["setup", "--name", "Club", "--owner-email"],
-          ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--category", " "]
+          ["setup", "--name", "Club", "--owner-email", "olga@idejo.test", "--category", " "],
+          ["setup", "--name", "Club", "--owner-email", "a@idejo.test", "--owner-oidc-subject"],
+          ["setup", "--name", "Club", "--owner-email", "a@idejo.test", "--owner-name", " "]
         ] do
       assert {_, 64} = run.(args), inspect(args)
     end
@@ -292,6 +415,7 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
     {usage, 0} = run.(["help"])
     assert usage =~ "setup --name NAME --owner-email EMAIL [--registration open|invite|closed]"
     assert usage =~ "[--category NAME]"
+    assert usage =~ "[--owner-oidc-subject SUB]"
   end
 
   describe "closed registration" do
