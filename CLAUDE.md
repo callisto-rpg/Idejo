@@ -1788,6 +1788,15 @@ The contract (M6; mark each item done here when its PR merges):
   others), and make a user topic's opening message topical ("Make topical" on it, the same
   icon dialog, "Without an icon" while there are none; `Forum.make_topical/3`, logged
   `topic.topical`, then `{:topic_icon, icon}` and the opening message to viewers).
+  Any Twemoji emoji may be the icon too (since 0.3.27; steward request, 2026-11-24): "Pick
+  an emoji" in the icon dialog (`emoji_event`, `#icon-picker-emoji`) opens the emoji picker
+  in its icon mode (`picker` with `icon: true`, "Pick an emoji", `data-push="icon_emoji"`;
+  the server's own reactions hidden), which pushes `"icon_emoji"` (`name`). The emoji's icon
+  is a `topic_icons` row with `emoji` (its gemoji name) and no upload
+  (`TopicIcons.for_emoji/1`, made at its first use, unique; drawn from `/emoji/{code}.svg`
+  by `TopicIcons.url/1`), never in the administrators' set (`list/0`) but in `index/0` and
+  `get/1`, and accepted wherever an icon id is (`TopicIcons.emoji?/1` in
+  `validate_icon_choice`). The API takes `icon_emoji` (a name) beside `icon_id`.
 - **Approval queue** (MO-04, `Idejo.Forum`; steward request, 2026-11-07): each category's
   `new_topics` (Admin → Categories, "New topics"): `open`; `approval`, every new topic waits;
   `new_users`, a new user's waits (`Forum.new_user?/1`: no topic of theirs exists yet, private

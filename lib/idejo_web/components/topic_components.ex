@@ -59,10 +59,16 @@ defmodule IdejoWeb.TopicComponents do
   attr :title, :string, default: nil, doc: "the dialog's title; \"Choose an icon\" by default"
   attr :allow_none, :boolean, default: false, doc: "offer \"Without an icon\" (an empty id)"
 
+  attr :emoji_event, :string,
+    default: nil,
+    doc: "pushed by \"Pick an emoji\", which opens the emoji picker (steward request, 2026-11-24)"
+
   @doc """
   Topic Type: the dialog to choose a topic icon among those administrators uploaded, a grid
-  of buttons named by each icon's name; the current one is pressed. Opened by the server
-  (the `InlineCard` hook); Escape or a click outside sends `close_event`.
+  of buttons named by each icon's name; the current one is pressed. With `emoji_event`,
+  "Pick an emoji" offers every Twemoji emoji instead (`ReactionComponents.emoji_picker/1`
+  with `icon: true`). Opened by the server (the `InlineCard` hook); Escape or a click
+  outside sends `close_event`.
   """
   def icon_dialog(assigns) do
     ~H"""
@@ -78,7 +84,7 @@ defmodule IdejoWeb.TopicComponents do
         <h2 id={"#{@id}-title"} class="inline-card-title">
           {@title || gettext("Choose an icon")}
         </h2>
-        <p :if={@icons == []} id={"#{@id}-none"} class="text-sm">
+        <p :if={@icons == [] and !@emoji_event} id={"#{@id}-none"} class="text-sm">
           {gettext("Administrators have not added any topic icons yet.")}
         </p>
         <ul :if={@icons != []} class="topic-icon-grid">
@@ -97,6 +103,15 @@ defmodule IdejoWeb.TopicComponents do
           </li>
         </ul>
         <form method="dialog" class="modal-action">
+          <button
+            :if={@emoji_event}
+            type="button"
+            id={"#{@id}-emoji"}
+            class="btn btn-sm"
+            phx-click={@emoji_event}
+          >
+            <.icon name="hero-face-smile" class="size-4" />{gettext("Pick an emoji")}
+          </button>
           <button
             :if={@allow_none}
             type="button"

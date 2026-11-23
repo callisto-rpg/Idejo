@@ -6,7 +6,7 @@ defmodule IdejoWeb.Api.CategoryController do
   use IdejoWeb.Api.Controller
 
   alias Idejo.Forum
-  alias Idejo.Forum.Category
+  alias Idejo.Forum.{Category, TopicIcons}
 
   def index(conn, _params), do: send_list(conn, Api.categories(user(conn)))
 
@@ -54,8 +54,9 @@ defmodule IdejoWeb.Api.CategoryController do
 
   @doc """
   Starts a topic (TP-01): `title`, `body_md`, `tag_ids`, and in a topical category
-  `icon_id`; a moderator may ask `topical: true`. It may wait for approval (MO-04):
-  `"pending"` then holds it.
+  `icon_id`, or any Twemoji emoji by name, `icon_emoji` (steward request, 2026-11-24); a
+  moderator may ask `topical: true`. It may wait for approval (MO-04): `"pending"` then
+  holds it.
   """
   def create_topic(conn, %{"id" => id} = params) do
     with {:ok, category} <- category(conn, id) do
@@ -65,20 +66,31 @@ defmodule IdejoWeb.Api.CategoryController do
 
   @doc false
   def create(conn, category, params, opts) do
-    attrs = %{
-      "title" => params["title"],
-      "body" => params["body_md"],
-      "tag_ids" => List.wrap(params["tag_ids"]),
-      "icon_id" => params["icon_id"],
-      "topical" => to_string(params["topical"] == true)
-    }
+    with {:ok, icon_id} <- icon_id(params) do
+      attrs = %{
+        "title" => params["title"],
+        "body" => params["body_md"],
+        "tag_ids" => List.wrap(params["tag_ids"]),
+        "icon_id" => icon_id,
+        "topical" => to_string(params["topical"] == true)
+      }
 
-    case Forum.create_topic(user(conn), category, attrs, opts) do
-      {:ok, topic} -> json(conn, %{"topic" => Api.topic(user(conn), topic), "pending" => nil})
-      {:pending, pending} -> json(conn, %{"topic" => nil, "pending" => pending_topic(pending)})
-      error -> error
+      case Forum.create_topic(user(conn), category, attrs, opts) do
+        {:ok, topic} -> json(conn, %{"topic" => Api.topic(user(conn), topic), "pending" => nil})
+        {:pending, pending} -> json(conn, %{"topic" => nil, "pending" => pending_topic(pending)})
+        error -> error
+      end
     end
   end
+
+  defp icon_id(%{"icon_emoji" => name}) when is_binary(name) do
+    case TopicIcons.for_emoji(name) do
+      {:ok, icon} -> {:ok, icon.id}
+      :error -> {:error, :validation, %{"fields" => %{"icon_emoji" => ["is not an emoji"]}}}
+    end
+  end
+
+  defp icon_id(params), do: {:ok, params["icon_id"]}
 
   @doc false
   def category(conn, id) when is_binary(id) do

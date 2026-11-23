@@ -186,6 +186,16 @@ defmodule IdejoWeb.Api.AP13ModerationTest do
     assert api(ctx.mod, :put, "/api/v1/topics/#{ctx.topic.id}/icon", %{"icon_id" => nil})
            |> api_json(200)
            |> Map.get("icon") == nil
+
+    # Any Twemoji emoji, by name (steward request, 2026-11-24).
+    assert api(ctx.mod, :put, "/api/v1/topics/#{ctx.topic.id}/icon", %{
+             "icon_emoji" => "sparkles"
+           })
+           |> api_json(200)
+           |> Map.get("icon") =~ ~r"/emoji/2728\.svg"
+
+    api(ctx.mod, :put, "/api/v1/topics/#{ctx.topic.id}/icon", %{"icon_emoji" => "agree"})
+    |> api_json(422)
   end
 
   @tag req: "AP-13"

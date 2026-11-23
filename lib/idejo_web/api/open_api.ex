@@ -112,7 +112,8 @@ defmodule IdejoWeb.Api.OpenApi do
     "PasswordChange" =>
       {~w(current_password password password_confirmation), ~w(current_password password)},
     "UnifiedPushRequest" => {~w(endpoint p256dh auth device_name), ~w(endpoint p256dh auth)},
-    "TopicCreate" => {~w(title body_md tag_ids icon_id topical category_id), ~w(title body_md)},
+    "TopicCreate" =>
+      {~w(title body_md tag_ids icon_id icon_emoji topical category_id), ~w(title body_md)},
     "TopicUpdate" => {~w(title tag_ids reason), []},
     "ReadPosition" => {~w(message_id), []},
     "Typing" => {~w(typing), []},
@@ -132,7 +133,7 @@ defmodule IdejoWeb.Api.OpenApi do
     "Reason" => {~w(reason), []},
     "Unarchive" => {~w(category_id reason), []},
     "Move" => {~w(category_id reason), ~w(category_id)},
-    "Icon" => {~w(icon_id), []},
+    "Icon" => {~w(icon_id icon_emoji), []},
     "TopicPermissionsUpdate" => {~w(settings), ~w(settings)},
     "DeleteTopic" => {~w(confirm reason), ~w(confirm)},
     "MoveMessages" => {~w(message_ids topic_id new reason banner), ~w(message_ids)},
@@ -143,6 +144,7 @@ defmodule IdejoWeb.Api.OpenApi do
   }
 
   @types %{
+    "icon_emoji" => "string",
     "id" => "string",
     "uri" => "string",
     "url" => "string",

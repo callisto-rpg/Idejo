@@ -2715,7 +2715,6 @@ defmodule IdejoWeb.TopicLive do
   defp event("pick_topic_icon", %{"id" => id}, %{assigns: %{icon_picker: icons}} = socket)
        when is_list(icons) do
     topic = socket.assigns.topic
-    icon = Forum.TopicIcons.get(id)
 
     result =
       cond do
@@ -2723,30 +2722,34 @@ defmodule IdejoWeb.TopicLive do
         id == "" and icons == [] and not topic.topical ->
           Forum.make_topical(user(socket), topic, nil)
 
-        icon == nil ->
-          :error
-
-        topic.topical ->
-          Forum.set_topic_icon(user(socket), topic, icon)
+        icon = Forum.TopicIcons.get(id) ->
+          put_topic_icon(socket, icon)
 
         true ->
-          Forum.make_topical(user(socket), topic, icon)
+          :error
       end
 
-    case result do
-      {:ok, _topic} ->
-        # The topic's viewers, this one too, get the new icon as an event.
-        {:noreply, assign(socket, :icon_picker, nil)}
-
-      _ ->
-        {:noreply,
-         socket
-         |> assign(:icon_picker, nil)
-         |> put_flash(:error, gettext("The icon could not be changed."))}
-    end
+    icon_changed(socket, result)
   end
 
   defp event("pick_topic_icon", _params, socket), do: {:noreply, socket}
+
+  # Steward request, 2026-11-24: "Pick an emoji" in the icon dialog, any Twemoji emoji.
+  defp event("icon_emoji_picker", _params, %{assigns: %{icon_picker: icons}} = socket)
+       when is_list(icons),
+       do: {:noreply, assign(socket, :picker, %{message_id: nil, icon: true})}
+
+  defp event("icon_emoji_picker", _params, socket), do: {:noreply, socket}
+
+  defp event("icon_emoji", %{"emoji" => name}, %{assigns: %{icon_picker: icons}} = socket)
+       when is_list(icons) and is_binary(name) do
+    result =
+      with {:ok, icon} <- Forum.TopicIcons.for_emoji(name), do: put_topic_icon(socket, icon)
+
+    icon_changed(assign(socket, :picker, nil), result)
+  end
+
+  defp event("icon_emoji", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
 
   # The Delete button in the message's controls (steward request, 2026-11-07): the author's
   # own closed message, not the opening one, asked first. The question offers Edit instead.
@@ -2927,7 +2930,7 @@ defmodule IdejoWeb.TopicLive do
         </div>
       </dialog>
       <ReactionComponents.emoji_picker
-        :if={@picker && (@can_react? or (@picker.message_id == nil and @can_post?))}
+        :if={picker_shown?(@picker, @icon_picker, @can_post?, @can_react?)}
         picker={@picker}
       />
       <IdejoWeb.GifComponents.gif_picker :if={@gifs && @can_post?} gifs={@gifs} />
@@ -2951,6 +2954,7 @@ defmodule IdejoWeb.TopicLive do
         close_event="close_icon_picker"
         title={if(@topic.topical, do: gettext("Choose an icon"), else: gettext("Make topical"))}
         allow_none={!@topic.topical and @icon_picker == []}
+        emoji_event="icon_emoji_picker"
       />
       <MessageModerationComponents.moderate_card
         :if={@can_moderate? && @moderated}
@@ -5014,5 +5018,32 @@ defmodule IdejoWeb.TopicLive do
       "%{count} messages were moved to another topic:",
       count
     )
+  end
+
+  # The emoji picker: to react, to write, or for a topic's icon from the icon dialog.
+  defp picker_shown?(nil, _icons, _can_post?, _can_react?), do: false
+  defp picker_shown?(%{icon: true}, icons, _can_post?, _can_react?), do: icons != nil
+  defp picker_shown?(%{message_id: nil}, _icons, can_post?, can_react?),
+    do: can_react? or can_post?
+
+  defp picker_shown?(_picker, _icons, _can_post?, can_react?), do: can_react?
+
+  # Topic Type: the icon a moderator chose, on a topical topic or one made topical with it.
+  defp put_topic_icon(socket, icon) do
+    topic = socket.assigns.topic
+
+    if topic.topical,
+      do: Forum.set_topic_icon(user(socket), topic, icon),
+      else: Forum.make_topical(user(socket), topic, icon)
+  end
+
+  # The topic's viewers, this one too, get the new icon as an event.
+  defp icon_changed(socket, {:ok, _topic}), do: {:noreply, assign(socket, :icon_picker, nil)}
+
+  defp icon_changed(socket, _result) do
+    {:noreply,
+     socket
+     |> assign(:icon_picker, nil)
+     |> put_flash(:error, gettext("The icon could not be changed."))}
   end
 end

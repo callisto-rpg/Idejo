@@ -17,13 +17,16 @@ defmodule IdejoWeb.NewTopicLive do
   any message the user may view, shown as a linked excerpt, into any category where they may
   start topics (chosen in the form; the source's category first when allowed). The composer's
   `!new-topic` comes here with `?from=` its message, whose text fills the first message.
+
+  In a topical category the icon is one of the set or any Twemoji emoji ("Pick an emoji" in
+  the icon dialog, steward request, 2026-11-24: `TopicIcons.for_emoji/1`).
   """
   use IdejoWeb, :live_view
 
   alias Idejo.Forum
-  alias Idejo.Forum.Tags
+  alias Idejo.Forum.{Tags, TopicIcons}
   alias Idejo.Messages.Body
-  alias IdejoWeb.ImageUploads
+  alias IdejoWeb.{ImageUploads, ReactionComponents}
 
   @impl true
   def mount(%{"id" => id} = params, _session, %{assigns: %{live_action: :fork}} = socket) do
@@ -51,7 +54,7 @@ defmodule IdejoWeb.NewTopicLive do
              |> assign(:page_title, gettext("New topic from a message"))
              |> assign(source: source, categories: categories, category: default)
              |> assign(:tags, Tags.available_tags(default))
-             |> assign(icon_picker?: false)
+             |> assign(icon_picker?: false, picker: nil, emoji_icon: nil)
              |> put_icons(%{})
              |> assign(:form, to_form(Forum.change_new_topic(sent(user, params)), as: :topic))
              |> assign(editor_mode: :write, preview_html: "")
@@ -74,7 +77,7 @@ defmodule IdejoWeb.NewTopicLive do
            |> assign(:page_title, gettext("New topic in %{category}", category: category.name))
            |> assign(source: nil, categories: [], category: category)
            |> assign(:tags, Tags.available_tags(category))
-           |> assign(icon_picker?: false)
+           |> assign(icon_picker?: false, picker: nil, emoji_icon: nil)
            |> put_icons(%{})
            |> assign(:form, to_form(Forum.change_new_topic(), as: :topic))
            |> assign(editor_mode: :write, preview_html: "")
@@ -136,16 +139,31 @@ defmodule IdejoWeb.NewTopicLive do
   def handle_event("close_icon_picker", _params, socket),
     do: {:noreply, assign(socket, :icon_picker?, false)}
 
-  def handle_event("pick_icon", %{"id" => id}, socket) do
-    params = Map.put(socket.assigns.form.params, "icon_id", id)
-
-    form =
-      params
-      |> Forum.change_new_topic(socket.assigns.tags, socket.assigns.icons)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, form: to_form(form, as: :topic), icon_picker?: false)}
+  # Steward request, 2026-11-24: any Twemoji emoji, from the emoji picker.
+  def handle_event("icon_emoji_picker", _params, socket) do
+    if socket.assigns.icons,
+      do: {:noreply, assign(socket, icon_picker?: false, picker: %{message_id: nil, icon: true})},
+      else: {:noreply, socket}
   end
+
+  def handle_event("close_picker", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
+
+  def handle_event("icon_emoji", %{"emoji" => name}, %{assigns: %{icons: icons}} = socket)
+      when is_list(icons) and is_binary(name) do
+    case TopicIcons.for_emoji(name) do
+      {:ok, icon} ->
+        {:noreply, socket |> assign(picker: nil, emoji_icon: icon) |> choose_icon(icon.id)}
+
+      :error ->
+        {:noreply, assign(socket, :picker, nil)}
+    end
+  end
+
+  def handle_event("icon_emoji", _params, socket), do: {:noreply, assign(socket, :picker, nil)}
+
+  def handle_event("pick_icon", %{"id" => id}, socket),
+    do: {:noreply, socket |> choose_icon(id) |> assign(:icon_picker?, false)}
+
 
   # TP-10: suggestions while typing an inline link.
   def handle_event("suggest", params, socket), do: IdejoWeb.Suggestions.reply(socket, params)
@@ -236,8 +254,26 @@ defmodule IdejoWeb.NewTopicLive do
 
   defp icon_errors(_form), do: []
 
-  defp chosen_icon(icons, form),
-    do: icons && Enum.find(icons, &(&1.id == form.params["icon_id"]))
+  defp choose_icon(socket, id) do
+    form =
+      socket.assigns.form.params
+      |> Map.put("icon_id", id)
+      |> Forum.change_new_topic(socket.assigns.tags, socket.assigns.icons)
+      |> Map.put(:action, :validate)
+
+    assign(socket, :form, to_form(form, as: :topic))
+  end
+
+  # The icon chosen: one of the set, or the emoji picked (steward request, 2026-11-24).
+  defp chosen_icon(icons, emoji_icon, form) do
+    id = form.params["icon_id"]
+
+    cond do
+      icons == nil -> nil
+      emoji_icon && emoji_icon.id == id -> emoji_icon
+      true -> Enum.find(icons, &(&1.id == id))
+    end
+  end
 
   @impl true
   def render(assigns) do
@@ -310,10 +346,10 @@ defmodule IdejoWeb.NewTopicLive do
           <input type="hidden" name="topic[icon_id]" value={@form.params["icon_id"]} />
           <div class="flex items-center gap-3">
             <img
-              :if={chosen_icon(@icons, @form)}
+              :if={chosen_icon(@icons, @emoji_icon, @form)}
               id="topic-icon-chosen"
-              src={Idejo.Forum.TopicIcons.url(chosen_icon(@icons, @form))}
-              alt={chosen_icon(@icons, @form).name}
+              src={TopicIcons.url(chosen_icon(@icons, @emoji_icon, @form))}
+              alt={chosen_icon(@icons, @emoji_icon, @form).name}
               class="topic-icon-preview"
             />
             <button
@@ -322,7 +358,7 @@ defmodule IdejoWeb.NewTopicLive do
               class="btn btn-sm"
               phx-click="open_icon_picker"
             >
-              {if chosen_icon(@icons, @form),
+              {if chosen_icon(@icons, @emoji_icon, @form),
                 do: gettext("Change icon"),
                 else: gettext("Choose an icon")}
             </button>
@@ -352,7 +388,9 @@ defmodule IdejoWeb.NewTopicLive do
         current={@form.params["icon_id"]}
         event="pick_icon"
         close_event="close_icon_picker"
+        emoji_event="icon_emoji_picker"
       />
+      <ReactionComponents.emoji_picker :if={@picker} picker={@picker} />
     </Layouts.app>
     """
   end

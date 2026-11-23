@@ -2131,6 +2131,9 @@
   .gif-picker-foot { justify-content: space-between; align-items: center; }
   .gif-picker-credit { color: var(--ink-faint); font-size: 0.75rem; }
   .emoji-groups { max-height: min(24rem, 60vh); overflow-y: auto; display: grid; gap: 0.75rem; }
+  /* A topic's icon: Twemoji's emoji only, not the server's own reactions (steward request,
+     2026-11-24). */
+  [data-push="icon_emoji"] [data-group="Server"] { display: none; }
   .emoji-group-title { margin-bottom: 0.25rem; color: var(--ink-faint); font-size: 0.75rem; font-weight: 600; }
   .emoji-grid { display: flex; flex-wrap: wrap; gap: 0.125rem; }
   /* The + picker's emoji, cells of one sprite sheet (steward decision, 2026-10-31):

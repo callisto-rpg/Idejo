@@ -211,6 +211,10 @@ and never gets HTML:
 - `author`: name, user tag, pictures (`avatar_dark_url` for the dark theme), the role shown
   beside the name, `ignored_by_me` (collapse it, as the web does). An opening message of a
   topical topic has no author: `{"id": null, "display_name": "the topic", "topical": true}`.
+  Its icon (a topic's `icon`, an image address) is one of `GET /topic-icons` or, since 0.3.27,
+  any Twemoji emoji (an SVG under `/emoji/`): starting a topic, `PUT /topics/{id}/icon` and
+  `POST /topics/{id}/make-topical` take `icon_emoji`, the emoji's name (`"joy"`), in place
+  of `icon_id`.
 
 idejo's Markdown is GitHub's (tables, strikethrough, task lists, bare links) plus:
 

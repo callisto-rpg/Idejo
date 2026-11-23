@@ -1168,7 +1168,7 @@ defmodule IdejoWeb.Api.Operations do
         :icon,
         "moderate",
         "Topic",
-        "Changes a topical topic's icon (`icon_id`, null for none).",
+        "Changes a topical topic's icon (`icon_id`, null for none, or `icon_emoji`).",
         body: "Icon",
         req: "AP-13"
       ),

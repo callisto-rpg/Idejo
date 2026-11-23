@@ -10,6 +10,8 @@
 // "react". Opened by the graphical composer's emoji button (TP-11; no data-message-id), the
 // choice goes to the composer instead (`idejo:emoji`, as `:name:`) and the picker closes;
 // opened for a poll answer (data-poll-option), it goes to the poll form ("poll_emoji").
+// Opened for a topic's icon (data-push, steward request 2026-11-24), it is pushed as that
+// event, and the server's own reactions are hidden: only Twemoji's.
 // The element is phx-update="ignore".
 
 let loading = null  // the fetch, shared by every opening on the page
@@ -65,6 +67,7 @@ const build = ({categories, sprite}, labels) => {
   let cell = 0
   for (const {key, emoji} of categories) {
     const section = document.createElement("section")
+    section.dataset.group = key
     section.setAttribute("aria-label", labels[key] || key)
     const title = document.createElement("h3")
     title.className = "emoji-group-title"
@@ -111,7 +114,9 @@ export const EmojiPicker = {
       const choice = event.target.closest("button[data-emoji]")
       if (!choice) return
       const id = this.el.dataset.messageId
-      if (id) {
+      if (this.el.dataset.push) {
+        this.pushEvent(this.el.dataset.push, {emoji: choice.dataset.emoji})
+      } else if (id) {
         this.pushEvent("react", {id, emoji: choice.dataset.emoji})
       } else if (this.el.dataset.pollOption != null) {
         // A poll answer's emoji (steward decision, 2026-11-02): the form keeps it.
@@ -149,7 +154,8 @@ export const EmojiPicker = {
     for (const {el, names} of choices) el.hidden = query !== "" && !names.some(name => name.includes(query))
     let any = false
     for (const section of this.groups.children) {
-      const shown = section.querySelector("button[data-emoji]:not([hidden])") !== null
+      const own = this.el.dataset.push && section.dataset.group === "Server"
+      const shown = !own && section.querySelector("button[data-emoji]:not([hidden])") !== null
       section.hidden = !shown
       any ||= shown
     }
