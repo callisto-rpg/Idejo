@@ -11,7 +11,8 @@ defmodule Idejo.Community do
   `IDEJO_COMMUNITY_URL` (`config :idejo, :community, url:`) answers which communities a
   person joined: `GET <url>?subject=<their subject at the provider>`, authenticated with this
   server's OpenID Connect client id and secret (HTTP Basic), answering
-  `{"communities": [{"name": …, "url": …}]}`. Only members linked to the provider (AC-09)
+  `{"communities": [{"name": …, "url": …, "favourite": …}]}` (`favourite`, the inbox's,
+  optional: steward request, 2026-11-23). Only members linked to the provider (AC-09)
   have a subject; for others the list is empty. Answers are kept for five minutes per
   member; a slow or failed answer gives an empty list, never an error on the page.
   `IDEJO_COMMUNITY_DIRECTORY_URL` (`directory_url:`) is the public directory.
@@ -73,9 +74,12 @@ defmodule Idejo.Community do
     do: config(:directory_url) || OIDCRegistry.config()[:directory_url]
 
   @doc """
-  The other communities `user` joined: `[%{name:, url:}]`, empty when none can be asked.
+  The other communities `user` joined: `[%{name:, url:, favourite:}]`, empty when none can
+  be asked.
   """
-  @spec communities(User.t() | nil) :: [%{name: String.t(), url: String.t()}]
+  @spec communities(User.t() | nil) :: [
+          %{name: String.t(), url: String.t(), favourite: boolean()}
+        ]
   def communities(nil), do: []
 
   def communities(%User{id: id} = user) do
@@ -164,6 +168,15 @@ defmodule Idejo.Community do
     end
   end
 
+  @doc "Forgets `user`'s communities kept from the last answer: the next read asks again."
+  @spec forget(User.t()) :: :ok
+  def forget(%User{id: id}) do
+    :ets.delete(@table, id)
+    :ok
+  rescue
+    ArgumentError -> :ok
+  end
+
   @doc false
   # The cache, an ETS table owned by the application's process tree.
   def child_spec(_arg) do
@@ -218,9 +231,13 @@ defmodule Idejo.Community do
 
     case Req.get(request) do
       {:ok, %{status: 200, body: %{"communities" => list}}} when is_list(list) ->
-        for %{"name" => name, "url" => "http" <> _ = link} <- list,
+        for %{"name" => name, "url" => "http" <> _ = link} = community <- list,
             is_binary(name) and name != "",
-            do: %{name: String.slice(name, 0, 100), url: link}
+            do: %{
+              name: String.slice(name, 0, 100),
+              url: link,
+              favourite: community["favourite"] == true
+            }
 
       _ ->
         []

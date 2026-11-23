@@ -9,7 +9,9 @@ defmodule Idejo.Inbox do
   sidebar and no categories of its own. It answers the group's chat service
   (`Idejo.Community.Chat`): the forums' `IDEJO_CHAT_URL` and `IDEJO_TOPICS_URL` point here.
 
-    * **Forums** (`/`): the communities the member joined (`Idejo.Community.communities/1`).
+    * **Forums** (`/`): the communities the member joined (`Idejo.Community.communities/1`),
+      the favourites first, each with a menu to mark it a favourite or leave it
+      (`favourite/3`, `leave/2`; steward request, 2026-11-23).
     * **Topics** (`/topics`): the topics they follow in each, as idejo's topic rows, compact
       or expanded (`topics/1`, `Idejo.Inbox.RemoteTopic`).
     * **Chats** (`/chat`, `/p/{id}`): idejo's private conversations, between members known
@@ -31,7 +33,7 @@ defmodule Idejo.Inbox do
   alias Idejo.Accounts
   alias Idejo.Accounts.{OIDC, User, UserIdentity}
   alias Idejo.Community.{Profile, SharedSettings}
-  alias Idejo.{Conversations, Federation, Repo}
+  alias Idejo.{Community, Conversations, Federation, Repo}
   alias Idejo.Forum.Topic
   alias Idejo.Inbox.RemoteTopic
   alias Idejo.Messages.{Message, Reaction}
@@ -223,6 +225,35 @@ defmodule Idejo.Inbox do
         |> Enum.split_with(&(&1["answered"] == true and &1["failed"] in [nil, []]))
 
       {:ok, %{done: Enum.map(done, & &1["name"]), missed: Enum.map(missed, & &1["name"])}}
+    else
+      _ -> :error
+    end
+  end
+
+  ## The Forums tab's menu
+
+  @doc """
+  Marks the forum at `host`, one of `user`'s communities, as a favourite or not (steward
+  request, 2026-11-23), through the group's service: `POST <service>/favourite`
+  `{subject, host, favourite}`. `:ok`, or `:error` when the service did not take it.
+  """
+  @spec favourite(User.t(), String.t(), boolean()) :: :ok | :error
+  def favourite(%User{} = user, host, favourite) when is_boolean(favourite) do
+    tell(user, "/favourite", %{host: host, favourite: favourite})
+  end
+
+  @doc """
+  Leaves the forum at `host` (steward request, 2026-11-23): the group's service
+  (`POST <service>/leave` `{subject, host}`) has the forum keep the member's account and
+  messages there, for a return. `:ok`, or `:error`.
+  """
+  @spec leave(User.t(), String.t()) :: :ok | :error
+  def leave(%User{} = user, host), do: tell(user, "/leave", %{host: host})
+
+  defp tell(user, path, body) do
+    with subject when is_binary(subject) <- subject(user),
+         {:ok, _answer} <- ask(:post, path, json: Map.put(body, :subject, subject)) do
+      Community.forget(user)
     else
       _ -> :error
     end
