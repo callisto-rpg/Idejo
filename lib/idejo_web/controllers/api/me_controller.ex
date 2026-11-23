@@ -285,7 +285,14 @@ defmodule IdejoWeb.Api.MeController do
     send_list(
       conn,
       for community <- Community.communities(user(conn)) do
-        %{"name" => community.name, "url" => community.url, "logo_url" => community.url <> "logo"}
+        %{
+          "name" => community.name,
+          "url" => community.url,
+          "logo_url" => community.url <> "logo",
+          # The member's favourite, marked in the inbox's Forums tab (steward request,
+          # 2026-11-23): the app's forum menu lists these only.
+          "favourite" => community.favourite
+        }
       end
     )
   end

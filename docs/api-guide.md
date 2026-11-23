@@ -388,8 +388,9 @@ that ignore VAPID still work.
 ## 9. Forums directory and "my forums"
 
 - `GET /api/v1/me/communities`: the other forums the member joined in the same group (idejo
-  Hub), `[{name, url, logo_url}]`, as the forum's community menu shows them. Empty on a
-  standalone forum.
+  Hub), `[{name, url, logo_url, favourite}]`. `favourite` (since 0.3.27) is true for the
+  forums the member marked in the group inbox's Forums tab; the forum's community menu
+  lists only those. Empty on a standalone forum.
 - Discovery's `community.directory_url` is the group's public directory page, or null. Its
   JSON is at `<directory_url>api/v1/forums?q=&page=`: listed forums with name, url,
   description, logo and member count, 20 a page.
