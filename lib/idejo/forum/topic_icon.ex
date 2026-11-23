@@ -6,6 +6,10 @@ defmodule Idejo.Forum.TopicIcon do
   An icon a topical topic may show in place of its starter (Topic Type, steward request,
   2026-11-07): an image administrators upload (`Idejo.Uploads.store_icon/2`) with a name,
   its text alternative, in their order. Managed by `Idejo.Forum.TopicIcons`.
+
+  Or an emoji (steward request, 2026-11-24): `emoji` is its gemoji name, drawn from its
+  Twemoji image, with no upload; one row per emoji, made when first chosen, never in the
+  administrators' set.
   """
   use Ecto.Schema
 
@@ -18,6 +22,7 @@ defmodule Idejo.Forum.TopicIcon do
   schema "topic_icons" do
     belongs_to :upload, Idejo.Uploads.Upload
     field :name, :string
+    field :emoji, :string
     field :position, :integer, default: 0
 
     timestamps(type: :utc_datetime, inserted_at: :created_at, updated_at: false)

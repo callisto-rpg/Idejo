@@ -7,20 +7,28 @@ defmodule Idejo.Forum.TopicIcons do
   in **Admin → Topic icons**, offered in a dialog when a topic starts in a topical category
   and to moderators changing a topical topic's icon. Each change is audited (SP-06).
   Deleting an icon leaves the topics that showed it with none (the category's mark).
+
+  Any Twemoji emoji may be chosen too (steward request, 2026-11-24): `for_emoji/1` gives its
+  icon, made at its first use; emoji icons are not in the set (`list/0`) but are in
+  `index/0` and `get/1`, and draw from `Idejo.Emoji`'s image.
   """
   import Ecto.Query, warn: false
 
   alias Idejo.Accounts.User
   alias Idejo.Audit
+  alias Idejo.Emoji
   alias Idejo.Forum.TopicIcon
   alias Idejo.Repo
   alias Idejo.Uploads
 
-  @doc "The icons, in their order, with their upload."
+  @doc "The administrators' icons, in their order, with their upload (no emoji)."
   @spec list() :: [TopicIcon.t()]
   def list do
     Repo.all(
-      from i in TopicIcon, order_by: [asc: i.position, asc: i.created_at], preload: :upload
+      from i in TopicIcon,
+        where: is_nil(i.emoji),
+        order_by: [asc: i.position, asc: i.created_at],
+        preload: :upload
     )
   end
 
@@ -29,7 +37,46 @@ defmodule Idejo.Forum.TopicIcons do
   list of topical topics costs one query.
   """
   @spec index() :: %{String.t() => TopicIcon.t()}
-  def index, do: Idejo.Memo.fetch(:topic_icons, fn -> Map.new(list(), &{&1.id, &1}) end)
+  def index do
+    Idejo.Memo.fetch(:topic_icons, fn ->
+      Map.new(Repo.all(from i in TopicIcon, preload: :upload), &{&1.id, &1})
+    end)
+  end
+
+  @doc """
+  The icon of a Twemoji emoji, by its name (`"joy"`), made at its first use; the server's own
+  reactions are not Twemoji and give `:error`.
+  """
+  @spec for_emoji(String.t()) :: {:ok, TopicIcon.t()} | :error
+  def for_emoji(name) when is_binary(name) do
+    case Emoji.lookup(name) do
+      %{char: char, name: name} when is_binary(char) ->
+        row = %{
+          id: Ecto.UUID.generate(),
+          emoji: name,
+          name: String.replace(name, "_", " "),
+          created_at: DateTime.utc_now(:second)
+        }
+
+        Repo.insert_all(TopicIcon, [row], on_conflict: :nothing, conflict_target: :emoji)
+
+        {:ok, Repo.get_by!(TopicIcon, emoji: name)}
+
+      _ ->
+        :error
+    end
+  end
+
+  def for_emoji(_name), do: :error
+
+  @doc "Whether `id` is an emoji's icon."
+  @spec emoji?(String.t() | nil) :: boolean()
+  def emoji?(id) do
+    case Ecto.UUID.cast(id || "") do
+      {:ok, id} -> Repo.exists?(from i in TopicIcon, where: i.id == ^id and not is_nil(i.emoji))
+      :error -> false
+    end
+  end
 
   @doc "An icon by id, with its upload, or nil."
   @spec get(String.t() | nil) :: TopicIcon.t() | nil
@@ -110,6 +157,7 @@ defmodule Idejo.Forum.TopicIcons do
   @doc "The icon's image address, or nil for none."
   @spec url(TopicIcon.t() | nil) :: String.t() | nil
   def url(nil), do: nil
+  def url(%TopicIcon{emoji: emoji}) when is_binary(emoji), do: Emoji.lookup(emoji)[:src]
   def url(%TopicIcon{upload: %Uploads.Upload{} = upload}), do: Uploads.url(upload)
 
   def url(%TopicIcon{} = icon), do: icon |> Repo.preload(:upload) |> url()

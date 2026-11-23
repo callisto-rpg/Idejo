@@ -321,4 +321,79 @@ defmodule IdejoWeb.TopicTypeTest do
     assert topic.icon_id == nil
     assert has_element?(lv, "#message-#{opening.id} .topic-icon .topic-icon-none")
   end
+
+  describe "an emoji as a topic's icon (steward request, 2026-11-24)" do
+    test "any Twemoji emoji is an icon, made once, outside the administrators' set", %{
+      wiki: wiki,
+      starter: starter
+    } do
+      assert {:ok, joy} = TopicIcons.for_emoji("joy")
+      assert {:ok, ^joy} = TopicIcons.for_emoji("joy")
+      assert joy.emoji == "joy"
+      assert TopicIcons.url(joy) =~ ~r"^/emoji/1f602\.svg\?vsn="
+      refute Enum.any?(TopicIcons.list(), &(&1.id == joy.id))
+      assert TopicIcons.index()[joy.id]
+
+      # The server's own reactions and unknown names are not Twemoji.
+      assert TopicIcons.for_emoji("agree") == :error
+      assert TopicIcons.for_emoji("no-such-emoji") == :error
+
+      {:ok, topic} = start(starter, wiki, %{"icon_id" => joy.id})
+      assert topic.icon_id == joy.id
+    end
+
+    test "the new topic form picks an emoji in the icon dialog", %{
+      conn: conn,
+      wiki: wiki,
+      starter: starter
+    } do
+      {:ok, lv, _html} = live(log_in_user(conn, starter), ~p"/c/#{wiki.slug}/new")
+      lv |> element("#choose-icon") |> render_click()
+      lv |> element("#icon-picker-emoji") |> render_click()
+      refute has_element?(lv, "#icon-picker")
+      assert has_element?(lv, "#emoji-picker-body[data-push='icon_emoji']")
+
+      render_hook(lv, "icon_emoji", %{"emoji" => "rocket"})
+      refute has_element?(lv, "#emoji-picker")
+      assert has_element?(lv, "#topic-icon-chosen[alt='rocket']")
+
+      lv
+      |> form("#new-topic-form", topic: %{title: "Launch", body: "Go"})
+      |> render_submit()
+
+      topic = Repo.one!(from t in Idejo.Forum.Topic, where: t.title == "Launch")
+      assert Repo.get!(TopicIcon, topic.icon_id).emoji == "rocket"
+    end
+
+    test "a moderator changes a topic's icon to an emoji", %{
+      admin: admin,
+      wiki: wiki,
+      star: star,
+      starter: starter
+    } do
+      {:ok, topic} = start(starter, wiki, %{"icon_id" => star.id})
+      [opening] = Forum.list_messages(topic)
+
+      {:ok, lv, _html} = watch(log_in_user(build_conn(), admin), topic)
+      lv |> element("#message-#{opening.id}-icon") |> render_click()
+      lv |> element("#icon-picker-emoji") |> render_click()
+      assert has_element?(lv, "#emoji-picker-title", "Pick an emoji")
+
+      render_hook(lv, "icon_emoji", %{"emoji" => "tada"})
+      refute has_element?(lv, "#icon-picker")
+
+      icon = Repo.get!(TopicIcon, Repo.reload!(topic).icon_id)
+      assert icon.emoji == "tada"
+
+      assert has_element?(
+               lv,
+               "#message-#{opening.id} .topic-icon img[src='#{TopicIcons.url(icon)}']"
+             )
+
+      # Members never get the dialog, so a pushed emoji changes nothing.
+      {:ok, member_lv, _html} = watch(log_in_user(build_conn(), user_fixture()), topic)
+      render_hook(member_lv, "icon_emoji", %{"emoji" => "skull"})
+      assert Repo.reload!(topic).icon_id == icon.id
+    end
+  end
 end

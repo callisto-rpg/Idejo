@@ -1461,8 +1461,8 @@ defmodule Idejo.Forum do
     |> validate_icon_choice(icons)
   end
 
-  # Topic Type: in a topical category (`icons` the set on offer, not nil), one of them, when
-  # there are any; elsewhere none.
+  # Topic Type: in a topical category (`icons` the set on offer, not nil), one of them or an
+  # emoji's icon (steward request, 2026-11-24), required when the set has any; elsewhere none.
   defp validate_icon_choice(changeset, nil), do: Ecto.Changeset.delete_change(changeset, :icon_id)
 
   defp validate_icon_choice(changeset, icons) do
@@ -1475,7 +1475,7 @@ defmodule Idejo.Forum do
       chosen in [nil, ""] ->
         Ecto.Changeset.delete_change(changeset, :icon_id)
 
-      Enum.any?(icons, &(&1.id == chosen)) ->
+      Enum.any?(icons, &(&1.id == chosen)) or TopicIcons.emoji?(chosen) ->
         changeset
 
       true ->

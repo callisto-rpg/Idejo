@@ -241,25 +241,37 @@ defmodule IdejoWeb.Api.ModerationController do
     do: on_topic(conn, id, &Forum.mark_inactive(user(conn), &1))
 
   def icon(conn, %{"id" => id} = params) do
-    with {:ok, icon} <- icon(params["icon_id"]),
+    with {:ok, icon} <- icon(params),
          do: on_topic(conn, id, &Forum.set_topic_icon(user(conn), &1, icon))
   end
 
   def make_topical(conn, %{"id" => id} = params) do
-    with {:ok, icon} <- icon(params["icon_id"]),
+    with {:ok, icon} <- icon(params),
          do: on_topic(conn, id, &Forum.make_topical(user(conn), &1, icon))
   end
 
-  defp icon(nil), do: {:ok, nil}
+  # One of the set, an emoji's icon by its id, or any Twemoji emoji by name (`icon_emoji`,
+  # steward request, 2026-11-24).
+  defp icon(%{"icon_emoji" => name}) when is_binary(name) do
+    case TopicIcons.for_emoji(name) do
+      {:ok, icon} -> {:ok, icon}
+      :error -> {:error, :invalid_target}
+    end
+  end
 
-  defp icon(id) when is_binary(id) do
-    case Enum.find(TopicIcons.list(), &(&1.id == id)) do
+  defp icon(%{"icon_id" => nil}), do: {:ok, nil}
+
+  defp icon(%{"icon_id" => id}) when is_binary(id) do
+    case Enum.find(TopicIcons.list(), &(&1.id == id)) || emoji_icon(id) do
       nil -> {:error, :invalid_target}
       icon -> {:ok, icon}
     end
   end
 
-  defp icon(_id), do: {:error, :bad_request}
+  defp icon(%{"icon_id" => _id}), do: {:error, :bad_request}
+  defp icon(_params), do: {:ok, nil}
+
+  defp emoji_icon(id), do: if(TopicIcons.emoji?(id), do: TopicIcons.get(id))
 
   def autofollow(conn, %{"id" => id}),
     do: on_topic(conn, id, &Forum.set_autofollow(user(conn), &1, true))
