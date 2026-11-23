@@ -112,9 +112,14 @@ defmodule IdejoWeb.CommunityMenuTest do
     community_on()
     member = linked_member("ada-4")
 
+    # Only the favourites (steward request, 2026-11-23).
     Req.Test.stub(Community, fn conn ->
       Req.Test.json(conn, %{
-        "communities" => [%{"name" => "Chess club", "url" => "https://chess.example.test/"}]
+        "communities" => [
+          %{"name" => "Chess club", "url" => "https://chess.example.test/", "favourite" => true},
+          %{"name" => "Go club", "url" => "https://go.example.test/", "favourite" => false},
+          %{"name" => "Old club", "url" => "https://old.example.test/"}
+        ]
       })
     end)
 
@@ -149,13 +154,7 @@ defmodule IdejoWeb.CommunityMenuTest do
            |> json_response(200) == json
 
     assert json == %{
-             "communities" => [
-               %{
-                 "name" => "Chess club",
-                 "url" => "https://chess.example.test/",
-                 "favourite" => false
-               }
-             ]
+             "communities" => [%{"name" => "Chess club", "url" => "https://chess.example.test/"}]
            }
 
     # Visitors: the menu, without a personal list.
