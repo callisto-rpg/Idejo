@@ -92,4 +92,93 @@ defmodule IdejoWeb.InboxHTML do
     </form>
     """
   end
+
+  @doc """
+  The Forums tab's groups (steward request, 2026-11-23): `{id, title, forums}`, the
+  favourites first under "Favourites", then the others; one group without a title when
+  there are only favourites or none.
+  """
+  def forum_groups([]), do: []
+
+  def forum_groups(communities) do
+    case Enum.split_with(communities, & &1.favourite) do
+      {[], others} ->
+        [{"inbox-forums", nil, others}]
+
+      {favourites, []} ->
+        [{"inbox-favourites", gettext("Favourites"), favourites}]
+
+      {favourites, others} ->
+        [
+          {"inbox-favourites", gettext("Favourites"), favourites},
+          {"inbox-forums", gettext("Other forums"), others}
+        ]
+    end
+  end
+
+  attr :forum, :map, required: true, doc: "`%{name:, url:, favourite:}`"
+
+  @doc """
+  A forum card's top right corner (steward request, 2026-11-23): a heart on a favourite, and
+  its menu, a `<details>` over a .popup-menu (so it opens without JavaScript): "Mark as
+  favourite" (or "Remove from favourites") and "Leave forum", each a plain POST form.
+  """
+  def forum_menu(assigns) do
+    name = assigns.forum.name
+
+    assigns =
+      assign(assigns,
+        host: URI.parse(assigns.forum.url).host,
+        leave_confirm:
+          gettext("Leave %{name}? Your account and messages there are kept.", name: name)
+      )
+
+    ~H"""
+    <div class="inbox-forum-corner">
+      <span :if={@forum.favourite} class="inbox-forum-heart" title={gettext("Favourite")}>
+        <.icon name="hero-heart-solid" class="size-4" />
+        <span class="sr-only">{gettext("Favourite")}</span>
+      </span>
+      <details id={"inbox-forum-menu-" <> @host} class="inbox-forum-menu">
+        <summary
+          class="inbox-forum-menu-button"
+          aria-label={gettext("Menu for %{name}", name: @forum.name)}
+        >
+          <.icon name="hero-ellipsis-vertical" class="size-5" />
+        </summary>
+        <div class="popup-menu has-arrow arrow-right inbox-forum-menu-panel">
+          <ul>
+            <li>
+              <.form
+                for={%{}}
+                action={~p"/forums/favourite"}
+                id={"inbox-forum-favourite-" <> @host}
+              >
+                <input type="hidden" name="host" value={@host} />
+                <input type="hidden" name="favourite" value={to_string(!@forum.favourite)} />
+                <button :if={!@forum.favourite}>
+                  <.icon name="hero-heart" class="size-4" />
+                  {gettext("Mark as favourite")}
+                </button>
+                <button :if={@forum.favourite}>
+                  <.icon name="hero-heart-solid" class="size-4" />
+                  {gettext("Remove from favourites")}
+                </button>
+              </.form>
+            </li>
+            <li>
+              <.form for={%{}} action={~p"/forums/leave"} id={"inbox-forum-leave-" <> @host}>
+                <input type="hidden" name="host" value={@host} />
+                <button class="inbox-forum-leave" data-confirm={@leave_confirm}>
+                  <.icon name="hero-arrow-right-start-on-rectangle" class="size-4" />
+                  {gettext("Leave forum")}
+                </button>
+              </.form>
+            </li>
+          </ul>
+        </div>
+      </details>
+    </div>
+    """
+  end
 end

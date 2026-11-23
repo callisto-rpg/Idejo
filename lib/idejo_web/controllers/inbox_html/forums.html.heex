@@ -13,31 +13,45 @@
     </a>
   </p>
 
-  <ul :if={@communities != []} id="inbox-forums" class="category-grid">
-    <li :for={forum <- @communities} class="category-card inbox-forum-card">
-      <div class="category-card-head">
-        <img
-          src={forum.url <> "logo"}
-          alt=""
-          class="inbox-forum-logo"
-          width="48"
-          height="48"
-          loading="lazy"
-        />
-        <h2 class="category-card-name">
-          <a
-            href={IdejoWeb.Plugs.ContinueSignIn.mark(forum.url)}
-            class="category-card-link"
-          >
-            {forum.name}
-          </a>
-        </h2>
-      </div>
-      <p class="category-card-stats">{URI.parse(forum.url).host}</p>
-      <%!-- Steward request, 2026-11-13: what is new in the topics they follow there. --%>
-      <.forum_news count={Map.get(@news, URI.parse(forum.url).host, 0)} />
-    </li>
-  </ul>
+  <%!-- Steward request, 2026-11-23: the favourites first, under their own heading. --%>
+  <section
+    :for={{id, title, forums} <- forum_groups(@communities)}
+    id={id}
+    aria-label={title}
+    class="inbox-forum-group"
+  >
+    <h2 :if={title} class="inbox-forum-group-title">{title}</h2>
+    <ul id={id <> "-list"} class="category-grid">
+      <li
+        :for={forum <- forums}
+        id={"inbox-forum-" <> URI.parse(forum.url).host}
+        class={["category-card inbox-forum-card", forum.favourite && "is-favourite"]}
+      >
+        <div class="category-card-head">
+          <img
+            src={forum.url <> "logo"}
+            alt=""
+            class="inbox-forum-logo"
+            width="48"
+            height="48"
+            loading="lazy"
+          />
+          <h3 class="category-card-name">
+            <a
+              href={IdejoWeb.Plugs.ContinueSignIn.mark(forum.url)}
+              class="category-card-link"
+            >
+              {forum.name}
+            </a>
+          </h3>
+        </div>
+        <p class="category-card-stats">{URI.parse(forum.url).host}</p>
+        <%!-- Steward request, 2026-11-13: what is new in the topics they follow there. --%>
+        <.forum_news count={Map.get(@news, URI.parse(forum.url).host, 0)} />
+        <.forum_menu forum={forum} />
+      </li>
+    </ul>
+  </section>
   <p :if={@communities != [] && Idejo.Community.directory_url()} class="inbox-more">
     <a href={Idejo.Community.directory_url()} id="inbox-directory">{gettext("Find more forums")}</a>
   </p>
