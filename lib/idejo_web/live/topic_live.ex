@@ -5023,6 +5023,7 @@ defmodule IdejoWeb.TopicLive do
   # The emoji picker: to react, to write, or for a topic's icon from the icon dialog.
   defp picker_shown?(nil, _icons, _can_post?, _can_react?), do: false
   defp picker_shown?(%{icon: true}, icons, _can_post?, _can_react?), do: icons != nil
+
   defp picker_shown?(%{message_id: nil}, _icons, can_post?, can_react?),
     do: can_react? or can_post?
 
