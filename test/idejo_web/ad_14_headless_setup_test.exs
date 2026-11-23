@@ -215,9 +215,9 @@ defmodule IdejoWeb.AD14HeadlessSetupTest do
       assert_email_sent(fn email ->
         assert email.to == [{"", "ada@idejo.test"}]
         assert email.subject == "You are the owner of Garden Club"
+        refute email.text_body =~ "reset-password"
         assert email.text_body =~ "Sign in with idejo ID"
         assert email.text_body =~ "#{base}/sign-in"
-        refute email.text_body =~ "reset-password"
       end)
     end
 

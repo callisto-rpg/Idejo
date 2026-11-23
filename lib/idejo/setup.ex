@@ -298,8 +298,7 @@ defmodule Idejo.Setup do
 
     %{
       "email" => email,
-      "username" =>
-        Accounts.free_username(blank_to_nil(attrs[:owner_username]) || name, "owner"),
+      "username" => Accounts.free_username(blank_to_nil(attrs[:owner_username]) || name, "owner"),
       "display_name" => name,
       "password" => Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
     }
