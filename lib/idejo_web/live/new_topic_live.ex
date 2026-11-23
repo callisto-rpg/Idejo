@@ -164,7 +164,6 @@ defmodule IdejoWeb.NewTopicLive do
   def handle_event("pick_icon", %{"id" => id}, socket),
     do: {:noreply, socket |> choose_icon(id) |> assign(:icon_picker?, false)}
 
-
   # TP-10: suggestions while typing an inline link.
   def handle_event("suggest", params, socket), do: IdejoWeb.Suggestions.reply(socket, params)
 
