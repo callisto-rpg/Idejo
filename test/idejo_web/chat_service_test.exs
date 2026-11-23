@@ -134,6 +134,13 @@ defmodule IdejoWeb.ChatServiceTest do
     [_, after_topics] = String.split(html, "community-all-topics", parts: 2)
     assert after_topics =~ "community-conversations"
 
+    # "All my Forums" (steward request, 2026-11-23): the inbox's Forums tab, above it.
+    assert html =~
+             ~s(href="https://my.example.test/?sso=1" class="community-link" id="community-all-forums")
+
+    [before_topics, _] = String.split(html, "community-all-topics", parts: 2)
+    assert before_topics =~ "community-all-forums"
+
     # The dot on the logo, filled by community_menu.js from /community/activity.
     assert html =~ ~s(id="community-dot")
 

@@ -91,11 +91,35 @@ defmodule IdejoWeb.CommunityMenuTest do
     end)
 
     assert Community.communities(member) == [
-             %{name: "Chess club", url: "https://chess.example.test/"}
+             %{name: "Chess club", url: "https://chess.example.test/", favourite: false}
            ]
 
     # Members not linked to the provider have no subject: nothing is asked.
     assert Community.communities(user_fixture()) == []
+  end
+
+  test "the API's me/communities says which forums are favourites" do
+    community_on()
+    member = linked_member("ada-fav")
+    {token, _row} = IdejoWeb.ApiHelpers.api_token_fixture(member)
+
+    Req.Test.stub(Community, fn conn ->
+      Req.Test.json(conn, %{
+        "communities" => [
+          %{"name" => "Chess club", "url" => "https://chess.example.test/", "favourite" => true},
+          %{"name" => "Go club", "url" => "https://go.example.test/"}
+        ]
+      })
+    end)
+
+    data =
+      build_conn()
+      |> IdejoWeb.ApiHelpers.api_conn(token)
+      |> get("/api/v1/me/communities")
+      |> json_response(200)
+      |> Map.fetch!("data")
+
+    assert [%{"name" => "Chess club", "favourite" => true}, %{"favourite" => false}] = data
   end
 
   test "a slow or failed answer gives an empty list, never an error" do
@@ -112,9 +136,14 @@ defmodule IdejoWeb.CommunityMenuTest do
     community_on()
     member = linked_member("ada-4")
 
+    # Only the favourites (steward request, 2026-11-23).
     Req.Test.stub(Community, fn conn ->
       Req.Test.json(conn, %{
-        "communities" => [%{"name" => "Chess club", "url" => "https://chess.example.test/"}]
+        "communities" => [
+          %{"name" => "Chess club", "url" => "https://chess.example.test/", "favourite" => true},
+          %{"name" => "Go club", "url" => "https://go.example.test/", "favourite" => false},
+          %{"name" => "Old club", "url" => "https://old.example.test/"}
+        ]
       })
     end)
 

@@ -241,6 +241,9 @@ defmodule IdejoWeb.Router do
     get "/topics", InboxController, :topics
     get "/chat", InboxController, :chats
     get "/chat/new", InboxController, :new_chat
+    # The Forums tab's card menu (steward request, 2026-11-23).
+    post "/forums/favourite", InboxController, :favourite
+    post "/forums/leave", InboxController, :leave
     get "/p", ConversationController, :index
     get "/p/:id", ConversationController, :show
     post "/u/:id/message", ConversationController, :create

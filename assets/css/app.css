@@ -4250,6 +4250,52 @@ body:has(#rename-topic:target) .title-edit { opacity: 1; }
   .inbox-forum-news { margin-top: 0.25rem; font-size: 0.8125rem; font-weight: 600; color: var(--color-primary); }
   .inbox-forum-logo { width: 3rem; height: 3rem; border-radius: 0.75rem; object-fit: contain; flex: none; }
   .inbox-more { opacity: 0.8; }
+  /* The Forums tab (steward request, 2026-11-23): the favourites first, under a heading; on
+     each card's top right corner a heart for a favourite and the card's menu, above the
+     card's link (which covers the card). */
+  .inbox-forum-group + .inbox-forum-group { margin-top: 2rem; }
+  .inbox-forum-group-title {
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .inbox-forum-card .category-card-head { padding-right: 3.5rem; }
+  .inbox-forum-corner {
+    position: absolute;
+    z-index: 2;
+    top: 0.625rem;
+    right: 0.625rem;
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+  }
+  .inbox-forum-heart { display: inline-flex; color: oklch(63% 0.22 15); }
+  .inbox-forum-menu { position: relative; }
+  .inbox-forum-menu-button {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    list-style: none;
+    transition: background 120ms;
+    &::-webkit-details-marker { display: none; }
+    &:hover { background: color-mix(in oklab, var(--color-base-content) 7%, transparent); }
+    &:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+  }
+  .inbox-forum-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: 13rem;
+    --arrow-x: 1rem;
+  }
+  .popup-menu .inbox-forum-leave { color: var(--color-error); }
   /* The Topics tab's toolbar (steward request, 2026-11-12): View at the left, the "Unread
      only" switch in the middle, the forums Filter at the right; wrapping on phones. */
   .inbox-toggles {

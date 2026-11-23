@@ -62,6 +62,20 @@ defmodule Idejo.Community.Chat do
   end
 
   @doc """
+  The group's inbox Forums tab (steward request, 2026-11-23): the home page of the inbox
+  that `topics_url/1` leads into, for the same members; else nil.
+  """
+  @spec forums_url(User.t() | nil) :: String.t() | nil
+  def forums_url(user) do
+    with "http" <> _ = topics <- topics_url(user),
+         %URI{host: host} = uri when is_binary(host) <- URI.parse(topics) do
+      URI.to_string(%URI{uri | path: "/", query: nil, fragment: nil})
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
   The group's Profile and account, where `user` changes settings for all their forums at once
   (steward request, 2026-11-13; `IDEJO_SETTINGS_URL`), for a member linked to the provider;
   else nil.

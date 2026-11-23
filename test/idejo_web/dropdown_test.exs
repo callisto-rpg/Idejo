@@ -79,7 +79,7 @@ defmodule IdejoWeb.DropdownTest do
     js = File.read!("assets/js/account_menu.js")
 
     assert js =~
-             ~s|const OUTSIDE_CLOSES = "#account-menu[open], .add-reaction[open], #community-menu[open]"|
+             ~s|const OUTSIDE_CLOSES = "#account-menu[open], .add-reaction[open], #community-menu[open], .inbox-forum-menu[open]"|
 
     assert js =~ ~s|if (!el.contains(e.target)) el.open = false|
     assert js =~ ~s|if (e.key !== "Escape") return|

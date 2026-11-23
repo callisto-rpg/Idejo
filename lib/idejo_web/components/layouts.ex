@@ -233,7 +233,10 @@ defmodule IdejoWeb.Layouts do
   menu first opens) and "Find more forums" (the directory). A `<details>`, so it opens
   without scripts (this forum and the directory).
 
-  Outside inbox mode, a member's menu also holds "All my topics" (`Chat.topics_url/1`) and
+  The list holds only the member's favourite forums (steward request, 2026-11-23; marked in
+  the inbox's Forums tab). Outside inbox mode, a member's menu also holds "All my Forums"
+  (that tab, `Chat.forums_url/1`; steward request, 2026-11-23), "All my topics"
+  (`Chat.topics_url/1`) and
   "Private Conversations" with its count, out of the sidebar (steward request, 2026-11-13).
   Only with a chat service (steward decision, 2026-11-20: the inbox alone hosts them): a link
   there for a member linked to idejo ID; greyed, with "Connect" at its right, otherwise.
@@ -269,7 +272,8 @@ defmodule IdejoWeb.Layouts do
         # At the chat service (kept a minute, nothing when it cannot be asked).
         conversations_unread: if(member?, do: Chat.unread(assigns.user), else: 0),
         conversations_url: Chat.for?(assigns.user) && signed_in_at(Chat.url()),
-        topics_url: member? && signed_in_at(Chat.topics_url(assigns.user))
+        topics_url: member? && signed_in_at(Chat.topics_url(assigns.user)),
+        forums_url: member? && signed_in_at(Chat.forums_url(assigns.user))
       )
 
     ~H"""
@@ -330,7 +334,7 @@ defmodule IdejoWeb.Layouts do
           id="community-list"
           class="community-list"
           data-src={~p"/community"}
-          aria-label={gettext("Your other forums")}
+          aria-label={gettext("Your favourite forums")}
           hidden
         >
         </ul>
@@ -350,7 +354,20 @@ defmodule IdejoWeb.Layouts do
           {gettext("Find more forums")}
         </a>
         <%!-- Out of the sidebar (steward request, 2026-11-13). --%>
-        <div :if={@member? and (@topics_url || @conversations?)} class="community-links">
+        <div
+          :if={@member? and (@forums_url || @topics_url || @conversations?)}
+          class="community-links"
+        >
+          <%!-- Steward request, 2026-11-23: the inbox's Forums tab, every forum joined. --%>
+          <a
+            :if={@forums_url}
+            href={@forums_url}
+            class="community-link"
+            id="community-all-forums"
+          >
+            <.icon name="hero-squares-2x2" class="size-4" />
+            {gettext("All my Forums")}
+          </a>
           <%!-- Steward request, 2026-11-10: the topics the member follows across the group. --%>
           <a :if={@topics_url} href={@topics_url} class="community-link" id="community-all-topics">
             <.icon name="hero-rectangle-stack" class="size-4" />

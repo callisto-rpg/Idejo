@@ -8,7 +8,11 @@ defmodule IdejoWeb.InboxController do
 
     * `forums/2` (`/`): the communities the member joined, as cards with their logos, each
       with "N new messages": the unread messages in the topics they follow there (steward
-      request, 2026-11-13; `Inbox.topics/1`, as the Topics tab counts them);
+      request, 2026-11-13; `Inbox.topics/1`, as the Topics tab counts them); the favourites
+      first, with a heart, then the others (steward request, 2026-11-23);
+    * `favourite/2` (`POST /forums/favourite`) and `leave/2` (`POST /forums/leave`): each
+      card's menu, "Mark as favourite" (or "Remove from favourites") and "Leave forum", for
+      a forum among the member's (`Inbox.favourite/3`, `Inbox.leave/2`);
     * `topics/2` (`/topics`): the topics they follow there, idejo's topic rows with the
       forum's logo and the activity lines (`?view=` compact or expanded, as the home page's,
       `IdejoWeb.TopicView`; `?show=` all or unread only; the Filter's hidden forums; each
@@ -45,6 +49,68 @@ defmodule IdejoWeb.InboxController do
         redirect(conn, to: ~p"/users/sign-in")
     end
   end
+
+  def favourite(conn, %{"host" => host, "favourite" => favourite})
+      when favourite in ["true", "false"] do
+    user = conn.assigns.current_scope.user
+    on? = favourite == "true"
+
+    case community(user, host) do
+      nil ->
+        not_found(conn)
+
+      forum ->
+        conn
+        |> favourite_flash(Inbox.favourite(user, host, on?), on?, forum)
+        |> redirect(to: ~p"/")
+    end
+  end
+
+  def favourite(conn, _params), do: not_found(conn)
+
+  def leave(conn, %{"host" => host}) do
+    user = conn.assigns.current_scope.user
+
+    case community(user, host) do
+      nil ->
+        not_found(conn)
+
+      forum ->
+        conn
+        |> leave_flash(Inbox.leave(user, host), forum)
+        |> redirect(to: ~p"/")
+    end
+  end
+
+  def leave(conn, _params), do: not_found(conn)
+
+  defp favourite_flash(conn, :ok, true, forum),
+    do: put_flash(conn, :info, gettext("%{name} is a favourite.", name: forum.name))
+
+  defp favourite_flash(conn, :ok, false, forum),
+    do: put_flash(conn, :info, gettext("%{name} is no longer a favourite.", name: forum.name))
+
+  defp favourite_flash(conn, :error, _on?, _forum),
+    do: put_flash(conn, :error, gettext("That did not work. Try again in a minute."))
+
+  defp leave_flash(conn, :ok, forum),
+    do:
+      put_flash(
+        conn,
+        :info,
+        gettext("You left %{name}. Your account and messages there are kept.", name: forum.name)
+      )
+
+  defp leave_flash(conn, :error, _forum),
+    do: put_flash(conn, :error, gettext("That did not work. Try again in a minute."))
+
+  # One of the member's communities, by its host; nil for any other.
+  defp community(user, host) when is_binary(host),
+    do: Enum.find(Community.communities(user), &(URI.parse(&1.url).host == host))
+
+  defp community(_user, _host), do: nil
+
+  defp not_found(conn), do: conn |> send_resp(404, "Not found") |> halt()
 
   # Each forum's unread messages, by host: the topics the member follows there.
   defp news(user) do

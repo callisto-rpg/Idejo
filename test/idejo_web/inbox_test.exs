@@ -166,6 +166,85 @@ defmodule IdejoWeb.InboxTest do
     assert build_conn() |> get(~p"/") |> redirected_to() == ~p"/users/sign-in"
   end
 
+  test "Forums: the favourites first, with a heart; each card's menu", %{conn: conn} do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+    me = self()
+
+    told = fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(me, {:told, conn.request_path, Jason.decode!(body)})
+      Req.Test.json(conn, %{ok: true})
+    end
+
+    service(%{
+      "" => %{
+        "communities" => [
+          %{
+            "name" => "Garden club",
+            "url" => "https://garden.example.test/",
+            "favourite" => false
+          },
+          %{"name" => "Quiet club", "url" => "https://quiet.example.test/", "favourite" => true}
+        ]
+      },
+      "/inbox/topics" => %{"forums" => []},
+      "/inbox/favourite" => told,
+      "/inbox/leave" => told
+    })
+
+    conn = log_in_user(conn, ada)
+    doc = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+
+    favourites = LazyHTML.query(doc, "#inbox-favourites .inbox-forum-card")
+    assert [quiet] = Enum.map(favourites, &LazyHTML.text/1)
+    assert quiet =~ "Quiet club" and quiet =~ "Remove from favourites"
+    assert LazyHTML.text(LazyHTML.query(doc, "#inbox-favourites h2")) =~ "Favourites"
+    assert [_heart] = Enum.to_list(LazyHTML.query(doc, ".inbox-forum-heart"))
+
+    others = LazyHTML.query(doc, "#inbox-forums .inbox-forum-card")
+    assert [garden] = Enum.map(others, &LazyHTML.text/1)
+    assert garden =~ "Garden club" and garden =~ "Mark as favourite" and garden =~ "Leave forum"
+    assert LazyHTML.text(LazyHTML.query(doc, "#inbox-forums h2")) =~ "Other forums"
+
+    conn = post(conn, ~p"/forums/favourite", %{host: "garden.example.test", favourite: "true"})
+
+    assert redirected_to(conn) == ~p"/"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Garden club is a favourite."
+
+    assert_received {:told, "/internal/community/inbox/favourite", body}
+    assert body == %{"subject" => "ada-sub", "host" => "garden.example.test", "favourite" => true}
+
+    conn = post(recycle(conn), ~p"/forums/leave", %{host: "quiet.example.test"})
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "You left Quiet club."
+
+    assert_received {:told, "/internal/community/inbox/leave", body}
+    assert body == %{"subject" => "ada-sub", "host" => "quiet.example.test"}
+
+    # Only the member's own forums.
+    conn = post(recycle(conn), ~p"/forums/leave", %{host: "other.example.test"})
+    assert response(conn, 404)
+    refute_received {:told, _, _}
+  end
+
+  test "Forums: the group's service refusing says so", %{conn: conn} do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+
+    service(%{
+      "" => %{
+        "communities" => [%{"name" => "Garden club", "url" => "https://garden.example.test/"}]
+      }
+    })
+
+    conn =
+      conn
+      |> log_in_user(ada)
+      |> post(~p"/forums/favourite", %{host: "garden.example.test", favourite: "true"})
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "That did not work"
+  end
+
   test "Topics: the forums' topics as idejo's own rows, compact or expanded", %{conn: conn} do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")
