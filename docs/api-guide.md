@@ -401,7 +401,8 @@ that ignore VAPID still work.
   account and messages, for a return), as the inbox's Forums tab menu does. `url` is the
   forum's `url` from the list (matched by host). 204 when done; 404 for a forum not among
   the member's, or anywhere but the inbox; 503 `unavailable` when the group's service did
-  not take it. Then read the list again.
+  not take it. Then read the list again. The inbox's discovery lists the feature
+  `forum_menu` when it answers these.
 - Discovery's `community.directory_url` is the group's public directory page, or null. Its
   JSON is at `<directory_url>api/v1/forums?q=&page=`: listed forums with name, url,
   description, logo and member count, 20 a page.

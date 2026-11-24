@@ -272,6 +272,9 @@ defmodule IdejoWeb.InboxTest do
 
     garden = %{"url" => "https://garden.example.test/"}
 
+    features = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    assert "forum_menu" in features["features"]
+
     assert call.(:put, "/api/v1/me/communities/favourite", garden) |> response(204)
     assert_received {:told, "/internal/community/inbox/favourite", body}
     assert body == %{"subject" => "ada-sub", "host" => "garden.example.test", "favourite" => true}
@@ -292,6 +295,9 @@ defmodule IdejoWeb.InboxTest do
     # Off inbox mode, nothing answers.
     Application.put_env(:idejo, :inbox, false)
     assert call.(:put, "/api/v1/me/communities/favourite", garden) |> response(404)
+
+    features = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    refute "forum_menu" in features["features"]
   end
 
   test "Topics: the forums' topics as idejo's own rows, compact or expanded", %{conn: conn} do

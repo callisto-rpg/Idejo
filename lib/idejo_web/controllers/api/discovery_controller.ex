@@ -14,7 +14,7 @@ defmodule IdejoWeb.Api.DiscoveryController do
 
   alias Idejo.Accounts
   alias Idejo.Accounts.ApiTokens
-  alias Idejo.{Api, Community, Gifs, Plugins, Push, Settings}
+  alias Idejo.{Api, Community, Gifs, Inbox, Plugins, Push, Settings}
   alias Idejo.Community.Chat
 
   def show(conn, _params) do
@@ -77,7 +77,9 @@ defmodule IdejoWeb.Api.DiscoveryController do
       {"private_messages", Idejo.Conversations.hosted?()},
       {"polls", true},
       {"scheduled_messages", true},
-      {"community_menu", Community.menu?()}
+      {"community_menu", Community.menu?()},
+      # The inbox's forum menu through the API: favourite and leave (0.3.28).
+      {"forum_menu", Inbox.on?()}
     ]
     |> Enum.filter(&elem(&1, 1))
     |> Enum.map(&elem(&1, 0))
