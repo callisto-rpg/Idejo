@@ -296,4 +296,46 @@ defmodule IdejoWeb.Api.MeController do
       end
     )
   end
+
+  @doc """
+  On the group's inbox (steward request, 2026-11-24, for the app's Forums tab): marks one
+  of the member's forums, by its `url`, as a favourite (`PUT`) or not (`DELETE`), as the
+  web's Forums tab does (`Inbox.favourite/3`). 404 for a forum not among theirs or off
+  inbox mode; `unavailable` when the group's service did not take it.
+  """
+  def favourite(conn, params) do
+    on? = conn.method == "PUT"
+
+    with {:ok, host} <- own_community(conn, params["url"]) do
+      case Inbox.favourite(user(conn), host, on?) do
+        :ok -> no_content(conn)
+        :error -> {:error, :unavailable}
+      end
+    end
+  end
+
+  @doc """
+  On the group's inbox (steward request, 2026-11-24): leaves one of the member's forums, by
+  its `url` (`Inbox.leave/2`): the forum keeps their account and messages for a return.
+  """
+  def leave(conn, params) do
+    with {:ok, host} <- own_community(conn, params["url"]) do
+      case Inbox.leave(user(conn), host) do
+        :ok -> no_content(conn)
+        :error -> {:error, :unavailable}
+      end
+    end
+  end
+
+  # The host of one of the member's communities, matched by the host of `url`.
+  defp own_community(conn, url) when is_binary(url) do
+    host = URI.parse(url).host
+
+    if Inbox.on?() and is_binary(host) and
+         Enum.any?(Community.communities(user(conn)), &(URI.parse(&1.url).host == host)),
+       do: {:ok, host},
+       else: {:error, :not_found}
+  end
+
+  defp own_community(_conn, _url), do: {:error, :bad_request}
 end

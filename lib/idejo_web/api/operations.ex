@@ -313,6 +313,39 @@ defmodule IdejoWeb.Api.Operations do
         req: "AP-12"
       ),
       op(
+        :put,
+        "/me/communities/favourite",
+        MeController,
+        :favourite,
+        "write",
+        :no_content,
+        "On the group's inbox, marks one of the user's forums (`url`) as a favourite.",
+        body: "CommunityRef",
+        req: "AP-12"
+      ),
+      op(
+        :delete,
+        "/me/communities/favourite",
+        MeController,
+        :favourite,
+        "write",
+        :no_content,
+        "On the group's inbox, takes one of the user's forums (`url`) out of the favourites.",
+        body: "CommunityRef",
+        req: "AP-12"
+      ),
+      op(
+        :post,
+        "/me/communities/leave",
+        MeController,
+        :leave,
+        "write",
+        :no_content,
+        "On the group's inbox, leaves one of the user's forums (`url`); its account is kept.",
+        body: "CommunityRef",
+        req: "AP-12"
+      ),
+      op(
         :get,
         "/me/push",
         PushController,
