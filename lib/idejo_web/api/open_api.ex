@@ -129,6 +129,7 @@ defmodule IdejoWeb.Api.OpenApi do
     # `subject` (an idejo ID) on a group's inbox only (steward request, 2026-11-19).
     "ConversationCreate" => {~w(user_id subject), []},
     "EverywhereRequest" => {~w(sections), ~w(sections)},
+    "CommunityRef" => {~w(url), ~w(url)},
     "ReportOutcome" => {~w(outcome note), ~w(outcome)},
     "Reason" => {~w(reason), []},
     "Unarchive" => {~w(category_id reason), []},

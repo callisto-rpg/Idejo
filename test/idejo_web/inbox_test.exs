@@ -245,6 +245,61 @@ defmodule IdejoWeb.InboxTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "That did not work"
   end
 
+  test "Forums through the API: favourite, not, leave (the app's long-press menu)" do
+    inbox_on()
+    ada = user_fixture() |> link("ada-sub")
+    me = self()
+
+    told = fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(me, {:told, conn.request_path, Jason.decode!(body)})
+      Req.Test.json(conn, %{ok: true})
+    end
+
+    service(%{
+      "" => %{
+        "communities" => [%{"name" => "Garden club", "url" => "https://garden.example.test/"}]
+      },
+      "/inbox/favourite" => told,
+      "/inbox/leave" => told
+    })
+
+    {token, _} = api_token_fixture(ada)
+
+    call = fn method, path, body ->
+      build_conn() |> api_conn(token) |> dispatch(@endpoint, method, path, body)
+    end
+
+    garden = %{"url" => "https://garden.example.test/"}
+
+    features = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    assert "forum_menu" in features["features"]
+
+    assert call.(:put, "/api/v1/me/communities/favourite", garden) |> response(204)
+    assert_received {:told, "/internal/community/inbox/favourite", body}
+    assert body == %{"subject" => "ada-sub", "host" => "garden.example.test", "favourite" => true}
+
+    assert call.(:delete, "/api/v1/me/communities/favourite", garden) |> response(204)
+    assert_received {:told, "/internal/community/inbox/favourite", %{"favourite" => false}}
+
+    assert call.(:post, "/api/v1/me/communities/leave", garden) |> response(204)
+    assert_received {:told, "/internal/community/inbox/leave", body}
+    assert body == %{"subject" => "ada-sub", "host" => "garden.example.test"}
+
+    # Only the member's own forums; a missing url is a bad request.
+    other = %{"url" => "https://other.example.test/"}
+    assert call.(:post, "/api/v1/me/communities/leave", other) |> response(404)
+    assert call.(:post, "/api/v1/me/communities/leave", %{}) |> response(400)
+    refute_received {:told, _, _}
+
+    # Off inbox mode, nothing answers.
+    Application.put_env(:idejo, :inbox, false)
+    assert call.(:put, "/api/v1/me/communities/favourite", garden) |> response(404)
+
+    features = build_conn() |> get("/.well-known/idejo") |> json_response(200)
+    refute "forum_menu" in features["features"]
+  end
+
   test "Topics: the forums' topics as idejo's own rows, compact or expanded", %{conn: conn} do
     inbox_on()
     ada = user_fixture() |> link("ada-sub")

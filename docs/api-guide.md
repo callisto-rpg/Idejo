@@ -395,6 +395,14 @@ that ignore VAPID still work.
   Hub), `[{name, url, logo_url, favourite}]`. `favourite` (since 0.3.26) is true for the
   forums the member marked in the group inbox's Forums tab; the forum's community menu
   lists only those. Empty on a standalone forum.
+- On the group's inbox (since 0.3.28; scope `write`): `PUT /api/v1/me/communities/favourite`
+  `{url}` marks one of those forums as a favourite, `DELETE` with the same body takes it out
+  of them, and `POST /api/v1/me/communities/leave` `{url}` leaves it (the forum keeps the
+  account and messages, for a return), as the inbox's Forums tab menu does. `url` is the
+  forum's `url` from the list (matched by host). 204 when done; 404 for a forum not among
+  the member's, or anywhere but the inbox; 503 `unavailable` when the group's service did
+  not take it. Then read the list again. The inbox's discovery lists the feature
+  `forum_menu` when it answers these.
 - Discovery's `community.directory_url` is the group's public directory page, or null. Its
   JSON is at `<directory_url>api/v1/forums?q=&page=`: listed forums with name, url,
   description, logo and member count, 20 a page.
